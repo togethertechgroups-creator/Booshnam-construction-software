@@ -1,0 +1,13 @@
+{
+  "name": "siteops-platform",
+  "version": "1.0.0",
+  "description": "SiteOps Construction Management Platform",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "backend\\.venv\\Scripts\\python.exe backend\\manage.py runserver 8000",
+    "seed": "backend\\.venv\\Scripts\\python.exe backend\\manage.py seed_siteops_demo",
+    "test:backend": "backend\\.venv\\Scripts\\python.exe backend\\manage.py test apps.core",
+    "build:frontend": "npm --prefix frontend run build"
+  }
+}

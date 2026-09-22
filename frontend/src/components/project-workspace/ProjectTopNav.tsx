@@ -1,0 +1,340 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  ChevronDown, ThumbsUp, Bell, 
+  User, Check, Plus, Search, Building2,
+  Share2, Shield, CircleDot, ArrowLeft
+} from 'lucide-react';
+import { Project } from '../../types';
+import { UserProfileDropdown } from '../UserProfileDropdown';
+import { formatProjectTitle } from '../../lib/mockData';
+
+export type WorkspaceTabId = 
+  | 'dashboard'
+  | 'design'
+  | 'boq'
+  | 'party'
+  | 'transaction'
+  | 'todo'
+  | 'task'
+  | 'attendance'
+  | 'material'
+  | 'subcon'
+  | 'equipment'
+  | 'files'
+  | 'mom';
+
+interface TabDefinition {
+  id: WorkspaceTabId;
+  label: string;
+  badge?: string | number;
+}
+
+export const WORKSPACE_TABS: TabDefinition[] = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'design', label: 'Design' },
+  { id: 'boq', label: 'BOQ' },
+  { id: 'party', label: 'Party' },
+  { id: 'transaction', label: 'Transaction' },
+  { id: 'todo', label: 'To Do' },
+  { id: 'task', label: 'Task' },
+  { id: 'attendance', label: 'Attendance' },
+  { id: 'material', label: 'Material' },
+  { id: 'subcon', label: 'Subcon' },
+  { id: 'equipment', label: 'Equipment' },
+  { id: 'files', label: 'Files' },
+  { id: 'mom', label: 'MOM' },
+];
+
+interface ProjectTopNavProps {
+  project: Project;
+  allProjects: Project[];
+  activeTab: WorkspaceTabId;
+  onSelectTab: (tab: WorkspaceTabId) => void;
+  onSelectProject: (project: Project) => void;
+  onCreateNewProject: () => void;
+  onStatusChange?: (status: 'ACTIVE' | 'PLANNING' | 'ON_HOLD' | 'COMPLETED') => void;
+  onOpenTeamModal?: () => void;
+  onOpenSettingsModal?: () => void;
+  onOpenFeedbackModal?: () => void;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+  onBack?: () => void;
+}
+
+export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
+  project,
+  allProjects,
+  activeTab,
+  onSelectTab,
+  onSelectProject,
+  onCreateNewProject,
+  onStatusChange,
+  onOpenTeamModal,
+  onOpenFeedbackModal,
+  isSidebarOpen,
+  onToggleSidebar,
+  onBack,
+}) => {
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
+
+  const projDropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const notifDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (projDropdownRef.current && !projDropdownRef.current.contains(e.target as Node)) {
+        setIsProjectDropdownOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtered projects for switcher
+  const filteredProjects = allProjects.filter(p => 
+    p.name.toLowerCase().includes(projectSearch.toLowerCase()) ||
+    p.code.toLowerCase().includes(projectSearch.toLowerCase()) ||
+    (p.client_name && p.client_name.toLowerCase().includes(projectSearch.toLowerCase()))
+  );
+
+  // Helper for status label & dot
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return { label: 'Ongoing', dotColor: 'bg-emerald-500', textColor: 'text-slate-800' };
+      case 'PLANNING':
+        return { label: 'Planning', dotColor: 'bg-amber-500', textColor: 'text-slate-800' };
+      case 'ON_HOLD':
+        return { label: 'On Hold', dotColor: 'bg-rose-500', textColor: 'text-slate-800' };
+      case 'COMPLETED':
+        return { label: 'Completed', dotColor: 'bg-blue-500', textColor: 'text-slate-800' };
+      default:
+        return { label: 'Ongoing', dotColor: 'bg-emerald-500', textColor: 'text-slate-800' };
+    }
+  };
+
+  const statusConfig = getStatusConfig(project.status);
+
+  // Display title: Project Name (Client Name)
+  const displayTitle = formatProjectTitle(project);
+  const baseTitleForInitials = displayTitle.split('(')[0].trim();
+
+  // Determine avatar initials (2 letters, e.g. HO)
+  const projectInitials = project.initials 
+    ? project.initials.slice(0, 2).toUpperCase() 
+    : (baseTitleForInitials ? baseTitleForInitials.slice(0, 2).toUpperCase() : 'PR');
+
+  return (
+    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 select-none px-6 py-3">
+      {/* Row 1: Left (Toggle + Badge + Title) and Right (Utilities) */}
+      <div className="flex items-center justify-between gap-4 min-w-0">
+        
+        {/* Left: Back Arrow + Sidebar Toggle + Red Avatar Badge + Project Name Dropdown */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Back arrow: return to projects list */}
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              title="Back to Projects"
+              aria-label="Back to Projects List"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 hover:border-red-200 shadow-sm transition-all cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-sm shadow-red-500/25 flex items-center justify-center text-white font-black text-xs overflow-hidden shrink-0 border border-red-300/40 select-none">
+            {/* Subtle aesthetic circle shapes inside icon */}
+            <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/25 pointer-events-none" />
+            <div className="absolute -bottom-1.5 -left-1.5 w-5 h-5 rounded-full bg-white/20 pointer-events-none" />
+            <span className="relative z-10 uppercase tracking-wide font-bold text-xs">
+              {projectInitials}
+            </span>
+          </div>
+
+          {/* Project Name Dropdown Trigger */}
+          <div className="relative min-w-0" ref={projDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+              className="flex items-center gap-1.5 py-1 px-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 text-slate-900 font-bold text-sm md:text-[15px] transition-colors cursor-pointer group text-left max-w-full"
+              title="Switch Project"
+            >
+              <span className="truncate text-slate-900 font-semibold tracking-tight">
+                {displayTitle}
+              </span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform shrink-0" />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isProjectDropdownOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 pb-2 border-b border-slate-100">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search projects..."
+                      value={projectSearch}
+                      onChange={(e) => setProjectSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-56 overflow-y-auto py-1">
+                  {filteredProjects.map((p) => {
+                    const isSelected = p.id === project.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          onSelectProject(p);
+                          setIsProjectDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left flex items-center justify-between text-xs hover:bg-red-50/60 transition-colors ${
+                          isSelected ? 'bg-red-50/80 font-bold text-red-900' : 'text-slate-700 font-medium'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <div className={`w-6 h-6 rounded-md ${p.avatar_color || 'bg-red-600'} text-white text-[10px] font-bold flex items-center justify-center shrink-0`}>
+                            {p.initials || p.name.charAt(0)}
+                          </div>
+                          <div className="truncate">
+                            <div className="truncate text-slate-800">{formatProjectTitle(p)}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{p.code}</div>
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-red-600 shrink-0 ml-2" />}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-1.5 mt-1 border-t border-slate-100 px-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProjectDropdownOpen(false);
+                      onCreateNewProject();
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create New Project</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Utilities: Status, ThumbsUp, M+, Bell, User Profile */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Status Dropdown */}
+          <div className="relative" ref={statusDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors border border-slate-200/80 cursor-pointer"
+              title="Update Project Status"
+            >
+              <span className={`w-2 h-2 rounded-full ${statusConfig.dotColor}`} />
+              <span className="text-[11px] sm:text-xs text-slate-700">{statusConfig.label}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
+
+            {isStatusDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Project Status
+                </div>
+                {[
+                  { key: 'ACTIVE', label: 'Ongoing', dot: 'bg-emerald-500' },
+                  { key: 'PLANNING', label: 'Planning', dot: 'bg-amber-500' },
+                  { key: 'ON_HOLD', label: 'On Hold', dot: 'bg-rose-500' },
+                  { key: 'COMPLETED', label: 'Completed', dot: 'bg-blue-500' },
+                ].map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => {
+                      onStatusChange?.(s.key as any);
+                      setIsStatusDropdownOpen(false);
+                    }}
+                    className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 hover:bg-slate-50 transition-colors ${
+                      project.status === s.key ? 'font-bold text-slate-900 bg-slate-50' : 'text-slate-600'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${s.dot}`} />
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Feedback Thumbs Up */}
+          <button
+            type="button"
+            onClick={onOpenFeedbackModal}
+            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+            title="Give Feedback"
+          >
+            <ThumbsUp className="w-4 h-4" />
+          </button>
+
+          {/* Team Member M+ */}
+          <button
+            type="button"
+            onClick={onOpenTeamModal}
+            className="flex items-center justify-center w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white text-[11px] font-bold shadow-2xs transition-transform hover:scale-105 cursor-pointer"
+            title="Manage Team Members"
+          >
+            <span className="leading-none">M</span>
+            <span className="text-[9px] font-black leading-none ml-0.5">+</span>
+          </button>
+
+          {/* User Profile & Notifications */}
+          <UserProfileDropdown showBell={true} avatarSizeClass="w-7 h-7" />
+        </div>
+
+      </div>
+
+      {/* Row 2: All 13 Horizontal Tabs spanning full width aligned with content */}
+      <nav className="flex items-center gap-3 sm:gap-4 md:gap-5.5 lg:gap-6 pt-2.5 mt-2.5 border-t border-slate-100 overflow-x-auto no-scrollbar">
+        {WORKSPACE_TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onSelectTab(tab.id)}
+              className={`relative pb-1 text-xs sm:text-[13px] font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                isActive 
+                  ? 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
+                  : 'text-slate-600 hover:text-slate-900 hover:text-red-600'
+              }`}
+            >
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </header>
+  );
+};

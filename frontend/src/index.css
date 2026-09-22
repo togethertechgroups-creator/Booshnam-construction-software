@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-site-bg text-site-text antialiased font-sans;
+  }
+}
+
+/* Card corner radius limited to 5px across all views */
+@layer utilities {
+  .rounded-lg,
+  .rounded-xl,
+  .rounded-2xl,
+  .rounded-3xl {
+    border-radius: 5px;
+  }
+
+  /* Soft, visible card border / margin lines across all pages */
+  .border-slate-200 {
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+  .border-slate-200\/80,
+  .border-slate-200\/90,
+  .border-slate-200\/70 {
+    border-color: #cbd5e1 !important;
+  }
+}
+
+/* Custom scrollbar for data-dense tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

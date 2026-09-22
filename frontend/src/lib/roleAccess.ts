@@ -1,0 +1,142 @@
+export interface SystemModule {
+  id: string;
+  name: string;
+  category: 'Core Operations' | 'Financials & Supply' | 'Repository & Quality' | 'Administration';
+  description: string;
+}
+
+export const ALL_SYSTEM_MODULES: SystemModule[] = [
+  { id: 'dashboard', name: 'Dashboard', category: 'Core Operations', description: 'Company performance KPIs, active projects count, revenue & operations overview' },
+  { id: 'projects', name: 'Projects', category: 'Core Operations', description: 'Project directory, WBS scheduling, task execution & site progress tracking' },
+  { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
+  { id: 'tasks', name: 'Tasks', category: 'Core Operations', description: 'Task delegation, Kanban board, team assignments & milestone deliverables' },
+  { id: 'clients', name: 'Clients', category: 'Core Operations', description: 'Client CRM directory, communication history, and portal relationship records' },
+  { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
+  { id: 'budget', name: 'BOQ & Budget', category: 'Financials & Supply', description: 'Bill of Quantities, cost estimation, budget variance & rate analysis' },
+  { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
+  { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
+  { id: 'equipment', name: 'Fleet & Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
+  { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
+  { id: 'approvals', name: 'Approvals', category: 'Repository & Quality', description: 'Multi-tiered authorization workflow for expenses, drawings & change orders' },
+  { id: 'site_ops', name: 'Reports (DPR)', category: 'Repository & Quality', description: 'Daily Progress Reports (DPR), site photos, weather logs & labour counts' },
+  { id: 'snags', name: 'Snags & QA', category: 'Repository & Quality', description: 'Defect logging, snag lists, photo proof verification & quality punch lists' },
+  { id: 'setting', name: 'Settings', category: 'Administration', description: 'Company profile, branches, business configuration, roles & permissions' },
+];
+
+export interface RoleAccessPermission {
+  roleCode: string;
+  roleName: string;
+  description: string;
+  allowedPages: string[];
+  isSystemRole?: boolean;
+}
+
+export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
+  SUPER_ADMIN: {
+    roleCode: 'SUPER_ADMIN',
+    roleName: 'Super Admin',
+    description: 'Complete workspace access to entire company system & settings',
+    allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
+    isSystemRole: true,
+  },
+  ADMIN: {
+    roleCode: 'ADMIN',
+    roleName: 'Admin',
+    description: 'Full operational access across all projects, financials & staff management',
+    allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
+    isSystemRole: true,
+  },
+  PROJECT_MANAGER: {
+    roleCode: 'PROJECT_MANAGER',
+    roleName: 'Project Manager',
+    description: 'Overall project leadership, team delegation, budget & schedule execution',
+    allowedPages: ['dashboard', 'projects', 'tasks', 'site_ops', 'workforce', 'budget', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
+    isSystemRole: true,
+  },
+  SUPERVISOR: {
+    roleCode: 'SUPERVISOR',
+    roleName: 'Supervisor',
+    description: 'Assigned project supervision, daily progress, attendance & site operations',
+    allowedPages: ['projects', 'tasks', 'workforce', 'site_ops', 'snags', 'documents', 'approvals', 'setting'],
+    isSystemRole: true,
+  },
+  SITE_ENGINEER: {
+    roleCode: 'SITE_ENGINEER',
+    roleName: 'Site Engineer',
+    description: 'Assigned project execution, daily DPR updates, material tracking & payment requests',
+    allowedPages: ['projects', 'tasks', 'site_ops', 'payments', 'documents', 'approvals', 'snags', 'setting'],
+    isSystemRole: true,
+  },
+  ARCHITECT: {
+    roleCode: 'ARCHITECT',
+    roleName: 'Architect',
+    description: 'Drawings, 3D models, architectural hub version management & drawing approvals',
+    allowedPages: ['projects', 'departments', 'tasks', 'approvals', 'documents', 'setting'],
+    isSystemRole: true,
+  },
+  CLIENT: {
+    roleCode: 'CLIENT',
+    roleName: 'Client',
+    description: 'Dedicated Client Portal: view project progress, approve designs & documents',
+    allowedPages: ['projects', 'approvals', 'documents', 'setting'],
+    isSystemRole: true,
+  },
+  ACCOUNTS: {
+    roleCode: 'ACCOUNTS',
+    roleName: 'Accounts',
+    description: 'Financial ledger, payment processing, vendor invoices, BOQ & payroll',
+    allowedPages: ['dashboard', 'payments', 'budget', 'workforce', 'procurement', 'approvals', 'setting'],
+    isSystemRole: true,
+  },
+  EMPLOYEE: {
+    roleCode: 'EMPLOYEE',
+    roleName: 'Other Staff / Employee',
+    description: 'Field task execution, attendance, daily work logs & documents',
+    allowedPages: ['tasks', 'site_ops', 'documents', 'setting'],
+    isSystemRole: true,
+  },
+};
+
+const STORAGE_KEY = 'booshnam_role_permissions_v1';
+
+export function getStoredRolePermissions(): Record<string, RoleAccessPermission> {
+  if (typeof window === 'undefined') return DEFAULT_ROLE_PERMISSIONS;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_ROLE_PERMISSIONS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_ROLE_PERMISSIONS, ...parsed };
+  } catch (e) {
+    console.error('Failed to parse stored role permissions', e);
+    return DEFAULT_ROLE_PERMISSIONS;
+  }
+}
+
+export function saveStoredRolePermission(permission: RoleAccessPermission): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getStoredRolePermissions();
+    current[permission.roleCode] = permission;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+    window.dispatchEvent(new CustomEvent('siteops_role_access_updated', { detail: permission }));
+  } catch (e) {
+    console.error('Failed to save role permission', e);
+  }
+}
+
+export function resetRolePermissions(): Record<string, RoleAccessPermission> {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(new CustomEvent('siteops_role_access_updated'));
+  }
+  return DEFAULT_ROLE_PERMISSIONS;
+}
+
+export function isPageAllowedForRole(roleCode: string, pageId: string): boolean {
+  // Super Admin always has full access
+  if (roleCode === 'SUPER_ADMIN') return true;
+  const permissions = getStoredRolePermissions();
+  const config = permissions[roleCode];
+  if (!config) return true; // default allow if unknown
+  return config.allowedPages.includes(pageId);
+}

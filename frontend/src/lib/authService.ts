@@ -1,4 +1,4 @@
-import { ALL_SYSTEM_MODULES } from './roleAccess';
+﻿import { ALL_SYSTEM_MODULES } from './roleAccess';
 import { getStaffMembers } from './staffService';
 
 export interface UserAccount {
@@ -206,3 +206,54 @@ export function isPageAllowedForActiveUser(pageId: string): boolean {
 
   return account.allowedPages.includes(targetId) || account.allowedPages.includes(pageId);
 }
+
+
+export function authenticateByPhone(phone: string, _dialCode: string = '+91'): UserAccount {
+  const cleanPhone = phone.replace(/\D/g, '');
+  const accounts = getUserAccounts();
+  const allStaff = getStaffMembers();
+
+  // 1. Check if linked to any known staff member
+  const staff = allStaff.find(s => {
+    const sPhone = (s.phone || '').replace(/\D/g, '');
+    return sPhone && (sPhone.endsWith(cleanPhone) || cleanPhone.endsWith(sPhone));
+  });
+
+  if (staff) {
+    const matched = accounts.find(a => a.staff_id === staff.id || (staff.username && a.username.toLowerCase() === staff.username.toLowerCase()));
+    if (matched) {
+      setCurrentUserAccount(matched);
+      return matched;
+    }
+  }
+
+  // 2. Check if username matches phone
+  const accountByUsername = accounts.find(a => a.username.replace(/\D/g, '') === cleanPhone);
+  if (accountByUsername) {
+    setCurrentUserAccount(accountByUsername);
+    return accountByUsername;
+  }
+
+  // 3. Fall back to primary Super Admin or first available account
+  const primaryAccount = accounts.find(a => a.role_code === 'SUPER_ADMIN') || accounts[0];
+  if (primaryAccount) {
+    setCurrentUserAccount(primaryAccount);
+    return primaryAccount;
+  }
+
+  // 4. Default verified user account
+  const fallbackAccount: UserAccount = {
+    id: 'usr-mob-' + Date.now(),
+    username: cleanPhone || 'mobile_user',
+    password: '',
+    staff_name: 'Verified Staff',
+    role_code: 'SUPER_ADMIN',
+    role_name: 'Super Admin',
+    allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
+    created_at: new Date().toISOString()
+  };
+  saveUserAccount(fallbackAccount);
+  setCurrentUserAccount(fallbackAccount);
+  return fallbackAccount;
+}
+

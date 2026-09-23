@@ -1,0 +1,16 @@
+{
+  "name": "Booshnam Associates",
+  "short_name": "Booshnam",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#ED1C24",
+  "theme_color": "#ED1C24",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

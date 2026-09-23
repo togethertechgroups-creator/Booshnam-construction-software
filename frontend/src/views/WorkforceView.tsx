@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Users, MapPin, CheckCircle2, AlertTriangle, Shield, 
+  Users, User, MapPin, CheckCircle2, AlertTriangle, Shield, 
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, KeyRound, Lock,
   Trash2, ArrowRight, ShieldCheck, Sparkles, Building2, Info

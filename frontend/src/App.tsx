@@ -3,7 +3,6 @@ import { Sidebar } from './components/Sidebar';
 import { CompanyDashboardView } from './views/CompanyDashboardView';
 import { DashboardView } from './views/DashboardView';
 import { ProjectsView } from './views/ProjectsView';
-import { BudgetView } from './views/BudgetView';
 import { ProcurementView } from './views/ProcurementView';
 import { WorkforceView } from './views/WorkforceView';
 import { EquipmentView } from './views/EquipmentView';
@@ -17,6 +16,7 @@ import { DepartmentsView } from './views/DepartmentsView';
 import { ClientPortalView } from './views/ClientPortalView';
 import { TasksView } from './views/TasksView';
 import { PaymentsView } from './views/PaymentsView';
+import { AccountsFinanceView } from './views/AccountsFinanceView';
 import { LoginView } from './views/LoginView';
 import { MobileSiteSimulatorModal } from './components/MobileSiteSimulatorModal';
 import { GlobalConfirmationModal } from './components/GlobalConfirmationModal';
@@ -440,16 +440,7 @@ export function App() {
             />
           )}
 
-          {currentView === 'budget' && (
-            <BudgetView
-              project={selectedProject}
-              boqItems={boq}
-              changeOrders={changeOrders}
-              canViewCost={canViewCost}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
+
 
           {(currentView === 'procurement' || currentView === 'warehouse') && (
             <ProcurementView
@@ -558,6 +549,15 @@ export function App() {
           {currentView === 'tasks' && (
             <TasksView
               tasks={tasks}
+              projects={projects}
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+              onShowToast={showToast}
+            />
+          )}
+
+          {(currentView === 'finance' || currentView === 'accounts_finance') && (
+            <AccountsFinanceView
               projects={projects}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

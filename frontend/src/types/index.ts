@@ -537,9 +537,14 @@ export interface MOMRecord {
 export interface BOQItem {
   id: string;
   s_no: number;
+  type?: 'item' | 'section';
+  parent_id?: string;
   item_code?: string;
   description: string;
   dimensions?: string; // N x L x W x H
+  cost_price?: number;
+  mark_up_percent?: number;
+  gst_percent?: number;
   unit_rate: number;
   quantity: number;
   unit: string;

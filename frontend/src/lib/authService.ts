@@ -202,6 +202,7 @@ export function isPageAllowedForActiveUser(pageId: string): boolean {
   if (pageId === 'asset') targetId = 'equipment';
   if (pageId === 'report') targetId = 'site_ops';
   if (pageId === 'library') targetId = 'documents';
+  if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
   if (pageId === 'soil_investigation' || pageId === 'architecture') targetId = 'departments';
 
   return account.allowedPages.includes(targetId) || account.allowedPages.includes(pageId);

@@ -12,7 +12,7 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'tasks', name: 'Tasks', category: 'Core Operations', description: 'Task delegation, Kanban board, team assignments & milestone deliverables' },
   { id: 'clients', name: 'Clients', category: 'Core Operations', description: 'Client CRM directory, communication history, and portal relationship records' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
-  { id: 'budget', name: 'BOQ & Budget', category: 'Financials & Supply', description: 'Bill of Quantities, cost estimation, budget variance & rate analysis' },
+  { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
   { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
   { id: 'equipment', name: 'Fleet & Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
@@ -50,7 +50,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'PROJECT_MANAGER',
     roleName: 'Project Manager',
     description: 'Overall project leadership, team delegation, budget & schedule execution',
-    allowedPages: ['dashboard', 'projects', 'tasks', 'site_ops', 'workforce', 'budget', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
+    allowedPages: ['dashboard', 'projects', 'tasks', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
     isSystemRole: true,
   },
   SUPERVISOR: {
@@ -64,7 +64,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'SITE_ENGINEER',
     roleName: 'Site Engineer',
     description: 'Assigned project execution, daily DPR updates, material tracking & payment requests',
-    allowedPages: ['projects', 'tasks', 'site_ops', 'payments', 'documents', 'approvals', 'snags', 'setting'],
+    allowedPages: ['projects', 'tasks', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'snags', 'setting'],
     isSystemRole: true,
   },
   ARCHITECT: {
@@ -85,7 +85,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'ACCOUNTS',
     roleName: 'Accounts',
     description: 'Financial ledger, payment processing, vendor invoices, BOQ & payroll',
-    allowedPages: ['dashboard', 'payments', 'budget', 'workforce', 'procurement', 'approvals', 'setting'],
+    allowedPages: ['dashboard', 'finance', 'payments', 'workforce', 'procurement', 'approvals', 'setting'],
     isSystemRole: true,
   },
   EMPLOYEE: {
@@ -138,5 +138,6 @@ export function isPageAllowedForRole(roleCode: string, pageId: string): boolean 
   const permissions = getStoredRolePermissions();
   const config = permissions[roleCode];
   if (!config) return true; // default allow if unknown
-  return config.allowedPages.includes(pageId);
+  const targetId = (pageId === 'finance' || pageId === 'accounts_finance') ? 'payments' : pageId;
+  return config.allowedPages.includes(pageId) || config.allowedPages.includes(targetId);
 }

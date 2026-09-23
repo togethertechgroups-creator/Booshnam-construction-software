@@ -4,7 +4,7 @@ import {
   RefreshCw, LayoutGrid, Home, Layers, ListTodo, UserCheck, Users, 
   Calculator, CreditCard, ShoppingCart, Truck, BookOpen, FileText, 
   ClipboardCheck, Settings, Shield, ArrowRight, Save, Calendar, 
-  Phone, Mail, Briefcase, Building2, KeyRound, AlertCircle, Info
+  Phone, Mail, Briefcase, Building2, KeyRound, AlertCircle, Info, Landmark
 } from 'lucide-react';
 import { 
   StaffMember, 
@@ -17,6 +17,7 @@ import { ALL_SYSTEM_MODULES, DEFAULT_ROLE_PERMISSIONS, SystemModule } from '../l
 import { getUserAccounts, saveUserAccount, UserAccount } from '../lib/authService';
 import { MOCK_ROLES } from '../lib/mockData';
 import { confirmAction } from '../lib/dialogService';
+import { CustomMonthPicker } from './CustomMonthPicker';
 
 interface StaffOverviewViewProps {
   staff: StaffMember;
@@ -35,6 +36,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'access' | 'leave_dashboard'>(initialTab);
   const [accessStep, setAccessStep] = useState<1 | 2>(1);
+  const [payslipMonth, setPayslipMonth] = useState('');
 
   // Tab 1: Staff Details Edit Form
   const [detailsForm, setDetailsForm] = useState({
@@ -114,7 +116,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       case 'tasks': return ListTodo;
       case 'clients': return UserCheck;
       case 'workforce': return Users;
-      case 'budget': return Calculator;
+      case 'finance': return Landmark;
       case 'payments': return CreditCard;
       case 'procurement': return ShoppingCart;
       case 'equipment': return Truck;
@@ -275,23 +277,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150 pb-20">
       {/* ── Top Navigation Breadcrumb Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-slate-500" />
-            <span>Back to Staff Directory</span>
-          </button>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Staff & Payroll</span>
-            <span>/</span>
-            <span className="font-bold text-slate-900">{staff.name}</span>
-          </div>
-        </div>
-
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-3 pb-3 border-b border-slate-200">
         {/* Workspace Login Status Badge */}
         <div>
           {staff.has_login_account ? (
@@ -339,48 +325,68 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
         {/* ── Tabs ── */}
         <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
           <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setActiveTab('leave_dashboard')}
-              className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'leave_dashboard'
-                  ? 'bg-white text-red-600 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Leaves & Payroll</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('details')}
-              className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'details'
-                  ? 'bg-white text-red-600 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Profile</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('access')}
-              className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'access'
-                  ? 'bg-white text-red-600 shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>System Access</span>
-            </button>
+            {initialTab === 'leave_dashboard' ? (
+              <button
+                type="button"
+                onClick={() => setActiveTab('leave_dashboard')}
+                className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'leave_dashboard'
+                    ? 'bg-white text-red-600 shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Leaves & Payroll</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('details')}
+                  className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'details'
+                      ? 'bg-white text-red-600 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Profile</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('access')}
+                  className={`px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'access'
+                      ? 'bg-white text-red-600 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>System Access</span>
+                </button>
+              </>
+            )}
           </div>
           
           {activeTab === 'leave_dashboard' && (
-            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-2 cursor-pointer">
-              Download Payslip
-            </button>
+            <div className="flex items-center gap-2">
+              <CustomMonthPicker 
+                value={payslipMonth}
+                onChange={setPayslipMonth}
+                onShowToast={onShowToast}
+              />
+              <button 
+                disabled={!payslipMonth}
+                className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-2 ${payslipMonth ? 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'}`}
+                onClick={() => {
+                  if(payslipMonth) {
+                    onShowToast(`Downloading payslip for ${payslipMonth}...`);
+                  }
+                }}
+              >
+                {payslipMonth ? `Download Payslip (${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(payslipMonth.split('-')[1])-1]} ${payslipMonth.split('-')[0]})` : 'Download Payslip'}
+              </button>
+            </div>
           )}
         </div>
       </div>

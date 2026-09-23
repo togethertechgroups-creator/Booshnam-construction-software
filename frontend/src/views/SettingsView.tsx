@@ -8,7 +8,7 @@ import {
   LayoutGrid, ShoppingCart, Truck, ClipboardCheck, Calculator,
   UserCheck, Search, RefreshCw, ShieldCheck, ListTodo, Settings as SettingsIcon,
   SlidersHorizontal, Home, Edit2, Lock, Eye, EyeOff, User as UserIcon, KeyRound, UserPlus,
-  Image as ImageIcon, PenTool, Info, CheckCircle
+  Image as ImageIcon, PenTool, Info, CheckCircle, Landmark
 } from 'lucide-react';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { Role } from '../types';
@@ -610,7 +610,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'tasks': return ListTodo;
       case 'clients': return UserCheck;
       case 'workforce': return Users;
-      case 'budget': return Calculator;
+      case 'finance': return Landmark;
       case 'payments': return CreditCard;
       case 'procurement': return ShoppingCart;
       case 'equipment': return Truck;

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, Search, ArrowLeft, SquarePen, MoreVertical, 
   Download, UploadCloud, Calendar, Check, X, FileSpreadsheet,
-  Layers, CheckCircle2, ChevronDown, DollarSign, Eye, Trash2, Copy
+  Layers, CheckCircle2, ChevronDown, DollarSign, Eye, Trash2, Copy,
+  FilePlus, FolderPlus
 } from 'lucide-react';
 import { Project, WBSTask, BOQRecord, BOQItem } from '../../../types';
 import { CustomSelect } from '../../CustomSelect';
@@ -85,10 +86,24 @@ export const BOQTab: React.FC<BOQTabProps> = ({
   // Modal State: Add Line Item to Selected BOQ
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [newItemDesc, setNewItemDesc] = useState('');
-  const [newItemRate, setNewItemRate] = useState<number>(0);
-  const [newItemQty, setNewItemQty] = useState<number>(1);
+  const [newItemCode, setNewItemCode] = useState('');
   const [newItemUnit, setNewItemUnit] = useState('nos');
-  const [newItemDimensions, setNewItemDimensions] = useState('-');
+  const [newItemGST, setNewItemGST] = useState<number>(18);
+  const [newItemQty, setNewItemQty] = useState<number>(1);
+  const [newItemCostPrice, setNewItemCostPrice] = useState<number>(0);
+  const [newItemMarkup, setNewItemMarkup] = useState<number>(0);
+  const [newItemSupplyAndInstall, setNewItemSupplyAndInstall] = useState(false);
+  const [newItemParentId, setNewItemParentId] = useState<string | null>(null);
+  
+  // Modal State: Add Section
+  const [isAddSectionModalOpen, setIsAddSectionModalOpen] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [newSectionAssignToParent, setNewSectionAssignToParent] = useState(false);
+  const [newSectionParentId, setNewSectionParentId] = useState<string | null>(null);
+
+  // Edit Mode State for BOQ Detail View
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [draftItems, setDraftItems] = useState<BOQItem[]>([]);
 
   // Modal State: Link Task Modal
   const [linkTaskTargetItem, setLinkTaskTargetItem] = useState<BOQItem | null>(null);
@@ -96,6 +111,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
 
   // Action Menu state for List rows
   const [openRowMenuId, setOpenRowMenuId] = useState<string | null>(null);
+  const [openItemMenuId, setOpenItemMenuId] = useState<string | null>(null);
 
   // Open Create Modal with auto-incremented BOQ number
   const handleOpenCreateModal = () => {
@@ -248,28 +264,77 @@ export const BOQTab: React.FC<BOQTabProps> = ({
     onShowToast?.(`BOQ ${toDelete?.boq_number || ''} deleted`);
   };
 
-  // Add Item to currently selected BOQ
+  // Toggle Edit Mode
+  const toggleEditMode = () => {
+    if (!isEditMode) {
+      setDraftItems([...(selectedBOQ?.items || [])]);
+      setIsEditMode(true);
+    } else {
+      setIsEditMode(false);
+    }
+  };
+
+  // Save Edit Mode Changes
+  const handleSaveEditMode = async () => {
+    if (!selectedBOQ) return;
+    const newBOQValue = draftItems.reduce((acc, i) => acc + (i.sales_price || 0), 0);
+    const updatedBOQ: BOQRecord = {
+      ...selectedBOQ,
+      items: draftItems,
+      boq_value: newBOQValue
+    };
+    setSelectedBOQ(updatedBOQ);
+    setBOQList(boqList.map(b => b.id === updatedBOQ.id ? updatedBOQ : b));
+    setIsEditMode(false);
+    onShowToast?.(`BOQ structure updated!`);
+  };
+
+  // Add Section to Draft Items
+  const handleAddSection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSectionName.trim()) return;
+
+    const newSection: BOQItem = {
+      id: `section-${Date.now()}`,
+      s_no: draftItems.length + 1, // Will be recomputed on render
+      type: 'section',
+      description: newSectionName.trim(),
+      parent_id: newSectionAssignToParent ? newSectionParentId || undefined : undefined,
+      unit_rate: 0,
+      quantity: 0,
+      unit: '',
+      billed_quantity: 0,
+      sales_price: 0
+    };
+
+    setDraftItems([...draftItems, newSection]);
+    setIsAddSectionModalOpen(false);
+    setNewSectionName('');
+    setNewSectionAssignToParent(false);
+    setNewSectionParentId(null);
+  };
+
+  // Add Item to Draft Items
   const handleAddLineItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBOQ || !newItemDesc.trim()) return;
+    if (!newItemDesc.trim()) return;
 
-    const confirmed = await confirmAction({
-      title: 'Add BOQ Line Item',
-      message: `Are you sure you want to add item "${newItemDesc.trim()}" (Qty: ${newItemQty} ${newItemUnit}) to ${selectedBOQ.boq_number}?`,
-      confirmText: 'Add Item',
-      cancelText: 'Cancel',
-      variant: 'primary',
-      icon: 'info'
-    });
-    if (!confirmed) return;
-
-    const calculatedPrice = Number(newItemRate) * Number(newItemQty);
+    // Computed Unit Rate & Price
+    const computedUnitRate = newItemCostPrice * (1 + newItemMarkup / 100);
+    const finalUnitRate = newItemSupplyAndInstall ? computedUnitRate : computedUnitRate; // Modify if extra logic needed
+    const calculatedPrice = finalUnitRate * Number(newItemQty);
+    
     const newItem: BOQItem = {
       id: `item-${Date.now()}`,
-      s_no: selectedBOQ.items.length + 1,
+      s_no: draftItems.length + 1, // Will be recomputed on render
+      type: 'item',
+      parent_id: newItemParentId || undefined,
+      item_code: newItemCode.trim(),
       description: newItemDesc.trim(),
-      dimensions: newItemDimensions.trim() || '-',
-      unit_rate: Number(newItemRate),
+      cost_price: newItemCostPrice,
+      mark_up_percent: newItemMarkup,
+      gst_percent: newItemGST,
+      unit_rate: finalUnitRate,
       quantity: Number(newItemQty),
       unit: newItemUnit,
       progress_percentage: 0,
@@ -277,22 +342,15 @@ export const BOQTab: React.FC<BOQTabProps> = ({
       sales_price: calculatedPrice
     };
 
-    const updatedItems = [...selectedBOQ.items, newItem];
-    const newBOQValue = updatedItems.reduce((acc, i) => acc + i.sales_price, 0);
-
-    const updatedBOQ: BOQRecord = {
-      ...selectedBOQ,
-      items: updatedItems,
-      boq_value: newBOQValue
-    };
-
-    setSelectedBOQ(updatedBOQ);
-    setBOQList(boqList.map(b => b.id === updatedBOQ.id ? updatedBOQ : b));
+    setDraftItems([...draftItems, newItem]);
     setIsAddItemModalOpen(false);
     setNewItemDesc('');
-    setNewItemRate(0);
+    setNewItemCode('');
+    setNewItemCostPrice(0);
+    setNewItemMarkup(0);
     setNewItemQty(1);
-    onShowToast?.(`Added item #${newItem.s_no} to ${selectedBOQ.boq_number}`);
+    setNewItemParentId(null);
+    setNewItemSupplyAndInstall(false);
   };
 
   // Handle Task Linking
@@ -327,13 +385,37 @@ export const BOQTab: React.FC<BOQTabProps> = ({
     b.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Filter items in detail view
-  const filteredDetailItems = selectedBOQ 
-    ? selectedBOQ.items.filter(item => 
+  // Build hierarchy and assign sequence numbers
+  const buildHierarchicalItems = (items: BOQItem[]) => {
+    const grouped: { [key: string]: BOQItem[] } = { root: [] };
+    items.forEach(item => {
+      const pid = item.parent_id || 'root';
+      if (!grouped[pid]) grouped[pid] = [];
+      grouped[pid].push(item);
+    });
+
+    const flattened: (BOQItem & { display_sno: string; level: number })[] = [];
+    const traverse = (parentId: string, prefix: string, level: number) => {
+      const children = grouped[parentId] || [];
+      children.forEach((child, idx) => {
+        const display_sno = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
+        flattened.push({ ...child, display_sno, level });
+        traverse(child.id, display_sno, level + 1);
+      });
+    };
+    traverse('root', '', 0);
+
+    if (itemSearch.trim()) {
+      return flattened.filter(item => 
         item.description.toLowerCase().includes(itemSearch.toLowerCase()) ||
         item.unit.toLowerCase().includes(itemSearch.toLowerCase())
-      )
-    : [];
+      );
+    }
+    return flattened;
+  };
+
+  // The active list to display in the table
+  const displayItems = selectedBOQ ? buildHierarchicalItems(isEditMode ? draftItems : selectedBOQ.items) : [];
 
   // Helper date formatter: e.g. "16 Sep, 2026"
   const formatDateDisplay = (dateStr: string) => {
@@ -508,59 +590,87 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             </button>
           </div>
 
-          {/* Right Toolbar: Search, Download, Edit, 3 Dots, + Add Item */}
+          {/* Right Toolbar */}
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            {/* Search Pill */}
-            <div className="relative w-48 sm:w-56">
-              <input
-                type="text"
-                placeholder="search"
-                value={itemSearch}
-                onChange={(e) => setItemSearch(e.target.value)}
-                className="w-full pr-8 pl-3.5 py-1.5 text-xs bg-white border border-slate-200/90 rounded-full text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 shadow-2xs"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
-            </div>
+            {!isEditMode ? (
+              <>
+                {/* Search Pill */}
+                <div className="relative w-48 sm:w-56">
+                  <input
+                    type="text"
+                    placeholder="search"
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    className="w-full pr-8 pl-3.5 py-1.5 text-xs bg-white border border-slate-200/90 rounded-full text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 shadow-2xs"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+                </div>
 
-            {/* Download Icon */}
-            <button
-              type="button"
-              onClick={() => onShowToast?.(`Exporting ${selectedBOQ.boq_number} items...`)}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-              title="Download BOQ"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+                {/* Download Icon */}
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.(`Exporting ${selectedBOQ.boq_number} items...`)}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                  title="Download BOQ"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
 
-            {/* Edit Icon */}
-            <button
-              type="button"
-              onClick={() => handleOpenEditModal(selectedBOQ, 'title')}
-              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer border border-transparent hover:border-red-200"
-              title="Edit BOQ Details"
-            >
-              <SquarePen className="w-4 h-4" />
-            </button>
+                {/* Edit Icon to Enter Edit Mode */}
+                <button
+                  type="button"
+                  onClick={toggleEditMode}
+                  className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer border border-transparent hover:border-red-200 flex items-center justify-center"
+                  title="Edit Items & Sections"
+                >
+                  <SquarePen className="w-4 h-4" />
+                </button>
 
-            {/* 3 Dots Menu */}
-            <button
-              type="button"
-              onClick={() => onShowToast?.('More BOQ actions')}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-transparent hover:border-slate-200"
-              title="More options"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-
-            {/* + Add Item Button (Red & White Theme) */}
-            <button
-              type="button"
-              onClick={() => setIsAddItemModalOpen(true)}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-full flex items-center gap-1 shadow-xs transition-colors cursor-pointer shrink-0 active:scale-95"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Item</span>
-            </button>
+                {/* 3 Dots Menu */}
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('More BOQ actions')}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-colors cursor-pointer border border-transparent hover:border-slate-200"
+                  title="More options"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSectionModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 hover:border-red-600 text-slate-700 hover:text-red-600 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Section</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddItemModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-white border border-slate-200 hover:border-red-600 text-slate-700 hover:text-red-600 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Item</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEditMode}
+                  className="px-5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-xs transition-colors cursor-pointer active:scale-95"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleEditMode}
+                  className="p-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg transition-colors cursor-pointer flex items-center justify-center shadow-xs"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
@@ -583,74 +693,122 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {filteredDetailItems.length === 0 ? (
+                  {displayItems.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-12 text-center text-slate-400">
                         No line items found. Click "+ Add Item" above to add items to this BOQ.
                       </td>
                     </tr>
                   ) : (
-                    filteredDetailItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                    displayItems.map((item) => (
+                      <tr key={item.id} className={`hover:bg-slate-50/70 transition-colors group ${item.type === 'section' ? 'bg-slate-50/40' : ''}`}>
                         {/* S.No */}
                         <td className="py-3.5 px-4 font-medium text-slate-800 align-top">
-                          {idx + 1}
+                          {item.display_sno}
                         </td>
 
                         {/* Item Description */}
-                        <td className="py-3.5 px-4 text-slate-800 leading-relaxed align-top">
-                          <div className="max-w-2xl font-normal text-[12.5px] text-slate-800">
+                        <td className="py-3.5 px-4 text-slate-800 leading-relaxed align-top relative">
+                          <div 
+                            className={`flex items-center gap-1.5 max-w-2xl text-[12.5px] ${item.type === 'section' ? 'font-bold text-slate-900' : 'font-normal text-slate-800'}`} 
+                            style={{ paddingLeft: `${item.level * 1.25}rem` }}
+                          >
+                            {item.type === 'section' && <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+                            {item.type === 'item' && item.level > 0 && <span className="text-slate-300 mx-0.5">↳</span>}
                             {item.description}
                           </div>
                           {item.linked_task_name && (
-                            <div className="mt-1 text-[10px] text-red-600 font-medium flex items-center gap-1">
+                            <div className="mt-1 text-[10px] text-red-600 font-medium flex items-center gap-1" style={{ paddingLeft: `${item.level * 1.25}rem` }}>
                               <Check className="w-3 h-3 text-emerald-600" />
                               <span>Linked: {item.linked_task_name}</span>
+                            </div>
+                          )}
+
+                          {/* Hover Actions for Section in Edit Mode */}
+                          {isEditMode && item.type === 'section' && (
+                            <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewItemParentId(item.id);
+                                  setIsAddItemModalOpen(true);
+                                }}
+                                className="p-1 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition-colors"
+                                title="Add item to the section"
+                              >
+                                <FilePlus className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onShowToast?.('Add item from library')}
+                                className="p-1 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition-colors"
+                                title="Add item from library"
+                              >
+                                <Layers className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewSectionParentId(item.id);
+                                  setNewSectionAssignToParent(true);
+                                  setIsAddSectionModalOpen(true);
+                                }}
+                                className="p-1 hover:bg-slate-200 rounded text-slate-700 hover:text-slate-900 transition-colors"
+                                title="Add sub-section"
+                              >
+                                <FolderPlus className="w-4 h-4" />
+                              </button>
                             </div>
                           )}
                         </td>
 
                         {/* N x L x W x H */}
                         <td className="py-3.5 px-4 text-center font-mono text-slate-500 align-top">
-                          {item.dimensions || '-'}
+                          {item.type === 'item' ? item.dimensions || '-' : '-'}
                         </td>
 
                         {/* Unit rate */}
                         <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-800 align-top">
-                          {item.unit_rate ? item.unit_rate.toLocaleString() : '0'}
+                          {item.type === 'item' ? (item.unit_rate ? item.unit_rate.toLocaleString() : '0') : '-'}
                         </td>
 
                         {/* QTY */}
                         <td className="py-3.5 px-4 text-right font-mono text-slate-800 align-top">
-                          {item.quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span>
+                          {item.type === 'item' ? (
+                            <>{item.quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span></>
+                          ) : '-'}
                         </td>
 
-                        {/* Progress Button: Link Task (Red & White Theme) */}
+                        {/* Progress Button */}
                         <td className="py-3.5 px-4 text-center align-top">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setLinkTaskTargetItem(item);
-                              setSelectedTaskId(item.linked_task_id || (tasks[0]?.id ?? ''));
-                            }}
-                            className={`px-3 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer inline-flex items-center gap-1 ${
-                              item.linked_task_id
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                : 'bg-red-50/60 text-red-600 border-red-200 hover:bg-red-100/70'
-                            }`}
-                          >
-                            {item.linked_task_id ? `${item.progress_percentage || 0}% Done` : 'Link Task'}
-                          </button>
+                          {item.type === 'item' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLinkTaskTargetItem(item);
+                                setSelectedTaskId(item.linked_task_id || (tasks[0]?.id ?? ''));
+                              }}
+                              className={`px-3 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer inline-flex items-center gap-1 ${
+                                item.linked_task_id
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                  : 'bg-red-50/60 text-red-600 border-red-200 hover:bg-red-100/70'
+                              }`}
+                            >
+                              {item.linked_task_id ? `${item.progress_percentage || 0}% Done` : 'Link Task'}
+                            </button>
+                          ) : '-'}
                         </td>
 
                         {/* Billed Qty */}
                         <td className="py-3.5 px-4 text-right font-mono text-slate-800 align-top">
-                          {item.billed_quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span>
+                          {item.type === 'item' ? (
+                            <>{item.billed_quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span></>
+                          ) : '-'}
                         </td>
 
                         {/* Sales Price */}
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 align-top">
-                          {item.sales_price ? item.sales_price.toLocaleString() : '0'}
+                          {item.type === 'item' ? (item.sales_price ? item.sales_price.toLocaleString() : '0') : '-'}
                         </td>
                       </tr>
                     ))
@@ -661,7 +819,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
 
             {/* Table Footer Totals */}
             <div className="bg-[#f8f9fc] border-t border-slate-200/80 px-4 py-3 flex items-center justify-between text-xs font-medium text-slate-600">
-              <div>Total {filteredDetailItems.length} line items</div>
+              <div>Total {displayItems.filter(i => i.type === 'item').length} line items</div>
               <div className="flex items-center gap-6 font-mono font-bold text-slate-800">
                 <div>
                   Total BOQ: <span className="text-slate-900">₹ {selectedBOQ.boq_value.toLocaleString()}</span>
@@ -765,111 +923,6 @@ export const BOQTab: React.FC<BOQTabProps> = ({
           </div>
         )}
 
-        {/* MODAL: ADD ITEM TO BOQ (Red & White Theme) */}
-        {isAddItemModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
-            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-900 text-sm">Add Item to {selectedBOQ.boq_number}</h3>
-                <button
-                  type="button"
-                  onClick={() => setIsAddItemModalOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddLineItem} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Item Description *</label>
-                  <textarea
-                    rows={3}
-                    required
-                    placeholder="Specification of the material, labor, or soil investigation work..."
-                    value={newItemDesc}
-                    onChange={(e) => setNewItemDesc(e.target.value)}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Unit Rate (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={newItemRate}
-                      onChange={(e) => setNewItemRate(Number(e.target.value))}
-                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity *</label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={newItemQty}
-                      onChange={(e) => setNewItemQty(Number(e.target.value))}
-                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Unit of Measurement</label>
-                    <CustomSelect
-                      value={newItemUnit}
-                      onChange={(val) => setNewItemUnit(val)}
-                      options={['lumpsum', 'nos', 'RMT', 'Cu.m', 'Sq.m', 'Sq.ft', 'MT']}
-                      size="md"
-                      variant="brand"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">N x L x W x H</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 1 x 10 x 2 x 1"
-                      value={newItemDimensions}
-                      onChange={(e) => setNewItemDimensions(e.target.value)}
-                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Calculated Sales Price:</span>
-                  <span className="font-bold font-mono text-slate-900">
-                    ₹ {(newItemRate * newItemQty).toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddItemModalOpen(false)}
-                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 transition-all"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Line Item</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* MODAL: LINK TASK MODAL (Red & White Theme) */}
         {linkTaskTargetItem && (
@@ -1606,6 +1659,201 @@ export const BOQTab: React.FC<BOQTabProps> = ({
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* ADD SECTION MODAL */}
+      {/* ===================================================================== */}
+      {isAddSectionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Add Section</h2>
+            <form onSubmit={handleAddSection} className="space-y-4">
+              <div className="relative border border-slate-300 rounded-xl px-3.5 py-2.5 focus-within:border-[#635BFF]">
+                <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-500">Section Name</label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={newSectionName}
+                  onChange={(e) => setNewSectionName(e.target.value)}
+                  className="w-full text-sm font-semibold text-slate-800 focus:outline-none"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newSectionAssignToParent}
+                  onChange={(e) => setNewSectionAssignToParent(e.target.checked)}
+                  className="w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-600"
+                />
+                <span>Assign to Parent</span>
+              </label>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSectionModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* ADD ITEM DRAWER/MODAL */}
+      {/* ===================================================================== */}
+      {isAddItemModalOpen && (
+        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setIsAddItemModalOpen(false)} className="p-1 hover:bg-slate-100 rounded text-slate-500 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-base font-bold text-slate-800 uppercase tracking-wide">NEW ITEM</h2>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddLineItem}
+              className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+            >
+              Save
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <form id="add-item-form" onSubmit={handleAddLineItem} className="space-y-6">
+              
+              <div className="relative border border-slate-200 rounded-xl px-3.5 py-2.5">
+                <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">ITEM NAME</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Item Name"
+                  value={newItemDesc}
+                  onChange={(e) => setNewItemDesc(e.target.value)}
+                  className="w-full text-sm text-slate-800 focus:outline-none placeholder:text-slate-400 font-medium"
+                />
+              </div>
+
+              <div className="relative border border-slate-200 rounded-xl px-3.5 py-2.5">
+                <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">ITEM CODE</label>
+                <input
+                  type="text"
+                  placeholder="Item Code"
+                  value={newItemCode}
+                  onChange={(e) => setNewItemCode(e.target.value)}
+                  className="w-full text-sm text-slate-800 focus:outline-none placeholder:text-slate-400 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center justify-between">
+                  <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">UNIT</label>
+                  <input
+                    type="text"
+                    value={newItemUnit}
+                    onChange={(e) => setNewItemUnit(e.target.value)}
+                    className="w-full text-sm text-slate-800 focus:outline-none font-medium"
+                  />
+                  <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+                <div className="relative border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center justify-between focus-within:border-slate-300">
+                  <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">GST %</label>
+                  <select
+                    value={newItemGST}
+                    onChange={(e) => setNewItemGST(Number(e.target.value))}
+                    className="w-full text-sm text-slate-800 focus:outline-none bg-transparent appearance-none font-medium cursor-pointer"
+                  >
+                    <option value={0}>0</option>
+                    <option value={5}>5</option>
+                    <option value={12}>12</option>
+                    <option value={18}>18</option>
+                    <option value={28}>28</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 pointer-events-none absolute right-3.5" />
+                </div>
+              </div>
+
+              <div className="relative border border-slate-200 rounded-xl px-3.5 py-2.5">
+                <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[10px] font-bold text-slate-400 uppercase tracking-wider">ESTIMATED QTY.</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={newItemQty === 0 ? '' : newItemQty}
+                  onChange={(e) => setNewItemQty(Number(e.target.value))}
+                  className="w-full text-sm text-slate-800 focus:outline-none font-medium"
+                />
+              </div>
+
+              {/* Cost Component Box */}
+              <div className="border border-slate-200 rounded-xl p-4 space-y-4 pb-5">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-slate-700">Cost Component</span>
+                  <button type="button" className="text-[11px] text-red-600 font-bold flex items-center gap-0.5 hover:underline cursor-pointer">
+                    <Plus className="w-3 h-3" /> Add
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-slate-700">Unit Cost Price</span>
+                  <div className="relative border border-slate-200 rounded-lg px-3.5 py-2 w-[55%]">
+                    <label className="absolute -top-2.5 left-3 px-1.5 bg-white text-[9px] font-bold text-slate-400 uppercase tracking-wider">AMOUNT</label>
+                    <input
+                      type="number"
+                      placeholder="Amount"
+                      min="0"
+                      step="any"
+                      value={newItemCostPrice === 0 ? '' : newItemCostPrice}
+                      onChange={(e) => setNewItemCostPrice(Number(e.target.value))}
+                      className="w-full text-sm text-slate-800 focus:outline-none font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-medium text-slate-700">Mark Up</span>
+                  <div className="relative border border-slate-200 rounded-lg px-3.5 py-2 w-[55%] flex items-center justify-between">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={newItemMarkup === 0 ? '' : newItemMarkup}
+                      onChange={(e) => setNewItemMarkup(Number(e.target.value))}
+                      className="w-full text-sm text-slate-800 focus:outline-none font-medium"
+                    />
+                    <div className="flex items-center text-slate-400 text-xs gap-1 pointer-events-none">
+                      <span>%</span>
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newItemSupplyAndInstall}
+                    onChange={(e) => setNewItemSupplyAndInstall(e.target.checked)}
+                    className="w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-600"
+                  />
+                  <span className="font-medium text-slate-700">Add Supply and Installation Rate</span>
+                </label>
+              </div>
+
+            </form>
           </div>
         </div>
       )}

@@ -3,7 +3,8 @@ import {
   LayoutGrid, FileText, Home, Users, Briefcase, CreditCard, 
   Package, ShoppingCart, Archive, Truck, ClipboardCheck, 
   BookOpen, Settings, ChevronDown, ArrowLeft, Shield, Smartphone,
-  Layers, ListTodo, UserCheck, Calculator, ShieldCheck, Menu, LogOut
+  Layers, ListTodo, UserCheck, Calculator, ShieldCheck, Menu, LogOut,
+  Landmark
 } from 'lucide-react';
 import { Role } from '../types';
 import { MOCK_ROLES } from '../lib/mockData';
@@ -109,7 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
       // Group 3: Financials & Supply Chain
       [
-        { id: 'budget', label: 'BOQ & Budget', icon: Calculator },
+        { id: 'finance', label: 'Accounts & Finance', icon: Landmark },
         { id: 'payments', label: 'Payments & Ledger', icon: CreditCard },
         { id: 'procurement', label: 'Procurement', icon: ShoppingCart },
         { id: 'equipment', label: 'Fleet & Assets', icon: Truck }
@@ -214,6 +215,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   const Icon = item.icon;
                   const isActive = 
                     currentView === item.id ||
+                    (item.id === 'finance' && (currentView === 'finance' || currentView === 'accounts_finance')) ||
                     (item.id === 'dashboard' && (currentView === 'company_dashboard' || currentView === 'dashboard')) ||
                     (item.id === 'site_ops' && (currentView === 'site_ops' || currentView === 'report')) ||
                     (item.id === 'workforce' && (currentView === 'workforce' || currentView === 'payroll')) ||

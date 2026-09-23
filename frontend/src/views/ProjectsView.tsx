@@ -1965,15 +1965,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           >
                             <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-red-600' : ''}`} />
                           </button>
-
-                          {/* 3-Dots Action Menu */}
-                          <button
-                            onClick={() => handleOpenProjectDetails(p)}
-                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition"
-                            title="More options"
-                          >
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       </td>
                     </tr>

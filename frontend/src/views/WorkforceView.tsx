@@ -3,7 +3,7 @@ import {
   Users, User, MapPin, CheckCircle2, AlertTriangle, Shield, 
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, KeyRound, Lock,
-  Trash2, ArrowRight, ShieldCheck, Sparkles, Building2, Info
+  Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -31,7 +31,7 @@ interface WorkforceViewProps {
   canViewCost: boolean;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
-  initialTab?: 'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays';
+  initialTab?: 'staff' | 'payroll';
   onNavigate?: (view: string) => void;
   onShowToast?: (msg: string) => void;
 }
@@ -43,17 +43,18 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   canViewCost,
   isSidebarOpen,
   onToggleSidebar,
-  initialTab = 'people',
+  initialTab = 'staff',
   onNavigate,
   onShowToast
 }) => {
-  const [activeTab, setActiveTab] = useState<'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>(initialTab);
+  const [mainTab, setMainTab] = useState<'staff' | 'payroll'>(initialTab);
+  const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [searchStaffQuery, setSearchStaffQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [selectedStaffForOverview, setSelectedStaffForOverview] = useState<StaffMember | null>(null);
-  const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access'>('details');
+  const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access' | 'leave_dashboard'>('details');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
   const allProjectsList = useMemo(() => {
@@ -67,7 +68,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     return [];
   }, [staffList]);
 
-  const handleOpenStaffOverview = (staff: StaffMember, defaultTab: 'details' | 'access' = 'details') => {
+  const handleOpenStaffOverview = (staff: StaffMember, defaultTab: 'details' | 'access' | 'leave_dashboard' = 'details') => {
     setSelectedStaffForOverview(staff);
     setOverviewInitialTab(defaultTab);
   };
@@ -92,7 +93,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   });
 
   useEffect(() => {
-    if (initialTab) setActiveTab(initialTab);
+    if (initialTab) setMainTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
@@ -287,11 +288,22 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black rounded uppercase tracking-wider">
-                SITE WORKFORCE
-              </span>
+              {selectedStaffForOverview ? (
+                <button
+                  type="button"
+                  onClick={() => setSelectedStaffForOverview(null)}
+                  className="mr-2 p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-colors flex items-center shadow-xs bg-white"
+                  title="Back to Directory"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              ) : (
+                <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black rounded uppercase tracking-wider">
+                  SITE WORKFORCE
+                </span>
+              )}
               <h1 className="text-xl font-bold text-slate-900">
-                Staff & Payroll Management
+                {selectedStaffForOverview ? `Staff Profile: ${selectedStaffForOverview.name}` : "Staff & Payroll Management"}
               </h1>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -300,80 +312,54 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           </div>
         </div>
 
-        {/* Tab Navigation: New Payroll UI Tabs */}
+        {/* Main Tab Navigation: Staff & Access | Payroll */}
         <div className="flex items-center gap-3 flex-wrap mt-2 md:mt-0">
-          <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
-            <button
-              onClick={() => setActiveTab('people')}
-              className={`px-4 py-3 transition-all cursor-pointer ${
-                activeTab === 'people' 
-                  ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              People
-            </button>
-            <button
-              onClick={() => setActiveTab('attendance')}
-              className={`px-4 py-3 transition-all cursor-pointer ${
-                activeTab === 'attendance' 
-                  ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Attendance
-            </button>
-            <button
-              onClick={() => setActiveTab('team_leaves')}
-              className={`px-4 py-3 transition-all cursor-pointer ${
-                activeTab === 'team_leaves' 
-                  ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Team Leaves
-            </button>
-            <button
-              onClick={() => setActiveTab('my_leaves')}
-              className={`px-4 py-3 transition-all cursor-pointer ${
-                activeTab === 'my_leaves' 
-                  ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              My Leaves
-            </button>
-            <button
-              onClick={() => setActiveTab('holidays')}
-              className={`px-4 py-3 transition-all cursor-pointer ${
-                activeTab === 'holidays' 
-                  ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Holidays
-            </button>
-          </div>
+          {!selectedStaffForOverview && (
+            <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
+              <button
+                onClick={() => setMainTab('staff')}
+                className={`px-4 py-3 transition-all cursor-pointer ${
+                  mainTab === 'staff' 
+                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Staff and Access
+              </button>
+              <button
+                onClick={() => setMainTab('payroll')}
+                className={`px-4 py-3 transition-all cursor-pointer ${
+                  mainTab === 'payroll' 
+                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold' 
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                Payroll
+              </button>
+            </div>
+          )}
           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
           <UserProfileDropdown showBell={true} onShowToast={triggerToast} />
         </div>
       </div>
 
-      {/* ── SECTION 1: PEOPLE (STAFF DIRECTORY) ── */}
-      {activeTab === 'people' && (
-        selectedStaffForOverview ? (
-          <StaffOverviewView
-            staff={selectedStaffForOverview}
-            initialTab={overviewInitialTab}
-            onBack={() => setSelectedStaffForOverview(null)}
-            onUpdateStaff={(updated) => {
-              setSelectedStaffForOverview(updated);
-              setStaffList(getStaffMembers());
-            }}
-            onShowToast={triggerToast}
-          />
-        ) : (
-          <div className="space-y-4">
+      {/* ── SELECTED STAFF OVERVIEW OR MAIN CONTENT ── */}
+      {selectedStaffForOverview ? (
+        <StaffOverviewView
+          staff={selectedStaffForOverview}
+          initialTab={overviewInitialTab}
+          onBack={() => setSelectedStaffForOverview(null)}
+          onUpdateStaff={(updated) => {
+            setSelectedStaffForOverview(updated);
+            setStaffList(getStaffMembers());
+          }}
+          onShowToast={triggerToast}
+        />
+      ) : (
+        <>
+          {/* ── SECTION 1: STAFF & ACCESS ── */}
+          {mainTab === 'staff' && (
+            <div className="space-y-4">
           {/* Quick Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
@@ -636,11 +622,58 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
           </div>
         </div>
-        )
       )}
 
-      {/* ── SECTION 2: ATTENDANCE ── */}
-      {activeTab === 'attendance' && (
+      {/* ── SECTION 2: PAYROLL TABS ── */}
+      {mainTab === 'payroll' && (
+        <div className="bg-white border-b border-slate-200 sticky top-[73px] z-10 shadow-xs">
+          <div className="flex items-center text-sm font-semibold max-w-7xl mx-auto px-6">
+            <button
+              onClick={() => setPayrollTab('attendance')}
+              className={`px-4 py-3 transition-all cursor-pointer ${
+                payrollTab === 'attendance' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Attendance
+            </button>
+            <button
+              onClick={() => setPayrollTab('team_leaves')}
+              className={`px-4 py-3 transition-all cursor-pointer ${
+                payrollTab === 'team_leaves' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Team Leaves
+            </button>
+            <button
+              onClick={() => setPayrollTab('my_leaves')}
+              className={`px-4 py-3 transition-all cursor-pointer ${
+                payrollTab === 'my_leaves' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              My Leaves
+            </button>
+            <button
+              onClick={() => setPayrollTab('holidays')}
+              className={`px-4 py-3 transition-all cursor-pointer ${
+                payrollTab === 'holidays' 
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold' 
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Holidays
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SECTION 2.1: ATTENDANCE ── */}
+      {mainTab === 'payroll' && payrollTab === 'attendance' && (
         <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -656,18 +689,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <button className="p-1 hover:bg-slate-100 rounded text-slate-500">{'<'}</button>
-                <div className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg flex flex-col items-center justify-center min-w-[50px] shadow-xs">
-                  <span className="text-sm font-bold leading-none">22</span>
-                  <span className="text-[10px] leading-none mt-0.5">Tue</span>
-                </div>
-                <button className="p-1 hover:bg-slate-100 rounded text-slate-500">{'>'}</button>
-                <div className="bg-white border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg flex flex-col items-center justify-center min-w-[50px] shadow-xs cursor-pointer hover:bg-slate-50">
-                  <Calendar className="w-3.5 h-3.5 mb-0.5 text-slate-400" />
-                  <span className="text-[10px] leading-none">Sep</span>
-                </div>
-              </div>
+
               
               <div className="relative w-64 hidden sm:block">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -711,7 +733,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                             {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleOpenStaffOverview(staff, 'details')}>
+                            <div className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}>
                               {staff.designation} - {staff.name}
                             </div>
                             <div className="text-[11px] text-slate-500 mt-0.5">{staff.designation}</div>
@@ -733,7 +755,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                               Present <span className="text-[10px]">▼</span>
                             </div>
                             <button 
-                              onClick={() => handleOpenStaffOverview(staff, 'details')}
+                              onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
                               className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"
                             >
                               <ArrowRight className="w-4 h-4" />
@@ -750,28 +772,30 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         </div>
       )}
 
-      {/* ── SECTION 3: TEAM LEAVES ── */}
-      {activeTab === 'team_leaves' && (
+      {/* ── SECTION 2.2: TEAM LEAVES ── */}
+      {mainTab === 'payroll' && payrollTab === 'team_leaves' && (
         <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
           <Calendar className="w-12 h-12 mb-4 opacity-20" />
           <p>Team Leaves view is under construction</p>
         </div>
       )}
 
-      {/* ── SECTION 4: MY LEAVES ── */}
-      {activeTab === 'my_leaves' && (
+      {/* ── SECTION 2.3: MY LEAVES ── */}
+      {mainTab === 'payroll' && payrollTab === 'my_leaves' && (
         <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
           <User className="w-12 h-12 mb-4 opacity-20" />
           <p>My Leaves view is under construction</p>
         </div>
       )}
 
-      {/* ── SECTION 5: HOLIDAYS ── */}
-      {activeTab === 'holidays' && (
-        <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
-          <Sparkles className="w-12 h-12 mb-4 opacity-20" />
-          <p>Holidays view is under construction</p>
-        </div>
+          {/* ── SECTION 2.4: HOLIDAYS ── */}
+          {mainTab === 'payroll' && payrollTab === 'holidays' && (
+            <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
+              <Sparkles className="w-12 h-12 mb-4 opacity-20" />
+              <p>Holidays view is under construction</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* ── MODAL: ADD NEW STAFF MEMBER ── */}

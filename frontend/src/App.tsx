@@ -45,6 +45,7 @@ import {
   isPageAllowedForActiveUser 
 } from './lib/authService';
 import { syncProjectAssignmentNotifications, getNotifications } from './lib/notificationService';
+import { getOrInitializeProjects } from './lib/departmentService';
 
 
 export function App() {
@@ -71,25 +72,10 @@ export function App() {
     }
     return MOCK_USER;
   });
-  const [projects, setProjects] = useState<Project[]>(() => {
-    try {
-      const saved = localStorage.getItem('booshnam_projects_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch (e) {}
-    return MOCK_PROJECTS;
-  });
+  const [projects, setProjects] = useState<Project[]>(() => getOrInitializeProjects());
   const [selectedProject, setSelectedProject] = useState<Project | null>(() => {
-    try {
-      const saved = localStorage.getItem('booshnam_projects_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-      }
-    } catch (e) {}
-    return MOCK_PROJECTS[0] || null;
+    const projs = getOrInitializeProjects();
+    return projs[0] || null;
   });
   const [isMobileSimOpen, setIsMobileSimOpen] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
@@ -402,6 +388,7 @@ export function App() {
             <CompanyDashboardView
               projects={projects}
               onSelectProject={setSelectedProject}
+              onNavigate={handleNavigateView}
               canViewCost={canViewCost}
               user={user}
               isSidebarOpen={isSidebarOpen}
@@ -526,13 +513,32 @@ export function App() {
             />
           )}
 
-          {(currentView === 'departments' || currentView === 'soil_investigation' || currentView === 'architecture') && (
+          {(currentView === 'departments' || 
+            currentView.startsWith('dept_') || 
+            currentView === 'soil_investigation' || 
+            currentView === 'architecture' || 
+            currentView === 'marketing' || 
+            currentView === 'construction_dept' || 
+            currentView === 'accounts_dept') && (
             <DepartmentsView
-              initialDepartment={currentView === 'architecture' ? 'ARCHITECTURE' : 'SOIL_INVESTIGATION'}
+              initialDepartment={
+                currentView === 'dept_architecture' || currentView === 'architecture' ? 'ARCHITECTURE' :
+                currentView === 'dept_marketing' || currentView === 'marketing' ? 'MARKETING' :
+                currentView === 'dept_construction' || currentView === 'construction_dept' ? 'CONSTRUCTION' :
+                currentView === 'dept_accounts' || currentView === 'accounts_dept' ? 'ACCOUNTS' :
+                'SOIL_INVESTIGATION'
+              }
               projects={projects}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
               onShowToast={showToast}
+              onDepartmentChange={(dept) => {
+                if (dept === 'SOIL_INVESTIGATION') setCurrentView('dept_soil');
+                else if (dept === 'ARCHITECTURE') setCurrentView('dept_architecture');
+                else if (dept === 'MARKETING') setCurrentView('dept_marketing');
+                else if (dept === 'CONSTRUCTION') setCurrentView('dept_construction');
+                else if (dept === 'ACCOUNTS') setCurrentView('dept_accounts');
+              }}
             />
           )}
 

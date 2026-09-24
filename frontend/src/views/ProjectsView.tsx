@@ -3,7 +3,7 @@ import {
   Plus, CheckCircle2, Clock, AlertCircle, FileText, 
   Calendar, Layers, Flag, Download, Check, Search, 
   ThumbsUp, ShoppingCart, ListTodo, ArrowLeft, Pin, 
-  MoreVertical, Building2, Bell, Settings,
+  MoreVertical, Bell, Settings,
   User, ExternalLink, ChevronRight, Filter, TrendingUp,
   CheckSquare, Sparkles, Phone, Mail, MapPin, Briefcase,
   DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2
@@ -33,6 +33,14 @@ import { PREDEFINED_TASKS_TEMPLATE, formatProjectTitle } from '../lib/mockData';
 import { getStaffMembers, getStaffTeamOptions, StaffMember } from '../lib/staffService';
 import { addNotification } from '../lib/notificationService';
 import { confirmAction, setFormDirty, clearFormDirty } from '../lib/dialogService';
+import { 
+  ORGANIZATION_DEPARTMENTS, 
+  getActiveDepartmentId, 
+  setActiveDepartmentId, 
+  normalizeDepartmentId, 
+  getIndividualDepartments 
+} from '../lib/departmentService';
+import { DepartmentLogo } from '../components/DepartmentLogo';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -85,6 +93,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
+  // Active Department State (Synchronized with global switcher)
+  const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
+
+  useEffect(() => {
+    const handleDeptChange = (e: any) => {
+      const newId = e.detail || getActiveDepartmentId();
+      setActiveDeptId(newId);
+    };
+    window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
+    return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
+  }, []);
+
   // Wizard state for Creating Project
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [newProjectName, setNewProjectName] = useState('');
@@ -92,7 +112,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [newAddress, setNewAddress] = useState('');
   const [newCity, setNewCity] = useState('');
   const [newEstimatedBudget, setNewEstimatedBudget] = useState('0');
+  const [newDepartment, setNewDepartment] = useState<string>(() => {
+    const current = getActiveDepartmentId();
+    return current === 'booshnam_associates' ? 'CONSTRUCTION' : current;
+  });
   const [newProjectType, setNewProjectType] = useState('Residential Construction');
+
+  useEffect(() => {
+    if (activeDeptId !== 'booshnam_associates') {
+      setNewDepartment(activeDeptId);
+    }
+  }, [activeDeptId]);
   const [selectedPM, setSelectedPM] = useState('');
   const [selectedEngineer, setSelectedEngineer] = useState('');
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
@@ -347,6 +377,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         if (!matchesCat) return false;
       }
 
+      // Active Department Filter (When specific department is selected in switcher)
+      if (activeDeptId !== 'booshnam_associates') {
+        const pDept = normalizeDepartmentId(p.department as string);
+        if (pDept !== activeDeptId) return false;
+      }
+
       return true;
     }).sort((a, b) => {
       const aPinned = pinnedIds.has(a.id);
@@ -355,7 +391,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks]);
+  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId]);
+
 
   // Handle open project details
   const handleOpenProjectDetails = (p: Project) => {
@@ -595,11 +632,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       resolvedCategory = 'Residential';
     }
 
+    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS[6]; // defaults to Construction
+
     const newProj: Project = {
       id: newProjId,
       code: code,
       name: displayName,
       client_name: cleanClientName || cleanProjName,
+      department: newDepartment,
+      department_name: deptObj.name,
       project_type: newProjectType,
       location: `${newAddress ? newAddress + ', ' : ''}${newCity || 'Chennai'}`,
       address: newAddress || 'Site Address',
@@ -801,21 +842,37 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Project Type / Category</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Department / Division *
+                    </label>
                     <CustomSelect
-                      value={newProjectType}
-                      onChange={(val) => setNewProjectType(val)}
-                      options={[
-                        'Residential Construction',
-                        'Commercial Complex',
-                        'Soil Investigation & Testing',
-                        'Architectural Design & Planning',
-                        'Infrastructure Project'
-                      ]}
+                      value={newDepartment}
+                      onChange={(val) => setNewDepartment(val)}
+                      options={ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+                        label: d.name,
+                        value: d.id,
+                      }))}
                       size="md"
                       variant="brand"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Project Type / Category</label>
+                  <CustomSelect
+                    value={newProjectType}
+                    onChange={(val) => setNewProjectType(val)}
+                    options={[
+                      'Residential Construction',
+                      'Commercial Complex',
+                      'Soil Investigation & Testing',
+                      'Architectural Design & Planning',
+                      'Infrastructure Project'
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1706,6 +1763,27 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
+          {/* Department Filter Dropdown */}
+          <div className="w-44 sm:w-56">
+            <CustomSelect
+              value={activeDeptId}
+              onChange={(val) => {
+                setActiveDepartmentId(val as any);
+                setActiveDeptId(val);
+              }}
+              options={[
+                { label: `All Departments (${allProjects.length})`, value: 'booshnam_associates' },
+                ...ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+                  label: `${d.shortName} (${allProjects.filter(p => normalizeDepartmentId(p.department as string) === d.id).length})`,
+                  value: d.id,
+                }))
+              ]}
+              prefix="Dept: "
+              size="sm"
+              variant="brand"
+            />
+          </div>
+
           {/* Count Badge */}
           <span className="h-8 px-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-[5px] border border-slate-200 shadow-2xs flex items-center justify-center">
             {filteredProjects.length}
@@ -1903,6 +1981,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                               <span className="text-[11px] text-slate-400">
                                 {p.location || p.city || 'Chennai'}
                               </span>
+                              {(() => {
+                                const deptId = normalizeDepartmentId(p.department as string);
+                                const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === deptId) || ORGANIZATION_DEPARTMENTS[6];
+                                return (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-700 bg-slate-100/90 px-2 py-0.5 rounded-full border border-slate-200">
+                                      <DepartmentLogo type={deptObj.logoType} size="sm" />
+                                      <span>{deptObj.shortName}</span>
+                                    </span>
+                                  </>
+                                );
+                              })()}
                               <span className="text-slate-300">•</span>
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                 stats.status === 'COMPLETED' 

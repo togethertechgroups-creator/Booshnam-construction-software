@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Building2, Layers, CheckCircle2, Clock, AlertCircle, 
   FileText, Download, Upload, Plus, Eye, Check, X, 
   Search, Filter, ChevronRight, Sparkles, User, Calendar, 
   DollarSign, MapPin, ShieldCheck, ArrowRight, MessageSquare,
-  FileCheck, Shield, Award, HardHat, Compass, BarChart3
+  FileCheck, Shield, Award, HardHat, Compass, BarChart3, ChevronDown
 } from 'lucide-react';
 import { 
   Department, Project, SoilSample, SoilLabTest, 
@@ -26,6 +26,7 @@ interface DepartmentsViewProps {
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onShowToast?: (msg: string) => void;
+  onDepartmentChange?: (dept: Department) => void;
 }
 
 export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
@@ -33,9 +34,34 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   projects = MOCK_PROJECTS,
   isSidebarOpen,
   onToggleSidebar,
-  onShowToast
+  onShowToast,
+  onDepartmentChange
 }) => {
   const [activeDept, setActiveDept] = useState<Department>(initialDepartment);
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (initialDepartment) {
+      setActiveDept(initialDepartment);
+    }
+  }, [initialDepartment]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
+        setIsDeptDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelectDepartment = (dept: Department) => {
+    setActiveDept(dept);
+    setIsDeptDropdownOpen(false);
+    onDepartmentChange?.(dept);
+  };
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || '');
 
   // Soil Investigation Local States
@@ -178,21 +204,140 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     onShowToast?.(action === 'SUPERVISOR_VERIFY' ? 'Payment request verified by supervisor, forwarded to Accounts!' : 'Payment marked as PAID with bank transaction reference!');
   };
 
+  const departmentOptions = [
+    { 
+      id: 'SOIL_INVESTIGATION' as Department, 
+      label: '1. Soil Investigation', 
+      shortLabel: 'Soil Investigation',
+      icon: Compass, 
+      count: `${samples.length} Samples`,
+      desc: 'Borehole logging, lab test verification, SBC calculation & geotechnical reports',
+    },
+    { 
+      id: 'ARCHITECTURE' as Department, 
+      label: '2. Architecture', 
+      shortLabel: 'Architecture',
+      icon: Layers, 
+      count: `${drawings.length} Drawings`,
+      desc: 'Architectural drawings, floor plans, elevations, 3D models & AFC sets',
+    },
+    { 
+      id: 'MARKETING' as Department, 
+      label: '3. Marketing', 
+      shortLabel: 'Marketing & CRM',
+      icon: BarChart3, 
+      count: `${marketingLeads.length} Leads`,
+      desc: 'Client CRM pipeline, incoming inquiries, site visits & conversions',
+    },
+    { 
+      id: 'CONSTRUCTION' as Department, 
+      label: '4. Construction', 
+      shortLabel: 'Construction',
+      icon: HardHat, 
+      count: `${dprs.length} DPRs`,
+      desc: 'Daily progress reports (DPR), site activity, manpower, weather & logs',
+    },
+    { 
+      id: 'ACCOUNTS' as Department, 
+      label: '5. Accounts', 
+      shortLabel: 'Accounts & Finance',
+      icon: DollarSign, 
+      count: `${paymentRequests.length} Payments`,
+      desc: 'Project payment requests, party cashbook, vouchers & disbursements',
+    },
+  ];
+
+  const currentDeptObj = departmentOptions.find(d => d.id === activeDept) || departmentOptions[0];
+  const CurrentIcon = currentDeptObj.icon;
+
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
-      {/* Edge-to-edge Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+      {/* Edge-to-edge Header with Department Dropdown */}
+      <div className="px-6 py-3.5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-20 shadow-2xs">
+        <div className="flex items-center gap-4 flex-wrap">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <span>Department Hub</span>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
-                5 Core Divisions
-              </span>
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
               Coordinated management across Soil Investigation, Architecture, Marketing, Construction, and Accounts
             </p>
+          </div>
+
+          {/* Dedicated Department Dropdown Selector */}
+          <div className="relative" ref={deptDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
+              className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-800 shadow-2xs transition-all cursor-pointer group"
+            >
+              <div className="w-6 h-6 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <CurrentIcon className="w-3.5 h-3.5" />
+              </div>
+              <div className="text-left">
+                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">Selected Division</div>
+                <div className="font-heading text-xs text-slate-900 font-bold leading-tight mt-0.5 flex items-center gap-1.5">
+                  <span>{currentDeptObj.shortLabel}</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700">
+                    {currentDeptObj.count}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-1.5 transition-transform duration-200 ${isDeptDropdownOpen ? 'rotate-180 text-red-600' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDeptDropdownOpen && (
+              <div className="absolute left-0 mt-1.5 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-3.5 py-2 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Select Core Department</span>
+                  <span className="text-[10px] text-red-600 font-bold">5 Divisions Available</span>
+                </div>
+
+                <div className="p-1 space-y-1">
+                  {departmentOptions.map((dept) => {
+                    const Icon = dept.icon;
+                    const isSelected = activeDept === dept.id;
+                    return (
+                      <button
+                        key={dept.id}
+                        type="button"
+                        onClick={() => handleSelectDepartment(dept.id)}
+                        className={`w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-start gap-3 cursor-pointer ${
+                          isSelected 
+                            ? 'bg-red-50/80 border border-red-200 shadow-2xs' 
+                            : 'hover:bg-slate-50 border border-transparent'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                          isSelected ? 'bg-red-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className={`font-heading text-xs ${isSelected ? 'font-bold text-red-700' : 'font-semibold text-slate-800'}`}>
+                              {dept.label}
+                            </span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                              isSelected ? 'bg-red-100 text-red-800' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {dept.count}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                            {dept.desc}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-red-600 shrink-0 mt-1" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -217,35 +362,31 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
         </div>
       </div>
 
-      {/* 5 Department Selector Tabs */}
-      <div className="bg-slate-50/70 border-b border-slate-200 px-4 sm:px-6 pt-3 flex items-center gap-1 overflow-x-auto">
-        {[
-          { id: 'SOIL_INVESTIGATION', label: '1. Soil Investigation', icon: Compass, count: `${samples.length} Samples` },
-          { id: 'ARCHITECTURE', label: '2. Architecture', icon: Layers, count: `${drawings.length} Drawings` },
-          { id: 'MARKETING', label: '3. Marketing', icon: BarChart3, count: `${marketingLeads.length} Leads` },
-          { id: 'CONSTRUCTION', label: '4. Construction', icon: HardHat, count: `${dprs.length} DPRs` },
-          { id: 'ACCOUNTS', label: '5. Accounts', icon: DollarSign, count: `${paymentRequests.length} Payments` },
-        ].map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeDept === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveDept(tab.id as Department)}
-              className={`flex items-center gap-2 px-4 py-2.5 border-b-2 font-medium text-xs rounded-t-lg transition whitespace-nowrap cursor-pointer ${
-                isActive 
-                  ? 'border-red-600 text-red-600 bg-white font-bold shadow-xs' 
-                  : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100/60'
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-red-600' : 'text-slate-400'}`} />
-              <span>{tab.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-red-100 text-red-800' : 'bg-slate-200 text-slate-600'}`}>
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
+      {/* Sub-header Navigation / Division Status Bar */}
+      <div className="bg-slate-50/80 border-b border-slate-200 px-6 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-400 font-medium">Department:</span>
+          <span className="font-heading font-bold text-slate-900 flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-2xs">
+            <CurrentIcon className="w-3.5 h-3.5 text-red-600" />
+            <span>{currentDeptObj.shortLabel}</span>
+          </span>
+          <span className="text-slate-300">•</span>
+          <span className="text-slate-500 text-[11px] hidden sm:inline">
+            {currentDeptObj.desc}
+          </span>
+        </div>
+
+        {/* Quick Division Switcher Dropdown Button */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsDeptDropdownOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-md text-[11px] font-semibold text-slate-700 hover:text-red-600 transition-colors shadow-2xs cursor-pointer"
+          >
+            <span>Switch Division</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+        </div>
       </div>
 
       {/* Department Content Body */}

@@ -3,7 +3,7 @@ import {
   Bell, User as UserIcon, RefreshCw, Calendar,
   Share2, ArrowUpDown, BarChart2, Maximize2, MoreVertical, 
   Search, CheckCircle2, AlertTriangle, Filter, ChevronDown, 
-  Building2, TrendingUp, DollarSign, Layers, ArrowUpRight, ArrowDownRight,
+  TrendingUp, DollarSign, Layers, ArrowDownRight,
   Settings, UserX, LogOut, CheckCheck, Clock, ShieldCheck, X,
   Download, FileSpreadsheet, Check, PieChart, Wallet, CreditCard,
   ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText
@@ -16,6 +16,10 @@ import autoTable from 'jspdf-autotable';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomDatePicker } from '../components/CustomDatePicker';
 import { CustomSelect } from '../components/CustomSelect';
+import { 
+  getActiveDepartmentId, 
+  normalizeDepartmentId 
+} from '../lib/departmentService';
 
 export interface UnderlyingAttendanceRecord {
   id: string;
@@ -65,6 +69,7 @@ const MASTER_EMPLOYEES = [
 interface CompanyDashboardViewProps {
   projects: Project[];
   onSelectProject?: (p: Project) => void;
+  onNavigate?: (view: string) => void;
   canViewCost?: boolean;
   user?: User;
   isSidebarOpen?: boolean;
@@ -74,6 +79,7 @@ interface CompanyDashboardViewProps {
 export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   projects,
   onSelectProject,
+  onNavigate,
   canViewCost = true,
   user,
   isSidebarOpen,
@@ -81,6 +87,18 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 }) => {
   const currentUser = user || MOCK_USER;
   const [activeTab, setActiveTab] = useState<'operational' | 'financial'>('operational');
+
+  // Active Department State (Synchronized with global switcher)
+  const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
+
+  useEffect(() => {
+    const handleDeptChange = (e: any) => {
+      const newId = e.detail || getActiveDepartmentId();
+      setActiveDeptId(newId);
+    };
+    window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
+    return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
+  }, []);
 
   // Header Interactive Dropdowns & Modals
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -305,10 +323,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [healthSearchTerm, setHealthSearchTerm] = useState('');
   const [healthFilterTab, setHealthFilterTab] = useState<'All' | 'Normal' | 'At Risk'>('All');
 
-  // Dynamic Projects derived from projects prop (matches the 9 projects in Projects page)
+  // Dynamic Projects derived from projects prop (matches active department or full portfolio)
   const summaryProjects = useMemo(() => {
-    if (projects && projects.length > 0) {
-      return projects.map((p, idx) => {
+    const rawList = activeDeptId === 'booshnam_associates'
+      ? projects
+      : projects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+
+    if (rawList && rawList.length > 0) {
+      return rawList.map((p, idx) => {
         const title = formatProjectTitle(p);
         const leadPerson = p.assigned_team && p.assigned_team.length > 0
           ? `${p.assigned_team[0].name} (${p.assigned_team[0].role})`
@@ -331,6 +353,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           id: p.id || String(idx + 1),
           code: p.code || `PRJ-00${idx + 1}`,
           name: title,
+          department: p.department,
           category: p.category || p.project_type || 'General',
           personnel: leadPerson,
           status: displayStatus,
@@ -344,7 +367,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
       });
     }
     return [];
-  }, [projects]);
+  }, [projects, activeDeptId]);
 
   const kpiCounts = useMemo(() => {
     let notStarted = 0;

@@ -31,6 +31,9 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        heading: ['Nexa', '"Nexa Heavy"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        title: ['Nexa', '"Nexa Heavy"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        nexa: ['Nexa', '"Nexa Heavy"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
         'md': '5px',

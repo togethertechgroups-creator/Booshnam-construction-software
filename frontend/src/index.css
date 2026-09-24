@@ -1,3 +1,27 @@
+@font-face {
+  font-family: 'Nexa';
+  src: url('./assets/Nexa-ExtraLight.ttf') format('truetype');
+  font-weight: 100 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nexa';
+  src: url('./assets/Nexa-Heavy.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nexa Heavy';
+  src: url('./assets/Nexa-Heavy.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,10 +30,25 @@
   body {
     @apply bg-site-bg text-site-text antialiased font-sans;
   }
+
+  /* Headings & Titles: Exclusively use Nexa Heavy font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Nexa', 'Nexa Heavy', 'Inter', system-ui, -apple-system, sans-serif;
+  }
 }
 
 /* Card corner radius limited to 5px across all views */
 @layer utilities {
+  .font-heading,
+  .font-title,
+  .font-nexa,
+  .heading-title,
+  .page-title,
+  .card-title,
+  .modal-title {
+    font-family: 'Nexa', 'Nexa Heavy', 'Inter', system-ui, -apple-system, sans-serif !important;
+  }
+
   .rounded-lg,
   .rounded-xl,
   .rounded-2xl,

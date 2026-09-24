@@ -1,8 +1,14 @@
 export type Department = 
+  | 'GOVERNMENT_PROJECT'
+  | 'STRUCTURAL'
+  | 'CBE_SOIL_INVESTIGATION'
+  | 'ART_SCULPTURE'
+  | 'MATERIAL_TESTING'
+  | 'CONSTRUCTION'
+  | 'SURVEY'
+  | 'ARCHITECTURE'
   | 'SOIL_INVESTIGATION' 
-  | 'ARCHITECTURE' 
   | 'MARKETING' 
-  | 'CONSTRUCTION' 
   | 'ACCOUNTS';
 
 export interface Organization {
@@ -99,6 +105,8 @@ export interface Project {
   is_pinned?: boolean;
   stage?: string;
   category?: string;
+  department?: Department | string;
+  department_name?: string;
   company_branch?: string;
   project_orientation?: string;
   project_dimension?: string;

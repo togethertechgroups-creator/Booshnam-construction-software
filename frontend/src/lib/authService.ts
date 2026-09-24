@@ -1,4 +1,4 @@
-﻿import { ALL_SYSTEM_MODULES } from './roleAccess';
+import { ALL_SYSTEM_MODULES } from './roleAccess';
 import { getStaffMembers } from './staffService';
 
 export interface UserAccount {
@@ -203,7 +203,7 @@ export function isPageAllowedForActiveUser(pageId: string): boolean {
   if (pageId === 'report') targetId = 'site_ops';
   if (pageId === 'library') targetId = 'documents';
   if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
-  if (pageId === 'soil_investigation' || pageId === 'architecture') targetId = 'departments';
+  if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
 
   return account.allowedPages.includes(targetId) || account.allowedPages.includes(pageId);
 }

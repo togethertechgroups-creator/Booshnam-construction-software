@@ -7,7 +7,8 @@ import {
   Trophy, Bell, ChevronDown, ExternalLink, RefreshCw, Printer, 
   Sparkles, SlidersHorizontal, Calendar, Phone, Mail, FileSpreadsheet,
   ArrowRight, Shield, Layers, HelpCircle, CheckCheck, Eye,
-  ArrowUp, ArrowDown, MapPin, ArrowLeft, ChevronRight
+  ArrowUp, ArrowDown, MapPin, ArrowLeft, ChevronRight,
+  Tag, HardHat, Truck, Fuel, Paperclip, Upload, ArrowLeftRight
 } from 'lucide-react';
 import { Project } from '../types';
 import { MOCK_PROJECTS } from '../lib/mockData';
@@ -299,21 +300,356 @@ export interface BankAccountRecord {
   tallyLedgerName: string;
 }
 
+export const INITIAL_BANK_ACCOUNTS: BankAccountRecord[] = [
+  {
+    id: 'ba-1',
+    accountName: 'Booshnam Associates Operations A/c',
+    bankName: 'HDFC Bank Ltd',
+    accountNumber: '•••• •••• 4892',
+    ifscCode: 'HDFC0001234',
+    accountType: 'Current',
+    balance: 1845200,
+    status: 'Active',
+    tallyLedgerName: 'HDFC Current Account (Main)'
+  },
+  {
+    id: 'ba-2',
+    accountName: 'Project Escrow Account (RERA)',
+    bankName: 'State Bank of India',
+    accountNumber: '•••• •••• 9012',
+    ifscCode: 'SBIN0005678',
+    accountType: 'Escrow',
+    balance: 4280000,
+    status: 'Active',
+    tallyLedgerName: 'SBI Project Escrow Account'
+  },
+  {
+    id: 'ba-3',
+    accountName: 'Site Petty Cash Vault - Chromepet',
+    bankName: 'Internal Site Cash Safe',
+    accountNumber: 'PETTY-CHR-01',
+    ifscCode: 'N/A (Cash)',
+    accountType: 'Petty Cash',
+    balance: 35000,
+    status: 'Active',
+    tallyLedgerName: 'Site Imprest Cash - Chromepet'
+  }
+];
+
+export interface AccountTransferRecord {
+  id: string;
+  transferCode: string;
+  date: string;
+  fromAccountId: string;
+  fromAccountName: string;
+  toAccountId: string;
+  toAccountName: string;
+  amount: number;
+  transferMode: 'NEFT/RTGS' | 'IMPS' | 'Cheque' | 'Cash Withdrawal' | 'Cash Deposit' | 'Internal Contra';
+  referenceNo: string;
+  purpose: string;
+  projectName?: string;
+  initiatedBy: string;
+  status: 'Completed' | 'Pending Verification' | 'Rejected';
+  notes?: string;
+}
+
+export const INITIAL_TRANSFERS: AccountTransferRecord[] = [
+  {
+    id: 'trf-1',
+    transferCode: 'TRF-2026-042',
+    date: '14 Jul 2026',
+    fromAccountId: 'ba-1',
+    fromAccountName: 'Booshnam Associates Operations A/c',
+    toAccountId: 'ba-3',
+    toAccountName: 'Site Petty Cash Vault - Chromepet',
+    amount: 50000,
+    transferMode: 'Cash Withdrawal',
+    referenceNo: 'SLIP-WDL-99401',
+    purpose: 'Site Imprest Cash & Emergency Labour Replenishment',
+    projectName: 'RO66 - Chromepet Plot Development',
+    initiatedBy: 'K. Balasubramanian (Site Incharge)',
+    status: 'Completed',
+    notes: 'Cheque self-withdrawal for on-site cash vault top-up'
+  },
+  {
+    id: 'trf-2',
+    transferCode: 'TRF-2026-041',
+    date: '11 Jul 2026',
+    fromAccountId: 'ba-2',
+    fromAccountName: 'Project Escrow Account (RERA)',
+    toAccountId: 'ba-1',
+    toAccountName: 'Booshnam Associates Operations A/c',
+    amount: 1500000,
+    transferMode: 'NEFT/RTGS',
+    referenceNo: 'SBIN20260711902',
+    purpose: 'Milestone 3 Structural Concrete Certified Release',
+    projectName: 'Villa Grande Phase 2',
+    initiatedBy: 'S. Raman (Finance Director)',
+    status: 'Completed',
+    notes: 'Architect & CA completion certificate submitted to RERA escrow desk'
+  },
+  {
+    id: 'trf-3',
+    transferCode: 'TRF-2026-040',
+    date: '08 Jul 2026',
+    fromAccountId: 'ba-1',
+    fromAccountName: 'Booshnam Associates Operations A/c',
+    toAccountId: 'ba-2',
+    toAccountName: 'Project Escrow Account (RERA)',
+    amount: 500000,
+    transferMode: 'Internal Contra',
+    referenceNo: 'HDFC20260708012',
+    purpose: 'Promoter Share Deposit for Commercial Hub Escrow',
+    projectName: 'Commercial Hub',
+    initiatedBy: 'Managing Director',
+    status: 'Completed',
+    notes: 'Mandatory 30% builder equity allocation for procurement lock'
+  },
+  {
+    id: 'trf-4',
+    transferCode: 'TRF-2026-039',
+    date: '04 Jul 2026',
+    fromAccountId: 'ba-3',
+    fromAccountName: 'Site Petty Cash Vault - Chromepet',
+    toAccountId: 'ba-1',
+    toAccountName: 'Booshnam Associates Operations A/c',
+    amount: 18000,
+    transferMode: 'Cash Deposit',
+    referenceNo: 'DEP-HDFC-44109',
+    purpose: 'Excess Site Trenching Contingency Re-deposit',
+    projectName: 'RO66 - Chromepet Plot Development',
+    initiatedBy: 'Site Accountant',
+    status: 'Completed',
+    notes: 'Surplus site cash remitted back to bank branch'
+  },
+  {
+    id: 'trf-5',
+    transferCode: 'TRF-2026-038',
+    date: '01 Jul 2026',
+    fromAccountId: 'ba-1',
+    fromAccountName: 'Booshnam Associates Operations A/c',
+    toAccountId: 'ba-3',
+    toAccountName: 'Site Petty Cash Vault - Chromepet',
+    amount: 35000,
+    transferMode: 'IMPS',
+    referenceNo: 'IMPS/260701/9921',
+    purpose: 'Monthly Petty Cash Imprest Float Creation',
+    projectName: 'RO66 - Chromepet Plot Development',
+    initiatedBy: 'Finance Executive',
+    status: 'Completed',
+    notes: 'Fixed monthly opening petty cash float for site team'
+  }
+];
+
+export interface ExpenseItem {
+  id: string;
+  expenseCode: string;
+  date: string;
+  title: string;
+  category: 'Materials' | 'Labour & Daily Wages' | 'Machinery & Equipment' | 'Site Petty Cash' | 'Subcontractor' | 'Fuel & Logistics' | 'Safety & Compliance' | 'Utilities & Admin';
+  projectName: string;
+  subProjectOrLocation?: string;
+  partyOrVendorName: string;
+  amount: number;
+  paymentMode: 'NEFT/RTGS' | 'UPI' | 'Petty Cash' | 'Corporate Card' | 'Cheque';
+  paidFromAccount: string;
+  referenceNo?: string;
+  billNumber?: string;
+  billFile?: string;
+  status: 'Approved' | 'Paid' | 'Pending Approval' | 'Rejected';
+  approvedBy?: string;
+  notes?: string;
+}
+
+export const INITIAL_EXPENSES: ExpenseItem[] = [
+  {
+    id: 'exp-1',
+    expenseCode: 'EXP-2026-105',
+    date: '14 Jul 2026',
+    title: 'JCB 3DX Excavator Site Clearance & Operator (32 Hrs)',
+    category: 'Machinery & Equipment',
+    projectName: 'RO66 - Chromepet Plot Development',
+    subProjectOrLocation: 'Trench Digging & Earth Moving Sector 2',
+    partyOrVendorName: 'Ranjith Earthmovers & Machinery',
+    amount: 48000,
+    paymentMode: 'UPI',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'UPI/260714/90218',
+    billNumber: 'REM-2026-88',
+    status: 'Paid',
+    approvedBy: 'K. Balasubramanian (Site Incharge)',
+    notes: 'Site clearance and foundation trenching for boundary wall'
+  },
+  {
+    id: 'exp-2',
+    expenseCode: 'EXP-2026-104',
+    date: '13 Jul 2026',
+    title: 'UltraTech ReadyMix Concrete M25 Batch Supply (45 CuM)',
+    category: 'Materials',
+    projectName: 'Villa Grande Phase 2',
+    subProjectOrLocation: '1st Floor Slab Casting Pouring',
+    partyOrVendorName: 'UltraTech Cement Agency Ltd',
+    amount: 162000,
+    paymentMode: 'NEFT/RTGS',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'HDFC20260713008',
+    billNumber: 'UTC-CHN-9941',
+    status: 'Paid',
+    approvedBy: 'Rajesh Kumar (Project Director)',
+    notes: 'Slump tested and certified on site, 45 cubic meters'
+  },
+  {
+    id: 'exp-3',
+    expenseCode: 'EXP-2026-103',
+    date: '12 Jul 2026',
+    title: 'Masonry & Bar-Bending Gang Weekly Wage Muster (18 Workers)',
+    category: 'Labour & Daily Wages',
+    projectName: 'Residential Tower B',
+    subProjectOrLocation: 'Structural Rebar Tying Floor 3',
+    partyOrVendorName: 'Senthil Kumar (Muster Lead)',
+    amount: 94500,
+    paymentMode: 'NEFT/RTGS',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'HDFC20260712055',
+    billNumber: 'LAB-WK28-03',
+    status: 'Paid',
+    approvedBy: 'Site Engineer & HR Accounts',
+    notes: 'Weekly muster settlement for 18 barbenders and helpers'
+  },
+  {
+    id: 'exp-4',
+    expenseCode: 'EXP-2026-102',
+    date: '11 Jul 2026',
+    title: 'Site Drinking & Curing Water Tankers (12,000L x 6 Trips)',
+    category: 'Site Petty Cash',
+    projectName: 'RO66 - Chromepet Plot Development',
+    subProjectOrLocation: 'Concrete Curing & Worker Amenities',
+    partyOrVendorName: 'Sri Amman Water Supply Services',
+    amount: 7200,
+    paymentMode: 'Petty Cash',
+    paidFromAccount: 'Site Petty Cash Vault - Chromepet',
+    referenceNo: 'VOUCH-SITE-044',
+    billNumber: 'SAW-8812',
+    status: 'Paid',
+    approvedBy: 'Site Supervisor',
+    notes: 'Daily curing water supply during hot afternoon cycles'
+  },
+  {
+    id: 'exp-5',
+    expenseCode: 'EXP-2026-101',
+    date: '10 Jul 2026',
+    title: 'Fe550D TMT Reinforcement Steel 16mm & 20mm (8 Metric Tonnes)',
+    category: 'Materials',
+    projectName: 'Commercial Hub',
+    subProjectOrLocation: 'Retaining Wall & Column Cages',
+    partyOrVendorName: 'Sri Murugan Steel Traders',
+    amount: 384000,
+    paymentMode: 'NEFT/RTGS',
+    paidFromAccount: 'Project Escrow Account (RERA)',
+    referenceNo: 'SBIN20260710112',
+    billNumber: 'MST-2026-0419',
+    status: 'Approved',
+    approvedBy: 'Procurement Head & Accounts',
+    notes: 'Weight-bridge challans verified at site entry gate'
+  },
+  {
+    id: 'exp-6',
+    expenseCode: 'EXP-2026-100',
+    date: '08 Jul 2026',
+    title: 'Certified Safety Helmets, Reflective Vests & Harnesses (50 Sets)',
+    category: 'Safety & Compliance',
+    projectName: 'Commercial Hub',
+    subProjectOrLocation: 'Site Safety Induction Stores',
+    partyOrVendorName: 'Apex Safety Solutions',
+    amount: 24500,
+    paymentMode: 'Corporate Card',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'CARD-HDFC-9912',
+    billNumber: 'APX-77310',
+    status: 'Paid',
+    approvedBy: 'Safety Officer',
+    notes: 'Mandatory PPE kit reissue for subcontractor crew'
+  },
+  {
+    id: 'exp-7',
+    expenseCode: 'EXP-2026-099',
+    date: '06 Jul 2026',
+    title: 'High-Speed Diesel for 62.5 kVA Backup Generator (420 Litres)',
+    category: 'Fuel & Logistics',
+    projectName: 'Villa Grande Phase 2',
+    subProjectOrLocation: 'DG Yard - Power Backup During Grid Maintenance',
+    partyOrVendorName: 'Shell Highway Outlet Chromepet',
+    amount: 39900,
+    paymentMode: 'Corporate Card',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'CARD-HDFC-8819',
+    billNumber: 'SHL-291823',
+    status: 'Paid',
+    approvedBy: 'Electrical Engineer',
+    notes: 'Emergency generator fuel barrel filling with printed slip'
+  },
+  {
+    id: 'exp-8',
+    expenseCode: 'EXP-2026-098',
+    date: '04 Jul 2026',
+    title: 'Italian Marble & Vitrified Tile Laying Subcontract Bill #2',
+    category: 'Subcontractor',
+    projectName: 'Villa Grande Phase 2',
+    subProjectOrLocation: 'Villa 101 & 102 Interior Living Area',
+    partyOrVendorName: 'Balaji Stone Craft & Tiling',
+    amount: 145000,
+    paymentMode: 'NEFT/RTGS',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'HDFC20260704192',
+    billNumber: 'BSC-VOUCH-02',
+    status: 'Approved',
+    approvedBy: 'Architect Incharge & Accounts',
+    notes: 'Passed after joint measurement sheet verification'
+  },
+  {
+    id: 'exp-9',
+    expenseCode: 'EXP-2026-097',
+    date: '02 Jul 2026',
+    title: 'Site Electricity Bill & Temporary Transformer Inspection Fee',
+    category: 'Utilities & Admin',
+    projectName: 'Residential Tower B',
+    subProjectOrLocation: 'Substation Feeder Pillar 1',
+    partyOrVendorName: 'Tamil Nadu Electricity Board (TNEB)',
+    amount: 28400,
+    paymentMode: 'NEFT/RTGS',
+    paidFromAccount: 'Booshnam Associates Operations A/c',
+    referenceNo: 'TNEB-ONL-20260702',
+    billNumber: 'EB-BILL-449102',
+    status: 'Paid',
+    approvedBy: 'Admin & Accounts',
+    notes: 'Monthly power tariff for 50kW industrial site connection'
+  }
+];
+
 interface AccountsFinanceViewProps {
   projects?: Project[];
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onShowToast?: (msg: string) => void;
+  initialTab?: 'party' | 'transaction' | 'payment_requests' | 'expenses' | 'account_transfer' | 'accounts';
 }
 
 export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   projects = MOCK_PROJECTS,
   isSidebarOpen,
   onToggleSidebar,
-  onShowToast
+  onShowToast,
+  initialTab
 }) => {
-  // Navigation Tabs: Party, Transaction, Payment Requests, Accounts
-  const [activeTab, setActiveTab] = useState<'party' | 'transaction' | 'payment_requests' | 'accounts'>('party');
+  // Navigation Tabs: Party, Transaction, Payment Requests, Expenses, Account to Account Transfer, Accounts
+  const [activeTab, setActiveTab] = useState<'party' | 'transaction' | 'payment_requests' | 'expenses' | 'account_transfer' | 'accounts'>(initialTab || 'party');
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Parties State with LocalStorage Persistence
   const [parties, setParties] = useState<PartyRecord[]>(() => {
@@ -494,42 +830,23 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
     }
   ]);
 
-  // Bank Accounts State
-  const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>([
-    {
-      id: 'ba-1',
-      accountName: 'Booshnam Associates Operations A/c',
-      bankName: 'HDFC Bank Ltd',
-      accountNumber: '•••• •••• 4892',
-      ifscCode: 'HDFC0001234',
-      accountType: 'Current',
-      balance: 1845200,
-      status: 'Active',
-      tallyLedgerName: 'HDFC Current Account (Main)'
-    },
-    {
-      id: 'ba-2',
-      accountName: 'Project Escrow Account (RERA)',
-      bankName: 'State Bank of India',
-      accountNumber: '•••• •••• 9012',
-      ifscCode: 'SBIN0005678',
-      accountType: 'Escrow',
-      balance: 4280000,
-      status: 'Active',
-      tallyLedgerName: 'SBI Project Escrow Account'
-    },
-    {
-      id: 'ba-3',
-      accountName: 'Site Petty Cash Vault - Chromepet',
-      bankName: 'Internal Site Cash Safe',
-      accountNumber: 'PETTY-CHR-01',
-      ifscCode: 'N/A (Cash)',
-      accountType: 'Petty Cash',
-      balance: 35000,
-      status: 'Active',
-      tallyLedgerName: 'Site Imprest Cash - Chromepet'
-    }
-  ]);
+  // Bank Accounts State with LocalStorage Persistence
+  const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_finance_bank_accounts_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_BANK_ACCOUNTS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_finance_bank_accounts_v1', JSON.stringify(bankAccounts));
+    } catch {}
+  }, [bankAccounts]);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -548,6 +865,15 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const [isAddPartyModalOpen, setIsAddPartyModalOpen] = useState(false);
   const [isRecordTxnModalOpen, setIsRecordTxnModalOpen] = useState(false);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
+
+  // Add Bank / Cash Account Form State
+  const [newAccName, setNewAccName] = useState('');
+  const [newAccBankName, setNewAccBankName] = useState('');
+  const [newAccNumber, setNewAccNumber] = useState('');
+  const [newAccIfsc, setNewAccIfsc] = useState('');
+  const [newAccType, setNewAccType] = useState<BankAccountRecord['accountType']>('Current');
+  const [newAccBalance, setNewAccBalance] = useState('');
+  const [newAccTallyLedger, setNewAccTallyLedger] = useState('');
 
   // Party Tab Filters, Active Overview & Drawer States
   const [partySearchQuery, setPartySearchQuery] = useState('');
@@ -1096,6 +1422,446 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
     }
   };
 
+  // Expenses State with LocalStorage Persistence
+  const [expenses, setExpenses] = useState<ExpenseItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_finance_expenses_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Fallback
+    }
+    return INITIAL_EXPENSES;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_finance_expenses_v1', JSON.stringify(expenses));
+    } catch {
+      // Ignore
+    }
+  }, [expenses]);
+
+  // Expenses Filters & Search State
+  const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
+  const [expenseProjectFilter, setExpenseProjectFilter] = useState('All');
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState<'All' | 'Paid' | 'Approved' | 'Pending Approval' | 'Rejected'>('All');
+  const [isExpenseFilterOpen, setIsExpenseFilterOpen] = useState(false);
+
+  // Expenses Modals
+  const [isRecordExpenseModalOpen, setIsRecordExpenseModalOpen] = useState(false);
+  const [selectedExpenseDetails, setSelectedExpenseDetails] = useState<ExpenseItem | null>(null);
+
+  // New Expense Form State
+  const [newExpTitle, setNewExpTitle] = useState('');
+  const [newExpCategory, setNewExpCategory] = useState<ExpenseItem['category']>('Materials');
+  const [newExpAmount, setNewExpAmount] = useState('');
+  const [newExpProject, setNewExpProject] = useState(projects[0]?.name || 'Villa Grande');
+  const [newExpLocation, setNewExpLocation] = useState('');
+  const [newExpPayee, setNewExpPayee] = useState('');
+  const [newExpAccount, setNewExpAccount] = useState(() => {
+    return bankAccounts[0]?.accountName || 'Booshnam Associates Operations A/c';
+  });
+  const [newExpMode, setNewExpMode] = useState<ExpenseItem['paymentMode']>('NEFT/RTGS');
+  const [newExpDate, setNewExpDate] = useState(() => {
+    return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  });
+  const [newExpRef, setNewExpRef] = useState('');
+  const [newExpBillNo, setNewExpBillNo] = useState('');
+  const [newExpFileName, setNewExpFileName] = useState('');
+  const [newExpStatus, setNewExpStatus] = useState<ExpenseItem['status']>('Paid');
+  const [newExpNotes, setNewExpNotes] = useState('');
+
+  // Filtered Expenses
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      if (expenseStatusFilter !== 'All' && exp.status !== expenseStatusFilter) return false;
+      if (expenseCategoryFilter !== 'All' && exp.category !== expenseCategoryFilter) return false;
+      if (expenseProjectFilter !== 'All' && !exp.projectName.toLowerCase().includes(expenseProjectFilter.toLowerCase())) return false;
+      if (expenseSearchQuery.trim()) {
+        const q = expenseSearchQuery.toLowerCase();
+        const matchesCode = exp.expenseCode.toLowerCase().includes(q);
+        const matchesTitle = exp.title.toLowerCase().includes(q);
+        const matchesParty = exp.partyOrVendorName.toLowerCase().includes(q);
+        const matchesProj = exp.projectName.toLowerCase().includes(q);
+        const matchesRef = (exp.referenceNo || '').toLowerCase().includes(q);
+        const matchesBill = (exp.billNumber || '').toLowerCase().includes(q);
+        const matchesCat = exp.category.toLowerCase().includes(q);
+        if (!matchesCode && !matchesTitle && !matchesParty && !matchesProj && !matchesRef && !matchesBill && !matchesCat) return false;
+      }
+      return true;
+    });
+  }, [expenses, expenseStatusFilter, expenseCategoryFilter, expenseProjectFilter, expenseSearchQuery]);
+
+  // Expenses Financial Metrics
+  const expenseMetrics = useMemo(() => {
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const materials = expenses.filter(e => e.category === 'Materials').reduce((sum, e) => sum + e.amount, 0);
+    const labourAndMachinery = expenses.filter(e => e.category === 'Labour & Daily Wages' || e.category === 'Machinery & Equipment').reduce((sum, e) => sum + e.amount, 0);
+    const sitePetty = expenses.filter(e => e.category === 'Site Petty Cash' || e.category === 'Fuel & Logistics' || e.category === 'Utilities & Admin' || e.category === 'Safety & Compliance').reduce((sum, e) => sum + e.amount, 0);
+    const paidAmount = expenses.filter(e => e.status === 'Paid').reduce((sum, e) => sum + e.amount, 0);
+    const pendingAmount = expenses.filter(e => e.status === 'Pending Approval' || e.status === 'Approved').reduce((sum, e) => sum + e.amount, 0);
+    return {
+      total,
+      materials,
+      labourAndMachinery,
+      sitePetty,
+      paidAmount,
+      pendingAmount
+    };
+  }, [expenses]);
+
+  // Handle Save Expense
+  const handleSaveExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(newExpAmount);
+    if (!amt || amt <= 0) {
+      alert('Please enter a valid expense amount');
+      return;
+    }
+    if (!newExpTitle.trim()) {
+      alert('Please enter an expense title / description');
+      return;
+    }
+
+    const nextCode = `EXP-2026-${String(expenses.length + 106).padStart(3, '0')}`;
+    const newExp: ExpenseItem = {
+      id: `exp-${Date.now()}`,
+      expenseCode: nextCode,
+      date: newExpDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      title: newExpTitle.trim(),
+      category: newExpCategory,
+      projectName: newExpProject,
+      subProjectOrLocation: newExpLocation || undefined,
+      partyOrVendorName: newExpPayee || 'Self / Site Cash',
+      amount: amt,
+      paymentMode: newExpMode,
+      paidFromAccount: newExpAccount,
+      referenceNo: newExpRef || `VOUCH-${Date.now().toString().slice(-6)}`,
+      billNumber: newExpBillNo || undefined,
+      billFile: newExpFileName || undefined,
+      status: newExpStatus,
+      notes: newExpNotes || undefined,
+      approvedBy: newExpStatus === 'Paid' || newExpStatus === 'Approved' ? 'Project Accounts' : undefined
+    };
+
+    // If Paid, deduct from the designated bank or cash account balance
+    if (newExpStatus === 'Paid') {
+      setBankAccounts(prev => prev.map(acc => {
+        if (acc.accountName === newExpAccount || acc.id === newExpAccount) {
+          return { ...acc, balance: Math.max(0, acc.balance - amt) };
+        }
+        return acc;
+      }));
+    }
+
+    setExpenses(prev => [newExp, ...prev]);
+    setIsRecordExpenseModalOpen(false);
+
+    // Reset Form
+    setNewExpTitle('');
+    setNewExpAmount('');
+    setNewExpPayee('');
+    setNewExpLocation('');
+    setNewExpRef('');
+    setNewExpBillNo('');
+    setNewExpFileName('');
+    setNewExpNotes('');
+
+    if (onShowToast) {
+      onShowToast(`Expense voucher ${nextCode} for ₹${amt.toLocaleString('en-IN')} recorded successfully`);
+    }
+  };
+
+  // Export Expenses to CSV
+  const handleExportExpenses = () => {
+    const headers = ['Voucher Code', 'Date', 'Expense Title', 'Category', 'Project', 'Vendor / Payee', 'Amount (₹)', 'Payment Mode', 'Paid Account', 'Status', 'Ref No'];
+    const rows = filteredExpenses.map(e => [
+      `"${e.expenseCode}"`,
+      `"${e.date}"`,
+      `"${e.title.replace(/"/g, '""')}"`,
+      `"${e.category}"`,
+      `"${e.projectName.replace(/"/g, '""')}"`,
+      `"${e.partyOrVendorName.replace(/"/g, '""')}"`,
+      e.amount,
+      `"${e.paymentMode}"`,
+      `"${e.paidFromAccount}"`,
+      `"${e.status}"`,
+      `"${e.referenceNo || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Booshnam_Expenses_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (onShowToast) onShowToast('Exported expenses report to CSV');
+  };
+
+  // Quick Status Update for Expense
+  const handleUpdateExpenseStatus = (expId: string, newStatus: 'Paid' | 'Approved') => {
+    const target = expenses.find(e => e.id === expId);
+    if (target && newStatus === 'Paid' && target.status !== 'Paid') {
+      setBankAccounts(prev => prev.map(acc => {
+        if (acc.accountName === target.paidFromAccount || acc.id === target.paidFromAccount) {
+          return { ...acc, balance: Math.max(0, acc.balance - target.amount) };
+        }
+        return acc;
+      }));
+    }
+
+    setExpenses(prev => prev.map(exp => {
+      if (exp.id === expId) {
+        return {
+          ...exp,
+          status: newStatus,
+          approvedBy: 'Project Accounts Manager'
+        };
+      }
+      return exp;
+    }));
+    if (selectedExpenseDetails && selectedExpenseDetails.id === expId) {
+      setSelectedExpenseDetails(prev => prev ? { ...prev, status: newStatus, approvedBy: 'Project Accounts Manager' } : null);
+    }
+    if (onShowToast) {
+      onShowToast(`Expense voucher marked as ${newStatus}`);
+    }
+  };
+
+  // Account Transfers State with LocalStorage Persistence
+  const [transfers, setTransfers] = useState<AccountTransferRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_finance_transfers_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_TRANSFERS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_finance_transfers_v1', JSON.stringify(transfers));
+    } catch {}
+  }, [transfers]);
+
+  // Account Transfers Filters & Search State
+  const [transferSearchQuery, setTransferSearchQuery] = useState('');
+  const [transferAccountFilter, setTransferAccountFilter] = useState('All');
+  const [transferModeFilter, setTransferModeFilter] = useState('All');
+  const [transferStatusFilter, setTransferStatusFilter] = useState<'All' | 'Completed' | 'Pending Verification' | 'Rejected'>('All');
+  const [isTransferFilterOpen, setIsTransferFilterOpen] = useState(false);
+
+  // Account Transfer Modals
+  const [isNewTransferModalOpen, setIsNewTransferModalOpen] = useState(false);
+  const [selectedTransferDetails, setSelectedTransferDetails] = useState<AccountTransferRecord | null>(null);
+
+  // New Transfer Form State
+  const [newTrfFromAccountId, setNewTrfFromAccountId] = useState('ba-1');
+  const [newTrfToAccountId, setNewTrfToAccountId] = useState('ba-3');
+  const [newTrfAmount, setNewTrfAmount] = useState('');
+  const [newTrfMode, setNewTrfMode] = useState<AccountTransferRecord['transferMode']>('Cash Withdrawal');
+  const [newTrfDate, setNewTrfDate] = useState(() => {
+    return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  });
+  const [newTrfRef, setNewTrfRef] = useState('');
+  const [newTrfPurpose, setNewTrfPurpose] = useState('');
+  const [newTrfProject, setNewTrfProject] = useState(projects[0]?.name || 'RO66 - Chromepet Plot Development');
+  const [newTrfInitiatedBy, setNewTrfInitiatedBy] = useState('Finance Incharge');
+  const [newTrfNotes, setNewTrfNotes] = useState('');
+
+  // Filtered Transfers
+  const filteredTransfers = useMemo(() => {
+    return transfers.filter(trf => {
+      if (transferStatusFilter !== 'All' && trf.status !== transferStatusFilter) return false;
+      if (transferModeFilter !== 'All' && trf.transferMode !== transferModeFilter) return false;
+      if (transferAccountFilter !== 'All') {
+        if (trf.fromAccountId !== transferAccountFilter && trf.toAccountId !== transferAccountFilter) return false;
+      }
+      if (transferSearchQuery.trim()) {
+        const q = transferSearchQuery.toLowerCase();
+        const matchesCode = trf.transferCode.toLowerCase().includes(q);
+        const matchesFrom = trf.fromAccountName.toLowerCase().includes(q);
+        const matchesTo = trf.toAccountName.toLowerCase().includes(q);
+        const matchesPurpose = trf.purpose.toLowerCase().includes(q);
+        const matchesRef = trf.referenceNo.toLowerCase().includes(q);
+        const matchesProj = (trf.projectName || '').toLowerCase().includes(q);
+        if (!matchesCode && !matchesFrom && !matchesTo && !matchesPurpose && !matchesRef && !matchesProj) return false;
+      }
+      return true;
+    });
+  }, [transfers, transferStatusFilter, transferModeFilter, transferAccountFilter, transferSearchQuery]);
+
+  // Account Transfer Metrics
+  const transferMetrics = useMemo(() => {
+    const totalTransferred = transfers.filter(t => t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    const pettyCashTransfers = transfers.filter(t => t.toAccountId === 'ba-3' && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    const interBankTransfers = transfers.filter(t => (t.toAccountId === 'ba-1' || t.toAccountId === 'ba-2') && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    return {
+      totalTransferred,
+      pettyCashTransfers,
+      interBankTransfers,
+      count: transfers.length
+    };
+  }, [transfers]);
+
+  // Handle Save New Account Transfer
+  const handleSaveTransfer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(newTrfAmount);
+    if (!amt || amt <= 0) {
+      alert('Please enter a valid transfer amount');
+      return;
+    }
+    if (newTrfFromAccountId === newTrfToAccountId) {
+      alert('Source and destination accounts must be different');
+      return;
+    }
+
+    const sourceAcc = bankAccounts.find(a => a.id === newTrfFromAccountId);
+    const destAcc = bankAccounts.find(a => a.id === newTrfToAccountId);
+    if (!sourceAcc || !destAcc) {
+      alert('Please select valid accounts');
+      return;
+    }
+
+    if (sourceAcc.balance < amt) {
+      alert(`Insufficient funds in ${sourceAcc.accountName}. Available: ₹${sourceAcc.balance.toLocaleString('en-IN')}`);
+      return;
+    }
+
+    const nextCode = `TRF-2026-${String(transfers.length + 43).padStart(3, '0')}`;
+    const newTrf: AccountTransferRecord = {
+      id: `trf-${Date.now()}`,
+      transferCode: nextCode,
+      date: newTrfDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      fromAccountId: sourceAcc.id,
+      fromAccountName: sourceAcc.accountName,
+      toAccountId: destAcc.id,
+      toAccountName: destAcc.accountName,
+      amount: amt,
+      transferMode: newTrfMode,
+      referenceNo: newTrfRef || `REF-TRF-${Date.now().toString().slice(-6)}`,
+      purpose: newTrfPurpose.trim() || 'Internal Liquidity & Imprest Transfer',
+      projectName: newTrfProject,
+      initiatedBy: newTrfInitiatedBy || 'Finance Incharge',
+      status: 'Completed',
+      notes: newTrfNotes || undefined
+    };
+
+    // Update balances dynamically across source and destination accounts
+    setBankAccounts(prev => prev.map(acc => {
+      if (acc.id === sourceAcc.id) {
+        return { ...acc, balance: acc.balance - amt };
+      }
+      if (acc.id === destAcc.id) {
+        return { ...acc, balance: acc.balance + amt };
+      }
+      return acc;
+    }));
+
+    setTransfers(prev => [newTrf, ...prev]);
+    setIsNewTransferModalOpen(false);
+
+    // Reset Form
+    setNewTrfAmount('');
+    setNewTrfRef('');
+    setNewTrfPurpose('');
+    setNewTrfNotes('');
+
+    if (onShowToast) {
+      onShowToast(`Transferred ₹${amt.toLocaleString('en-IN')} from ${sourceAcc.bankName} to ${destAcc.bankName} successfully!`);
+    }
+  };
+
+  // Export Transfers to CSV
+  const handleExportTransfers = () => {
+    const headers = ['Voucher Code', 'Date', 'From Account', 'To Account', 'Amount (₹)', 'Transfer Mode', 'Reference / UTR', 'Purpose', 'Project', 'Status', 'Initiated By'];
+    const rows = filteredTransfers.map(t => [
+      `"${t.transferCode}"`,
+      `"${t.date}"`,
+      `"${t.fromAccountName.replace(/"/g, '""')}"`,
+      `"${t.toAccountName.replace(/"/g, '""')}"`,
+      t.amount,
+      `"${t.transferMode}"`,
+      `"${t.referenceNo}"`,
+      `"${t.purpose.replace(/"/g, '""')}"`,
+      `"${(t.projectName || '').replace(/"/g, '""')}"`,
+      `"${t.status}"`,
+      `"${t.initiatedBy}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Booshnam_Account_Transfers_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (onShowToast) onShowToast('Exported account transfers report to CSV');
+  };
+
+  // Handle Save New Bank / Cash Account
+  const handleSaveAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccName.trim()) {
+      alert('Please enter an account or ledger name');
+      return;
+    }
+
+    const bal = parseFloat(newAccBalance) || 0;
+    const rawNo = newAccNumber.trim();
+    const formattedNumber = rawNo
+      ? (rawNo.startsWith('••••') || rawNo.toUpperCase().startsWith('PETTY') ? rawNo : `•••• •••• ${rawNo.slice(-4)}`)
+      : `•••• •••• ${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newAcc: BankAccountRecord = {
+      id: `ba-${Date.now()}`,
+      accountName: newAccName.trim(),
+      bankName: newAccBankName.trim() || (newAccType === 'Petty Cash' ? 'Internal Site Cash Safe' : 'Commercial Bank'),
+      accountNumber: formattedNumber,
+      ifscCode: newAccIfsc.trim().toUpperCase() || (newAccType === 'Petty Cash' ? 'N/A (Cash)' : 'BANK0001234'),
+      accountType: newAccType,
+      balance: bal,
+      status: 'Active',
+      tallyLedgerName: newAccTallyLedger.trim() || `${newAccName.trim()} Ledger`
+    };
+
+    setBankAccounts(prev => [...prev, newAcc]);
+    setIsAddAccountModalOpen(false);
+
+    // Reset Form
+    setNewAccName('');
+    setNewAccBankName('');
+    setNewAccNumber('');
+    setNewAccIfsc('');
+    setNewAccType('Current');
+    setNewAccBalance('');
+    setNewAccTallyLedger('');
+
+    if (onShowToast) {
+      onShowToast(`Account "${newAcc.accountName}" added to chart of accounts!`);
+    }
+  };
+
+  // Handle Delete / Archive Account
+  const handleDeleteAccount = (accId: string, accName: string) => {
+    if (bankAccounts.length <= 1) {
+      alert('You must have at least one active bank or cash account');
+      return;
+    }
+    if (confirm(`Are you sure you want to remove account "${accName}"?`)) {
+      setBankAccounts(prev => prev.filter(a => a.id !== accId));
+      if (onShowToast) onShowToast(`Account "${accName}" removed`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-slate-800 flex flex-col font-sans">
       
@@ -1111,47 +1877,8 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           </span>
         </div>
 
-        {/* Right utilities matching Image 1 */}
-        <div className="flex items-center gap-3.5 sm:gap-6">
-          {/* Book Demo */}
-          <button
-            type="button"
-            onClick={() => setIsDemoModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-[#635BFF] transition-colors cursor-pointer"
-          >
-            <Calendar className="w-3.5 h-3.5 text-[#635BFF]" />
-            <span className="hidden sm:inline">Book Demo</span>
-          </button>
-
-          {/* Integrate Tally/Zoho */}
-          <button
-            type="button"
-            onClick={() => setIsTallyModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-[#635BFF] transition-colors cursor-pointer"
-          >
-            <Boxes className="w-3.5 h-3.5 text-[#635BFF]" />
-            <span className="hidden md:inline">Integrate Tally/Zoho</span>
-          </button>
-
-          {/* Refer & Earn */}
-          <button
-            type="button"
-            onClick={() => setIsReferModalOpen(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-[#635BFF] transition-colors cursor-pointer"
-          >
-            <Gift className="w-3.5 h-3.5 text-[#635BFF]" />
-            <span className="hidden md:inline">Refer & Earn</span>
-          </button>
-
-          {/* Leaderboard */}
-          <button
-            type="button"
-            onClick={() => setIsLeaderboardModalOpen(true)}
-            className="text-xs font-semibold text-slate-700 hover:text-[#635BFF] transition-colors cursor-pointer hidden lg:inline"
-          >
-            Leaderboard
-          </button>
-
+        {/* Right utilities */}
+        <div className="flex items-center gap-3.5 sm:gap-4">
           {/* Notifications */}
           <div className="relative">
             <button 
@@ -1194,14 +1921,17 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
 
       {/* ─────────────────────────────────────────────────────────────
-          2. SUB-NAVIGATION TABS (Party | Transaction | Payment Requests | Accounts)
+          2. SUB-NAVIGATION TABS (Party | Transaction | Payment Requests | Expenses | Accounts)
       ───────────────────────────────────────────────────────────── */}
       <div className="border-b border-slate-200 bg-white px-6">
-        <nav className="flex items-center gap-8 -mb-px">
+        <nav className="flex items-center gap-8 -mb-px overflow-x-auto scrollbar-none">
           <button
             type="button"
-            onClick={() => setActiveTab('party')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer ${
+            onClick={() => {
+              setActiveTab('party');
+              setActivePartyOverview(null);
+            }}
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'party'
                 ? 'border-[#635BFF] text-[#635BFF] font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -1213,7 +1943,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('transaction')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer ${
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'transaction'
                 ? 'border-[#635BFF] text-[#635BFF] font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -1225,7 +1955,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('payment_requests')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer ${
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'payment_requests'
                 ? 'border-[#635BFF] text-[#635BFF] font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -1236,8 +1966,32 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
           <button
             type="button"
+            onClick={() => setActiveTab('expenses')}
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
+              activeTab === 'expenses'
+                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+            }`}
+          >
+            Expenses
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('account_transfer')}
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
+              activeTab === 'account_transfer'
+                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
+            }`}
+          >
+            Account to Account Transfer
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab('accounts')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer ${
+            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'accounts'
                 ? 'border-[#635BFF] text-[#635BFF] font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
@@ -2017,9 +2771,823 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           </div>
         )}
 
+        {/* ═════════════════════════════════════════════════════════════
+            TAB: EXPENSES (Construction Expenses, Petty Cash & Vouchers)
+        ═════════════════════════════════════════════════════════════ */}
+        {activeTab === 'expenses' && (
+          <div className="space-y-4">
+            
+            {/* 1. Four Summary KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Expenses */}
+              <div className="bg-[#FFF1F2] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FFE4E6] shadow-2xs">
+                <div className="flex items-center gap-2 text-[#E11D48] font-semibold text-xs">
+                  <div className="w-5 h-5 rounded-full border border-[#E11D48] flex items-center justify-center shrink-0">
+                    <ArrowUp className="w-3 h-3 text-[#E11D48] stroke-[2.5]" />
+                  </div>
+                  <span className="tracking-tight">Total Operational Expenses</span>
+                </div>
+                <div className="mt-2.5">
+                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                    ₹ {expenseMetrics.total.toLocaleString('en-IN')}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {expenses.length} vouchers logged
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 2: Materials & Procurement */}
+              <div className="bg-[#EFF6FF] rounded-2xl p-4.5 flex flex-col justify-between border border-[#DBEAFE] shadow-2xs">
+                <div className="flex items-center gap-2 text-[#2563EB] font-semibold text-xs">
+                  <div className="w-5 h-5 rounded-full border border-[#2563EB] flex items-center justify-center shrink-0">
+                    <Building2 className="w-3 h-3 text-[#2563EB]" />
+                  </div>
+                  <span className="tracking-tight">Direct Materials</span>
+                </div>
+                <div className="mt-2.5">
+                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                    ₹ {expenseMetrics.materials.toLocaleString('en-IN')}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Cement, Steel, Aggregates
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Labour & Machinery */}
+              <div className="bg-[#FFFBEB] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FEF3C7] shadow-2xs">
+                <div className="flex items-center gap-2 text-[#D97706] font-semibold text-xs">
+                  <div className="w-5 h-5 rounded-full border border-[#D97706] flex items-center justify-center shrink-0">
+                    <HardHat className="w-3 h-3 text-[#D97706]" />
+                  </div>
+                  <span className="tracking-tight">Labour & Machinery</span>
+                </div>
+                <div className="mt-2.5">
+                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                    ₹ {expenseMetrics.labourAndMachinery.toLocaleString('en-IN')}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Daily wages, JCB & Crane hire
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 4: Site Petty Cash & Sundry */}
+              <div className="bg-[#ECFDF5] rounded-2xl p-4.5 flex flex-col justify-between border border-[#D1FAE5] shadow-2xs">
+                <div className="flex items-center gap-2 text-[#059669] font-semibold text-xs">
+                  <div className="w-5 h-5 rounded-full border border-[#059669] flex items-center justify-center shrink-0">
+                    <Wallet className="w-3 h-3 text-[#059669]" />
+                  </div>
+                  <span className="tracking-tight">Site Petty Cash & Utilities</span>
+                </div>
+                <div className="mt-2.5">
+                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                    ₹ {expenseMetrics.sitePetty.toLocaleString('en-IN')}
+                  </div>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Fuel, water tankers, permits
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Action & Filter Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Left filters: Search, Filter Popover, Quick Category Pills */}
+              <div className="flex items-center gap-2 flex-wrap flex-1">
+                {/* Filter button */}
+                <button
+                  type="button"
+                  onClick={() => setIsExpenseFilterOpen(!isExpenseFilterOpen)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                    expenseStatusFilter !== 'All' || expenseCategoryFilter !== 'All' || expenseProjectFilter !== 'All'
+                      ? 'border-[#635BFF] text-[#635BFF] bg-purple-50/60'
+                      : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Filter</span>
+                  {(expenseStatusFilter !== 'All' || expenseCategoryFilter !== 'All' || expenseProjectFilter !== 'All') && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#635BFF]" />
+                  )}
+                </button>
+
+                {/* Search input */}
+                <div className="relative min-w-[200px] sm:min-w-[260px]">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search voucher, vendor, project, title..."
+                    value={expenseSearchQuery}
+                    onChange={e => setExpenseSearchQuery(e.target.value)}
+                    className="w-full pl-8.5 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  />
+                  {expenseSearchQuery && (
+                    <button 
+                      onClick={() => setExpenseSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Category Filter Pills */}
+                <div className="hidden xl:flex items-center gap-1.5 pl-1">
+                  {(['All', 'Materials', 'Labour & Daily Wages', 'Machinery & Equipment', 'Site Petty Cash', 'Subcontractor'] as const).map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setExpenseCategoryFilter(cat)}
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                        expenseCategoryFilter === cat
+                          ? 'bg-[#635BFF] text-white shadow-2xs'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      {cat === 'Labour & Daily Wages' ? 'Labour' : cat === 'Machinery & Equipment' ? 'Machinery' : cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Right: Export & Record Expense Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleExportExpenses}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+                  title="Export to CSV"
+                >
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Export</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newExpAccount || !bankAccounts.some(b => b.accountName === newExpAccount)) {
+                      setNewExpAccount(bankAccounts[0]?.accountName || 'Booshnam Associates Operations A/c');
+                    }
+                    setIsRecordExpenseModalOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Record Expense</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Popover Container */}
+            {isExpenseFilterOpen && (
+              <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-lg flex flex-wrap items-center gap-4 text-xs animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                  <select
+                    value={expenseStatusFilter}
+                    onChange={(e: any) => setExpenseStatusFilter(e.target.value)}
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF]"
+                  >
+                    <option value="All">All Statuses</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending Approval">Pending Approval</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
+                  <select
+                    value={expenseCategoryFilter}
+                    onChange={(e: any) => setExpenseCategoryFilter(e.target.value)}
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF]"
+                  >
+                    <option value="All">All Categories</option>
+                    <option value="Materials">Materials</option>
+                    <option value="Labour & Daily Wages">Labour & Daily Wages</option>
+                    <option value="Machinery & Equipment">Machinery & Equipment</option>
+                    <option value="Site Petty Cash">Site Petty Cash</option>
+                    <option value="Subcontractor">Subcontractor</option>
+                    <option value="Fuel & Logistics">Fuel & Logistics</option>
+                    <option value="Safety & Compliance">Safety & Compliance</option>
+                    <option value="Utilities & Admin">Utilities & Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Project</label>
+                  <select
+                    value={expenseProjectFilter}
+                    onChange={(e: any) => setExpenseProjectFilter(e.target.value)}
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF] max-w-[240px]"
+                  >
+                    <option value="All">All Projects</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-end gap-2 ml-auto pt-4 sm:pt-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setExpenseStatusFilter('All');
+                      setExpenseCategoryFilter('All');
+                      setExpenseProjectFilter('All');
+                      setExpenseSearchQuery('');
+                      setIsExpenseFilterOpen(false);
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsExpenseFilterOpen(false)}
+                    className="px-4 py-1.5 rounded-lg bg-[#635BFF] text-white font-semibold hover:bg-[#5046E5] cursor-pointer"
+                  >
+                    Apply Filter
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Expenses Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              
+              {/* Header Row */}
+              <div className="grid grid-cols-12 px-6 py-3 bg-[#f8fafc] border-b border-slate-200 text-xs font-semibold text-slate-600 select-none">
+                <div className="col-span-5 md:col-span-4 pl-12">
+                  Expense Details & Voucher
+                </div>
+                <div className="col-span-3 md:col-span-3">
+                  Project & Allocation
+                </div>
+                <div className="col-span-2 hidden md:block">
+                  Category
+                </div>
+                <div className="col-span-4 md:col-span-3 text-right">
+                  Amount & Status
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div className="divide-y divide-slate-100">
+                {filteredExpenses.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400">
+                    <Receipt className="w-10 h-10 mx-auto text-slate-300 mb-2 stroke-1" />
+                    <p className="text-sm font-semibold text-slate-600">No expenses found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try resetting the filters or record a new expense voucher.</p>
+                  </div>
+                ) : (
+                  filteredExpenses.map((exp) => (
+                    <div
+                      key={exp.id}
+                      onClick={() => setSelectedExpenseDetails(exp)}
+                      className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                    >
+                      {/* Left: Purple Date Box + Expense Title & Voucher */}
+                      <div className="col-span-5 md:col-span-4 flex items-center gap-3.5 min-w-0 pr-2">
+                        {/* Date Box */}
+                        <div className="w-11 h-11 rounded-lg bg-[#635BFF] text-white flex flex-col items-center justify-center shrink-0 shadow-2xs">
+                          <span className="text-[10px] font-bold tracking-tight text-white/95 leading-none">
+                            {exp.date.split(' ').slice(0, 2).join(' ')}
+                          </span>
+                          <Receipt className="w-3.5 h-3.5 text-white/90 mt-1 stroke-[2.2]" />
+                        </div>
+
+                        {/* Title & Payee / Voucher Code */}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-slate-900 group-hover:text-[#635BFF] transition-colors truncate">
+                            {exp.title}
+                          </div>
+                          <div className="text-xs text-slate-500 font-medium mt-0.5 truncate flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-700">{exp.partyOrVendorName}</span>
+                            <span>•</span>
+                            <span className="text-slate-400">{exp.expenseCode}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Middle: Project & Subproject Location */}
+                      <div className="col-span-3 md:col-span-3 min-w-0 pr-3">
+                        <div className="text-xs font-semibold text-slate-800 truncate" title={exp.projectName}>
+                          {exp.projectName}
+                        </div>
+                        <div className="text-xs text-slate-400 font-medium mt-0.5 truncate">
+                          {exp.subProjectOrLocation || exp.paidFromAccount}
+                        </div>
+                      </div>
+
+                      {/* Category Badge */}
+                      <div className="col-span-2 hidden md:block">
+                        <span className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded border ${
+                          exp.category === 'Materials'
+                            ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                            : exp.category === 'Labour & Daily Wages'
+                            ? 'bg-violet-50 text-violet-700 border-violet-200'
+                            : exp.category === 'Machinery & Equipment'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : exp.category === 'Site Petty Cash'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : exp.category === 'Subcontractor'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : exp.category === 'Fuel & Logistics'
+                            ? 'bg-orange-50 text-orange-700 border-orange-200'
+                            : exp.category === 'Safety & Compliance'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}>
+                          {exp.category}
+                        </span>
+                      </div>
+
+                      {/* Right: Amount & Status Badge */}
+                      <div className="col-span-4 md:col-span-3 text-right shrink-0">
+                        <div className="text-sm font-bold text-slate-900">
+                          ₹ {exp.amount.toLocaleString('en-IN')}
+                        </div>
+                        <div className="mt-1 flex items-center justify-end gap-1.5">
+                          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${
+                            exp.status === 'Paid'
+                              ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                              : exp.status === 'Approved'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : exp.status === 'Pending Approval'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-red-50 text-red-600 border border-red-200'
+                          }`}>
+                            {exp.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Table Footer Summary */}
+              <div className="px-6 py-3 bg-[#f8fafc] border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500">
+                <span>Showing {filteredExpenses.length} of {expenses.length} expense vouchers</span>
+                <div className="flex items-center gap-5">
+                  <span>Paid: <strong className="text-slate-800">₹{expenseMetrics.paidAmount.toLocaleString('en-IN')}</strong></span>
+                  <span>Pending: <strong className="text-amber-700">₹{expenseMetrics.pendingAmount.toLocaleString('en-IN')}</strong></span>
+                  <span>Total: <strong className="text-[#635BFF]">₹{expenseMetrics.total.toLocaleString('en-IN')}</strong></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* ═════════════════════════════════════════════════════════════
-            TAB 4: ACCOUNTS (Bank & Cash Accounts + Tally/Zoho Integration)
+            TAB 4: ACCOUNT TO ACCOUNT TRANSFER (Contra Ledgers & Imprest)
+        ═════════════════════════════════════════════════════════════ */}
+        {activeTab === 'account_transfer' && (
+          <div className="space-y-6">
+            
+            {/* Top KPI Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Transferred */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Transferred</span>
+                  <div className="w-8 h-8 rounded-lg bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
+                    <ArrowLeftRight className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">
+                  ₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
+                  <span className="text-emerald-700 font-semibold">{transfers.filter(t => t.status === 'Completed').length} Completed</span>
+                  <span>Contra entries posted</span>
+                </p>
+              </div>
+
+              {/* Card 2: Bank to Site Petty Cash */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Bank ➔ Site Imprest</span>
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">
+                  ₹{transferMetrics.pettyCashTransfers.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-amber-700 mt-1 font-medium flex items-center gap-1">
+                  <span>Site cash safe replenishment</span>
+                </p>
+              </div>
+
+              {/* Card 3: Inter-Bank & Escrow */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inter-Bank & Escrow</span>
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">
+                  ₹{transferMetrics.interBankTransfers.toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                  HDFC Operations ⇋ SBI Escrow
+                </p>
+              </div>
+
+              {/* Card 4: Connected Accounts */}
+              <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Connected Accounts</span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">
+                  {bankAccounts.length} Active Accounts
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                  Total Liquidity: <span className="font-semibold text-slate-800">₹{bankAccounts.reduce((acc, b) => acc + b.balance, 0).toLocaleString('en-IN')}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Live Account Balances Quick-Overview */}
+            <div className="bg-gradient-to-r from-slate-50 via-slate-50/70 to-indigo-50/30 p-4 rounded-xl border border-slate-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Landmark className="w-4 h-4 text-[#635BFF]" />
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Connected Account Balances</span>
+                  <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Live Synchronized
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500">Click any account to initiate a quick transfer</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {bankAccounts.map(acc => (
+                  <div 
+                    key={acc.id} 
+                    className="p-3.5 bg-white rounded-lg border border-slate-200 shadow-2xs hover:border-[#635BFF]/60 hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer"
+                    onClick={() => {
+                      setNewTrfFromAccountId(acc.id);
+                      const other = bankAccounts.find(b => b.id !== acc.id);
+                      if (other) setNewTrfToAccountId(other.id);
+                      setIsNewTransferModalOpen(true);
+                    }}
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs font-bold text-slate-900 truncate block">{acc.accountName}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate">{acc.bankName} • {acc.accountNumber}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs text-slate-400 font-medium">Balance</div>
+                      <div className="text-sm font-black text-slate-900">₹{acc.balance.toLocaleString('en-IN')}</div>
+                      <span className="text-[10px] font-semibold text-[#635BFF] opacity-0 group-hover:opacity-100 transition-opacity">
+                        Transfer ➔
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Bar: Search, Filters, Modes, and + New Transfer Button */}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                
+                {/* Search & Filter Trigger */}
+                <div className="flex items-center gap-2.5 flex-1 min-w-[280px] max-w-xl">
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={transferSearchQuery}
+                      onChange={(e) => setTransferSearchQuery(e.target.value)}
+                      placeholder="Search voucher #, account, UTR, purpose, project..."
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] transition-all"
+                    />
+                    {transferSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setTransferSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Filter Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsTransferFilterOpen(!isTransferFilterOpen)}
+                      className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                        transferAccountFilter !== 'All' || transferStatusFilter !== 'All'
+                          ? 'border-[#635BFF] bg-[#635BFF]/10 text-[#635BFF]'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                      <span>Filter</span>
+                      {(transferAccountFilter !== 'All' || transferStatusFilter !== 'All') && (
+                        <span className="w-2 h-2 rounded-full bg-[#635BFF]" />
+                      )}
+                    </button>
+
+                    {isTransferFilterOpen && (
+                      <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 z-40 space-y-3.5">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                          <span className="text-xs font-bold text-slate-900">Filter Transfers</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransferAccountFilter('All');
+                              setTransferStatusFilter('All');
+                              setTransferModeFilter('All');
+                            }}
+                            className="text-[11px] text-[#635BFF] font-medium hover:underline cursor-pointer"
+                          >
+                            Reset All
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-slate-600 block mb-1">Account Involved</label>
+                          <select
+                            value={transferAccountFilter}
+                            onChange={(e) => setTransferAccountFilter(e.target.value)}
+                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                          >
+                            <option value="All">All Bank & Cash Accounts</option>
+                            {bankAccounts.map(b => (
+                              <option key={b.id} value={b.id}>{b.accountName}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-semibold text-slate-600 block mb-1">Status</label>
+                          <select
+                            value={transferStatusFilter}
+                            onChange={(e) => setTransferStatusFilter(e.target.value as any)}
+                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                          >
+                            <option value="All">All Statuses</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Pending Verification">Pending Verification</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsTransferFilterOpen(false)}
+                            className="px-3 py-1 bg-[#635BFF] text-white rounded text-xs font-semibold cursor-pointer"
+                          >
+                            Done
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Actions: Export + New Transfer Button */}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleExportTransfers}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer transition-colors shadow-2xs"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Export CSV</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewTrfFromAccountId(bankAccounts[0]?.id || 'ba-1');
+                      setNewTrfToAccountId(bankAccounts[2]?.id || bankAccounts[1]?.id || 'ba-2');
+                      setIsNewTransferModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ New Transfer</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Transfer Mode Quick Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <span className="text-[11px] font-semibold text-slate-400 mr-1 shrink-0">Mode:</span>
+                {[
+                  { id: 'All', label: 'All Transfers' },
+                  { id: 'Cash Withdrawal', label: '💵 Cash Withdrawal (Imprest)' },
+                  { id: 'IMPS / Bank Transfer', label: '⚡ IMPS' },
+                  { id: 'NEFT / RTGS', label: '🏦 NEFT / RTGS' },
+                  { id: 'Internal Ledger Contra', label: '🔄 Internal Contra' },
+                  { id: 'Cash Deposit', label: '📥 Cash Deposit' }
+                ].map(mode => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setTransferModeFilter(mode.id)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium shrink-0 transition-all cursor-pointer border ${
+                      transferModeFilter === mode.id
+                        ? 'bg-slate-900 border-slate-900 text-white font-semibold shadow-2xs'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Transfers Table Card */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-[#f8fafc] text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      <th className="py-3 px-4">Voucher # & Date</th>
+                      <th className="py-3 px-4">From Account (Credit)</th>
+                      <th className="py-3 px-2 text-center w-8"></th>
+                      <th className="py-3 px-4">To Account (Debit)</th>
+                      <th className="py-3 px-4">Mode & Reference</th>
+                      <th className="py-3 px-4">Purpose & Project</th>
+                      <th className="py-3 px-4 text-right">Amount (₹)</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredTransfers.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-14 text-center">
+                          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                            <ArrowLeftRight className="w-6 h-6" />
+                          </div>
+                          <p className="text-sm font-bold text-slate-800">No account transfers found</p>
+                          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                            {transferSearchQuery || transferModeFilter !== 'All' || transferStatusFilter !== 'All'
+                              ? 'Try adjusting your search query or clear the active filters.'
+                              : 'Record contra transfers between HDFC Bank, SBI Escrow, and Site Petty Cash Vaults.'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setIsNewTransferModalOpen(true)}
+                            className="mt-4 px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+                          >
+                            + Record Transfer
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTransfers.map(trf => (
+                        <tr key={trf.id} className="hover:bg-slate-50/70 transition-colors group">
+                          
+                          {/* Voucher Code & Date */}
+                          <td className="py-3.5 px-4 font-mono">
+                            <span className="font-bold text-slate-900 block">{trf.transferCode}</span>
+                            <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              {trf.date}
+                            </span>
+                          </td>
+
+                          {/* From Account */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-md bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-semibold text-slate-800 block truncate max-w-[170px]" title={trf.fromAccountName}>
+                                  {trf.fromAccountName}
+                                </span>
+                                <span className="text-[10px] text-slate-400">Debit / Outflow</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Arrow Flow */}
+                          <td className="py-3.5 px-2 text-center">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
+                              <ArrowRight className="w-3.5 h-3.5 text-[#635BFF]" />
+                            </div>
+                          </td>
+
+                          {/* To Account */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                <ArrowDownRight className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-semibold text-slate-800 block truncate max-w-[170px]" title={trf.toAccountName}>
+                                  {trf.toAccountName}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 font-medium">Credit / Inflow</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Mode & Ref */}
+                          <td className="py-3.5 px-4">
+                            <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                              {trf.transferMode}
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-500 block mt-1 truncate max-w-[130px]" title={trf.referenceNo}>
+                              {trf.referenceNo}
+                            </span>
+                          </td>
+
+                          {/* Purpose & Project */}
+                          <td className="py-3.5 px-4">
+                            <p className="text-slate-800 font-medium line-clamp-1 max-w-[220px]" title={trf.purpose}>
+                              {trf.purpose}
+                            </p>
+                            {trf.projectName && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded mt-0.5 truncate max-w-[200px]" title={trf.projectName}>
+                                <Building2 className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">{trf.projectName}</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Amount */}
+                          <td className="py-3.5 px-4 text-right">
+                            <span className="text-sm font-bold text-slate-900 block font-mono">
+                              ₹{trf.amount.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[10px] font-medium text-slate-400">Contra Entry</span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                              trf.status === 'Completed'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : trf.status === 'Pending Verification'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              {trf.status === 'Completed' && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                              {trf.status === 'Pending Verification' && <Clock className="w-3 h-3 text-amber-600" />}
+                              {trf.status === 'Rejected' && <AlertCircle className="w-3 h-3 text-red-600" />}
+                              <span>{trf.status}</span>
+                            </span>
+                          </td>
+
+                          {/* Action */}
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTransferDetails(trf)}
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-[#635BFF] hover:border-[#635BFF] hover:bg-[#635BFF]/5 transition-colors cursor-pointer inline-flex items-center gap-1"
+                              title="View Contra Voucher Slip"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span className="text-[10px] font-semibold hidden md:inline">Voucher</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer Summary */}
+              <div className="px-6 py-3 bg-[#f8fafc] border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500">
+                <span>Showing {filteredTransfers.length} of {transfers.length} contra transfer entries</span>
+                <div className="flex items-center gap-5">
+                  <span>Filtered Sum: <strong className="text-slate-900 font-mono">₹{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-IN')}</strong></span>
+                  <span>Total Completed: <strong className="text-[#635BFF] font-mono">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+
+        {/* ═════════════════════════════════════════════════════════════
+            TAB 5: ACCOUNTS (Bank & Cash Accounts + Tally/Zoho Integration)
         ═════════════════════════════════════════════════════════════ */}
         {activeTab === 'accounts' && (
           <div className="space-y-5">
@@ -2041,11 +3609,20 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             {/* Bank Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {bankAccounts.map(ba => (
-                <div key={ba.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                <div key={ba.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4 hover:border-slate-300 transition-all group">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{ba.bankName}</span>
-                      <h3 className="text-sm font-bold text-slate-900 mt-0.5">{ba.accountName}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{ba.bankName}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          ba.accountType === 'Escrow' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          ba.accountType === 'Petty Cash' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                          'bg-purple-50 text-purple-700 border border-purple-200'
+                        }`}>
+                          {ba.accountType}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-900 mt-1">{ba.accountName}</h3>
                     </div>
                     <span className="p-2 rounded-lg bg-purple-50 text-[#635BFF]">
                       <Landmark className="w-4 h-4" />
@@ -2054,16 +3631,38 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
                   <div>
                     <span className="text-xs text-slate-500 block">Available Balance</span>
-                    <div className="text-2xl font-bold text-slate-900 mt-0.5">
+                    <div className="text-2xl font-bold text-slate-900 mt-0.5 font-mono">
                       ₹ {ba.balance.toLocaleString('en-IN')}
                     </div>
                   </div>
 
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                     <span>A/c: {ba.accountNumber}</span>
-                    <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
-                      <CheckCircle2 className="w-3 h-3" /> Active
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewTrfFromAccountId(ba.id);
+                          const other = bankAccounts.find(b => b.id !== ba.id);
+                          if (other) setNewTrfToAccountId(other.id);
+                          setActiveTab('account_transfer');
+                          setIsNewTransferModalOpen(true);
+                        }}
+                        className="text-[11px] font-bold text-[#635BFF] hover:underline cursor-pointer"
+                      >
+                        Transfer ➔
+                      </button>
+                      {ba.id.startsWith('ba-') && !['ba-1', 'ba-2', 'ba-3'].includes(ba.id) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAccount(ba.id, ba.accountName)}
+                          className="text-[11px] text-red-500 hover:text-red-700 cursor-pointer p-0.5"
+                          title="Delete Account"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -2769,51 +4368,149 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       {/* MODAL I: ADD BANK ACCOUNT */}
       {isAddAccountModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">Add Bank or Cash Ledger</h3>
-              <button onClick={() => setIsAddAccountModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Add Bank or Cash Ledger</h3>
+                  <p className="text-[11px] text-slate-400">Syncs immediately to Expenses & Transfers</p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setIsAddAccountModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3 text-xs">
+            
+            <form onSubmit={handleSaveAccount} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Account / Ledger Name</label>
-                <input type="text" placeholder="e.g. Axis Bank Site Escrow" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Account / Ledger Name <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="e.g. Axis Bank Site Escrow or Site Petty Cash - Tambaram" 
+                  value={newAccName}
+                  onChange={e => setNewAccName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]" 
+                />
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Bank Name</label>
-                  <input type="text" placeholder="Axis Bank" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Bank / Institution Name <span className="text-red-500">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required
+                    placeholder="e.g. Axis Bank Ltd" 
+                    value={newAccBankName}
+                    onChange={e => setNewAccBankName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
+                  />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Account Number</label>
-                  <input type="text" placeholder="•••• 1234" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                  <label className="block font-semibold text-slate-700 mb-1">Account Type</label>
+                  <select
+                    value={newAccType}
+                    onChange={e => setNewAccType(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:border-[#635BFF]"
+                  >
+                    <option value="Current">Current Account</option>
+                    <option value="Savings">Savings Account</option>
+                    <option value="Escrow">Project Escrow (RERA)</option>
+                    <option value="Petty Cash">Petty Cash Safe</option>
+                  </select>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">IFSC Code</label>
-                  <input type="text" placeholder="UTIB0001234" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Account / Safe Number
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. 9230100482910" 
+                    value={newAccNumber}
+                    onChange={e => setNewAccNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
+                  />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Opening Balance (₹)</label>
-                  <input type="number" placeholder="0" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                  <label className="block font-semibold text-slate-700 mb-1">IFSC / Branch Code</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. UTIB0001234" 
+                    value={newAccIfsc}
+                    onChange={e => setNewAccIfsc(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
+                  />
                 </div>
               </div>
-            </div>
-            <div className="pt-2 flex justify-end gap-2">
-              <button onClick={() => setIsAddAccountModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500">Cancel</button>
-              <button 
-                onClick={() => {
-                  setIsAddAccountModalOpen(false);
-                  if (onShowToast) onShowToast('Bank ledger added to chart of accounts');
-                }}
-                className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg"
-              >
-                Save Account
-              </button>
-            </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Opening Balance (₹) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                    <input 
+                      type="number" 
+                      min="0"
+                      step="any"
+                      placeholder="0" 
+                      value={newAccBalance}
+                      onChange={e => setNewAccBalance(e.target.value)}
+                      className="w-full pl-6 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-[#635BFF]" 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Tally / Zoho Ledger</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Axis Bank - Ops" 
+                    value={newAccTallyLedger}
+                    onChange={e => setNewAccTallyLedger(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
+                  />
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-indigo-50/60 border border-indigo-100 text-[11px] text-indigo-900 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#635BFF] shrink-0" />
+                <span>This account will instantly become selectable in <strong>Expenses</strong> and <strong>Account Transfers</strong>.</span>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddAccountModalOpen(false)} 
+                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-1.5 text-xs font-bold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-2xs cursor-pointer transition-colors"
+                >
+                  Save Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -3076,6 +4773,853 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
         </div>
       )}
 
+      {/* MODAL L: RECORD NEW EXPENSE */}
+      {isRecordExpenseModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#635BFF] text-white flex items-center justify-center">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Record Construction Expense</h3>
+                  <p className="text-[11px] text-slate-400">Log operational bills, contractor claims, and site petty cash</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsRecordExpenseModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveExpense} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Expense Description / Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. UltraTech M25 Grade RMC Pouring (45 CuM)"
+                  value={newExpTitle}
+                  onChange={e => setNewExpTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={newExpCategory}
+                    onChange={(e: any) => setNewExpCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white font-medium"
+                  >
+                    <option value="Materials">Materials</option>
+                    <option value="Labour & Daily Wages">Labour & Daily Wages</option>
+                    <option value="Machinery & Equipment">Machinery & Equipment</option>
+                    <option value="Site Petty Cash">Site Petty Cash</option>
+                    <option value="Subcontractor">Subcontractor</option>
+                    <option value="Fuel & Logistics">Fuel & Logistics</option>
+                    <option value="Safety & Compliance">Safety & Compliance</option>
+                    <option value="Utilities & Admin">Utilities & Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Amount (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="e.g. 48000"
+                    value={newExpAmount}
+                    onChange={e => setNewExpAmount(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Project *
+                  </label>
+                  <select
+                    value={newExpProject}
+                    onChange={e => setNewExpProject(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                  >
+                    {projects.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Site Location / Sub-Work
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Block A - 2nd Floor Slab"
+                    value={newExpLocation}
+                    onChange={e => setNewExpLocation(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Vendor / Payee Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. UltraTech Cement or Site Worker"
+                    value={newExpPayee}
+                    onChange={e => setNewExpPayee(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Paid From Account *
+                  </label>
+                  <select
+                    value={newExpAccount}
+                    onChange={e => setNewExpAccount(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white font-medium text-slate-800"
+                  >
+                    {bankAccounts.map(ba => (
+                      <option key={ba.id} value={ba.accountName}>
+                        {ba.accountName} (₹{ba.balance.toLocaleString('en-IN')})
+                      </option>
+                    ))}
+                  </select>
+                  {(() => {
+                    const sel = bankAccounts.find(ba => ba.accountName === newExpAccount || ba.id === newExpAccount);
+                    return sel ? (
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Available Balance: <strong className="text-slate-800 font-mono">₹{sel.balance.toLocaleString('en-IN')}</strong>
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Payment Mode
+                  </label>
+                  <select
+                    value={newExpMode}
+                    onChange={(e: any) => setNewExpMode(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                  >
+                    <option value="NEFT/RTGS">NEFT / RTGS</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Petty Cash">Petty Cash</option>
+                    <option value="Corporate Card">Corporate Card</option>
+                    <option value="Cheque">Cheque</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Voucher Date
+                  </label>
+                  <input
+                    type="text"
+                    value={newExpDate}
+                    onChange={e => setNewExpDate(e.target.value)}
+                    placeholder="14 Jul 26"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={newExpStatus}
+                    onChange={(e: any) => setNewExpStatus(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                  >
+                    <option value="Paid">Paid</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Pending Approval">Pending Approval</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Reference / UTR / Cheque #
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFC20260714088"
+                    value={newExpRef}
+                    onChange={e => setNewExpRef(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Invoice / Bill #
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. INV-8821"
+                    value={newExpBillNo}
+                    onChange={e => setNewExpBillNo(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Receipt File Attachment */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Upload Invoice / Delivery Challan
+                </label>
+                <div className="border border-dashed border-slate-300 rounded-xl p-3 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-[#635BFF] flex items-center justify-center">
+                      <Paperclip className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-800">
+                        {newExpFileName || 'Attach tax invoice or weight slip'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">PDF, PNG, JPG up to 10MB</p>
+                    </div>
+                  </div>
+                  <label className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-100 cursor-pointer shadow-2xs">
+                    <span>{newExpFileName ? 'Change' : 'Browse'}</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={e => {
+                        if (e.target.files?.[0]) {
+                          setNewExpFileName(e.target.files[0].name);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Remarks / Site Purpose
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Details of delivery, batch quality check, or supervisor remarks..."
+                  value={newExpNotes}
+                  onChange={e => setNewExpNotes(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordExpenseModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-semibold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                >
+                  Record Expense
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL M: EXPENSE DETAILS & VOUCHER PREVIEW */}
+      {selectedExpenseDetails && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#635BFF] text-white flex flex-col items-center justify-center font-bold text-[10px]">
+                  <span>{selectedExpenseDetails.date.split(' ').slice(0, 2).join(' ')}</span>
+                  <Receipt className="w-3.5 h-3.5 text-white/90 mt-0.5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">{selectedExpenseDetails.expenseCode}</h3>
+                  <p className="text-xs text-slate-500">{selectedExpenseDetails.partyOrVendorName}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedExpenseDetails(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              {/* Financial Highlight */}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex items-center justify-between">
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Expense Amount</span>
+                  <span className="text-xl font-bold text-slate-900">
+                    ₹ {selectedExpenseDetails.amount.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[11px] text-right">Status</span>
+                  <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded ${
+                    selectedExpenseDetails.status === 'Paid'
+                      ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                      : selectedExpenseDetails.status === 'Approved'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : selectedExpenseDetails.status === 'Pending Approval'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                      : 'bg-red-50 text-red-600 border border-red-200'
+                  }`}>
+                    {selectedExpenseDetails.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Attributes */}
+              <div className="space-y-2.5">
+                <div>
+                  <span className="font-semibold text-slate-700 block">Expense Title:</span>
+                  <p className="text-slate-900 font-medium text-xs mt-0.5">{selectedExpenseDetails.title}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                  <div>
+                    <span className="font-semibold text-slate-700 block">Project:</span>
+                    <p className="text-slate-600 truncate">{selectedExpenseDetails.projectName}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-700 block">Category:</span>
+                    <p className="text-slate-600">{selectedExpenseDetails.category}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                  <div>
+                    <span className="font-semibold text-slate-700 block">Disbursed From:</span>
+                    <p className="text-slate-600 truncate">{selectedExpenseDetails.paidFromAccount}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-700 block">Mode & Ref:</span>
+                    <p className="text-slate-600 truncate">{selectedExpenseDetails.paymentMode} • {selectedExpenseDetails.referenceNo || 'N/A'}</p>
+                  </div>
+                </div>
+                {selectedExpenseDetails.billNumber && (
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="font-semibold text-slate-700 block">Invoice / Bill Reference:</span>
+                    <p className="text-slate-600 font-mono">{selectedExpenseDetails.billNumber}</p>
+                  </div>
+                )}
+                {selectedExpenseDetails.approvedBy && (
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="font-semibold text-slate-700 block">Verified / Approved By:</span>
+                    <p className="text-emerald-700 font-medium">{selectedExpenseDetails.approvedBy}</p>
+                  </div>
+                )}
+                {selectedExpenseDetails.notes && (
+                  <div className="pt-1 border-t border-slate-100">
+                    <span className="font-semibold text-slate-700 block">Site Remarks:</span>
+                    <p className="text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-1">{selectedExpenseDetails.notes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onShowToast) onShowToast(`Expense voucher ${selectedExpenseDetails.expenseCode} downloaded`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Voucher</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {selectedExpenseDetails.status !== 'Paid' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateExpenseStatus(selectedExpenseDetails.id, 'Paid')}
+                      className="px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                    >
+                      Mark as Paid
+                    </button>
+                  )}
+                  {selectedExpenseDetails.status === 'Pending Approval' && (
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateExpenseStatus(selectedExpenseDetails.id, 'Approved')}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                    >
+                      Approve
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: NEW ACCOUNT TO ACCOUNT TRANSFER
+      ───────────────────────────────────────────────────────────── */}
+      {isNewTransferModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
+                  <ArrowLeftRight className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">New Account to Account Transfer</h3>
+                  <p className="text-xs text-slate-500">Record an internal fund transfer or site petty cash imprest</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsNewTransferModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveTransfer} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+              
+              {/* Account Selection Flow (From ➔ To) */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+                  
+                  {/* From Account */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      From Account (Source / Debit) <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={newTrfFromAccountId}
+                      onChange={(e) => setNewTrfFromAccountId(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#635BFF] shadow-2xs"
+                    >
+                      {bankAccounts.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.accountName} (₹{b.balance.toLocaleString('en-IN')})
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                      return src ? (
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Available Balance: <strong className="text-slate-800 font-mono">₹{src.balance.toLocaleString('en-IN')}</strong>
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+
+                  {/* To Account */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      To Account (Destination / Credit) <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={newTrfToAccountId}
+                      onChange={(e) => setNewTrfToAccountId(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#635BFF] shadow-2xs"
+                    >
+                      {bankAccounts.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.accountName} (₹{b.balance.toLocaleString('en-IN')})
+                        </option>
+                      ))}
+                    </select>
+                    {(() => {
+                      const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
+                      return dst ? (
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Current Balance: <strong className="text-slate-800 font-mono">₹{dst.balance.toLocaleString('en-IN')}</strong>
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+
+                {newTrfFromAccountId === newTrfToAccountId && (
+                  <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>Source and destination cannot be the same account!</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Transfer Amount (₹) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-slate-400">₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="any"
+                    value={newTrfAmount}
+                    onChange={(e) => setNewTrfAmount(e.target.value)}
+                    placeholder="Enter amount, e.g. 50000"
+                    required
+                    className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  />
+                </div>
+
+                {/* Quick Preset Buttons */}
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] text-slate-400">Quick Add:</span>
+                  {[10000, 25000, 50000, 100000].map(val => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setNewTrfAmount(String(val))}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-semibold cursor-pointer transition-colors"
+                    >
+                      +₹{val.toLocaleString('en-IN')}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Balance validation alert */}
+                {(() => {
+                  const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                  const amt = parseFloat(newTrfAmount) || 0;
+                  if (src && amt > src.balance) {
+                    return (
+                      <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>Warning: Amount exceeds source account balance (₹{src.balance.toLocaleString('en-IN')})</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
+              {/* Real-Time Balance Simulation Preview */}
+              {parseFloat(newTrfAmount) > 0 && newTrfFromAccountId !== newTrfToAccountId && (
+                <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1.5">
+                  <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#635BFF]" />
+                    <span>Projected Balances After Transfer</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    {(() => {
+                      const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                      const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
+                      const amt = parseFloat(newTrfAmount) || 0;
+                      return (
+                        <>
+                          <div className="p-2 bg-white rounded border border-indigo-100">
+                            <span className="text-slate-500 block truncate">{src?.accountName}</span>
+                            <span className="font-bold text-red-600 font-mono">
+                              ₹{((src?.balance || 0) - amt).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[9px] text-slate-400 block">(-₹{amt.toLocaleString('en-IN')})</span>
+                          </div>
+                          <div className="p-2 bg-white rounded border border-indigo-100">
+                            <span className="text-slate-500 block truncate">{dst?.accountName}</span>
+                            <span className="font-bold text-emerald-600 font-mono">
+                              ₹{((dst?.balance || 0) + amt).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[9px] text-slate-400 block">(+₹{amt.toLocaleString('en-IN')})</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Row: Mode and Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Transfer Mode</label>
+                  <select
+                    value={newTrfMode}
+                    onChange={(e) => setNewTrfMode(e.target.value as any)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  >
+                    <option value="Cash Withdrawal">Cash Withdrawal (Site Imprest)</option>
+                    <option value="IMPS / Bank Transfer">IMPS / Bank Transfer</option>
+                    <option value="NEFT / RTGS">NEFT / RTGS</option>
+                    <option value="Cash Deposit">Cash Deposit</option>
+                    <option value="Internal Ledger Contra">Internal Ledger Contra</option>
+                    <option value="Cheque">Cheque Transfer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Transfer Date</label>
+                  <input
+                    type="text"
+                    value={newTrfDate}
+                    onChange={(e) => setNewTrfDate(e.target.value)}
+                    placeholder="e.g. 24 Sep 2026"
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+              </div>
+
+              {/* Row: Reference & Project */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Reference / UTR / Cheque #</label>
+                  <input
+                    type="text"
+                    value={newTrfRef}
+                    onChange={(e) => setNewTrfRef(e.target.value)}
+                    placeholder="e.g. UTR-998821 or CHQ-7782"
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Related Project (Optional)</label>
+                  <select
+                    value={newTrfProject}
+                    onChange={(e) => setNewTrfProject(e.target.value)}
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  >
+                    <option value="">General Company Accounts</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Purpose / Narration */}
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">
+                  Purpose / Narration <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newTrfPurpose}
+                  onChange={(e) => setNewTrfPurpose(e.target.value)}
+                  placeholder="e.g. Replenish site petty cash vault for masonry wages & fuel"
+                  required
+                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                />
+              </div>
+
+              {/* Initiated By & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Initiated By</label>
+                  <input
+                    type="text"
+                    value={newTrfInitiatedBy}
+                    onChange={(e) => setNewTrfInitiatedBy(e.target.value)}
+                    placeholder="e.g. Finance Incharge"
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Internal Notes (Optional)</label>
+                  <input
+                    type="text"
+                    value={newTrfNotes}
+                    onChange={(e) => setNewTrfNotes(e.target.value)}
+                    placeholder="e.g. Approved by Managing Director"
+                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsNewTransferModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newTrfFromAccountId === newTrfToAccountId}
+                  className={`px-5 py-2 rounded-lg text-white text-xs font-bold transition-all shadow-xs ${
+                    newTrfFromAccountId === newTrfToAccountId
+                      ? 'bg-slate-300 cursor-not-allowed'
+                      : 'bg-[#635BFF] hover:bg-[#5046E5] cursor-pointer'
+                  }`}
+                >
+                  Post Contra Transfer
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: CONTRA TRANSFER VOUCHER SLIP
+      ───────────────────────────────────────────────────────────── */}
+      {selectedTransferDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Slip Header */}
+            <div className="px-6 py-4 border-b border-slate-100 bg-[#f8fafc] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-[#635BFF] uppercase tracking-wider block">Booshnam Associates</span>
+                <h3 className="text-base font-bold text-slate-900">Contra Voucher Details</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTransferDetails(null)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Slip Body */}
+            <div className="p-6 space-y-4 text-xs">
+              
+              {/* Voucher Code & Status Banner */}
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold">Voucher Number</span>
+                  <div className="text-base font-mono font-black text-slate-900">{selectedTransferDetails.transferCode}</div>
+                  <span className="text-[11px] text-slate-500">{selectedTransferDetails.date}</span>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {selectedTransferDetails.status}
+                </span>
+              </div>
+
+              {/* Amount & Route Graphic */}
+              <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/40 via-purple-50/30 to-indigo-50/40 text-center">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Total Transferred</span>
+                <div className="text-2xl font-black text-slate-900 font-mono my-1">
+                  ₹{selectedTransferDetails.amount.toLocaleString('en-IN')}
+                </div>
+                
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block">From (Credit)</span>
+                    <span className="font-bold text-slate-800 text-xs">{selectedTransferDetails.fromAccountName}</span>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white shadow-xs text-[#635BFF] flex items-center justify-center font-bold">
+                    ➔
+                  </div>
+                  <div className="text-left">
+                    <span className="text-[10px] text-slate-400 block">To (Debit)</span>
+                    <span className="font-bold text-slate-800 text-xs">{selectedTransferDetails.toAccountName}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Breakdown Details Grid */}
+              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50/70 rounded-xl border border-slate-100">
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-medium">Transfer Mode</span>
+                  <span className="font-semibold text-slate-800">{selectedTransferDetails.transferMode}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-medium">Reference / UTR</span>
+                  <span className="font-mono font-semibold text-slate-800">{selectedTransferDetails.referenceNo}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-medium">Initiated By</span>
+                  <span className="font-semibold text-slate-800">{selectedTransferDetails.initiatedBy}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block uppercase font-medium">Related Project</span>
+                  <span className="font-semibold text-slate-800">{selectedTransferDetails.projectName || 'General Accounts'}</span>
+                </div>
+              </div>
+
+              {/* Purpose / Narration */}
+              <div>
+                <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Purpose / Narration</span>
+                <p className="text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-medium">
+                  {selectedTransferDetails.purpose}
+                </p>
+              </div>
+
+              {selectedTransferDetails.notes && (
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Internal Notes</span>
+                  <p className="text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    {selectedTransferDetails.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onShowToast) onShowToast(`Contra voucher slip ${selectedTransferDetails.transferCode} downloaded`);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Voucher</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedTransferDetails(null)}
+                  className="px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
+

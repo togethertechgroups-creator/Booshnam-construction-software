@@ -1642,9 +1642,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       {/* Top Header Bar Inside Full-Bleed View */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Projects</h1>
-            <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction & soil investigation initiatives</p>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Projects</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction & soil investigation initiatives</p>
+        </div>
 
         {/* Right Settings, Bell & User Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5">
@@ -1742,12 +1742,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
       </div>
 
-      {/* Filter and Action Toolbar (Exact Screenshot 1 Match) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2">
-        {/* Left: Dropdowns (All with badge, Stage, Category) */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+      {/* Filter and Action Toolbar */}
+      <div className="flex flex-col gap-3 pt-2">
+        {/* Row 1: Status, Dept, Count Badge, Stage, Search, Download, New Project */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* All / Status Dropdown */}
-          <div className="w-28 sm:w-32">
+          <div className="w-28">
             <CustomSelect
               value={statusFilter}
               onChange={(val) => setStatusFilter(val)}
@@ -1764,7 +1764,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           </div>
 
           {/* Department Filter Dropdown */}
-          <div className="w-44 sm:w-56">
+          <div className="w-52">
             <CustomSelect
               value={activeDeptId}
               onChange={(val) => {
@@ -1790,7 +1790,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           </span>
 
           {/* Stage Dropdown */}
-          <div className="w-48 sm:w-56">
+          <div className="w-44">
             <CustomSelect
               value={stageFilter}
               onChange={(val) => setStageFilter(val)}
@@ -1808,29 +1808,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
-          {/* Category Dropdown */}
-          <div className="w-40 sm:w-48">
-            <CustomSelect
-              value={categoryFilter}
-              onChange={(val) => setCategoryFilter(val)}
-              options={[
-                { label: 'Category: All', value: 'All' },
-                { label: 'Residential', value: 'Residential' },
-                { label: 'Commercial', value: 'Commercial' },
-                { label: 'Infrastructure', value: 'Infrastructure' },
-                { label: 'Testing', value: 'Testing' },
-              ]}
-              placeholder="Category"
-              size="sm"
-              variant="brand"
-            />
-          </div>
-        </div>
+          {/* Spacer to push right-side controls to the end */}
+          <div className="flex-1" />
 
-        {/* Right: Search Input, Download Icon, + New Project Button */}
-        <div className="flex items-center gap-2.5 flex-wrap">
           {/* Search Projects Input */}
-          <div className="relative min-w-[220px]">
+          <div className="relative w-52">
             <input
               type="text"
               value={searchQuery}
@@ -1849,6 +1831,27 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           >
             <Download className="w-4 h-4" />
           </button>
+        </div>
+
+        {/* Row 2: Category + New Project Button aligned */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Category Dropdown */}
+          <div className="w-40">
+            <CustomSelect
+              value={categoryFilter}
+              onChange={(val) => setCategoryFilter(val)}
+              options={[
+                { label: 'Category: All', value: 'All' },
+                { label: 'Residential', value: 'Residential' },
+                { label: 'Commercial', value: 'Commercial' },
+                { label: 'Infrastructure', value: 'Infrastructure' },
+                { label: 'Testing', value: 'Testing' },
+              ]}
+              placeholder="Category"
+              size="sm"
+              variant="brand"
+            />
+          </div>
 
           {/* + New Project Button */}
           <button

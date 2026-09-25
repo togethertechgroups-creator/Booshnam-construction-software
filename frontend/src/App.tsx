@@ -562,12 +562,13 @@ export function App() {
             />
           )}
 
-          {(currentView === 'finance' || currentView === 'accounts_finance') && (
+          {(currentView === 'finance' || currentView === 'accounts_finance' || currentView === 'expenses' || currentView === 'account_transfer' || currentView === 'account-transfer') && (
             <AccountsFinanceView
               projects={projects}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
               onShowToast={showToast}
+              initialTab={currentView === 'expenses' ? 'expenses' : (currentView === 'account_transfer' || currentView === 'account-transfer') ? 'account_transfer' : undefined}
             />
           )}
 

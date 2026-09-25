@@ -57,6 +57,47 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access' | 'leave_dashboard'>('details');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
+  // Attendance status per staff member
+  type AttendanceStatus = 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave';
+  const [staffAttendanceStatus, setStaffAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
+  const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
+
+  const getAttendanceStatus = (staffId: string): AttendanceStatus =>
+    staffAttendanceStatus[staffId] ?? 'Present';
+
+  const setAttendanceStatus = (staffId: string, status: AttendanceStatus) => {
+    setStaffAttendanceStatus(prev => ({ ...prev, [staffId]: status }));
+    setOpenAttendanceDropdown(null);
+    triggerToast(`Attendance marked as ${status}`);
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openAttendanceDropdown) return;
+    const handleClick = () => { setOpenAttendanceDropdown(null); setDropdownPos(null); };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [openAttendanceDropdown]);
+
+  const handleToggleAttendanceDropdown = (staffId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    if (openAttendanceDropdown === staffId) {
+      setOpenAttendanceDropdown(null);
+      setDropdownPos(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      setOpenAttendanceDropdown(staffId);
+    }
+  };
+
+    const attendanceOptions: { label: AttendanceStatus; color: string; bg: string; border: string }[] = [
+    { label: 'Present',    color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-200' },
+    { label: 'Absent',     color: 'text-red-700',     bg: 'bg-red-100',     border: 'border-red-200' },
+    { label: 'Weekoff',    color: 'text-indigo-700',  bg: 'bg-indigo-100',  border: 'border-indigo-200' },
+    { label: 'Paid Leave', color: 'text-amber-700',   bg: 'bg-amber-100',   border: 'border-amber-200' },
+  ];
+
   const allProjectsList = useMemo(() => {
     try {
       const raw = localStorage.getItem('booshnam_projects_v2');
@@ -751,8 +792,45 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                             <div className="flex items-center gap-1 text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">
                               <Clock className="w-3.5 h-3.5" /> 1 Shift
                             </div>
-                            <div className="bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded font-bold flex items-center gap-1.5 cursor-pointer">
-                              Present <span className="text-[10px]">▼</span>
+                            {/* Attendance Status Dropdown */}
+                            <div
+                              className="relative"
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              {(() => {
+                                const status = getAttendanceStatus(staff.id);
+                                const opt = attendanceOptions.find(o => o.label === status) ?? attendanceOptions[0];
+                                return (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleToggleAttendanceDropdown(staff.id, e)}
+                                      className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-3 py-1.5 rounded font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90'}
+                                    >
+                                      {status}
+                                      <span className="text-[10px]">▼</span>
+                                    </button>
+
+                                    {openAttendanceDropdown === staff.id && dropdownPos && (
+                                      <div className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
+                                        style={{ top: dropdownPos.top, right: dropdownPos.right }}
+                                        onMouseDown={(e) => e.stopPropagation()}>
+                                        {attendanceOptions.map((option) => (
+                                          <button
+                                            key={option.label}
+                                            type="button"
+                                            onClick={() => setAttendanceStatus(staff.id, option.label)}
+                                            className={'w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 transition-colors hover:bg-slate-50 ' + (status === option.label ? option.bg + ' ' + option.color : 'text-slate-700')}
+                                          >
+                                            <span className={'w-2 h-2 rounded-full ' + option.bg.replace('100', '500')} />
+                                            {option.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                             <button 
                               onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
@@ -1246,3 +1324,4 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     </div>
   );
 };
+

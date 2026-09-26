@@ -3,8 +3,8 @@ import {
   LayoutGrid, FileText, Home, Users, Briefcase, CreditCard, 
   Package, ShoppingCart, Archive, Truck, ClipboardCheck, 
   BookOpen, Settings, ChevronDown, ArrowLeft, Shield, Smartphone,
-  Layers, ListTodo, UserCheck, Calculator, ShieldCheck, Menu, LogOut,
-  Landmark, Compass, BarChart3, HardHat, DollarSign, Building2, CheckCircle2
+  Layers, ListTodo, Calculator, ShieldCheck, Menu, LogOut,
+  Landmark, Compass, BarChart3, HardHat, DollarSign, Building2, CheckCircle2, Bell
 } from 'lucide-react';
 import { Role } from '../types';
 import { MOCK_ROLES } from '../lib/mockData';
@@ -13,6 +13,7 @@ import { isPageAllowedForActiveUser, logoutUser, getCurrentUserAccount } from '.
 import { confirmSignOut } from '../lib/dialogService';
 import { ORGANIZATION_DEPARTMENTS, getActiveDepartment, setActiveDepartmentId, DepartmentEntity } from '../lib/departmentService';
 import { DepartmentLogo } from './DepartmentLogo';
+import { getDueFollowUpsCount } from '../lib/leadsNotificationService';
 
 interface SidebarProps {
   currentView: string;
@@ -30,6 +31,7 @@ interface NavGroupItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | null;
+  hasBell?: boolean;
 }
 
 const DEPARTMENT_SUB_ITEMS = [
@@ -98,6 +100,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [, setRolePermissionsTick] = useState(0);
   const activeAccount = getCurrentUserAccount();
 
+  // Dynamic Follow-up Reminders Count for Quotation & Leads
+  const [followUpsCount, setFollowUpsCount] = useState<number>(() => getDueFollowUpsCount());
+
+  useEffect(() => {
+    const syncFollowUps = () => {
+      setFollowUpsCount(getDueFollowUpsCount());
+    };
+    window.addEventListener('booshnam_leads_updated', syncFollowUps);
+    window.addEventListener('booshnam_reminders_viewed', syncFollowUps);
+    window.addEventListener('storage', syncFollowUps);
+    return () => {
+      window.removeEventListener('booshnam_leads_updated', syncFollowUps);
+      window.removeEventListener('booshnam_reminders_viewed', syncFollowUps);
+      window.removeEventListener('storage', syncFollowUps);
+    };
+  }, []);
+
   // Synchronize available roles & permissions whenever configured
   useEffect(() => {
     const syncPermissions = () => {
@@ -154,12 +173,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
         { id: 'projects', label: 'Projects', icon: Home },
-        { id: 'quotation', label: 'Quotation', icon: Calculator },
+        { 
+          id: 'quotation', 
+          label: 'Quotation', 
+          icon: Calculator, 
+          badge: followUpsCount > 0 ? `${followUpsCount}` : null,
+          hasBell: followUpsCount > 0
+        },
         { id: 'tasks', label: 'Tasks', icon: ListTodo, badge: '11' }
       ],
-      // Group 2: Clients & People
+      // Group 2: Workforce & Payroll
       [
-        { id: 'clients', label: 'Clients', icon: UserCheck },
         { id: 'workforce', label: 'Staff & Payroll', icon: Users }
       ],
       // Group 3: Financials & Supply Chain
@@ -366,16 +390,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </div>
 
                       {isOpen && item.badge && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors ${
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all shadow-xs ${
                           isActive ? 'bg-white text-red-600' : 'bg-red-600 text-white'
                         }`}>
-                          {item.badge}
+                          {item.hasBell && (
+                            <Bell className={`w-2.5 h-2.5 shrink-0 ${isActive ? 'text-red-600' : 'text-white'} fill-current`} />
+                          )}
+                          <span>{item.badge}</span>
                         </span>
                       )}
 
-                      {/* Mini mode: badge as small dot */}
+                      {/* Mini mode: badge as small glowing dot */}
                       {!isOpen && item.badge && (
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-600" />
+                        <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border border-white"></span>
+                        </span>
                       )}
                     </button>
                   );

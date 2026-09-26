@@ -94,29 +94,29 @@ export const CustomMonthPicker: React.FC<CustomMonthPickerProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center justify-center w-9 h-9 bg-white border ${value ? 'border-indigo-500 text-indigo-600 bg-indigo-50' : 'border-slate-200 text-slate-700'} rounded-lg hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 shadow-xs transition-colors`}
+        className={`flex items-center justify-center w-9 h-9 bg-white border ${value ? 'border-red-500 text-red-600 bg-red-50/50' : 'border-slate-200 text-slate-700'} rounded-lg hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 shadow-xs transition-colors cursor-pointer`}
         title={formatDisplay()}
       >
         <CalendarIcon className="w-4 h-4" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 select-none">
           
           {/* Header */}
-          <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div className="p-3 border-b border-red-100/60 bg-white flex items-center justify-between">
             <button 
               type="button"
               onClick={() => setViewYear(prev => prev - 1)}
-              className="p-1 hover:bg-slate-200 rounded text-slate-600"
+              className="p-1 hover:bg-red-50 rounded-lg text-slate-600 hover:text-red-600 transition-colors cursor-pointer"
             >
               {'<'}
             </button>
-            <span className="text-sm font-bold text-slate-800">{viewYear}</span>
+            <span className="text-sm font-bold text-slate-900">{viewYear}</span>
             <button 
               type="button"
               onClick={() => setViewYear(prev => prev + 1)}
-              className="p-1 hover:bg-slate-200 rounded text-slate-600"
+              className="p-1 hover:bg-red-50 rounded-lg text-slate-600 hover:text-red-600 transition-colors cursor-pointer"
             >
               {'>'}
             </button>
@@ -134,12 +134,12 @@ export const CustomMonthPicker: React.FC<CustomMonthPickerProps> = ({
                   type="button"
                   onClick={() => handleSelectMonth(idx)}
                   className={`
-                    py-2 text-xs font-medium rounded-md transition-all
+                    py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer
                     ${isSelected 
-                      ? 'bg-blue-600 text-white shadow-xs border border-blue-800 font-bold' 
+                      ? 'bg-red-600 text-white shadow-sm font-bold' 
                       : isFuture 
                         ? 'text-slate-300 cursor-not-allowed hover:bg-transparent'
-                        : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'
+                        : 'text-slate-700 hover:bg-red-50 hover:text-red-600'
                     }
                   `}
                 >
@@ -154,14 +154,14 @@ export const CustomMonthPicker: React.FC<CustomMonthPickerProps> = ({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              className="text-xs font-semibold text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
             >
               Clear
             </button>
             <button
               type="button"
               onClick={handleThisMonth}
-              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+              className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline transition-colors cursor-pointer"
             >
               This month
             </button>

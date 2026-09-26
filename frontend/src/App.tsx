@@ -10,7 +10,6 @@ import { SiteOpsView } from './views/SiteOpsView';
 import { SnagsView } from './views/SnagsView';
 import { ApprovalsView } from './views/ApprovalsView';
 import { SettingsView } from './views/SettingsView';
-import { CRMView } from './views/CRMView';
 import { DocumentsView } from './views/DocumentsView';
 import { DepartmentsView } from './views/DepartmentsView';
 import { ClientPortalView } from './views/ClientPortalView';
@@ -52,6 +51,13 @@ import { getOrInitializeProjects } from './lib/departmentService';
 export function App() {
   const [currentUserAccount, setCurrentUserAccountState] = useState<UserAccount | null>(() => getCurrentUserAccount());
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
+
+  // If clients or crm view is requested, route to quotation which contains the full Leads CRM & Quotations hub
+  useEffect(() => {
+    if (currentView === 'clients' || currentView === 'crm') {
+      setCurrentView('quotation');
+    }
+  }, [currentView]);
   const [activeRole, setActiveRole] = useState<Role>(() => {
     const acc = getCurrentUserAccount();
     if (acc) {
@@ -356,7 +362,9 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-site-text flex flex-col">
+    <div className={`bg-white text-site-text flex flex-col ${
+      currentView === 'quotation' ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'
+    }`}>
       {/* Toast Notification */}
       {notificationMsg && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 animate-bounce">
@@ -382,9 +390,11 @@ export function App() {
       {/* Main Content Area */}
       <div className={`transition-all duration-300 ease-in-out flex flex-col flex-1 min-w-0 bg-white ${
         isProfileModalOpen ? 'pl-0' : isSidebarOpen ? 'pl-64' : 'pl-[72px]'
-      }`}>
+      } ${currentView === 'quotation' ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
         {/* View Router */}
-        <main className="flex-1 w-full min-w-0 bg-[#f8fafc]">
+        <main className={`flex-1 w-full min-w-0 bg-[#f8fafc] ${
+          currentView === 'quotation' ? 'h-full flex flex-col overflow-hidden' : ''
+        }`}>
           {currentView === 'company_dashboard' && (
             <CompanyDashboardView
               projects={projects}
@@ -497,15 +507,6 @@ export function App() {
             />
           )}
 
-          {currentView === 'crm' && (
-            <CRMView
-              leads={leads}
-              onConvertSuccess={handleConvertLeadSuccess}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
           {currentView === 'quotation' && (
             <QuotationView
               projects={projects}
@@ -589,15 +590,6 @@ export function App() {
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
               onShowToast={showToast}
-            />
-          )}
-
-          {currentView === 'clients' && (
-            <CRMView
-              leads={leads}
-              onConvertSuccess={handleConvertLeadSuccess}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
           )}
         </main>

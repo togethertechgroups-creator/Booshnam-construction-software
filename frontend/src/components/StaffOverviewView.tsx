@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   ArrowLeft, User, ShieldCheck, Check, CheckCircle2, Lock, Eye, EyeOff, 
   RefreshCw, LayoutGrid, Home, Layers, ListTodo, UserCheck, Users, 
   Calculator, CreditCard, ShoppingCart, Truck, BookOpen, FileText, 
   ClipboardCheck, Settings, Shield, ArrowRight, Save, Calendar, 
-  Phone, Mail, Briefcase, Building2, KeyRound, AlertCircle, Info, Landmark
+  Phone, Mail, Briefcase, Building2, KeyRound, AlertCircle, Info, Landmark,
+  Download, X, Image as ImageIcon, ChevronDown
 } from 'lucide-react';
 import { 
   StaffMember, 
@@ -18,6 +19,12 @@ import { getUserAccounts, saveUserAccount, UserAccount } from '../lib/authServic
 import { MOCK_ROLES } from '../lib/mockData';
 import { confirmAction } from '../lib/dialogService';
 import { CustomMonthPicker } from './CustomMonthPicker';
+import { 
+  calculatePayslip, 
+  exportPayslipToPDF, 
+  exportPayslipToWord, 
+  exportPayslipToPNG 
+} from '../lib/payslipExportService';
 
 interface StaffOverviewViewProps {
   staff: StaffMember;
@@ -36,7 +43,21 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'access' | 'leave_dashboard'>(initialTab);
   const [accessStep, setAccessStep] = useState<1 | 2>(1);
-  const [payslipMonth, setPayslipMonth] = useState('');
+  const [payslipMonth, setPayslipMonth] = useState('2026-01');
+  const [isPayslipDropdownOpen, setIsPayslipDropdownOpen] = useState(false);
+  const payslipDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (payslipDropdownRef.current && !payslipDropdownRef.current.contains(e.target as Node)) {
+        setIsPayslipDropdownOpen(false);
+      }
+    };
+    if (isPayslipDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isPayslipDropdownOpen]);
 
   // Tab 1: Staff Details Edit Form
   const [detailsForm, setDetailsForm] = useState({
@@ -375,17 +396,125 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                 onChange={setPayslipMonth}
                 onShowToast={onShowToast}
               />
-              <button 
-                disabled={!payslipMonth}
-                className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-2 ${payslipMonth ? 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer' : 'bg-slate-300 cursor-not-allowed'}`}
-                onClick={() => {
-                  if(payslipMonth) {
-                    onShowToast(`Downloading payslip for ${payslipMonth}...`);
-                  }
-                }}
-              >
-                {payslipMonth ? `Download Payslip (${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(payslipMonth.split('-')[1])-1]} ${payslipMonth.split('-')[0]})` : 'Download Payslip'}
-              </button>
+              <div ref={payslipDropdownRef} className="relative">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!payslipMonth) setPayslipMonth('2026-01');
+                    setIsPayslipDropdownOpen(prev => !prev);
+                  }}
+                  className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
+                    isPayslipDropdownOpen ? 'bg-indigo-700 ring-2 ring-indigo-400/40' : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>
+                    {payslipMonth ? `Download Payslip (${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(payslipMonth.split('-')[1])-1]} ${payslipMonth.split('-')[0]})` : 'Download Payslip'}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPayslipDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isPayslipDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 z-[100] py-2 text-xs text-slate-800 animate-in fade-in zoom-in-95">
+                    <div className="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                      <span>Select Format:</span>
+                      <span className="font-mono text-indigo-600 font-bold">
+                        {payslipMonth || '2026-01'}
+                      </span>
+                    </div>
+
+                    <div className="p-1.5 space-y-1">
+                      {/* PDF Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            exportPayslipToPDF(staff, payslipMonth || undefined);
+                            onShowToast(`Payslip PDF downloaded for ${staff.name}`);
+                            setIsPayslipDropdownOpen(false);
+                          } catch (err) {
+                            console.error('PDF export error', err);
+                            onShowToast('Failed to generate PDF.');
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-red-50 text-slate-700 hover:text-red-700 transition-colors text-left group cursor-pointer"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs">Official PDF (.pdf)</span>
+                            <span className="text-[9.5px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">PDF</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 group-hover:text-red-600/70 truncate">
+                            Printable ISO/NABL salary slip
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* Word Option */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try {
+                            exportPayslipToWord(staff, payslipMonth || undefined);
+                            onShowToast(`Payslip Word doc downloaded for ${staff.name}`);
+                            setIsPayslipDropdownOpen(false);
+                          } catch (err) {
+                            console.error('Word export error', err);
+                            onShowToast('Failed to generate Word doc.');
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-blue-50 text-slate-700 hover:text-blue-700 transition-colors text-left group cursor-pointer"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs">Microsoft Word (.doc)</span>
+                            <span className="text-[9.5px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Word</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 group-hover:text-blue-600/70 truncate">
+                            Editable salary breakdown document
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* PNG Option */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            onShowToast('Generating PNG slip image...');
+                            await exportPayslipToPNG(staff, payslipMonth || undefined);
+                            onShowToast(`Payslip PNG image downloaded for ${staff.name}`);
+                            setIsPayslipDropdownOpen(false);
+                          } catch (err) {
+                            console.error('PNG export error', err);
+                            onShowToast('Failed to generate image.');
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-lg flex items-center gap-3 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors text-left group cursor-pointer"
+                      >
+                        <div className="w-7 h-7 rounded-md bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-xs">Digital Slip Image (.png)</span>
+                            <span className="text-[9.5px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Image</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 group-hover:text-emerald-600/70 truncate">
+                            Quick mobile & WhatsApp sharing
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

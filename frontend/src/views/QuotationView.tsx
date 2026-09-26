@@ -5,13 +5,15 @@ import {
   ArrowRight, Briefcase, Building2, Phone, Mail, FileText, 
   Sparkles, ShieldCheck, MapPin, Calendar, Check,
   ChevronDown, RotateCcw, Award, Layers, MoreVertical, Edit2,
-  Gift, HelpCircle, Info
+  Gift, HelpCircle, Info, Bell, BellRing, Globe
 } from 'lucide-react';
 import { Project, Department, Lead, Quotation, QuotationItem } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
 import { CustomDatePicker } from '../components/CustomDatePicker';
 import { confirmAction } from '../lib/dialogService';
+import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
+import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
 
 interface QuotationViewProps {
   projects?: Project[];
@@ -38,6 +40,9 @@ const INITIAL_CRM_LEADS: Lead[] = [
     status_label: 'New Lead',
     source: 'Just dial',
     category: 'Soil Testing',
+    priority: 'High',
+    last_contacted_date: '2026-09-01',
+    followup_date: '2026-09-14',
     last_updated: '25 September 2026',
     creation_date: '2026-09-25'
   },
@@ -56,6 +61,9 @@ const INITIAL_CRM_LEADS: Lead[] = [
     status_label: 'New Lead',
     source: 'Just dial',
     category: 'Soil Testing',
+    priority: 'Medium',
+    last_contacted_date: '2026-09-20',
+    followup_date: '2026-09-26',
     last_updated: '25 September 2026',
     creation_date: '2026-09-25'
   },
@@ -74,6 +82,9 @@ const INITIAL_CRM_LEADS: Lead[] = [
     status_label: 'Proposal Stage',
     source: 'Just dial',
     category: 'Soil Testing',
+    priority: 'Medium',
+    last_contacted_date: '2026-09-22',
+    followup_date: '2026-09-30',
     last_updated: '25 September 2026',
     creation_date: '2026-09-25'
   },
@@ -187,26 +198,35 @@ const INITIAL_CRM_LEADS: Lead[] = [
   }
 ];
 
-// Initial Sample Quotations matching User Screenshot (Image 3)
+// Initial Sample Quotations matching User Screenshot (Official Booshnam Associates Template)
 const INITIAL_CRM_QUOTATIONS: Quotation[] = [
   {
     id: 'quo-1',
-    quotation_number: 'QBAG2289',
-    date: '25 Sep 2026',
-    valid_until: '25 Oct 2026',
-    client_name: 'Karthick',
+    quotation_number: 'QBAG/3078/2026-27',
+    date: '25th Sep 2026',
+    valid_until: '25th Oct 2026',
+    client_name: 'Mr. Prakash',
+    client_address: 'Chennai.',
     client_phone: '9840123456',
-    client_email: 'karthick@gmail.com',
-    project_title: 'Soil Investigation',
+    client_email: 'prakash@gmail.com',
+    project_title: 'Soil Investigations to be carried out for proposed structure at Arasankalai.',
     department: 'CBE_SOIL_INVESTIGATION',
     status: 'Client Confirmed',
-    subtotal: 9745,
+    subtotal: 29500,
     tax_percentage: 18,
-    tax_amount: 1755,
-    total_amount: 11500,
-    notes: 'Soil bore hole testing and safe bearing capacity determination.',
+    tax_amount: 0,
+    total_amount: 29500,
+    notes: '1. GST 18% Will be added.\n2. 50% payment shall be made while issuing the work order, 50% shall be made while submitting the report.\n3. Site shall be cleared of any obstructions, obligations, etc.\n4. Water shall be provided for drilling purposes.\n5. If there is significant variation in soil characteristics among the boreholes, it may be necessary to conduct additional drilling to evaluate the nature of the soil at varying depths and across different locations.\n6. Soil Sample will be disposed of within 2 days from the date of issue of the test report.',
     items: [
-      { id: '1', item_code: 'ITM-01', description: 'Soil Investigation Bore Hole Drilling & Sample Collection (Up to 10m)', unit: 'Bore', quantity: 1, unit_rate: 9745, amount: 9745, category: 'Soil Investigation' }
+      { id: '1', item_code: '1.0', description: 'Mobilization and De-mobilisation of Men and Equipments to the site location where the soilinvestigations have to be carried out.', unit: 'LS', quantity: 1, unit_rate: 2500, amount: 2500, category: 'Soil Investigation' },
+      { id: '2', item_code: '2.0', description: 'Boring through all type of soil strata and conducting SPT tests at the specified interval at the investigation location in accordance with I. S: 2131 . Collection of SPT samples and disturbed samples in accordance with I.S:1498- 1970 from the existing soil strata. Drilling in Soil', unit: '', quantity: 0, unit_rate: 0, amount: 0, category: 'Soil Investigation' },
+      { id: '3', item_code: '2.1', description: '0.00m to 10.0m or a depth where SPT>60-whicheveris met earlier and SPT @ 1.50m interval', unit: 'No.', quantity: 3, unit_rate: 9000, amount: 27000, category: 'Soil Investigation' },
+      { id: '4', item_code: '2.2', description: '10.00m to 20.0m or a depth where SPT>60-whichever is met earlier and SPT @ 2.00 m interval', unit: 'RM', quantity: 0, unit_rate: 900, amount: 0, category: 'Soil Investigation' },
+      { id: '5', item_code: '2.3', description: '20.00m to 30.0m or a depth where SPT>60-whichever is met earlier and SPT @ 2.00 m interval', unit: 'RM', quantity: 0, unit_rate: 950, amount: 0, category: 'Soil Investigation' },
+      { id: '6', item_code: '2.4', description: 'Drilling in soil where SPT>60 / Weathered Rock', unit: 'RM', quantity: 0, unit_rate: 2500, amount: 0, category: 'Soil Investigation' },
+      { id: '7', item_code: '2.5', description: 'Drilling in hard rock / strata using Diamond cutter', unit: 'RM', quantity: 0, unit_rate: 4500, amount: 0, category: 'Soil Investigation' },
+      { id: '8', item_code: '3.0', description: 'Conducting Laboratory tests on the disturbed soil samples to arrive at the shear parameters of the soil. Determining the gradation characteristics through dry sieve and wet sieve analysis. Conducting Atterberg Limit tests on the clayey strata to determine the plasticity characteristics of strata.', unit: 'Per Bore', quantity: 3, unit_rate: 0, amount: 0, category: 'Soil Investigation' },
+      { id: '9', item_code: '4.0', description: 'Compiling the field and laboratory test results in theform of report and suggesting the type of foundation system for the proposed structure withrecommendations and submitting the same.', unit: 'LS', quantity: 0, unit_rate: 0, amount: 0, category: 'Soil Investigation' },
     ]
   },
   {
@@ -344,6 +364,7 @@ interface FilterDropdownProps {
   onChange: (value: string) => void;
   options: FilterDropdownOption[];
   minWidth?: string;
+  icon?: React.ReactNode;
 }
 
 const FilterDropdown: React.FC<FilterDropdownProps> = ({
@@ -351,7 +372,8 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   value,
   onChange,
   options,
-  minWidth = 'min-w-[130px]'
+  minWidth = 'min-w-[130px]',
+  icon
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -382,9 +404,13 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
             : 'border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50/70'
         } ${isOpen ? 'border-red-500 ring-2 ring-red-500/15 bg-slate-50/40' : ''}`}
       >
-        <div className="flex items-center gap-1.5 truncate max-w-[125px]">
-          {selectedOption?.dotColor && (
-            <span className={`w-2 h-2 rounded-full shrink-0 ${selectedOption.dotColor}`} />
+        <div className="flex items-center gap-1.5 truncate max-w-[155px]">
+          {icon ? (
+            <span className="shrink-0">{icon}</span>
+          ) : (
+            selectedOption?.dotColor && (
+              <span className={`w-2 h-2 rounded-full shrink-0 ${selectedOption.dotColor}`} />
+            )
           )}
           <span className="truncate">
             {isFiltered ? selectedOption?.label || value : label}
@@ -435,6 +461,122 @@ const FilterDropdown: React.FC<FilterDropdownProps> = ({
   );
 };
 
+interface FloatingSelectOption {
+  label: string;
+  value: string;
+  dotColor?: string;
+}
+
+interface FloatingSelectProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  options: (string | FloatingSelectOption)[];
+  placeholder?: string;
+  align?: 'left' | 'right';
+  className?: string;
+}
+
+const FloatingSelect: React.FC<FloatingSelectProps> = ({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  align = 'left',
+  className = '',
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const normalizedOptions: FloatingSelectOption[] = useMemo(() => {
+    return options.map((opt) =>
+      typeof opt === 'string' ? { label: opt, value: opt } : opt
+    );
+  }, [options]);
+
+  const selectedOpt = normalizedOptions.find((o) => o.value === value);
+
+  return (
+    <div ref={containerRef} className={`relative w-full ${className}`}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className={`relative border rounded-xl h-11 px-3.5 flex items-center justify-between cursor-pointer transition-colors bg-white select-none ${
+          isOpen
+            ? 'border-red-600 ring-2 ring-red-100'
+            : 'border-slate-300 hover:border-slate-400'
+        }`}
+      >
+        <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10 pointer-events-none">
+          {label}
+        </label>
+        <div className="flex items-center gap-2 truncate pr-2 flex-1 min-w-0">
+          {selectedOpt?.dotColor && (
+            <span className={`w-2 h-2 rounded-full shrink-0 ${selectedOpt.dotColor}`} />
+          )}
+          <span className={`text-xs truncate ${value ? 'font-medium text-slate-800' : 'text-slate-400 font-normal'}`}>
+            {selectedOpt?.label || value || placeholder}
+          </span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-red-600' : ''
+          }`}
+        />
+      </div>
+
+      {isOpen && (
+        <div
+          className={`absolute top-full mt-1.5 ${
+            align === 'right' ? 'right-0' : 'left-0'
+          } z-50 w-full min-w-[200px] bg-white rounded-xl border border-slate-200 shadow-2xl py-1 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 select-none`}
+        >
+          <div className="max-h-60 overflow-y-auto py-0.5">
+            {normalizedOptions.map((opt) => {
+              const isSelected = opt.value === value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-3.5 py-2.5 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer text-xs ${
+                    isSelected
+                      ? 'bg-red-50 text-red-700 font-bold'
+                      : 'hover:bg-red-50/50 text-slate-700 hover:text-red-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {opt.dotColor && (
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dotColor}`} />
+                    )}
+                    <span className="truncate">{opt.label}</span>
+                  </div>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-red-600 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const QuotationView: React.FC<QuotationViewProps> = ({
   projects = [],
   onConvertSuccess,
@@ -453,7 +595,18 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       const saved = localStorage.getItem('booshnam_leads_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasAnyFollowup = parsed.some((l: Lead) => l.followup_date);
+          if (!hasAnyFollowup) {
+            return parsed.map((l: Lead, idx: number) => {
+              if (idx === 0) return { ...l, last_contacted_date: '2026-09-01', followup_date: '2026-09-14' };
+              if (idx === 1) return { ...l, last_contacted_date: '2026-09-20', followup_date: '2026-09-26' };
+              if (idx === 2) return { ...l, last_contacted_date: '2026-09-22', followup_date: '2026-09-30' };
+              return l;
+            });
+          }
+          return parsed;
+        }
       }
     } catch {}
     return INITIAL_CRM_LEADS;
@@ -462,6 +615,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem('booshnam_leads_v2', JSON.stringify(leads));
+      window.dispatchEvent(new Event('booshnam_leads_updated'));
     } catch {}
   }, [leads]);
 
@@ -472,6 +626,60 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [leadStatusFilter, setLeadStatusFilter] = useState('ALL');
   const [leadSourceFilter, setLeadSourceFilter] = useState('ALL');
   const [leadCategoryFilter, setLeadCategoryFilter] = useState('ALL');
+  const [leadFollowUpFilter, setLeadFollowUpFilter] = useState<'ALL' | 'DUE' | 'TODAY' | 'OVERDUE' | 'UPCOMING' | 'NO_DATE'>('ALL');
+
+  const [viewedRemindersTick, setViewedRemindersTick] = useState(0);
+  const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleRemindersUpdated = () => setViewedRemindersTick(t => t + 1);
+    window.addEventListener('booshnam_reminders_viewed', handleRemindersUpdated);
+    window.addEventListener('booshnam_leads_updated', handleRemindersUpdated);
+    return () => {
+      window.removeEventListener('booshnam_reminders_viewed', handleRemindersUpdated);
+      window.removeEventListener('booshnam_leads_updated', handleRemindersUpdated);
+    };
+  }, []);
+
+  // Follow-up statistics for notifications & badge alerts
+  const followUpStats = useMemo(() => {
+    let overdue = 0;
+    let today = 0;
+    let upcoming = 0;
+    let unviewedDue = 0;
+    const viewedMap = getViewedRemindersMap();
+
+    leads.forEach(l => {
+      const info = getFollowUpStatus(l.followup_date);
+      if (info.status === 'OVERDUE') overdue++;
+      else if (info.status === 'TODAY') today++;
+      else if (info.status === 'UPCOMING') upcoming++;
+
+      if (info.status === 'OVERDUE' || info.status === 'TODAY') {
+        const isViewed = isReminderViewed(l.id, l.followup_date);
+        if (!isViewed) {
+          unviewedDue++;
+        }
+      }
+    });
+    return { overdue, today, upcoming, totalDue: overdue + today, unviewedDue };
+  }, [leads, viewedRemindersTick]);
+
+  // List of due/overdue leads for reminders modal
+  const dueLeads = useMemo(() => {
+    return leads.filter(l => {
+      if (!l.followup_date) return false;
+      const info = getFollowUpStatus(l.followup_date);
+      return info.status === 'OVERDUE' || info.status === 'TODAY';
+    });
+  }, [leads]);
+
+  const handleOpenViewReminders = () => {
+    // Open the Reminders Modal so the user can inspect and act on individual reminders
+    setIsRemindersModalOpen(true);
+    // Filter leads to DUE
+    setLeadFollowUpFilter('DUE');
+  };
 
   // New Lead Right Drawer State (Image 2)
   const [isLeadDrawerOpen, setIsLeadDrawerOpen] = useState(false);
@@ -510,7 +718,14 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       const saved = localStorage.getItem('booshnam_quotations_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // If the official Booshnam template quotation QBAG/3078/2026-27 is not yet in list, prepend it
+          const hasOfficialTemplate = parsed.some((q: Quotation) => q.quotation_number.includes('3078'));
+          if (!hasOfficialTemplate) {
+            return [INITIAL_CRM_QUOTATIONS[0], ...parsed];
+          }
+          return parsed;
+        }
       }
     } catch {}
     return INITIAL_CRM_QUOTATIONS;
@@ -531,9 +746,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [activeQuoteStatusDropdownId, setActiveQuoteStatusDropdownId] = useState<string | null>(null);
   const [activeQuoteRowMenuId, setActiveQuoteRowMenuId] = useState<string | null>(null);
 
-  // Preview & Modal States
+  // Preview & Download Modal States
   const [isNewQuoteModalOpen, setIsNewQuoteModalOpen] = useState(false);
   const [previewQuotation, setPreviewQuotation] = useState<Quotation | null>(null);
+  const [downloadQuoteTarget, setDownloadQuoteTarget] = useState<Quotation | null>(null);
 
   // New Quotation Form Fields
   const [quoteClientName, setQuoteClientName] = useState('');
@@ -598,9 +814,17 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       }
       if (leadSourceFilter !== 'ALL' && l.source !== leadSourceFilter) return false;
       if (leadCategoryFilter !== 'ALL' && l.category !== leadCategoryFilter) return false;
+      if (leadFollowUpFilter !== 'ALL') {
+        const info = getFollowUpStatus(l.followup_date);
+        if (leadFollowUpFilter === 'DUE' && info.status !== 'OVERDUE' && info.status !== 'TODAY') return false;
+        if (leadFollowUpFilter === 'TODAY' && info.status !== 'TODAY') return false;
+        if (leadFollowUpFilter === 'OVERDUE' && info.status !== 'OVERDUE') return false;
+        if (leadFollowUpFilter === 'UPCOMING' && info.status !== 'UPCOMING') return false;
+        if (leadFollowUpFilter === 'NO_DATE' && l.followup_date) return false;
+      }
       return true;
     });
-  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter]);
+  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter, leadFollowUpFilter]);
 
   const filteredQuotations = useMemo(() => {
     return quotations.filter(q => {
@@ -665,6 +889,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   };
 
   const handleEditLead = (lead: Lead) => {
+    markRemindersAsViewed([lead.id]);
     setEditingLeadId(lead.id);
     setDrawerAssignee(lead.assigned_to_name || '');
     setDrawerDate(lead.creation_date || '');
@@ -786,6 +1011,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   // Convert Lead to Quotation
   const handleConvertLeadToQuote = (lead: Lead) => {
+    markRemindersAsViewed([lead.id]);
     setActiveRowMenuId(null);
     setQuoteClientName(lead.client_name);
     setQuoteClientPhone(lead.phone || '');
@@ -811,6 +1037,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   // Convert Lead to Project
   const handleConvertLeadToProject = (lead: Lead) => {
+    markRemindersAsViewed([lead.id]);
     setActiveRowMenuId(null);
     setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, stage: 'WON', status_label: 'Client Confirmed', probability: 100 } : l));
     onConvertSuccess?.(lead.project_title || `${lead.client_name} Project`);
@@ -862,17 +1089,17 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       return;
     }
 
-    const nextCode = `QBAG${String(quotations.length + 2289)}`;
+    const nextCode = `QBAG/${String(quotations.length + 3078)}/2026-27`;
     const newQuote: Quotation = {
       id: `quo-${Date.now()}`,
       quotation_number: nextCode,
-      date: '25 Sep 2026',
+      date: '25th Sep 2026',
       valid_until: quoteValidUntil,
       client_name: quoteClientName.trim(),
       client_phone: quoteClientPhone.trim() || undefined,
       client_email: quoteClientEmail.trim() || undefined,
-      client_address: quoteClientAddress.trim() || undefined,
-      project_title: quoteProjectTitle.trim() || 'Soil Investigation',
+      client_address: quoteClientAddress.trim() || 'Chennai.',
+      project_title: quoteProjectTitle.trim() || 'Soil Investigations to be carried out for proposed structure at Arasankalai.',
       department: quoteDepartment,
       status: status,
       subtotal: quoteSubtotal,
@@ -887,6 +1114,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
     setQuotations(prev => [newQuote, ...prev]);
     setIsNewQuoteModalOpen(false);
+    setActiveTab('quotations'); // Auto-switch to quotations page!
     onShowToast?.(`Quotation ${nextCode} generated successfully!`);
 
     // Reset Form
@@ -962,13 +1190,13 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#ffffff] min-h-screen font-sans">
-      {/* ── TOP HEADER BAR ── */}
-      <header className="px-6 py-3.5 bg-white border-b border-slate-100 sticky top-0 z-20">
+    <div className="flex-1 flex flex-col min-w-0 bg-[#ffffff] h-full max-h-screen overflow-hidden font-sans">
+      {/* ── FIXED TOP HEADER BAR (Stays pinned in position, never moves or overlaps) ── */}
+      <header className="px-6 pt-3.5 pb-0 bg-white border-b border-slate-200 shrink-0 z-30 shadow-2xs">
         <div className="flex items-center justify-between">
           {/* Left Title: Quotation */}
           <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight font-heading">
               Quotation
             </h1>
           </div>
@@ -980,7 +1208,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         </div>
 
         {/* ── SUB-PAGE TABS: [ 1. Leads ] [ 2. Quotation ] (Red & White Theme) ── */}
-        <div className="flex items-center gap-6 mt-3 border-b border-slate-200/80">
+        <div className="flex items-center gap-6 mt-3">
           <button
             type="button"
             onClick={() => setActiveTab('leads')}
@@ -1027,15 +1255,15 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         </div>
       </header>
 
-      {/* ── MAIN CONTENT ── */}
-      <main className="p-6 space-y-4 flex-1">
+      {/* ── SCROLLABLE MAIN CONTENT (Only this content area scrolls vertically!) ── */}
+      <main className="p-6 space-y-4 flex-1 overflow-y-auto overflow-x-hidden min-h-0 bg-white">
         {/* ================================================================= */}
         {/* SUB-PAGE 1: LEADS (IMAGE 1) */}
         {/* ================================================================= */}
         {activeTab === 'leads' && (
           <div className="space-y-4">
             {/* Filter Toolbar Row (Red and White Theme - Perfectly Aligned, No Clipping) */}
-            <div className="relative z-30 flex items-center justify-between gap-3">
+            <div className="relative z-10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 shrink-0">
                 {/* Search Box */}
                 <div className="relative shrink-0 w-36 sm:w-44">
@@ -1122,26 +1350,78 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                   ]}
                   minWidth="min-w-[155px]"
                 />
+
+                {/* Follow-up Reminders Dropdown */}
+                <FilterDropdown
+                  label={followUpStats.totalDue > 0 ? `Reminder (${followUpStats.totalDue})` : 'Reminder'}
+                  value={leadFollowUpFilter}
+                  onChange={(val) => setLeadFollowUpFilter(val as any)}
+                  icon={
+                    <BellRing 
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        leadFollowUpFilter === 'DUE' || followUpStats.totalDue > 0 ? 'text-red-600' : 'text-slate-400'
+                      }`} 
+                    />
+                  }
+                  options={[
+                    { label: 'All Reminders', value: 'ALL' },
+                    { label: `Reminder (${followUpStats.totalDue})`, value: 'DUE', dotColor: 'bg-red-500' },
+                    { label: `Due Today (${followUpStats.today})`, value: 'TODAY', dotColor: 'bg-amber-500' },
+                    { label: `Overdue (${followUpStats.overdue})`, value: 'OVERDUE', dotColor: 'bg-red-600' },
+                    { label: `Upcoming (${followUpStats.upcoming})`, value: 'UPCOMING', dotColor: 'bg-blue-500' },
+                    { label: 'No Date Set', value: 'NO_DATE' },
+                  ]}
+                  minWidth="min-w-[175px]"
+                />
               </div>
 
-              {/* "+ New Lead" Button (Red & White Theme) */}
-              <div className="shrink-0">
+              {/* "+ New Lead" Button (Red & White Theme - Perfectly Aligned) */}
+              <div className="shrink-0 flex items-center">
                 <button
                   type="button"
                   onClick={handleOpenNewLeadDrawer}
-                  className="h-9 px-4.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-semibold shadow-xs shadow-red-600/20 flex items-center gap-1.5 cursor-pointer transition-all whitespace-nowrap"
+                  className="h-9 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all whitespace-nowrap border border-transparent"
                 >
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
                   <span>New Lead</span>
-                  <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
+
+            {/* Follow-up Reminders Alert Banner (only shows when there are unviewed due reminders) */}
+            {followUpStats.unviewedDue > 0 && leadFollowUpFilter !== 'DUE' && (
+              <div className="w-fit max-w-full bg-gradient-to-r from-red-50 via-white to-amber-50/40 border border-red-200/90 rounded-lg px-3 py-1.5 flex items-center gap-3.5 shadow-2xs animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <BellRing className="w-3.5 h-3.5 animate-pulse" />
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-bold text-slate-900">
+                      {followUpStats.unviewedDue} Follow-up {followUpStats.unviewedDue === 1 ? 'Reminder' : 'Reminders'} Pending:
+                    </span>
+                    <span className="text-slate-600 ml-1.5">
+                      {followUpStats.today > 0 && <span className="text-amber-700 font-semibold">{followUpStats.today} due today</span>}
+                      {followUpStats.today > 0 && followUpStats.overdue > 0 && ' • '}
+                      {followUpStats.overdue > 0 && <span className="text-red-700 font-semibold">{followUpStats.overdue} overdue</span>}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenViewReminders}
+                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-md font-bold text-xs shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                >
+                  <Bell className="w-3 h-3 text-white fill-white" />
+                  <span>View Reminders</span>
+                </button>
+              </div>
+            )}
 
             {/* Showing Count & Reset filters */}
             <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-0.5">
               <div className="flex items-center gap-2">
                 <span>Showing <strong className="text-slate-800 font-semibold">{filteredLeads.length}</strong> of {leads.length} leads</span>
-                {(leadSearch || leadPriorityFilter !== 'ALL' || leadStatusFilter !== 'ALL' || leadSourceFilter !== 'ALL' || leadCategoryFilter !== 'ALL') && (
+                {(leadSearch || leadPriorityFilter !== 'ALL' || leadStatusFilter !== 'ALL' || leadSourceFilter !== 'ALL' || leadCategoryFilter !== 'ALL' || leadFollowUpFilter !== 'ALL') && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1150,6 +1430,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       setLeadStatusFilter('ALL');
                       setLeadSourceFilter('ALL');
                       setLeadCategoryFilter('ALL');
+                      setLeadFollowUpFilter('ALL');
                     }}
                     className="text-[11px] text-red-600 hover:text-red-700 font-semibold underline underline-offset-2 cursor-pointer ml-1"
                   >
@@ -1171,6 +1452,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       <th className="py-3 px-4 font-semibold text-slate-700">Last Updated</th>
                       <th className="py-3 px-4 font-semibold text-slate-700">Contact Number</th>
                       <th className="py-3 px-4 font-semibold text-slate-700 text-center">Status</th>
+                      <th className="py-3 px-4 font-semibold text-slate-700 whitespace-nowrap">Follow Up</th>
                       <th className="py-3 px-4 font-semibold text-slate-700">Source</th>
                       <th className="py-3 px-4 font-semibold text-slate-700 text-center w-12">
                         <button 
@@ -1188,7 +1470,8 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                     {filteredLeads.map((lead, idx) => (
                       <tr 
                         key={lead.id}
-                        className="hover:bg-slate-50/70 transition-colors group text-slate-800"
+                        onClick={() => handleEditLead(lead)}
+                        className="hover:bg-slate-50/80 transition-colors group text-slate-800 cursor-pointer"
                       >
                         <td className="py-3.5 px-4 font-medium text-slate-500">
                           {idx + 1}
@@ -1209,6 +1492,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         <td className="py-3.5 px-4 font-mono text-slate-700 whitespace-nowrap">
                           <a 
                             href={`tel:${lead.phone}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="hover:text-red-600 hover:underline"
                             title="Call contact"
                           >
@@ -1222,11 +1506,79 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           </span>
                         </td>
 
+                        {/* Follow Up Column with Status Badges and Reminders */}
+                        <td className="py-3.5 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          {(() => {
+                            const info = getFollowUpStatus(lead.followup_date);
+                            const isViewed = isReminderViewed(lead.id, lead.followup_date);
+                            if (!lead.followup_date || info.status === 'NONE') {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditLead(lead)}
+                                  className="text-[11px] text-slate-400 hover:text-red-600 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                                  title="Click to set follow up date"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Set Date</span>
+                                </button>
+                              );
+                            }
+                            if (info.status === 'OVERDUE') {
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditLead(lead)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors cursor-pointer shadow-2xs group"
+                                    title="Overdue! Click to view or reschedule follow-up"
+                                  >
+                                    <BellRing className={`w-3.5 h-3.5 text-red-600 shrink-0 ${!isViewed ? 'animate-pulse' : ''}`} />
+                                    <span>{info.label}</span>
+                                  </button>
+                                  {!isViewed && (
+                                    <span className="w-2 h-2 rounded-full bg-red-600 shrink-0 shadow-xs" title="Unread reminder" />
+                                  )}
+                                </div>
+                              );
+                            }
+                            if (info.status === 'TODAY') {
+                              return (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEditLead(lead)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs group"
+                                    title="Due today! Click to view or reschedule follow-up"
+                                  >
+                                    <Bell className={`w-3.5 h-3.5 text-amber-600 shrink-0 fill-amber-500/20 ${!isViewed ? 'animate-bounce' : ''}`} />
+                                    <span>{info.label}</span>
+                                  </button>
+                                  {!isViewed && (
+                                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 shadow-xs" title="Unread reminder" />
+                                  )}
+                                </div>
+                              );
+                            }
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleEditLead(lead)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition-colors cursor-pointer"
+                                title="Click to view or reschedule follow-up"
+                              >
+                                <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                                <span>{info.label}</span>
+                              </button>
+                            );
+                          })()}
+                        </td>
+
                         <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                           {lead.source || 'Just dial'}
                         </td>
 
-                        <td className="py-3.5 px-4 text-center relative dropdown-trigger-container">
+                        <td className="py-3.5 px-4 text-center relative dropdown-trigger-container" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -1241,6 +1593,21 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           {/* Options Dropdown */}
                           {activeRowMenuId === lead.id && (
                             <div className="absolute right-4 top-10 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
+                              {!isReminderViewed(lead.id, lead.followup_date) && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    markRemindersAsViewed([lead.id]);
+                                    setActiveRowMenuId(null);
+                                    onShowToast?.(`Reminder for ${lead.client_name} marked as read`);
+                                  }}
+                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Mark as Read</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleConvertLeadToQuote(lead)}
@@ -1307,7 +1674,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         {activeTab === 'quotations' && (
           <div className="space-y-4">
             {/* Quotation Filters Toolbar (Red & White Theme - Perfectly Aligned, No Clipping) */}
-            <div className="relative z-30 flex items-center justify-between gap-3">
+            <div className="relative z-10 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 shrink-0">
                 {/* Search Quotation */}
                 <div className="relative shrink-0 w-44 sm:w-56">
@@ -1359,14 +1726,14 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 />
               </div>
 
-              {/* "+ New Quotation" Button (Red & White Theme) */}
-              <div className="shrink-0">
+              {/* "+ New Quotation" Button (Red & White Theme - Perfectly Aligned) */}
+              <div className="shrink-0 flex items-center">
                 <button
                   type="button"
                   onClick={() => setIsNewQuoteModalOpen(true)}
-                  className="h-9 px-4.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-semibold shadow-xs shadow-red-600/20 flex items-center gap-1.5 cursor-pointer transition-all whitespace-nowrap"
+                  className="h-9 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all whitespace-nowrap border border-transparent"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 stroke-[2.5]" />
                   <span>New Quotation</span>
                 </button>
               </div>
@@ -1470,7 +1837,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           </button>
 
                           {activeQuoteRowMenuId === quote.id && (
-                            <div className="absolute right-4 top-10 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
+                            <div className="absolute right-4 top-10 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1480,7 +1847,18 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                                 className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
                               >
                                 <Eye className="w-3.5 h-3.5 text-red-600" />
-                                <span>Preview / Print (PDF)</span>
+                                <span>Preview Proposal</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveQuoteRowMenuId(null);
+                                  setDownloadQuoteTarget(quote);
+                                }}
+                                className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+                              >
+                                <Download className="w-3.5 h-3.5 text-red-600" />
+                                <span>Download (PDF / Word)</span>
                               </button>
                               <div className="border-t border-slate-100 my-1" />
                               <button
@@ -1561,37 +1939,29 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               {/* Row 1: LEAD ASSIGNEE & DATE (Perfect 2-col alignment) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* LEAD ASSIGNEE */}
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    LEAD ASSIGNEE
-                  </label>
-                  <select
-                    value={drawerAssignee}
-                    onChange={(e) => setDrawerAssignee(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer appearance-none pr-6"
-                  >
-                    <option value="">Select Assignee</option>
-                    <option value="Venkatesh (Site Ops)">Venkatesh (Site Ops)</option>
-                    <option value="Karthik (Sales)">Karthik (Sales)</option>
-                    <option value="Suryathaniga (Staff)">Suryathaniga (Staff)</option>
-                    <option value="Super Admin">Super Admin</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
-                </div>
+                <FloatingSelect
+                  label="LEAD ASSIGNEE"
+                  value={drawerAssignee}
+                  onChange={setDrawerAssignee}
+                  placeholder="Select Assignee"
+                  options={[
+                    { label: 'Select Assignee', value: '' },
+                    { label: 'Venkatesh (Site Ops)', value: 'Venkatesh (Site Ops)' },
+                    { label: 'Karthik (Sales)', value: 'Karthik (Sales)' },
+                    { label: 'Suryathaniga (Staff)', value: 'Suryathaniga (Staff)' },
+                    { label: 'Super Admin', value: 'Super Admin' },
+                  ]}
+                />
 
                 {/* DATE */}
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center gap-2 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    DATE
-                  </label>
-                  <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                  <input
-                    type="date"
-                    value={drawerDate}
-                    onChange={(e) => setDrawerDate(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer"
-                  />
-                </div>
+                <CustomDatePicker
+                  value={drawerDate}
+                  onChange={setDrawerDate}
+                  label="DATE"
+                  variant="floating"
+                  align="right"
+                  placeholder="DD-MM-YYYY"
+                />
               </div>
 
               {/* LEAD TYPE * */}
@@ -1690,128 +2060,99 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               </div>
 
               {/* SOURCE */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  SOURCE
-                </label>
-                <select
-                  value={drawerSource}
-                  onChange={(e) => setDrawerSource(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer appearance-none pr-6"
-                >
-                  <option value="">Select Source</option>
-                  <option value="Just dial">Just dial</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Direct Walk-in">Direct Walk-in</option>
-                  <option value="Website">Website</option>
-                  <option value="Social Media">Social Media</option>
-                  <option value="Google">Google</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
-              </div>
+              <FloatingSelect
+                label="SOURCE"
+                value={drawerSource}
+                onChange={setDrawerSource}
+                placeholder="Select Source"
+                options={[
+                  { label: 'Select Source', value: '' },
+                  { label: 'Just dial', value: 'Just dial' },
+                  { label: 'Referral', value: 'Referral' },
+                  { label: 'Direct Walk-in', value: 'Direct Walk-in' },
+                  { label: 'Website', value: 'Website' },
+                  { label: 'Social Media', value: 'Social Media' },
+                  { label: 'Google', value: 'Google' },
+                ]}
+              />
 
               {/* CATEGORY */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  CATEGORY
-                </label>
-                <select
-                  value={drawerCategory}
-                  onChange={(e) => setDrawerCategory(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer appearance-none pr-6"
-                >
-                  <option value="">Select Category</option>
-                  <option value="Soil Testing">Soil Testing</option>
-                  <option value="Civil Construction">Civil Construction</option>
-                  <option value="Architecture">Architecture</option>
-                  <option value="Structural">Structural</option>
-                  <option value="Survey">Survey</option>
-                </select>
-                <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
-              </div>
+              <FloatingSelect
+                label="CATEGORY"
+                value={drawerCategory}
+                onChange={setDrawerCategory}
+                placeholder="Select Category"
+                options={[
+                  { label: 'Select Category', value: '' },
+                  { label: 'Soil Testing', value: 'Soil Testing' },
+                  { label: 'Civil Construction', value: 'Civil Construction' },
+                  { label: 'Architecture', value: 'Architecture' },
+                  { label: 'Structural', value: 'Structural' },
+                  { label: 'Survey', value: 'Survey' },
+                ]}
+              />
 
               {/* Row: LEAD STATUS & PRIORITY (Perfect 2-col alignment with uniform h-11) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    LEAD STATUS
-                  </label>
-                  <select
-                    value={drawerStatus}
-                    onChange={(e) => setDrawerStatus(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer appearance-none pr-6"
-                  >
-                    <option value="">Select Status</option>
-                    <option value="New Lead">New Lead</option>
-                    <option value="Proposal Stage">Proposal Stage</option>
-                    <option value="No Response">No Response</option>
-                    <option value="Follow Up">Follow Up</option>
-                    <option value="Client Confirmed">Client Confirmed</option>
-                    <option value="Lost">Lost</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
-                </div>
+                <FloatingSelect
+                  label="LEAD STATUS"
+                  value={drawerStatus}
+                  onChange={setDrawerStatus}
+                  placeholder="Select Status"
+                  options={[
+                    { label: 'Select Status', value: '' },
+                    { label: 'New Lead', value: 'New Lead', dotColor: 'bg-red-500' },
+                    { label: 'Proposal Stage', value: 'Proposal Stage', dotColor: 'bg-amber-500' },
+                    { label: 'No Response', value: 'No Response', dotColor: 'bg-slate-400' },
+                    { label: 'Follow Up', value: 'Follow Up', dotColor: 'bg-blue-500' },
+                    { label: 'Client Confirmed', value: 'Client Confirmed', dotColor: 'bg-emerald-500' },
+                    { label: 'Lost', value: 'Lost', dotColor: 'bg-rose-500' },
+                  ]}
+                />
 
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    PRIORITY
-                  </label>
-                  <select
-                    value={drawerPriority}
-                    onChange={(e) => setDrawerPriority(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer appearance-none pr-6"
-                  >
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Low">Low</option>
-                  </select>
-                  <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 pointer-events-none" />
-                </div>
+                <FloatingSelect
+                  label="PRIORITY"
+                  value={drawerPriority}
+                  onChange={setDrawerPriority}
+                  placeholder="Select Priority"
+                  align="right"
+                  options={[
+                    { label: 'High', value: 'High', dotColor: 'bg-red-500' },
+                    { label: 'Medium', value: 'Medium', dotColor: 'bg-amber-500' },
+                    { label: 'Low', value: 'Low', dotColor: 'bg-emerald-500' },
+                  ]}
+                />
               </div>
 
               {/* Row: LAST CONTACTED DATE & FOLLOW UP DATE (Perfect 2-col alignment with uniform h-11) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center gap-2 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    LAST CONTACTED DATE
-                  </label>
-                  <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                  <input
-                    type="date"
-                    value={drawerLastContactedDate}
-                    onChange={(e) => setDrawerLastContactedDate(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer"
-                  />
-                </div>
+                <CustomDatePicker
+                  value={drawerLastContactedDate}
+                  onChange={setDrawerLastContactedDate}
+                  label="LAST CONTACTED DATE"
+                  variant="floating"
+                  placeholder="DD-MM-YYYY"
+                />
 
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center gap-2 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    FOLLOW UP DATE
-                  </label>
-                  <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                  <input
-                    type="date"
-                    value={drawerFollowupDate}
-                    onChange={(e) => setDrawerFollowupDate(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer"
-                  />
-                </div>
+                <CustomDatePicker
+                  value={drawerFollowupDate}
+                  onChange={setDrawerFollowupDate}
+                  label="FOLLOW UP DATE"
+                  variant="floating"
+                  align="right"
+                  placeholder="DD-MM-YYYY"
+                />
               </div>
 
               {/* Row: EXPECTED CLOSURE DATE & BUDGET (Perfect 2-col alignment with uniform h-11) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center gap-2 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    EXPECTED CLOSURE DATE
-                  </label>
-                  <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                  <input
-                    type="date"
-                    value={drawerExpectedClosureDate}
-                    onChange={(e) => setDrawerExpectedClosureDate(e.target.value)}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none cursor-pointer"
-                  />
-                </div>
+                <CustomDatePicker
+                  value={drawerExpectedClosureDate}
+                  onChange={setDrawerExpectedClosureDate}
+                  label="EXPECTED CLOSURE DATE"
+                  variant="floating"
+                  placeholder="DD-MM-YYYY"
+                />
 
                 <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
                   <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
@@ -1924,17 +2265,20 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
-                  <select
+                  <CustomSelect
                     value={quoteDepartment}
-                    onChange={(e) => setQuoteDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-red-600 cursor-pointer"
-                  >
-                    <option value="CBE_SOIL_INVESTIGATION">Soil Investigation</option>
-                    <option value="CONSTRUCTION">Civil Construction</option>
-                    <option value="ARCHITECTURE">Architecture</option>
-                    <option value="STRUCTURAL">Structural</option>
-                    <option value="SURVEY">Survey</option>
-                  </select>
+                    onChange={(val) => setQuoteDepartment(val)}
+                    options={[
+                      { value: 'CBE_SOIL_INVESTIGATION', label: 'Soil Investigation' },
+                      { value: 'CONSTRUCTION', label: 'Civil Construction' },
+                      { value: 'ARCHITECTURE', label: 'Architecture' },
+                      { value: 'STRUCTURAL', label: 'Structural' },
+                      { value: 'SURVEY', label: 'Survey' },
+                    ]}
+                    size="md"
+                    className="w-full"
+                    triggerClassName="w-full !rounded-xl !h-[38px] text-xs font-semibold text-slate-800"
+                  />
                 </div>
               </div>
 
@@ -2100,128 +2444,522 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       )}
 
       {/* ================================================================= */}
-      {/* FULL PRINTABLE / PDF PROPOSAL PREVIEW (RED & WHITE THEME) */}
+      {/* FOLLOW-UP REMINDERS MODAL (View & Manage Due Reminders) */}
       {/* ================================================================= */}
-      {previewQuotation && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-2xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6">
-            <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-red-400" />
-                <span className="font-bold text-sm">Quotation Preview — {previewQuotation.quotation_number}</span>
+      {isRemindersModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-600/30 text-red-400 flex items-center justify-center">
+                  <BellRing className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">Follow-up Reminders</h3>
+                  <p className="text-[11px] text-slate-400">
+                    {dueLeads.length} client {dueLeads.length === 1 ? 'follow-up' : 'follow-ups'} pending action
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewQuotation(null)}
-                  className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsRemindersModalOpen(false)}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div className="p-8 space-y-6 text-xs text-slate-800 bg-white">
-              {/* Document Header */}
-              <div className="flex justify-between items-start border-b border-slate-200 pb-5">
-                <div>
-                  <div className="text-xl font-black text-slate-900 font-heading">BOOSHNAM GROUP</div>
-                  <div className="text-[11px] text-slate-500 font-medium">Construction & Soil Investigation Division</div>
-                  <div className="text-[11px] text-slate-400 mt-1">GSTIN: 33AAACB1234F1Z9</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-slate-900 font-mono">{previewQuotation.quotation_number}</div>
-                  <div className="text-slate-500 text-[11px] mt-0.5">Date: {previewQuotation.date}</div>
-                  <div className="text-slate-500 text-[11px]">Valid Until: {previewQuotation.valid_until}</div>
-                </div>
+            {/* Modal Body */}
+            <div className="p-5 space-y-3 overflow-y-auto flex-1">
+              <div className="text-xs text-slate-600 flex items-center justify-between pb-1 border-b border-slate-100">
+                <span className="font-semibold text-slate-700">Client Inquiries Requiring Follow-up</span>
+                <span className="text-[11px] font-semibold flex items-center gap-1">
+                  {followUpStats.unviewedDue > 0 ? (
+                    <span className="text-red-600 flex items-center gap-1 font-bold">
+                      <BellRing className="w-3.5 h-3.5 animate-pulse" />
+                      {followUpStats.unviewedDue} Unread {followUpStats.unviewedDue === 1 ? 'Notification' : 'Notifications'}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      All Reminders Viewed
+                    </span>
+                  )}
+                </span>
               </div>
 
-              {/* Client & Scope Info */}
-              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">QUOTATION TO:</div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">{previewQuotation.client_name}</div>
-                  {previewQuotation.client_phone && <div className="text-slate-600 mt-0.5">{previewQuotation.client_phone}</div>}
-                  {previewQuotation.client_email && <div className="text-slate-600">{previewQuotation.client_email}</div>}
+              {dueLeads.length === 0 ? (
+                <div className="py-8 text-center text-slate-400">
+                  <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
+                  <p className="text-xs font-semibold text-slate-700">All follow-ups completed!</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">No overdue or today's client reminders.</p>
                 </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">PROJECT SUBJECT:</div>
-                  <div className="text-sm font-bold text-slate-900 mt-0.5">{previewQuotation.project_title}</div>
-                  <div className="text-slate-600 mt-0.5">Status: <span className="font-semibold text-red-600">{previewQuotation.status}</span></div>
-                </div>
-              </div>
+              ) : (
+                dueLeads.map((lead, idx) => {
+                  const info = getFollowUpStatus(lead.followup_date);
+                  const isRead = isReminderViewed(lead.id, lead.followup_date);
+                  return (
+                    <div 
+                      key={lead.id || idx}
+                      className={`p-3.5 rounded-xl border transition-all space-y-2 bg-white shadow-2xs ${
+                        !isRead ? 'border-red-300 ring-1 ring-red-100 bg-red-50/15' : 'border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          {!isRead && (
+                            <span className="w-2 h-2 rounded-full bg-red-600 shrink-0 mt-1 shadow-xs animate-pulse" title="Unread reminder" />
+                          )}
+                          <div>
+                            <div className="font-bold text-xs text-slate-900">{lead.contact_person || lead.client_name}</div>
+                            <div className="text-[11px] text-slate-500 font-medium">{lead.project_title || lead.client_name}</div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold shrink-0 ${info.badgeClass}`}>
+                          {info.label}
+                        </span>
+                      </div>
 
-              {/* Items Table */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-100 text-slate-700 font-bold">
-                    <tr>
-                      <th className="py-2.5 px-3 w-10 text-center">#</th>
-                      <th className="py-2.5 px-3">Description</th>
-                      <th className="py-2.5 px-3 w-20 text-center">Unit</th>
-                      <th className="py-2.5 px-3 w-16 text-right">Qty</th>
-                      <th className="py-2.5 px-3 w-28 text-right">Rate (₹)</th>
-                      <th className="py-2.5 px-3 w-28 text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {previewQuotation.items.map((it, idx) => (
-                      <tr key={it.id}>
-                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-medium text-slate-900">{it.description}</td>
-                        <td className="py-2.5 px-3 text-center text-slate-600">{it.unit}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">{it.quantity}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">₹ {(it.unit_rate || 0).toLocaleString('en-IN')}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold">₹ {(it.amount || 0).toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Summary */}
-              <div className="flex justify-end">
-                <div className="w-64 space-y-1.5 text-xs">
-                  <div className="flex justify-between text-slate-600">
-                    <span>Subtotal:</span>
-                    <span className="font-mono">₹ {previewQuotation.subtotal.toLocaleString('en-IN')}</span>
-                  </div>
-                  {previewQuotation.discount_amount ? (
-                    <div className="flex justify-between text-slate-600">
-                      <span>Discount:</span>
-                      <span className="font-mono text-emerald-600">- ₹ {previewQuotation.discount_amount.toLocaleString('en-IN')}</span>
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 text-slate-600">
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span className="font-mono text-[11px]">{lead.phone || 'No phone'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!isRead && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                markRemindersAsViewed([lead.id]);
+                                onShowToast?.(`Marked reminder for ${lead.client_name} as read`);
+                              }}
+                              className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md font-medium transition-colors cursor-pointer flex items-center gap-1"
+                              title="Mark this reminder as read"
+                            >
+                              <CheckCircle2 className="w-3 h-3 text-slate-500" />
+                              <span>Mark Read</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              markRemindersAsViewed([lead.id]);
+                              setIsRemindersModalOpen(false);
+                              handleEditLead(lead);
+                            }}
+                            className="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-md font-semibold transition-colors cursor-pointer"
+                          >
+                            Reschedule
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              markRemindersAsViewed([lead.id]);
+                              setIsRemindersModalOpen(false);
+                              handleConvertLeadToQuote(lead);
+                            }}
+                            className="px-2.5 py-1 text-[11px] bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold transition-colors cursor-pointer shadow-2xs"
+                          >
+                            Create Quote
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  ) : null}
-                  <div className="flex justify-between text-slate-600">
-                    <span>GST (18%):</span>
-                    <span className="font-mono">₹ {previewQuotation.tax_amount.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="border-t border-slate-300 pt-1.5 flex justify-between font-bold text-sm text-slate-900">
-                    <span>Estimated Total:</span>
-                    <span className="font-mono text-red-600 font-bold">₹ {previewQuotation.total_amount.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {previewQuotation.notes && (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-600">
-                  <span className="font-bold text-slate-800">Payment Terms: </span>
-                  {previewQuotation.notes}
-                </div>
+                  );
+                })
               )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+              <span className="text-[11px] text-slate-500">
+                {followUpStats.unviewedDue > 0 ? (
+                  <span>Opening each lead will decrement the Quotation bell badge.</span>
+                ) : (
+                  <span className="text-emerald-600 font-medium">All notifications cleared from Quotation bell.</span>
+                )}
+              </span>
+              <div className="flex items-center gap-2">
+                {followUpStats.unviewedDue > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markRemindersAsViewed();
+                      onShowToast?.('All follow-up reminders marked as read');
+                    }}
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    Mark All Read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsRemindersModalOpen(false)}
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* ================================================================= */}
+      {/* DOWNLOAD FORMAT SELECTION MODAL (WORD / PDF) */}
+      {/* ================================================================= */}
+      {downloadQuoteTarget && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-red-600/30 flex items-center justify-center text-red-400">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">Download Quotation</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">{downloadQuoteTarget.quotation_number}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDownloadQuoteTarget(null)}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="text-xs text-slate-600">
+                Choose your preferred file format for <span className="font-bold text-slate-900">{downloadQuoteTarget.client_name}</span> proposal.
+              </div>
+
+              {/* Option 1: PDF */}
+              <div 
+                onClick={() => {
+                  exportQuotationToPDF(downloadQuoteTarget);
+                  onShowToast?.(`Downloaded PDF for ${downloadQuoteTarget.quotation_number}`);
+                  setDownloadQuoteTarget(null);
+                }}
+                className="p-4 border-2 border-slate-200 hover:border-red-500 hover:bg-red-50/30 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 group-hover:text-red-700">Official PDF (.pdf)</span>
+                    <span className="text-[10px] font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Recommended</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-normal">
+                    2-Page official print-ready proposal with Booshnam ISO/NABL header, itemized work scope table, and notes.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 2: Word */}
+              <div 
+                onClick={() => {
+                  exportQuotationToWord(downloadQuoteTarget);
+                  onShowToast?.(`Downloaded Word doc for ${downloadQuoteTarget.quotation_number}`);
+                  setDownloadQuoteTarget(null);
+                }}
+                className="p-4 border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm text-slate-900 group-hover:text-blue-700">Microsoft Word (.doc)</span>
+                    <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Editable</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1 leading-normal">
+                    Editable Microsoft Word document formatted with standard tables, notes, and letterhead.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDownloadQuoteTarget(null)}
+                className="px-4 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================= */}
+      {/* OFFICIAL BOOSHNAM 2-PAGE PROPOSAL PREVIEW MODAL */}
+      {/* ================================================================= */}
+      {/* ================================================================= */}
+      {/* OFFICIAL BOOSHNAM PROPOSAL PREVIEW MODAL (Smart 1-Page / 2-Page) */}
+      {/* ================================================================= */}
+      {previewQuotation && (() => {
+        const isPreviewSinglePage = (previewQuotation.items?.length || 0) <= 4;
+
+        // Reusable Official 4-Column Footer (Exact match to User's Reference Image)
+        const renderOfficialFooter = () => (
+          <div className="mt-8 pt-2.5 border-t-2 border-red-600 text-[9px] leading-tight text-slate-700 shrink-0">
+            <div className="flex items-center justify-between pb-1">
+              <div>
+                <div className="font-bold text-red-600 text-[11px] tracking-wide font-serif">BOOSHNAM ASSOCIATES PVT. LTD.</div>
+                <div className="italic font-semibold text-red-700 text-[9px]">ISO & NABL Accredited Laboratory</div>
+              </div>
+            </div>
+
+            {/* 4-column address grid matching uploaded image with icons */}
+            <div className="border-t border-slate-200 pt-2 pb-2 grid grid-cols-1 sm:grid-cols-4 gap-3 text-[8.8px] text-slate-700 items-start">
+              {/* Col 1: Chennai Address */}
+              <div className="flex items-start gap-1">
+                <MapPin className="w-3 h-3 text-slate-800 shrink-0 mt-0.5" />
+                <div>
+                  Plot no: 8, Door no: 2, LIC Colony, 6th Street, (Near by Shankar Nagar, Pammal), Anakaputhur, <strong className="text-slate-900 font-bold">Chennai</strong> - 600 075
+                </div>
+              </div>
+
+              {/* Col 2: Coimbatore Address */}
+              <div className="pl-0 sm:pl-1">
+                Old No. 80, New No. 36, Maniam Kaliappa Street, KK Pudur, <strong className="text-slate-900 font-bold">Coimbatore</strong> - 641038
+              </div>
+
+              {/* Col 3: Phone */}
+              <div className="flex items-start gap-1">
+                <Phone className="w-3 h-3 text-slate-800 shrink-0 mt-0.5" />
+                <div className="font-medium">
+                  <div>+91 96296 31255 | 96001 84996,</div>
+                  <div>95002 77170</div>
+                </div>
+              </div>
+
+              {/* Col 4: Email & Web */}
+              <div className="flex flex-col gap-0.5 sm:text-right">
+                <div className="flex items-center gap-1 sm:justify-end">
+                  <Mail className="w-3 h-3 text-slate-800 shrink-0" />
+                  <span className="text-slate-900 font-medium">booshnamassociates@gmail.com</span>
+                </div>
+                <div className="flex items-center gap-1 sm:justify-end">
+                  <Globe className="w-3 h-3 text-slate-800 shrink-0" />
+                  <span className="text-slate-900 font-medium">www.booshnamassociates.com</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Registration Details */}
+            <div className="border-t border-slate-200 pt-1 text-center font-bold text-[8.2px] text-slate-600">
+              GSTIN: 33AAKCB8628A1ZW | IT PAN: AAKCB8628A | CIN: U45309TN2022PTC153348
+            </div>
+          </div>
+        );
+
+        // Notes and Signatory Block
+        const renderNotesAndSignature = (isCompact: boolean) => (
+          <div className={isCompact ? "mt-8 md:mt-10" : "mt-10"}>
+            <div className="text-[11px] font-bold text-black uppercase tracking-wider">
+              NOTES
+            </div>
+            <ol className={`mt-2.5 space-y-1.5 ${isCompact ? 'text-[9.5px]' : 'text-xs'} text-slate-900 leading-relaxed list-decimal list-inside`}>
+              <li>GST 18% Will be added.</li>
+              <li>50% payment shall be made while issuing the work order, 50% shall be made while submitting the report.</li>
+              <li>Site shall be cleared of any obstructions, obligations, etc.</li>
+              <li>Water shall be provided for drilling purposes.</li>
+              <li>If there is significant variation in soil characteristics among the boreholes, it may be necessary to conduct additional drilling to evaluate the nature of the soil at varying depths and across different locations.</li>
+              <li>Soil Sample will be disposed of within 2 days from the date of issue of the test report.</li>
+            </ol>
+
+            <div className={`${isCompact ? 'mt-10 md:mt-12' : 'mt-20 md:mt-24'} text-center italic font-bold text-xs text-slate-900`}>
+              Expecting your valuable order
+            </div>
+
+            <div className={`${isCompact ? 'mt-8 md:mt-10' : 'mt-16 md:mt-20'} text-right space-y-0.5`}>
+              <div className="font-bold text-xs text-black">Er. A. Nivedhitha M.tech.,(Ph.D)</div>
+              <div className="font-bold text-xs text-black">Geotechnical Engineer.</div>
+            </div>
+          </div>
+        );
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-2xs flex items-center justify-center p-2 md:p-6 overflow-y-auto">
+            <div className="bg-slate-200/90 w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-300 overflow-hidden my-auto flex flex-col max-h-[92vh]">
+              {/* Action Bar Header */}
+              <div className="px-6 py-3.5 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-red-500" />
+                  <div>
+                    <span className="font-bold text-sm">Official Quotation Preview</span>
+                    <span className="text-slate-400 text-xs ml-2 font-mono">({previewQuotation.quotation_number})</span>
+                    <span className="ml-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-2xs">
+                      {isPreviewSinglePage ? '1 Page (Single Page Fit)' : '2 Pages (Multi-item Proposal)'}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Download Button (opens download modal for PDF/Word) */}
+                  <button
+                    type="button"
+                    onClick={() => setDownloadQuoteTarget(previewQuotation)}
+                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download (PDF / Word)</span>
+                  </button>
+                  {/* Print Button */}
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors border border-slate-700"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Print</span>
+                  </button>
+                  {/* Close Button */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewQuotation(null)}
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Container with A4 Page(s) */}
+              <div className="overflow-y-auto p-4 md:p-8 flex flex-col items-center gap-8 bg-slate-200">
+                {/* PAGE 1 */}
+                <div className="bg-white w-full max-w-[800px] shadow-2xl border border-slate-300 rounded-xs p-8 md:p-10 text-slate-900 font-sans flex flex-col justify-between min-h-[1100px]">
+                  <div>
+                    {/* Top Bar: Logo Left, Legal Meta Right */}
+                    <div className="flex items-start justify-between border-b-0 pb-2">
+                      <div>
+                        <div className="text-2xl md:text-3xl font-black text-red-600 tracking-tight font-serif">
+                          BOOSHNAM
+                        </div>
+                        <div className="text-[10px] tracking-widest text-slate-500 uppercase font-semibold mt-0.5">
+                          — ASSOCIATES —
+                        </div>
+                      </div>
+                      <div className="text-right text-[11px] font-bold text-slate-900 leading-snug">
+                        <div>GSTIN: 33AAKCB8628A1ZW</div>
+                        <div>QUOTATION No: {previewQuotation.quotation_number}</div>
+                        <div>IT PAN No: AACB8628A</div>
+                        <div>SACCODE: 998331</div>
+                        <div className="mt-4 font-bold text-xs">{previewQuotation.date || '25th Sep 2026'}</div>
+                      </div>
+                    </div>
+
+                    {/* To Address */}
+                    <div className="mt-3 text-xs text-slate-900">
+                      <div className="font-bold">To,</div>
+                      <div className="font-bold">{previewQuotation.client_name || 'Mr. Prakash'}</div>
+                      <div>{previewQuotation.client_address || 'Chennai.'}</div>
+                    </div>
+
+                    {/* Subject Line */}
+                    <div className="mt-4 text-xs font-bold text-slate-900">
+                      SUB: Quotation for {previewQuotation.project_title || 'Soil Investigations to be carried out for proposed structure at Arasankalai.'}
+                    </div>
+
+                    {/* Quotation Table matching Screenshot */}
+                    <div className="mt-3.5 border-2 border-black">
+                      <div className="bg-white text-center font-bold text-xs py-1 border-b border-black uppercase tracking-wider">
+                        QUOTATION
+                      </div>
+                      <table className="w-full text-[11px] border-collapse text-black">
+                        <thead>
+                          <tr className="bg-white font-bold text-center border-b border-black">
+                            <th className="border-r border-black p-1.5 w-14">Item Code</th>
+                            <th className="border-r border-black p-1.5 text-left">Description of Work</th>
+                            <th className="border-r border-black p-1.5 w-12">Unit</th>
+                            <th className="border-r border-black p-1.5 w-14">Quantity</th>
+                            <th className="border-r border-black p-1.5 w-20 text-right pr-2">Rate</th>
+                            <th className="p-1.5 w-24 text-right pr-2">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-black">
+                          {(previewQuotation.items && previewQuotation.items.length > 0 ? previewQuotation.items : []).map((it, idx) => {
+                            const code = it.item_code || `${idx + 1}.0`;
+                            const qtyStr = it.quantity && it.quantity > 0 ? it.quantity.toFixed(1) : '-';
+                            const rateStr = it.unit_rate && it.unit_rate > 0 ? it.unit_rate.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '-';
+                            const isInclusive = it.amount === 0 && (code === '3.0' || code === '4.0' || it.description.toLowerCase().includes('report'));
+                            const amountStr = it.amount && it.amount > 0 
+                              ? it.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 }) 
+                              : isInclusive ? 'Inclusive' : '-';
+
+                            return (
+                              <tr key={it.id || idx} className="align-top">
+                                <td className="border-r border-black p-1.5 text-center font-bold">{code}</td>
+                                <td className="border-r border-black p-1.5 leading-snug">{it.description}</td>
+                                <td className="border-r border-black p-1.5 text-center">{it.unit || ''}</td>
+                                <td className="border-r border-black p-1.5 text-center">{qtyStr}</td>
+                                <td className="border-r border-black p-1.5 text-right font-mono pr-2">{rateStr}</td>
+                                <td className="p-1.5 text-right font-mono font-medium pr-2">{amountStr}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-black font-bold">
+                            <td colSpan={5} className="border-r border-black p-1.5 text-right pr-3">Total</td>
+                            <td className="p-1.5 text-right font-mono pr-2">
+                              {previewQuotation.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    {/* Overall Total in Words */}
+                    <div className="mt-2.5 text-center font-bold text-xs text-black">
+                      Overall Total: {numberToIndianWords(previewQuotation.total_amount)} (Rs. {previewQuotation.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })})/-
+                    </div>
+
+                    {/* IF SINGLE PAGE: Render Notes, Expecting Order & Signatory directly on Page 1! */}
+                    {isPreviewSinglePage && renderNotesAndSignature(true)}
+                  </div>
+
+                  {/* Page 1 Footer */}
+                  {renderOfficialFooter()}
+                </div>
+
+                {/* PAGE 2: Only rendered if items overflow and cannot fit on Page 1 */}
+                {!isPreviewSinglePage && (
+                  <div className="bg-white w-full max-w-[800px] shadow-2xl border border-slate-300 rounded-xs p-8 md:p-12 text-slate-900 font-sans flex flex-col justify-between min-h-[1100px]">
+                    <div>
+                      {/* Top Bar: Logo Left */}
+                      <div className="flex items-start justify-between pb-2">
+                        <div>
+                          <div className="text-2xl md:text-3xl font-black text-red-600 tracking-tight font-serif">
+                            BOOSHNAM
+                          </div>
+                          <div className="text-[10px] tracking-widest text-slate-500 uppercase font-semibold mt-0.5">
+                            — ASSOCIATES —
+                          </div>
+                        </div>
+                      </div>
+
+                      {renderNotesAndSignature(false)}
+                    </div>
+
+                    {/* Page 2 Footer */}
+                    {renderOfficialFooter()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

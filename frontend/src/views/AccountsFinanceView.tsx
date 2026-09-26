@@ -8,12 +8,14 @@ import {
   Sparkles, SlidersHorizontal, Calendar, Phone, Mail, FileSpreadsheet,
   ArrowRight, Shield, Layers, HelpCircle, CheckCheck, Eye,
   ArrowUp, ArrowDown, MapPin, ArrowLeft, ChevronRight,
-  Tag, HardHat, Truck, Fuel, Paperclip, Upload, ArrowLeftRight
+  Tag, HardHat, Truck, Fuel, Paperclip, Upload, ArrowLeftRight,
+  Copy, Trash2, MoreVertical, Pencil
 } from 'lucide-react';
 import { Project } from '../types';
 import { MOCK_PROJECTS } from '../lib/mockData';
 import { CustomSelect } from '../components/CustomSelect';
 import { AddPartyDrawer, PartyFormData } from '../components/finance/AddPartyDrawer';
+import { AddAccountDrawer, AccountFormData } from '../components/finance/AddAccountDrawer';
 
 export interface PaymentRequestItem {
   id: string;
@@ -96,6 +98,29 @@ export interface BankAccountRecord {
   balance: number;
   status: 'Active' | 'Inactive';
   tallyLedgerName: string;
+  accountHolderName?: string;
+  bankAddress?: string;
+  ibanNumber?: string;
+  upiNumber?: string;
+  overdraftLimit?: number;
+  isPrimary?: boolean;
+  openingBalance?: number;
+}
+
+export interface AccountStatementTransaction {
+  id: string;
+  accountId: string; // 'cash' or bank account id
+  date: string; // e.g. '26 Sep 26'
+  rawDate: string; // '2026-09-26'
+  partyName: string;
+  voucherCode: string; // e.g. '#CB-265'
+  paymentType: 'Payment In' | 'Payment Out';
+  type: 'Credit' | 'Debit';
+  amount: number;
+  paymentMode: string;
+  projectName: string;
+  sourceAccountName: string;
+  details?: string;
 }
 
 export interface AccountTransferRecord {
@@ -135,6 +160,160 @@ export interface ExpenseItem {
   approvedBy?: string;
   notes?: string;
 }
+
+export const INITIAL_STATEMENT_TRANSACTIONS: AccountStatementTransaction[] = [
+  {
+    id: 'st-c-1',
+    accountId: 'cash',
+    date: '26 Sep 26',
+    rawDate: '2026-09-26',
+    partyName: 'Sadhik Diamond Associates',
+    voucherCode: '#CB-265',
+    paymentType: 'Payment In',
+    type: 'Credit',
+    amount: 20000,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2522-(2026-2027)-Sadik Diamond Associates-Adambakkam-2pts-Likson-(Manual)-9600160200',
+    sourceAccountName: 'Cash Account',
+    details: 'Advance milestone payment (cash settlement)',
+  },
+  {
+    id: 'st-c-2',
+    accountId: 'cash',
+    date: '26 Sep 26',
+    rawDate: '2026-09-26',
+    partyName: 'Sadhik Diamond Associates',
+    voucherCode: '#CB-264',
+    paymentType: 'Payment In',
+    type: 'Credit',
+    amount: 20000,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2521-(2026-2027)-Sadhik Diamond Associates-Velachery-2pts-Likson-(Manual)-9600160200',
+    sourceAccountName: 'Cash Account',
+    details: 'Site mobilization cash receipt Likson',
+  },
+  {
+    id: 'st-c-3',
+    accountId: 'cash',
+    date: '25 Sep 26',
+    rawDate: '2026-09-25',
+    partyName: 'Suvamathi Builders Suki',
+    voucherCode: '#CB-259',
+    paymentType: 'Payment Out',
+    type: 'Debit',
+    amount: 2500,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2442-(2026-2027)-Suvamathi Builders-Padiyanallur-1Pt-Likson-(Manual)-9841308628',
+    sourceAccountName: 'Cash Account',
+    details: 'Site Quadination Payment (Sugi Builders)',
+  },
+  {
+    id: 'st-c-4',
+    accountId: 'cash',
+    date: '25 Sep 26',
+    rawDate: '2026-09-25',
+    partyName: 'Jegan Suki Gummidipoondi',
+    voucherCode: '#CB-260',
+    paymentType: 'Payment Out',
+    type: 'Debit',
+    amount: 2500,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2475-(2026-2027)-Jegan Suki Engineering-Gummidipoondi-1Pts-Likson-(Manual)-8124305970',
+    sourceAccountName: 'Cash Account',
+    details: 'Site Quadination payment (sugi Builders)',
+  },
+  {
+    id: 'st-c-5',
+    accountId: 'cash',
+    date: '24 Sep 26',
+    rawDate: '2026-09-24',
+    partyName: 'Apex Infra Developers',
+    voucherCode: '#CB-250',
+    paymentType: 'Payment In',
+    type: 'Credit',
+    amount: 50000,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2400-(2026-2027)-Apex Infra-Porur-Likson-(Manual)',
+    sourceAccountName: 'Cash Account',
+    details: 'Advance site mobilization cash advance',
+  },
+  {
+    id: 'st-c-6',
+    accountId: 'cash',
+    date: '24 Sep 26',
+    rawDate: '2026-09-24',
+    partyName: 'Shree Balaji Transports',
+    voucherCode: '#CB-249',
+    paymentType: 'Payment Out',
+    type: 'Debit',
+    amount: 8400,
+    paymentMode: 'Cash',
+    projectName: 'RG33-BAGJ-2388-(2026-2027)-Balaji Logistics-Site Cash',
+    sourceAccountName: 'Cash Account',
+    details: 'Diesel freight charges cash voucher',
+  },
+  // Axis Bank Statement Transactions
+  {
+    id: 'st-ax-1',
+    accountId: 'ba-axis',
+    date: '26 Sep 26',
+    rawDate: '2026-09-26',
+    partyName: 'Grand City Developers Ltd',
+    voucherCode: '#AX-101',
+    paymentType: 'Payment In',
+    type: 'Credit',
+    amount: 1500000,
+    paymentMode: 'RTGS',
+    projectName: 'RG12-(2026-2027)-Tower B Commercial Complex-Anna Salai',
+    sourceAccountName: 'Axis Bank',
+    details: 'Running Account Bill #7 Payment via RTGS',
+  },
+  {
+    id: 'st-ax-2',
+    accountId: 'ba-axis',
+    date: '25 Sep 26',
+    rawDate: '2026-09-25',
+    partyName: 'UltraTech Cement Ltd',
+    voucherCode: '#AX-102',
+    paymentType: 'Payment Out',
+    type: 'Debit',
+    amount: 450000,
+    paymentMode: 'NEFT',
+    projectName: 'RG12-(2026-2027)-Tower B Commercial Complex-Anna Salai',
+    sourceAccountName: 'Axis Bank',
+    details: 'Bulk 53 Grade OPC cement delivery batch 4',
+  },
+  {
+    id: 'st-ax-3',
+    accountId: 'ba-axis',
+    date: '24 Sep 26',
+    rawDate: '2026-09-24',
+    partyName: 'Metro Rail Infra Corp',
+    voucherCode: '#AX-103',
+    paymentType: 'Payment In',
+    type: 'Credit',
+    amount: 3500000,
+    paymentMode: 'RTGS',
+    projectName: 'RG08-(2026-2027)-Metro Depot Structural Work',
+    sourceAccountName: 'Axis Bank',
+    details: 'Milestone 3 certified progressive billing',
+  },
+  {
+    id: 'st-ax-4',
+    accountId: 'ba-axis',
+    date: '23 Sep 26',
+    rawDate: '2026-09-23',
+    partyName: 'Tata Steel Rebar Agency',
+    voucherCode: '#AX-104',
+    paymentType: 'Payment Out',
+    type: 'Debit',
+    amount: 825000,
+    paymentMode: 'NEFT',
+    projectName: 'RG08-(2026-2027)-Metro Depot Structural Work',
+    sourceAccountName: 'Axis Bank',
+    details: 'Fe550D TMT reinforcement bar supplies',
+  },
+];
 
 export const INITIAL_PARTIES: PartyRecord[] = [];
 export const INITIAL_PARTY_TRANSACTIONS: Record<string, PartyLedgerTransaction[]> = {};
@@ -228,29 +407,463 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
     } catch {}
   }, [transactions]);
 
+  // Default initial accounts if none saved (matching Company Cash & Bank Accounts)
+  const DEFAULT_BANK_ACCOUNTS: BankAccountRecord[] = [
+    {
+      id: 'ba-hdfc',
+      accountName: 'Booshnam Associates Operations A/c',
+      accountHolderName: 'Booshnam Associates Pvt Ltd',
+      bankName: 'HDFC Bank Ltd',
+      bankAddress: 'Anna Salai Main Branch, Mount Road, Chennai - 600002',
+      accountNumber: '50200048291048',
+      ifscCode: 'HDFC0000123',
+      accountType: 'Current',
+      balance: 4850000,
+      openingBalance: 4850000,
+      overdraftLimit: 1500000,
+      status: 'Active',
+      tallyLedgerName: 'HDFC Operations Ledger',
+      ibanNumber: 'IN45HDFC000012300048291048',
+      upiNumber: 'booshnam.ops@hdfcbank',
+      isPrimary: false
+    },
+    {
+      id: 'ba-sbi',
+      accountName: 'Greenfield Villa Project RERA Escrow',
+      accountHolderName: 'Booshnam Infra Projects LLP',
+      bankName: 'State Bank of India',
+      bankAddress: 'T. Nagar Commercial Branch, South Usman Road, Chennai - 600017',
+      accountNumber: '381920394851',
+      ifscCode: 'SBIN0004021',
+      accountType: 'Escrow',
+      balance: 12450000,
+      openingBalance: 12450000,
+      overdraftLimit: 0,
+      status: 'Active',
+      tallyLedgerName: 'SBI - RERA Escrow Ledger',
+      ibanNumber: 'IN89SBIN000402100038192039',
+      upiNumber: 'booshnam.rera@sbi',
+      isPrimary: false
+    },
+    {
+      id: 'ba-axis',
+      accountName: 'Axis Bank Current A/c',
+      accountHolderName: 'Booshnam Associates Pvt Ltd.',
+      bankName: 'Axis Bank',
+      bankAddress: 'NO. 66, PAMMAL MAIN ROADPALLAVARAM, CHENNAI DIST. KANCHEEPURAM, TAMIL NADU PIN 600043',
+      accountNumber: '922020058090700',
+      ifscCode: 'UTIB0000851',
+      accountType: 'Current',
+      balance: 17583911.51,
+      openingBalance: 0,
+      status: 'Active',
+      tallyLedgerName: 'Axis Bank Current Ledger',
+      ibanNumber: '',
+      upiNumber: '',
+      overdraftLimit: 0,
+      isPrimary: true
+    },
+    {
+      id: 'ba-idbi',
+      accountName: 'IDBI Bank A/c',
+      accountHolderName: 'BOOSHNAM ASSOCIATES PVT LTD',
+      bankName: 'IDBI',
+      bankAddress: '13, YAK COMPLEX, PAMMAL MAIN ROAD, NEAR HP PETROL BUNK PALLAVARAM, CHENNAI 600 075',
+      accountNumber: '0779102000015905',
+      ifscCode: 'IBKL0000779',
+      accountType: 'Current',
+      balance: 0,
+      openingBalance: 0,
+      status: 'Active',
+      tallyLedgerName: 'IDBI Current Ledger',
+      ibanNumber: '',
+      upiNumber: '',
+      overdraftLimit: 0,
+      isPrimary: false
+    }
+  ];
+
   // Bank Accounts State with LocalStorage Persistence
   const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>(() => {
     try {
-      const saved = localStorage.getItem('booshnam_finance_bank_accounts_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedV4 = localStorage.getItem('booshnam_finance_bank_accounts_v4');
+      if (savedV4) {
+        const parsed = JSON.parse(savedV4);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const clean = parsed.filter(ba => !['ba-1', 'ba-2', 'ba-3', 'ba-4', 'ba-5'].includes(ba.id));
-          if (clean.length !== parsed.length) {
-            localStorage.setItem('booshnam_finance_bank_accounts_v1', JSON.stringify(clean));
-          }
-          return clean;
+          return parsed;
+        }
+      }
+      // Migrate from v3 or prior
+      const savedV3 = localStorage.getItem('booshnam_finance_bank_accounts_v3');
+      if (savedV3) {
+        const parsedV3 = JSON.parse(savedV3);
+        if (Array.isArray(parsedV3)) {
+          const customAccs = parsedV3.filter(b => !['ba-default-1', 'ba-default-2', 'ba-idbi', 'ba-axis', 'ba-hdfc', 'ba-sbi'].includes(b.id));
+          return [...DEFAULT_BANK_ACCOUNTS, ...customAccs];
         }
       }
     } catch {}
-    return [];
+    return DEFAULT_BANK_ACCOUNTS;
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('booshnam_finance_bank_accounts_v1', JSON.stringify(bankAccounts));
+      localStorage.setItem('booshnam_finance_bank_accounts_v4', JSON.stringify(bankAccounts));
     } catch {}
   }, [bankAccounts]);
+
+
+// Date Filter Preset Definitions (Matching Reference Image)
+type DateFilterPresetKey = 
+  | 'all'
+  | 'today'
+  | 'this_week'
+  | 'last_week'
+  | 'this_month'
+  | 'last_month'
+  | 'this_year'
+  | 'current_fy'
+  | 'fy_25_26'
+  | 'fy_24_25'
+  | 'custom';
+
+const DATE_FILTER_PRESET_OPTIONS: { id: DateFilterPresetKey; label: string; start: string; end: string }[] = [
+  { id: 'last_week', label: 'Last Week', start: '2026-09-14', end: '2026-09-20' },
+  { id: 'this_week', label: 'This Week', start: '2026-09-21', end: '2026-09-27' },
+  { id: 'today', label: 'Today', start: '2026-09-26', end: '2026-09-26' },
+  { id: 'this_month', label: 'This Month', start: '2026-09-01', end: '2026-09-30' },
+  { id: 'last_month', label: 'Last Month', start: '2026-08-01', end: '2026-08-31' },
+  { id: 'this_year', label: 'This Year', start: '2026-01-01', end: '2026-12-31' },
+  { id: 'all', label: 'All', start: '', end: '' },
+];
+
+const toDisplayDate = (isoStr: string) => {
+  if (!isoStr) return '';
+  const parts = isoStr.trim().split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return isoStr;
+};
+
+const toIsoDate = (displayStr: string) => {
+  if (!displayStr) return '';
+  const parts = displayStr.trim().split(/[-/.]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 2 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  return displayStr;
+};
+
+  // Tab 5: Accounts Statement & View States
+  const [statementActiveAccountId, setStatementActiveAccountId] = useState<string | null>(null);
+  const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false);
+  const [statementDateFilter, setStatementDateFilter] = useState<DateFilterPresetKey>('all');
+  const [isDateFilterModalOpen, setIsDateFilterModalOpen] = useState(false);
+  const [tempDatePreset, setTempDatePreset] = useState<DateFilterPresetKey>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
+  const [inputStartDisplay, setInputStartDisplay] = useState('');
+  const [inputEndDisplay, setInputEndDisplay] = useState('');
+  const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
+
+  // Close 3-dot preview dropdown when clicking anywhere outside
+  useEffect(() => {
+    if (!openCardMenuId) return;
+    const handleOutsideClick = () => {
+      setOpenCardMenuId(null);
+    };
+    const timer = setTimeout(() => {
+      window.addEventListener('click', handleOutsideClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('click', handleOutsideClick);
+    };
+  }, [openCardMenuId]);
+
+  const handleOpenDateFilterModal = () => {
+    setTempDatePreset(statementDateFilter);
+    setTempStartDate(customStartDate);
+    setTempEndDate(customEndDate);
+    setInputStartDisplay(toDisplayDate(customStartDate));
+    setInputEndDisplay(toDisplayDate(customEndDate));
+    setIsDateFilterModalOpen(true);
+  };
+
+  const handleApplyDateFilter = () => {
+    setStatementDateFilter(tempDatePreset);
+    setCustomStartDate(tempStartDate);
+    setCustomEndDate(tempEndDate);
+    setIsDateFilterModalOpen(false);
+
+    if (onShowToast) {
+      const opt = DATE_FILTER_PRESET_OPTIONS.find(p => p.id === tempDatePreset);
+      const label = opt ? opt.label : `${inputStartDisplay || 'Start'} to ${inputEndDisplay || 'End'}`;
+      onShowToast(`Date filter applied: ${label}`);
+    }
+  };
+
+  // Cash Account Opening Balance State with LocalStorage Persistence
+  const [cashOpeningBalance, setCashOpeningBalance] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_cash_opening_balance');
+      if (saved !== null) {
+        const val = parseFloat(saved);
+        if (!isNaN(val)) return val;
+      }
+    } catch {}
+    return 0;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_cash_opening_balance', cashOpeningBalance.toString());
+    } catch {}
+  }, [cashOpeningBalance]);
+
+  // Cash Account Net Cash Flow and Closing Balance
+  const cashTotalCredit = 41340367.72;
+  const cashTotalDebit = 59599585.31;
+  const cashNetFlow = cashTotalCredit - cashTotalDebit; // -18259217.59
+  const cashClosingBalance = cashOpeningBalance + cashNetFlow;
+
+  // Edit Opening Balance Modal State
+  const [openingBalanceModal, setOpeningBalanceModal] = useState<{
+    isOpen: boolean;
+    accountId: string;
+    accountName: string;
+    currentAmount: number;
+  } | null>(null);
+  const [openingBalanceInput, setOpeningBalanceInput] = useState('0');
+
+  const handleSaveOpeningBalance = () => {
+    if (!openingBalanceModal) return;
+    const parsed = parseFloat(openingBalanceInput);
+    const newAmount = isNaN(parsed) ? 0 : parsed;
+
+    if (openingBalanceModal.accountId === 'cash') {
+      setCashOpeningBalance(newAmount);
+      if (onShowToast) {
+        onShowToast(`Cash Account Opening Balance updated to ₹${newAmount.toLocaleString('en-IN')}`);
+      }
+    } else {
+      setBankAccounts(prev => prev.map(ba => {
+        if (ba.id === openingBalanceModal.accountId) {
+          const oldOp = ba.openingBalance || 0;
+          const diff = newAmount - oldOp;
+          return {
+            ...ba,
+            openingBalance: newAmount,
+            balance: (ba.balance || 0) + diff,
+          };
+        }
+        return ba;
+      }));
+      if (onShowToast) {
+        onShowToast(`${openingBalanceModal.accountName} Opening Balance updated to ₹${newAmount.toLocaleString('en-IN')}`);
+      }
+    }
+
+    setOpeningBalanceModal(null);
+  };
+
+  // Statement Transactions with LocalStorage Persistence
+  const [statementTransactions, setStatementTransactions] = useState<AccountStatementTransaction[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_statement_transactions_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {}
+    return INITIAL_STATEMENT_TRANSACTIONS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_statement_transactions_v1', JSON.stringify(statementTransactions));
+    } catch {}
+  }, [statementTransactions]);
+
+  // Computed Active Account for Statement View
+  const activeStatementAccount = useMemo(() => {
+    if (!statementActiveAccountId) return null;
+    if (statementActiveAccountId === 'cash') {
+      return {
+        id: 'cash',
+        name: 'Cash Account',
+        accountHolderName: 'Booshnam Associates Pvt Ltd',
+        type: 'Cash Account',
+        isCash: true,
+        accountNumber: 'N/A',
+        openingBalance: cashOpeningBalance,
+        totalCredit: cashTotalCredit,
+        totalDebit: cashTotalDebit,
+        closingBalance: cashClosingBalance,
+      };
+    }
+    const found = bankAccounts.find(b => b.id === statementActiveAccountId);
+    if (!found) {
+      return {
+        id: statementActiveAccountId,
+        name: 'Account Statement',
+        accountHolderName: 'Booshnam Associates',
+        type: 'Bank Account',
+        isCash: false,
+        accountNumber: '',
+        openingBalance: 0,
+        totalCredit: 0,
+        totalDebit: 0,
+        closingBalance: 0,
+      };
+    }
+
+    if (found.id === 'ba-axis') {
+      const op = found.openingBalance || 0;
+      return {
+        id: found.id,
+        name: found.bankName,
+        accountHolderName: found.accountHolderName || 'Booshnam Associates Pvt Ltd.',
+        type: found.accountType,
+        isCash: false,
+        accountNumber: found.accountNumber,
+        openingBalance: op,
+        totalCredit: 21540000.00,
+        totalDebit: 3956088.49,
+        closingBalance: op + 17583911.51,
+      };
+    }
+
+    if (found.id === 'ba-idbi') {
+      const op = found.openingBalance || 0;
+      return {
+        id: found.id,
+        name: found.bankName,
+        accountHolderName: found.accountHolderName || 'BOOSHNAM ASSOCIATES PVT LTD',
+        type: found.accountType,
+        isCash: false,
+        accountNumber: found.accountNumber,
+        openingBalance: op,
+        totalCredit: 0,
+        totalDebit: 0,
+        closingBalance: op,
+      };
+    }
+
+    const accTxns = statementTransactions.filter(t => t.accountId === found.id);
+    const cr = accTxns.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0);
+    const dr = accTxns.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0);
+    const op = found.balance || 0;
+    const cl = op + cr - dr;
+
+    return {
+      id: found.id,
+      name: found.bankName,
+      accountHolderName: found.accountHolderName || found.accountName,
+      type: found.accountType,
+      isCash: false,
+      accountNumber: found.accountNumber,
+      openingBalance: op,
+      totalCredit: cr,
+      totalDebit: dr,
+      closingBalance: cl,
+    };
+  }, [statementActiveAccountId, bankAccounts, statementTransactions]);
+
+  // Filtered Statement Transactions for Statement View
+  const filteredStatementTransactions = useMemo(() => {
+    if (!statementActiveAccountId) return [];
+    return statementTransactions.filter(t => {
+      if (t.accountId !== statementActiveAccountId) return false;
+      if (statementDateFilter === 'all') return true;
+      if (statementDateFilter === 'today') {
+        return t.rawDate === '2026-09-26';
+      }
+      if (statementDateFilter === 'this_week') {
+        return t.rawDate >= '2026-09-21' && t.rawDate <= '2026-09-27';
+      }
+      if (statementDateFilter === 'last_week') {
+        return t.rawDate >= '2026-09-14' && t.rawDate <= '2026-09-20';
+      }
+      if (statementDateFilter === 'this_month') {
+        return t.rawDate >= '2026-09-01' && t.rawDate <= '2026-09-30';
+      }
+      if (statementDateFilter === 'last_month') {
+        return t.rawDate >= '2026-08-01' && t.rawDate <= '2026-08-31';
+      }
+      if (statementDateFilter === 'this_year') {
+        return t.rawDate >= '2026-01-01' && t.rawDate <= '2026-12-31';
+      }
+      if (statementDateFilter === 'current_fy') {
+        return t.rawDate >= '2026-04-01' && t.rawDate <= '2027-03-31';
+      }
+      if (statementDateFilter === 'fy_25_26') {
+        return t.rawDate >= '2025-04-01' && t.rawDate <= '2026-03-31';
+      }
+      if (statementDateFilter === 'fy_24_25') {
+        return t.rawDate >= '2024-04-01' && t.rawDate <= '2025-03-31';
+      }
+      if (statementDateFilter === 'custom') {
+        if (customStartDate && t.rawDate < customStartDate) return false;
+        if (customEndDate && t.rawDate > customEndDate) return false;
+        return true;
+      }
+      return true;
+    });
+  }, [statementActiveAccountId, statementTransactions, statementDateFilter, customStartDate, customEndDate]);
+
+  const statementPeriodCredit = useMemo(() => {
+    return filteredStatementTransactions.filter(t => t.type === 'Credit').reduce((s, t) => s + t.amount, 0);
+  }, [filteredStatementTransactions]);
+
+  const statementPeriodDebit = useMemo(() => {
+    return filteredStatementTransactions.filter(t => t.type === 'Debit').reduce((s, t) => s + t.amount, 0);
+  }, [filteredStatementTransactions]);
+
+  const statementPeriodClosing = useMemo(() => {
+    const op = activeStatementAccount?.openingBalance || 0;
+    return op + statementPeriodCredit - statementPeriodDebit;
+  }, [activeStatementAccount?.openingBalance, statementPeriodCredit, statementPeriodDebit]);
+
+  // Tab 5: Accounts Search and Filter State
+  const [accountSearchQuery, setAccountSearchQuery] = useState('');
+  const [accountTypeFilter, setAccountTypeFilter] = useState<'All' | 'Current' | 'Savings' | 'Escrow' | 'Petty Cash'>('All');
+
+  const filteredBankAccounts = useMemo(() => {
+    return bankAccounts.filter(ba => {
+      const q = accountSearchQuery.toLowerCase().trim();
+      const matchesQuery = !q || 
+        ba.accountName.toLowerCase().includes(q) ||
+        (ba.accountHolderName && ba.accountHolderName.toLowerCase().includes(q)) ||
+        ba.bankName.toLowerCase().includes(q) ||
+        (ba.bankAddress && ba.bankAddress.toLowerCase().includes(q)) ||
+        ba.accountNumber.includes(q) ||
+        ba.ifscCode.toLowerCase().includes(q) ||
+        (ba.upiNumber && ba.upiNumber.toLowerCase().includes(q)) ||
+        (ba.ibanNumber && ba.ibanNumber.toLowerCase().includes(q));
+
+      const matchesType = accountTypeFilter === 'All' || ba.accountType === accountTypeFilter;
+      return matchesQuery && matchesType;
+    });
+  }, [bankAccounts, accountSearchQuery, accountTypeFilter]);
+
+  const handleCopyAccountData = (text: string, label: string) => {
+    if (!text || text === '—') return;
+    navigator.clipboard.writeText(text);
+    if (onShowToast) {
+      onShowToast(`Copied ${label}: ${text}`);
+    }
+  };
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -1087,8 +1700,8 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const [selectedTransferDetails, setSelectedTransferDetails] = useState<AccountTransferRecord | null>(null);
 
   // New Transfer Form State
-  const [newTrfFromAccountId, setNewTrfFromAccountId] = useState('');
-  const [newTrfToAccountId, setNewTrfToAccountId] = useState('ba-3');
+  const [newTrfFromAccountId, setNewTrfFromAccountId] = useState(() => bankAccounts[0]?.id || '');
+  const [newTrfToAccountId, setNewTrfToAccountId] = useState(() => bankAccounts[1]?.id || bankAccounts[0]?.id || '');
   const [newTrfAmount, setNewTrfAmount] = useState('');
   const [newTrfMode, setNewTrfMode] = useState<AccountTransferRecord['transferMode']>('Cash Withdrawal');
   const [newTrfDate, setNewTrfDate] = useState(() => {
@@ -1231,7 +1844,58 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
     if (onShowToast) onShowToast('Exported account transfers report to CSV');
   };
 
-  // Handle Save New Bank / Cash Account
+  // Handle Save New Bank / Cash Account from Drawer (Side Navigation Bar)
+  const handleSaveAccountFromDrawer = (data: AccountFormData) => {
+    const rawNo = data.accountNumber.trim();
+    const formattedNumber = rawNo || `${Math.floor(100000000000 + Math.random() * 900000000000)}`;
+
+    const newAcc: BankAccountRecord = {
+      id: `ba-${Date.now()}`,
+      accountName: data.accountHolderName.trim() || data.bankName.trim() || 'New Account',
+      accountHolderName: data.accountHolderName.trim() || 'Booshnam Associates Pvt Ltd',
+      bankName: data.bankName.trim() || 'Commercial Bank',
+      bankAddress: data.bankAddress.trim() || '',
+      accountNumber: formattedNumber,
+      ifscCode: data.ifscCode.trim().toUpperCase() || 'BANK0001234',
+      ibanNumber: data.ibanNumber.trim(),
+      upiNumber: data.upiNumber.trim(),
+      accountType: 'Current',
+      balance: data.openingBalance || 0,
+      openingBalance: data.openingBalance || 0,
+      overdraftLimit: data.overdraftLimit || 0,
+      status: 'Active',
+      tallyLedgerName: `${data.accountHolderName.trim() || data.bankName.trim()} Ledger`,
+      isPrimary: false,
+    };
+
+    setBankAccounts(prev => [newAcc, ...prev]);
+    setIsAddAccountModalOpen(false);
+
+    if (data.openingBalance && data.openingBalance > 0) {
+      const initTxn: AccountStatementTransaction = {
+        id: `st-init-${newAcc.id}`,
+        accountId: newAcc.id,
+        date: 'Today',
+        rawDate: new Date().toISOString().split('T')[0],
+        partyName: newAcc.accountHolderName || 'Opening Balance',
+        voucherCode: `#OPB-${newAcc.id.slice(-4)}`,
+        paymentType: 'Payment In',
+        type: 'Credit',
+        amount: data.openingBalance,
+        paymentMode: 'Bank Transfer',
+        projectName: 'General Opening Account Balance',
+        sourceAccountName: newAcc.bankName,
+        details: 'Initial Opening Balance Deposit',
+      };
+      setStatementTransactions(prev => [initTxn, ...prev]);
+    }
+
+    if (onShowToast) {
+      onShowToast(`Bank Account "${newAcc.bankName} - ${newAcc.accountHolderName}" created successfully!`);
+    }
+  };
+
+  // Handle Save New Bank / Cash Account (Legacy fallback)
   const handleSaveAccount = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAccName.trim()) {
@@ -1337,7 +2001,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           </div>
 
           {/* User Profile Avatar */}
-          <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-orange-100 select-none cursor-pointer">
+          <div className="w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-red-100 select-none cursor-pointer">
             <User className="w-3.5 h-3.5 text-white" />
           </div>
         </div>
@@ -1357,7 +2021,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             }}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'party'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1369,7 +2033,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             onClick={() => setActiveTab('transaction')}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'transaction'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1381,7 +2045,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             onClick={() => setActiveTab('payment_requests')}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'payment_requests'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1393,7 +2057,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             onClick={() => setActiveTab('expenses')}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'expenses'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1405,7 +2069,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             onClick={() => setActiveTab('account_transfer')}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'account_transfer'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1417,7 +2081,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             onClick={() => setActiveTab('accounts')}
             className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
               activeTab === 'accounts'
-                ? 'border-[#635BFF] text-[#635BFF] font-bold'
+                ? 'border-red-600 text-red-600 font-bold'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
             }`}
           >
@@ -1448,14 +2112,14 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
                     statusFilter !== 'All' || selectedProjectFilter !== 'All'
-                      ? 'border-[#635BFF] text-[#635BFF] bg-purple-50/60'
+                      ? 'border-red-600 text-red-600 bg-red-50/60'
                       : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   <span>Filter</span>
                   {(statusFilter !== 'All' || selectedProjectFilter !== 'All') && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#635BFF]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
                   )}
                 </button>
 
@@ -1477,7 +2141,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="Search party, project, voucher..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                   {searchQuery && (
                     <button 
@@ -1498,7 +2162,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       onClick={() => setStatusFilter(st)}
                       className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                         statusFilter === st 
-                          ? 'bg-[#635BFF] text-white shadow-2xs' 
+                          ? 'bg-red-600 text-white shadow-2xs' 
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
@@ -1513,7 +2177,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsNewRequestModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Payment Request</span>
@@ -1529,7 +2193,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select 
                     value={statusFilter}
                     onChange={(e: any) => setStatusFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF]"
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Paid">Paid</option>
@@ -1544,7 +2208,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select 
                     value={selectedProjectFilter}
                     onChange={(e: any) => setSelectedProjectFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF] max-w-[240px]"
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600 max-w-[240px]"
                   >
                     <option value="All">All Projects</option>
                     {projects.map(p => (
@@ -1569,7 +2233,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsFilterModalOpen(false)}
-                    className="px-4 py-1.5 rounded-lg bg-[#635BFF] text-white font-semibold hover:bg-[#5046E5] cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 cursor-pointer"
                   >
                     Apply Filter
                   </button>
@@ -1620,7 +2284,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
                         {/* Party Name & Subtitle */}
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-slate-900 group-hover:text-[#635BFF] transition-colors truncate">
+                          <div className="text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate">
                             {req.partyName}
                           </div>
                           <div className="text-xs text-slate-400 font-medium mt-0.5 truncate">
@@ -1647,7 +2311,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         <div className="mt-1">
                           <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${
                             req.status === 'Paid'
-                              ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                              ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
                               : req.status === 'Approved'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : req.status === 'Pending'
@@ -1675,73 +2339,69 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           </div>
         )}
 
-
-        {/* ═════════════════════════════════════════════════════════════
-            TAB 2: PARTY DIRECTORY (Matching User Screenshot 1)
-        ═════════════════════════════════════════════════════════════ */}
         {/* ═════════════════════════════════════════════════════════════
             TAB 2: PARTY DIRECTORY (Full View & Split Master-Detail)
         ═════════════════════════════════════════════════════════════ */}
         {activeTab === 'party' && !activePartyOverview && (
           <div className="space-y-4">
             
-            {/* 1. Four Summary KPI Cards matching Image 1 */}
+            {/* 1. Four Summary KPI Cards (Red & White Theme with Perfect Height & Proportions) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Card 1: Advance Paid */}
-              <div className="bg-[#EAF8F1] rounded-2xl p-4.5 flex flex-col justify-between border border-[#D5F2E2] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#0D824B] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#0D824B] flex items-center justify-center shrink-0">
-                    <ArrowDown className="w-3 h-3 text-[#0D824B] stroke-[2.5]" />
+              <div className="bg-white rounded-xl p-5 min-h-[112px] flex flex-col justify-between border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 text-slate-600 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0">
+                    <ArrowDown className="w-3.5 h-3.5 text-slate-600 stroke-[2.5]" />
                   </div>
-                  <span className="tracking-tight">Advance Paid</span>
+                  <span className="tracking-tight text-slate-600">Advance Paid</span>
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2.5 tracking-tight">
-                  ₹ {partyKpiMetrics.advancePaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight font-mono leading-none mt-3">
+                  ₹ {partyKpiMetrics.advancePaid.toLocaleString('en-IN')}
                 </div>
               </div>
 
               {/* Card 2: To Pay */}
-              <div className="bg-[#FDF0F3] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FCDCE2] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#E11D48] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#E11D48] flex items-center justify-center shrink-0">
-                    <ArrowUp className="w-3 h-3 text-[#E11D48] stroke-[2.5]" />
+              <div className="bg-white rounded-xl p-5 min-h-[112px] flex flex-col justify-between border border-slate-200 shadow-2xs hover:border-red-300 hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 text-red-600 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-red-50 border border-red-200/90 flex items-center justify-center shrink-0">
+                    <ArrowUp className="w-3.5 h-3.5 text-red-600 stroke-[2.5]" />
                   </div>
-                  <span className="tracking-tight">To Pay</span>
+                  <span className="tracking-tight text-red-600">To Pay</span>
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2.5 tracking-tight">
-                  ₹ {partyKpiMetrics.toPay.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight font-mono leading-none mt-3">
+                  ₹ {partyKpiMetrics.toPay.toLocaleString('en-IN')}
                 </div>
               </div>
 
               {/* Card 3: To Receive */}
-              <div className="bg-[#FDF0F6] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FADDEE] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#BE185D] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#BE185D] flex items-center justify-center shrink-0">
-                    <ArrowUp className="w-3 h-3 text-[#BE185D] stroke-[2.5]" />
+              <div className="bg-white rounded-xl p-5 min-h-[112px] flex flex-col justify-between border border-slate-200 shadow-2xs hover:border-red-300 hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 text-red-600 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-red-50 border border-red-200/90 flex items-center justify-center shrink-0">
+                    <ArrowDown className="w-3.5 h-3.5 text-red-600 stroke-[2.5]" />
                   </div>
-                  <span className="tracking-tight">To Receive</span>
+                  <span className="tracking-tight text-red-600">To Receive</span>
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2.5 tracking-tight">
+                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight font-mono leading-none mt-3">
                   ₹ {partyKpiMetrics.toReceive.toLocaleString('en-IN')}
                 </div>
               </div>
 
               {/* Card 4: Advance Received */}
-              <div className="bg-[#EAF8F1] rounded-2xl p-4.5 flex flex-col justify-between border border-[#D5F2E2] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#0D824B] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#0D824B] flex items-center justify-center shrink-0">
-                    <ArrowDown className="w-3 h-3 text-[#0D824B] stroke-[2.5]" />
+              <div className="bg-white rounded-xl p-5 min-h-[112px] flex flex-col justify-between border border-slate-200 shadow-2xs hover:border-slate-300 hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 text-slate-600 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200/90 flex items-center justify-center shrink-0">
+                    <ArrowUp className="w-3.5 h-3.5 text-slate-600 stroke-[2.5]" />
                   </div>
-                  <span className="tracking-tight">Advance Received</span>
+                  <span className="tracking-tight text-slate-600">Advance Received</span>
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2.5 tracking-tight">
+                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight font-mono leading-none mt-3">
                   ₹ {partyKpiMetrics.advanceReceived.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
 
-            {/* 2. Action & Filter Toolbar matching Image 1 */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+            {/* 2. Action & Filter Toolbar (Perfect Alignment with h-9 & Red Focus) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               
               {/* Left filters: Search, Payment Type, Party Type, Active */}
               <div className="flex items-center gap-2.5 flex-wrap flex-1">
@@ -1753,12 +2413,12 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="Search parties..."
                     value={partySearchQuery}
                     onChange={e => setPartySearchQuery(e.target.value)}
-                    className="w-full pl-8.5 pr-8 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] transition-all"
+                    className="w-full h-9 pl-9 pr-8 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all shadow-2xs"
                   />
                   {partySearchQuery && (
                     <button 
                       onClick={() => setPartySearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -1770,7 +2430,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={partyPaymentTypeFilter}
                     onChange={e => setPartyPaymentTypeFilter(e.target.value)}
-                    className="appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#635BFF] cursor-pointer"
+                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
                   >
                     <option value="All">Payment Type</option>
                     <option value="To Receive">To Receive</option>
@@ -1787,7 +2447,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={partyTypeFilter}
                     onChange={e => setPartyTypeFilter(e.target.value)}
-                    className="appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#635BFF] cursor-pointer"
+                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
                   >
                     <option value="All">Party Type</option>
                     <option value="Client">Client</option>
@@ -1805,7 +2465,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={partyActiveFilter}
                     onChange={e => setPartyActiveFilter(e.target.value)}
-                    className="appearance-none bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:border-[#635BFF] cursor-pointer"
+                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -1820,7 +2480,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <button
                   type="button"
                   onClick={handleExportParties}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-medium transition-colors cursor-pointer shadow-2xs"
+                  className="h-9 flex items-center gap-1.5 px-3.5 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
                   title="Export to CSV"
                 >
                   <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -1830,7 +2490,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddPartyDrawerOpen(true)}
-                  className="flex items-center gap-1.5 px-4.5 py-2 bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  className="h-9 flex items-center gap-1.5 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>New Party</span>
@@ -1838,11 +2498,11 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </div>
             </div>
 
-            {/* 3. Table matching Image 1 */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+            {/* 3. Table */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
               
               {/* Header row */}
-              <div className="grid grid-cols-12 px-6 py-3.5 bg-[#F6F7FB] border-b border-slate-100 text-xs font-semibold text-slate-600 select-none">
+              <div className="grid grid-cols-12 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-700 select-none">
                 <div className="col-span-6">Party Details</div>
                 <div className="col-span-2 text-center">Type</div>
                 <div className="col-span-2 text-right">Balance (₹)</div>
@@ -1865,15 +2525,21 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         setActivePartyOverview(p);
                         setSelectedPartyRecord(p);
                       }}
-                      className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-[#FAFAFD] transition-colors cursor-pointer group"
+                      className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-red-50/20 transition-colors cursor-pointer group"
                     >
                       {/* Party Details: Avatar Circle + Name */}
                       <div className="col-span-6 flex items-center gap-3.5 min-w-0 pr-2">
-                        <div className={`w-8 h-8 rounded-full ${p.avatarColor || 'bg-[#1E40AF]'} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs select-none`}>
+                        <div className={`w-8 h-8 rounded-full ${
+                          p.type === 'Staff' 
+                            ? 'bg-red-600' 
+                            : p.type === 'Client'
+                            ? 'bg-slate-900'
+                            : 'bg-red-700'
+                        } text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs select-none`}>
                           {p.avatarText || p.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1 truncate">
-                          <span className="text-xs sm:text-sm font-medium text-slate-900 group-hover:text-[#635BFF] transition-colors truncate block">
+                          <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate block">
                             {p.name}
                           </span>
                         </div>
@@ -1881,34 +2547,34 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
                       {/* Type Badge */}
                       <div className="col-span-2 text-center">
-                        <span className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded ${
+                        <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
                           p.type === 'Staff' 
-                            ? 'bg-[#F5F3FF] text-[#7C3AED]'
+                            ? 'bg-red-50 text-red-700 border-red-200'
                             : p.type === 'Vendor'
-                            ? 'bg-[#FFF7ED] text-[#C2410C]'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : p.type === 'Subcontractor'
-                            ? 'bg-[#EEF2FF] text-[#4F46E5]'
-                            : 'bg-[#EFF6FF] text-[#2563EB]'
+                            ? 'bg-slate-100 text-slate-800 border-slate-300'
+                            : 'bg-slate-50 text-slate-700 border-slate-200'
                         }`}>
                           {p.type}
                         </span>
                       </div>
 
                       {/* Balance (₹) */}
-                      <div className="col-span-2 text-right font-medium text-xs sm:text-sm text-slate-900">
+                      <div className="col-span-2 text-right font-mono font-bold text-xs sm:text-sm text-slate-900">
                         ₹ {p.balanceDue.toLocaleString('en-IN')}
                       </div>
 
                       {/* Status Badge */}
                       <div className="col-span-2 text-right pr-2">
-                        <span className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded ${
+                        <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                           p.status === 'To Receive'
-                            ? 'border border-blue-200 bg-[#EFF6FF] text-[#2563EB]'
+                            ? 'border-red-200 bg-red-50 text-red-600'
                             : p.status === 'To Pay'
-                            ? 'border border-red-200 bg-red-50 text-red-600'
+                            ? 'border-red-300 bg-red-100 text-red-800'
                             : p.status === 'Advance Paid' || p.status === 'Advance Received'
-                            ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-slate-100 text-slate-600'
                         }`}>
                           {p.status}
                         </span>
@@ -1965,14 +2631,14 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                                 setSelectedPartyRecord(found);
                               }
                             }}
-                            className="text-base sm:text-lg font-bold text-slate-900 tracking-tight bg-transparent pr-5.5 cursor-pointer focus:outline-none appearance-none hover:text-[#635BFF] transition-colors"
+                            className="text-base sm:text-lg font-bold text-slate-900 tracking-tight bg-transparent pr-5.5 cursor-pointer focus:outline-none appearance-none hover:text-red-600 transition-colors"
                             title="Click to switch between parties"
                           >
                             {parties.map(p => (
                               <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </select>
-                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-[#635BFF]" />
+                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-red-600" />
                         </div>
 
                         <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-[#EFF6FF] text-[#2563EB]">
@@ -2010,16 +2676,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
                   {/* 3. Metric Row: User Icon, Party Paid, Sales Invoice matching Image */}
                   <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center gap-12 select-none">
-                    <div className="text-[#635BFF] flex items-center justify-center">
+                    <div className="text-red-600 flex items-center justify-center">
                       <User className="w-6 h-6 stroke-[1.75]" />
                     </div>
 
                     <div className="relative pb-1">
-                      <div className="text-xs font-semibold text-[#635BFF]">Party Paid</div>
+                      <div className="text-xs font-semibold text-red-600">Party Paid</div>
                       <div className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
                         ₹ {summary.partyPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
-                      <div className="absolute -bottom-4 left-0 right-0 h-1 bg-[#635BFF] rounded-t-sm" />
+                      <div className="absolute -bottom-4 left-0 right-0 h-1 bg-red-600 rounded-t-sm" />
                     </div>
 
                     <div>
@@ -2100,7 +2766,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsCreatePartyTxnModalOpen(true)}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
                     >
                       <Plus className="w-4 h-4 stroke-[3]" />
                       <span>Create Transaction</span>
@@ -2127,7 +2793,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsRecordTxnModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Record Transaction</span>
@@ -2148,7 +2814,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Net Operating Cash Balance</span>
-                <div className="text-xl font-bold text-[#635BFF] mt-1">₹ 15,58,000</div>
+                <div className="text-xl font-bold text-red-600 mt-1">₹ 15,58,000</div>
                 <span className="text-[10px] text-emerald-600 font-semibold">Positive Cashflow</span>
               </div>
             </div>
@@ -2286,14 +2952,14 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   onClick={() => setIsExpenseFilterOpen(!isExpenseFilterOpen)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
                     expenseStatusFilter !== 'All' || expenseCategoryFilter !== 'All' || expenseProjectFilter !== 'All'
-                      ? 'border-[#635BFF] text-[#635BFF] bg-purple-50/60'
+                      ? 'border-red-600 text-red-600 bg-red-50/60'
                       : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   <span>Filter</span>
                   {(expenseStatusFilter !== 'All' || expenseCategoryFilter !== 'All' || expenseProjectFilter !== 'All') && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#635BFF]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
                   )}
                 </button>
 
@@ -2305,7 +2971,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="Search voucher, vendor, project, title..."
                     value={expenseSearchQuery}
                     onChange={e => setExpenseSearchQuery(e.target.value)}
-                    className="w-full pl-8.5 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full pl-8.5 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                   {expenseSearchQuery && (
                     <button 
@@ -2326,7 +2992,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       onClick={() => setExpenseCategoryFilter(cat)}
                       className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
                         expenseCategoryFilter === cat
-                          ? 'bg-[#635BFF] text-white shadow-2xs'
+                          ? 'bg-red-600 text-white shadow-2xs'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                       }`}
                     >
@@ -2356,7 +3022,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     }
                     setIsRecordExpenseModalOpen(true);
                   }}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Record Expense</span>
@@ -2372,7 +3038,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={expenseStatusFilter}
                     onChange={(e: any) => setExpenseStatusFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF]"
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Paid">Paid</option>
@@ -2387,7 +3053,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={expenseCategoryFilter}
                     onChange={(e: any) => setExpenseCategoryFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF]"
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
                   >
                     <option value="All">All Categories</option>
                     <option value="Materials">Materials</option>
@@ -2406,7 +3072,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={expenseProjectFilter}
                     onChange={(e: any) => setExpenseProjectFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-[#635BFF] max-w-[240px]"
+                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600 max-w-[240px]"
                   >
                     <option value="All">All Projects</option>
                     {projects.map(p => (
@@ -2432,7 +3098,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsExpenseFilterOpen(false)}
-                    className="px-4 py-1.5 rounded-lg bg-[#635BFF] text-white font-semibold hover:bg-[#5046E5] cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 cursor-pointer"
                   >
                     Apply Filter
                   </button>
@@ -2477,7 +3143,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       {/* Left: Purple Date Box + Expense Title & Voucher */}
                       <div className="col-span-5 md:col-span-4 flex items-center gap-3.5 min-w-0 pr-2">
                         {/* Date Box */}
-                        <div className="w-11 h-11 rounded-lg bg-[#635BFF] text-white flex flex-col items-center justify-center shrink-0 shadow-2xs">
+                        <div className="w-11 h-11 rounded-lg bg-red-600 text-white flex flex-col items-center justify-center shrink-0 shadow-2xs">
                           <span className="text-[10px] font-bold tracking-tight text-white/95 leading-none">
                             {exp.date.split(' ').slice(0, 2).join(' ')}
                           </span>
@@ -2486,7 +3152,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
                         {/* Title & Payee / Voucher Code */}
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-slate-900 group-hover:text-[#635BFF] transition-colors truncate">
+                          <div className="text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate">
                             {exp.title}
                           </div>
                           <div className="text-xs text-slate-500 font-medium mt-0.5 truncate flex items-center gap-1.5">
@@ -2538,7 +3204,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         <div className="mt-1 flex items-center justify-end gap-1.5">
                           <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${
                             exp.status === 'Paid'
-                              ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                              ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
                               : exp.status === 'Approved'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                               : exp.status === 'Pending Approval'
@@ -2560,7 +3226,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <div className="flex items-center gap-5">
                   <span>Paid: <strong className="text-slate-800">₹{expenseMetrics.paidAmount.toLocaleString('en-IN')}</strong></span>
                   <span>Pending: <strong className="text-amber-700">₹{expenseMetrics.pendingAmount.toLocaleString('en-IN')}</strong></span>
-                  <span>Total: <strong className="text-[#635BFF]">₹{expenseMetrics.total.toLocaleString('en-IN')}</strong></span>
+                  <span>Total: <strong className="text-red-600">₹{expenseMetrics.total.toLocaleString('en-IN')}</strong></span>
                 </div>
               </div>
             </div>
@@ -2580,7 +3246,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-shadow">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Transferred</span>
-                  <div className="w-8 h-8 rounded-lg bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-red-600/10 text-red-600 flex items-center justify-center">
                     <ArrowLeftRight className="w-4 h-4" />
                   </div>
                 </div>
@@ -2646,7 +3312,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             <div className="bg-gradient-to-r from-slate-50 via-slate-50/70 to-indigo-50/30 p-4 rounded-xl border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <Landmark className="w-4 h-4 text-[#635BFF]" />
+                  <Landmark className="w-4 h-4 text-red-600" />
                   <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">Connected Account Balances</span>
                   <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                     Live Synchronized
@@ -2659,7 +3325,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 {bankAccounts.map(acc => (
                   <div 
                     key={acc.id} 
-                    className="p-3.5 bg-white rounded-lg border border-slate-200 shadow-2xs hover:border-[#635BFF]/60 hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer"
+                    className="p-3.5 bg-white rounded-lg border border-slate-200 shadow-2xs hover:border-red-600/60 hover:shadow-xs transition-all flex items-center justify-between group cursor-pointer"
                     onClick={() => {
                       setNewTrfFromAccountId(acc.id);
                       const other = bankAccounts.find(b => b.id !== acc.id);
@@ -2676,7 +3342,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <div className="text-right shrink-0">
                       <div className="text-xs text-slate-400 font-medium">Balance</div>
                       <div className="text-sm font-black text-slate-900">₹{acc.balance.toLocaleString('en-IN')}</div>
-                      <span className="text-[10px] font-semibold text-[#635BFF] opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] font-semibold text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         Transfer ➔
                       </span>
                     </div>
@@ -2698,7 +3364,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       value={transferSearchQuery}
                       onChange={(e) => setTransferSearchQuery(e.target.value)}
                       placeholder="Search voucher #, account, UTR, purpose, project..."
-                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] transition-all"
+                      className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 transition-all"
                     />
                     {transferSearchQuery && (
                       <button
@@ -2718,14 +3384,14 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       onClick={() => setIsTransferFilterOpen(!isTransferFilterOpen)}
                       className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                         transferAccountFilter !== 'All' || transferStatusFilter !== 'All'
-                          ? 'border-[#635BFF] bg-[#635BFF]/10 text-[#635BFF]'
+                          ? 'border-red-600 bg-red-600/10 text-red-600'
                           : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                       }`}
                     >
                       <Filter className="w-3.5 h-3.5" />
                       <span>Filter</span>
                       {(transferAccountFilter !== 'All' || transferStatusFilter !== 'All') && (
-                        <span className="w-2 h-2 rounded-full bg-[#635BFF]" />
+                        <span className="w-2 h-2 rounded-full bg-red-600" />
                       )}
                     </button>
 
@@ -2740,7 +3406,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                               setTransferStatusFilter('All');
                               setTransferModeFilter('All');
                             }}
-                            className="text-[11px] text-[#635BFF] font-medium hover:underline cursor-pointer"
+                            className="text-[11px] text-red-600 font-medium hover:underline cursor-pointer"
                           >
                             Reset All
                           </button>
@@ -2751,7 +3417,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                           <select
                             value={transferAccountFilter}
                             onChange={(e) => setTransferAccountFilter(e.target.value)}
-                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-red-600"
                           >
                             <option value="All">All Bank & Cash Accounts</option>
                             {bankAccounts.map(b => (
@@ -2765,7 +3431,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                           <select
                             value={transferStatusFilter}
                             onChange={(e) => setTransferStatusFilter(e.target.value as any)}
-                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-red-600"
                           >
                             <option value="All">All Statuses</option>
                             <option value="Completed">Completed</option>
@@ -2778,7 +3444,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setIsTransferFilterOpen(false)}
-                            className="px-3 py-1 bg-[#635BFF] text-white rounded text-xs font-semibold cursor-pointer"
+                            className="px-3 py-1 bg-red-600 text-white rounded text-xs font-semibold cursor-pointer"
                           >
                             Done
                           </button>
@@ -2806,7 +3472,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       setNewTrfToAccountId(bankAccounts[2]?.id || bankAccounts[1]?.id || 'ba-2');
                       setIsNewTransferModalOpen(true);
                     }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>+ New Transfer</span>
@@ -2874,7 +3540,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setIsNewTransferModalOpen(true)}
-                            className="mt-4 px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+                            className="mt-4 px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
                           >
                             + Record Transfer
                           </button>
@@ -2911,7 +3577,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                           {/* Arrow Flow */}
                           <td className="py-3.5 px-2 text-center">
                             <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mx-auto">
-                              <ArrowRight className="w-3.5 h-3.5 text-[#635BFF]" />
+                              <ArrowRight className="w-3.5 h-3.5 text-red-600" />
                             </div>
                           </td>
 
@@ -2982,7 +3648,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setSelectedTransferDetails(trf)}
-                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-[#635BFF] hover:border-[#635BFF] hover:bg-[#635BFF]/5 transition-colors cursor-pointer inline-flex items-center gap-1"
+                              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-600 hover:bg-red-600/5 transition-colors cursor-pointer inline-flex items-center gap-1"
                               title="View Contra Voucher Slip"
                             >
                               <Eye className="w-3.5 h-3.5" />
@@ -3001,7 +3667,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <span>Showing {filteredTransfers.length} of {transfers.length} contra transfer entries</span>
                 <div className="flex items-center gap-5">
                   <span>Filtered Sum: <strong className="text-slate-900 font-mono">₹{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-IN')}</strong></span>
-                  <span>Total Completed: <strong className="text-[#635BFF] font-mono">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
+                  <span>Total Completed: <strong className="text-red-600 font-mono">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
                 </div>
               </div>
             </div>
@@ -3011,117 +3677,807 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
 
         {/* ═════════════════════════════════════════════════════════════
-            TAB 5: ACCOUNTS (Bank & Cash Accounts + Tally/Zoho Integration)
+            TAB 5: ACCOUNTS (Bank & Cash Accounts + Detailed Account Cards)
         ═════════════════════════════════════════════════════════════ */}
         {activeTab === 'accounts' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">Bank Accounts & Petty Cash Vaults</h2>
-                <p className="text-xs text-slate-500">Connected bank ledgers, RERA escrow, and Tally/Zoho books sync</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddAccountModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#635BFF] hover:bg-[#5046E5] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Account</span>
-              </button>
-            </div>
+          <div className="space-y-6">
+            {statementActiveAccountId ? (
+              /* ═══════════════════════════════════════════════════════════
+                 VIEW B: ACCOUNT STATEMENT VIEW (Matching Image 2 + Audio)
+              ═══════════════════════════════════════════════════════════ */
+              <div className="space-y-6">
+                
+                {/* 1. Statement Top Bar: Back Button, Account Switcher & Date Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    {/* Back to Accounts List */}
+                    <button
+                      type="button"
+                      onClick={() => setStatementActiveAccountId(null)}
+                      className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
+                      title="Back to Cash & Bank Accounts"
+                    >
+                      <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
+                    </button>
 
-            {/* Bank Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {bankAccounts.map(ba => (
-                <div key={ba.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4 hover:border-slate-300 transition-all group">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{ba.bankName}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          ba.accountType === 'Escrow' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                          ba.accountType === 'Petty Cash' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                          'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}>
-                          {ba.accountType}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-900 mt-1">{ba.accountName}</h3>
-                    </div>
-                    <span className="p-2 rounded-lg bg-purple-50 text-[#635BFF]">
-                      <Landmark className="w-4 h-4" />
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-xs text-slate-500 block">Available Balance</span>
-                    <div className="text-2xl font-bold text-slate-900 mt-0.5 font-mono">
-                      ₹ {ba.balance.toLocaleString('en-IN')}
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <span>A/c: {ba.accountNumber}</span>
-                    <div className="flex items-center gap-2.5">
+                    {/* Account Selector Pill with Dropdown */}
+                    <div className="relative">
                       <button
                         type="button"
-                        onClick={() => {
-                          setNewTrfFromAccountId(ba.id);
-                          const other = bankAccounts.find(b => b.id !== ba.id);
-                          if (other) setNewTrfToAccountId(other.id);
-                          setActiveTab('account_transfer');
-                          setIsNewTransferModalOpen(true);
-                        }}
-                        className="text-[11px] font-bold text-[#635BFF] hover:underline cursor-pointer"
+                        onClick={() => setIsAccountSelectorOpen(prev => !prev)}
+                        className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:border-slate-300 shadow-2xs text-xs sm:text-sm font-bold text-slate-800 transition-all cursor-pointer"
                       >
-                        Transfer ➔
+                        <div className="w-6 h-6 rounded-md bg-[#eaf7f2] border border-[#bce8d5] text-[#00875a] flex items-center justify-center shrink-0">
+                          {activeStatementAccount?.isCash ? (
+                            <Wallet className="w-3.5 h-3.5 text-[#00875a]" />
+                          ) : (
+                            <Landmark className="w-3.5 h-3.5 text-indigo-600" />
+                          )}
+                        </div>
+                        <span>{activeStatementAccount?.name}</span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                       </button>
-                      {ba.id.startsWith('ba-') && true && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteAccount(ba.id, ba.accountName)}
-                          className="text-[11px] text-red-500 hover:text-red-700 cursor-pointer p-0.5"
-                          title="Delete Account"
-                        >
-                          ✕
-                        </button>
+
+                      {isAccountSelectorOpen && (
+                        <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            Select Account Statement
+                          </div>
+                          
+                          {/* Cash Account Option */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStatementActiveAccountId('cash');
+                              setIsAccountSelectorOpen(false);
+                            }}
+                            className={`w-full px-3.5 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                              statementActiveAccountId === 'cash' ? 'bg-red-50/60 font-bold text-red-600' : 'text-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-6 h-6 rounded bg-[#eaf7f2] border border-[#bce8d5] text-[#00875a] flex items-center justify-center shrink-0">
+                                <Wallet className="w-3.5 h-3.5 text-[#00875a]" />
+                              </div>
+                              <span className="text-xs">Cash Account</span>
+                            </div>
+                            <span className="text-[11px] font-mono font-semibold text-slate-500">₹ -1.82 Cr</span>
+                          </button>
+
+                          {/* Bank Accounts List */}
+                          {bankAccounts.map(ba => (
+                            <button
+                              key={ba.id}
+                              type="button"
+                              onClick={() => {
+                                setStatementActiveAccountId(ba.id);
+                                setIsAccountSelectorOpen(false);
+                              }}
+                              className={`w-full px-3.5 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                                statementActiveAccountId === ba.id ? 'bg-red-50/60 font-bold text-red-600' : 'text-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-6 h-6 rounded bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                                  <Landmark className="w-3.5 h-3.5" />
+                                </div>
+                                <div>
+                                  <span className="text-xs block font-medium">{ba.bankName}</span>
+                                  {ba.isPrimary && (
+                                    <span className="text-[9px] font-bold uppercase text-[#5932ea] bg-[#ececfd] px-1 py-0.2 rounded">PRIMARY</span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-[11px] font-mono font-semibold text-slate-500">
+                                ₹ {ba.balance.toLocaleString('en-IN')}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
 
-            {/* Tally / Zoho Integration Banner */}
-            <div className="bg-gradient-to-r from-purple-50 to-indigo-50/60 rounded-xl border border-purple-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-[#635BFF] text-white shrink-0 shadow-sm">
-                  <Boxes className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900">ERP & Accounting Synchronization</h4>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Seamlessly push payment vouchers and receipts to Tally Prime & Zoho Books in real-time.
-                  </p>
-                  <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
-                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                      <Check className="w-3 h-3 text-emerald-600" /> Tally ODBC Gateway Ready
-                    </span>
-                    <span>•</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
-                      <Check className="w-3 h-3 text-emerald-600" /> Zoho Books REST API Active
-                    </span>
+                  {/* Date Filter Trigger & Active Filter Badge */}
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={handleOpenDateFilterModal}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border shadow-2xs text-xs font-semibold cursor-pointer transition-all ${
+                        statementDateFilter !== 'all'
+                          ? 'border-[#5932ea]/40 bg-[#ececfd] text-[#5932ea] hover:bg-[#e4e4fc]'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Date Filter</span>
+                      {statementDateFilter !== 'all' && (
+                        <span className="w-2 h-2 rounded-full bg-[#5932ea]" />
+                      )}
+                    </button>
+
+                    {statementDateFilter !== 'all' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#ececfd] text-[#5932ea] border border-[#5932ea]/20">
+                        <span>
+                          {DATE_FILTER_PRESET_OPTIONS.find(p => p.id === statementDateFilter)?.label || 
+                           `${toDisplayDate(customStartDate) || 'Start'} to ${toDisplayDate(customEndDate) || 'End'}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStatementDateFilter('all');
+                            setCustomStartDate('');
+                            setCustomEndDate('');
+                            if (onShowToast) onShowToast('Date filter reset to All');
+                          }}
+                          className="p-0.5 hover:bg-[#5932ea]/15 rounded cursor-pointer transition-colors"
+                          title="Clear date filter"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {/* 2. Four KPI Summary Cards (Matching Image 2) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Card 1: OPENING BALANCE */}
+                  <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between min-h-[96px]">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      OPENING BALANCE
+                    </span>
+                    <div className="text-xl sm:text-2xl font-bold text-slate-900 font-mono tracking-tight mt-1.5">
+                      ₹ {activeStatementAccount?.openingBalance.toLocaleString('en-IN')}
+                    </div>
+                  </div>
+
+                  {/* Card 2: TOTAL CREDIT */}
+                  <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between min-h-[96px]">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      TOTAL CREDIT
+                    </span>
+                    <div className="text-xl sm:text-2xl font-black text-emerald-600 font-mono tracking-tight mt-1.5">
+                      ₹ {statementPeriodCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  {/* Card 3: TOTAL DEBIT */}
+                  <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between min-h-[96px]">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      TOTAL DEBIT
+                    </span>
+                    <div className="text-xl sm:text-2xl font-black text-red-600 font-mono tracking-tight mt-1.5">
+                      ₹ {statementPeriodDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  {/* Card 4: CLOSING BALANCE */}
+                  <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-2xs flex flex-col justify-between min-h-[96px]">
+                    <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                      CLOSING BALANCE
+                    </span>
+                    <div className="text-xl sm:text-2xl font-black text-[#5932ea] font-mono tracking-tight mt-1.5">
+                      {(() => {
+                        const val = statementPeriodClosing;
+                        const isNeg = val < 0;
+                        const formatted = Math.abs(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                        return isNeg ? `₹ -${formatted}` : `₹ ${formatted}`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Detailed Statement Transactions Table (with extra Credit/Debit column & Project info) */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200/80 bg-slate-50/50">
+                          <th className="px-5 py-3.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Payment Type
+                          </th>
+                          <th className="px-5 py-3.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Project / Source Account
+                          </th>
+                          <th className="px-5 py-3.5 text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Details
+                          </th>
+                          <th className="px-5 py-3.5 text-center text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="px-5 py-3.5 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
+                            Amount
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredStatementTransactions.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-xs">
+                              No statement entries found for this period.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredStatementTransactions.map(txn => (
+                            <tr key={txn.id} className="hover:bg-slate-50/70 transition-colors">
+                              {/* 1. Payment Type Column */}
+                              <td className="px-5 py-4 whitespace-nowrap align-top">
+                                <div className="flex items-start gap-3">
+                                  {/* Date Badge */}
+                                  <div className={`w-12 h-11 rounded-lg shrink-0 flex flex-col items-center justify-center text-[9px] font-bold border ${
+                                    txn.type === 'Credit'
+                                      ? 'bg-[#ebf8ee] border-[#b7ebc7] text-[#288448]'
+                                      : 'bg-[#ffedee] border-[#ffc9cb] text-[#d93845]'
+                                  }`}>
+                                    <span>{txn.date}</span>
+                                    {txn.type === 'Credit' ? (
+                                      <ArrowDownRight className="w-3.5 h-3.5 text-[#288448] stroke-[2.5]" />
+                                    ) : (
+                                      <ArrowUpRight className="w-3.5 h-3.5 text-[#d93845] stroke-[2.5]" />
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span className="font-bold text-xs sm:text-sm text-slate-800 block">
+                                      {txn.partyName}
+                                    </span>
+                                    <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
+                                      {txn.paymentType} | {txn.voucherCode}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* 2. Project / Source Account Column */}
+                              <td className="px-5 py-4 align-top max-w-sm">
+                                <div className="text-xs font-medium text-slate-800 leading-snug line-clamp-2">
+                                  {txn.projectName}
+                                </div>
+                                <div className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                                  <span>Account:</span>
+                                  <strong className="text-slate-700">{txn.sourceAccountName}</strong>
+                                </div>
+                              </td>
+
+                              {/* 3. Details Column */}
+                              <td className="px-5 py-4 align-top text-xs text-slate-600 max-w-xs">
+                                {txn.details || '—'}
+                              </td>
+
+                              {/* 4. Type Column (Extra Column as requested) */}
+                              <td className="px-5 py-4 align-top text-center whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                  txn.type === 'Credit'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
+                                  {txn.type === 'Credit' ? (
+                                    <>
+                                      <ArrowDown className="w-3 h-3 stroke-[3]" />
+                                      <span>Credit</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ArrowUp className="w-3 h-3 stroke-[3]" />
+                                      <span>Debit</span>
+                                    </>
+                                  )}
+                                </span>
+                              </td>
+
+                              {/* 5. Amount Column */}
+                              <td className="px-5 py-4 align-top text-right whitespace-nowrap">
+                                <div className="font-bold text-xs sm:text-sm text-slate-900 font-mono">
+                                  ₹ {txn.amount.toLocaleString('en-IN')}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                  {txn.paymentMode}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
-              <button
-                type="button"
-                onClick={() => setIsTallyModalOpen(true)}
-                className="px-4 py-2 rounded-lg bg-white border border-[#635BFF] text-[#635BFF] hover:bg-purple-50 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-2xs"
-              >
-                Configure Sync
-              </button>
-            </div>
+            ) : (
+              /* ═══════════════════════════════════════════════════════════
+                 VIEW A: COMPANY CASH & BANK ACCOUNTS (Matching Image 1)
+              ═══════════════════════════════════════════════════════════ */
+              <div className="space-y-6">
+                
+                {/* 1. Header Toolbar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                    Company Cash & Bank Accounts
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAccountModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5932ea] hover:bg-[#4d2ad4] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>New Bank Account</span>
+                  </button>
+                </div>
+
+                {/* 2. CASH ACCOUNT SECTION */}
+                <div>
+                  <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                    CASH ACCOUNT
+                  </h3>
+
+                  <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs">
+                    {/* Left: Wallet Icon & Name */}
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-lg bg-[#eaf7f2] border border-[#bce8d5] text-[#00875a] flex items-center justify-center shrink-0 shadow-2xs">
+                        <Wallet className="w-5 h-5 text-[#00875a]" />
+                      </div>
+                      <span className="font-bold text-sm sm:text-base text-slate-900">
+                        Cash Account
+                      </span>
+                    </div>
+
+                    {/* Right: Closing Balance, View Statement & Edit Opening Balance */}
+                    <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
+                      <span className="font-bold text-base sm:text-lg text-slate-900 font-mono tracking-tight mr-1">
+                        {(() => {
+                          const isNeg = cashClosingBalance < 0;
+                          const formatted = Math.abs(cashClosingBalance).toLocaleString('en-IN', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          });
+                          return isNeg ? `₹ -${formatted}` : `₹ ${formatted}`;
+                        })()}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setStatementActiveAccountId('cash')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs font-semibold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <span>View Statement</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                      </button>
+
+                      {/* Edit Opening Balance Button (Replaces three-dot icon as requested) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpeningBalanceModal({
+                            isOpen: true,
+                            accountId: 'cash',
+                            accountName: 'Cash Account',
+                            currentAmount: cashOpeningBalance,
+                          });
+                          setOpeningBalanceInput(cashOpeningBalance.toString());
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs font-semibold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Edit Opening Balance</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. BANK ACCOUNTS SECTION (Column Style Cards Layout) */}
+                <div>
+                  {/* Top Search & Filter Bar */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 mb-4 mt-2">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={accountSearchQuery}
+                        onChange={e => setAccountSearchQuery(e.target.value)}
+                        placeholder="Search by holder, bank, ifsc, account no, UPI..."
+                        className="w-full pl-10 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 shadow-2xs"
+                      />
+                      {accountSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setAccountSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Pills & Date Filter */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      {(['All', 'Current', 'Savings', 'Escrow', 'Petty Cash'] as const).map(type => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setAccountTypeFilter(type)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            accountTypeFilter === type
+                              ? 'bg-red-600 text-white shadow-2xs'
+                              : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+
+                      {/* Date Filter Button */}
+                      <button
+                        type="button"
+                        onClick={handleOpenDateFilterModal}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border shrink-0 ${
+                          statementDateFilter !== 'all'
+                            ? 'bg-[#ececfd] text-[#5932ea] border-[#5932ea]/40'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Date Filter</span>
+                        {statementDateFilter !== 'all' && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#5932ea]" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Column Style Cards List */}
+                  <div className="space-y-3.5">
+                    {filteredBankAccounts.length === 0 ? (
+                      <div className="bg-white rounded-xl border border-slate-200 p-10 text-center shadow-2xs">
+                        <Landmark className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <h4 className="text-sm font-bold text-slate-800">No bank accounts match your search</h4>
+                        <p className="text-xs text-slate-500 mt-1">Try resetting your filters or search keywords.</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAccountSearchQuery('');
+                            setAccountTypeFilter('All');
+                          }}
+                          className="mt-3 px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg shadow-2xs hover:bg-red-700 cursor-pointer"
+                        >
+                          Reset Filters
+                        </button>
+                      </div>
+                    ) : (
+                      filteredBankAccounts.map(ba => {
+                        const isIdbi = ba.bankName.toLowerCase().includes('idbi');
+                        const isAxis = ba.bankName.toLowerCase().includes('axis');
+                        const isHdfc = ba.bankName.toLowerCase().includes('hdfc');
+                        const isSbi = ba.bankName.toLowerCase().includes('sbi') || ba.bankName.toLowerCase().includes('state bank');
+
+                        return (
+                          <div
+                            key={ba.id}
+                            className={`bg-white rounded-xl p-5 shadow-2xs transition-all hover:border-slate-300 ${
+                              ba.isPrimary ? 'border-2 border-[#5932ea] ring-1 ring-[#5932ea]/20' : 'border border-slate-200'
+                            }`}
+                          >
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 items-center">
+                              
+                              {/* Column 1: Bank Info, Type & Address (lg:col-span-3) */}
+                              <div className="lg:col-span-3 flex items-start gap-3.5">
+                                {/* Bank Logo */}
+                                {isHdfc ? (
+                                  <div className="w-10 h-10 rounded-lg bg-[#004B8D] text-white flex items-center justify-center shrink-0 font-black text-[10px] shadow-2xs">
+                                    HDFC
+                                  </div>
+                                ) : isSbi ? (
+                                  <div className="w-10 h-10 rounded-lg bg-[#280071] text-white flex items-center justify-center shrink-0 font-black text-[10px] shadow-2xs">
+                                    SBI
+                                  </div>
+                                ) : isIdbi ? (
+                                  <div className="w-10 h-10 rounded-lg bg-[#005C46] flex items-center justify-center shrink-0 shadow-2xs">
+                                    <svg viewBox="0 0 32 32" className="w-6 h-6" fill="none">
+                                      <circle cx="16" cy="16" r="14" fill="#005C46" stroke="#cce6dd" strokeWidth="1.5" />
+                                      <path d="M16 8V24" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                                      <path d="M10 14L16 8L22 14" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      <circle cx="16" cy="16" r="3" fill="#ff7a00" />
+                                    </svg>
+                                  </div>
+                                ) : isAxis ? (
+                                  <div className="w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0">
+                                    <div className="w-10 h-7 rounded-md bg-[#861F41] flex items-center justify-center shadow-2xs">
+                                      <svg viewBox="0 0 36 28" className="w-6 h-5" fill="none">
+                                        <path d="M7 24L17 5L22 5L12 24H7Z" fill="white" />
+                                        <path d="M18 24L24 13L27 18L24 24H18Z" fill="white" />
+                                      </svg>
+                                    </div>
+                                    <span className="text-[6.5px] font-black text-[#861F41] tracking-tighter mt-0.5">AXIS BANK</span>
+                                  </div>
+                                ) : (
+                                  <div className="w-10 h-10 rounded-lg bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
+                                    <Landmark className="w-5 h-5 text-red-600" />
+                                  </div>
+                                )}
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <h4 className="font-bold text-sm sm:text-base text-slate-900 leading-tight">
+                                      {ba.bankName}
+                                    </h4>
+                                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                                      {ba.accountType}
+                                    </span>
+                                    {ba.isPrimary && (
+                                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#ececfd] text-[#5932ea]">
+                                        PRIMARY
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-start gap-1 text-[11px] text-slate-500 mt-1 leading-snug">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                    <span className="line-clamp-2" title={ba.bankAddress}>
+                                      {ba.bankAddress || 'Branch address not specified'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 font-semibold mt-1.5">
+                                    <Check className="w-3 h-3 text-emerald-600" />
+                                    <span>{ba.tallyLedgerName || `${ba.bankName} Ledger`}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Column 2: Account Holder & UPI (lg:col-span-3 lg:border-l border-slate-100 lg:pl-5) */}
+                              <div className="lg:col-span-3 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-5 space-y-2.5">
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    ACCOUNT HOLDER
+                                  </span>
+                                  <span className="text-xs font-bold text-slate-900 block truncate mt-0.5" title={ba.accountHolderName || ba.accountName}>
+                                    {ba.accountHolderName || ba.accountName}
+                                  </span>
+                                  {ba.accountName && ba.accountHolderName && ba.accountName !== ba.accountHolderName && (
+                                    <span className="text-[10px] text-slate-500 font-medium block truncate mt-0.5" title={ba.accountName}>
+                                      Alias: {ba.accountName}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    UPI ID / NUMBER
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs font-semibold text-slate-800 font-mono truncate">
+                                      {ba.upiNumber || '--'}
+                                    </span>
+                                    {ba.upiNumber && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyAccountData(ba.upiNumber || '', 'UPI ID')}
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                        title="Copy UPI ID"
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Column 3: Account Number & IFSC / IBAN (lg:col-span-3 lg:border-l border-slate-100 lg:pl-5) */}
+                              <div className="lg:col-span-3 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-5 space-y-2.5">
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    ACCOUNT NUMBER
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs font-bold text-slate-900 font-mono tracking-wider">
+                                      {ba.accountNumber}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyAccountData(ba.accountNumber, 'Account Number')}
+                                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                      title="Copy Account Number"
+                                    >
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    IFSC CODE
+                                  </span>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className="text-xs font-semibold text-slate-800 font-mono uppercase">
+                                      {ba.ifscCode || '--'}
+                                    </span>
+                                    {ba.ifscCode && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyAccountData(ba.ifscCode, 'IFSC Code')}
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                        title="Copy IFSC Code"
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {ba.ibanNumber ? (
+                                  <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                      IBAN NUMBER
+                                    </span>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-[11px] font-mono text-slate-700 block truncate" title={ba.ibanNumber}>
+                                        {ba.ibanNumber}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopyAccountData(ba.ibanNumber || '', 'IBAN Number')}
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                        title="Copy IBAN Number"
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              {/* Column 4: Balances & Actions (lg:col-span-3 lg:border-l border-slate-100 lg:pl-5) */}
+                              <div className="lg:col-span-3 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-5 flex flex-col justify-between">
+                                <div>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                    AVAILABLE BALANCE
+                                  </span>
+                                  <div className="text-lg sm:text-xl font-bold text-slate-900 font-mono tracking-tight mt-0.5">
+                                    ₹ {ba.balance.toLocaleString('en-IN')}
+                                  </div>
+
+                                  <div className="flex items-center gap-2.5 text-[11px] text-slate-500 mt-1 flex-wrap">
+                                    <span>
+                                      OD: <strong className="text-slate-700 font-mono">{ba.overdraftLimit ? `₹ ${ba.overdraftLimit.toLocaleString('en-IN')}` : 'Nil'}</strong>
+                                    </span>
+                                    <span>•</span>
+                                    <span>
+                                      Opening: <strong className="text-slate-700 font-mono">₹ {(ba.openingBalance || 0).toLocaleString('en-IN')}</strong>
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center gap-2 mt-4 flex-wrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => setStatementActiveAccountId(ba.id)}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                                  >
+                                    <span>Statement</span>
+                                    <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpeningBalanceModal({
+                                        isOpen: true,
+                                        accountId: ba.id,
+                                        accountName: ba.bankName,
+                                        currentAmount: ba.openingBalance || 0,
+                                      });
+                                      setOpeningBalanceInput((ba.openingBalance || 0).toString());
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors cursor-pointer shadow-2xs"
+                                    title="Edit Opening Balance"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Opening</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setNewTrfFromAccountId(ba.id);
+                                      const otherAcc = bankAccounts.find(x => x.id !== ba.id);
+                                      if (otherAcc) setNewTrfToAccountId(otherAcc.id);
+                                      setActiveTab('account_transfer');
+                                      setIsNewTransferModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                                  >
+                                    <span>Transfer</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* More Menu Dropdown */}
+                                  <div className="relative">
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenCardMenuId(openCardMenuId === ba.id ? null : ba.id)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                    >
+                                      <MoreVertical className="w-4 h-4" />
+                                    </button>
+                                    {openCardMenuId === ba.id && (
+                                      <>
+                                        <div
+                                          className="fixed inset-0 z-20 cursor-default"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenCardMenuId(null);
+                                          }}
+                                        />
+                                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 animate-in fade-in zoom-in-95 duration-100 text-xs">
+                                          {!ba.isPrimary && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setBankAccounts(prev => prev.map(b => ({ ...b, isPrimary: b.id === ba.id })));
+                                                setOpenCardMenuId(null);
+                                                if (onShowToast) onShowToast(`${ba.bankName} marked as Primary Account`);
+                                              }}
+                                              className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer"
+                                            >
+                                              Set as Primary
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              handleDeleteAccount(ba.id, ba.accountName);
+                                              setOpenCardMenuId(null);
+                                            }}
+                                            className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 font-medium cursor-pointer"
+                                          >
+                                            Delete Account
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Tally / Zoho Integration Banner */}
+                <div className="bg-gradient-to-r from-red-50 to-indigo-50/60 rounded-xl border border-red-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-6">
+                  <div className="flex items-start gap-3.5">
+                    <div className="p-2.5 rounded-xl bg-red-600 text-white shrink-0 shadow-sm">
+                      <Boxes className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">ERP & Accounting Synchronization</h4>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Seamlessly push payment vouchers and receipts to Tally Prime & Zoho Books in real-time.
+                      </p>
+                      <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                          <Check className="w-3 h-3 text-emerald-600" /> Tally ODBC Gateway Ready
+                        </span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700">
+                          <Check className="w-3 h-3 text-emerald-600" /> Zoho Books REST API Active
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsTallyModalOpen(true)}
+                    className="px-4 py-2 rounded-lg bg-white border border-red-600 text-red-600 hover:bg-red-50 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    Configure Sync
+                  </button>
+                </div>
+
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -3137,7 +4493,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#635BFF] text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center">
                   <Receipt className="w-4 h-4" />
                 </div>
                 <h3 className="text-sm font-bold text-slate-900">Create Payment Request</h3>
@@ -3161,7 +4517,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder="e.g. Jd Ekambaram Chrompet"
                   value={newPartyName}
                   onChange={e => setNewPartyName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
@@ -3177,7 +4533,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="e.g. 5000"
                     value={newAmount}
                     onChange={e => setNewAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
 
@@ -3190,7 +4546,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     value={newDate}
                     onChange={e => setNewDate(e.target.value)}
                     placeholder="13 Jul 26"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
               </div>
@@ -3204,7 +4560,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   value={newProjectName}
                   onChange={e => setNewProjectName(e.target.value)}
                   placeholder="e.g. RO66 - 2153 - (2026 - 2027) - Jd Ekambaram - Chromepet"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
@@ -3216,7 +4572,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newSubProjectText}
                     onChange={e => setNewSubProjectText(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
                   >
                     <option value="Against Other">Against Other</option>
                     <option value="Against Material PO">Against Material PO</option>
@@ -3233,7 +4589,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newStatus}
                     onChange={(e: any) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
                   >
                     <option value="Paid">Paid</option>
                     <option value="Approved">Approved</option>
@@ -3251,7 +4607,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder="Details of expense, site work, or invoice reference..."
                   value={newNotes}
                   onChange={e => setNewNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                 />
               </div>
 
@@ -3265,7 +4621,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-semibold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-all cursor-pointer"
                 >
                   Save Request
                 </button>
@@ -3311,7 +4667,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <span className="text-slate-500 block text-[11px] text-right">Status</span>
                   <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded ${
                     selectedRequestDetails.status === 'Paid'
-                      ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                      ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
                       : selectedRequestDetails.status === 'Approved'
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -3366,7 +4722,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         setSelectedRequestDetails(null);
                         if (onShowToast) onShowToast(`Marked ${selectedRequestDetails.requestCode} as Paid`);
                       }}
-                      className="px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-lg cursor-pointer"
+                      className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg cursor-pointer"
                     >
                       Mark as Paid
                     </button>
@@ -3385,7 +4741,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#635BFF]" />
+                <Calendar className="w-4 h-4 text-red-600" />
                 <h3 className="text-sm font-bold text-slate-900">Book Interactive Demo</h3>
               </div>
               <button onClick={() => setIsDemoModalOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -3412,7 +4768,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   setIsDemoModalOpen(false);
                   if (onShowToast) onShowToast('Demo session scheduled! Our specialist will reach out.');
                 }}
-                className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg"
+                className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg"
               >
                 Confirm Booking
               </button>
@@ -3428,7 +4784,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-[#635BFF]" />
+                <Boxes className="w-4 h-4 text-red-600" />
                 <h3 className="text-sm font-bold text-slate-900">Configure Tally & Zoho Integration</h3>
               </div>
               <button onClick={() => setIsTallyModalOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -3463,7 +4819,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   setIsTallyModalOpen(false);
                   if (onShowToast) onShowToast('Sync complete: 12 vouchers posted to Tally & Zoho Books');
                 }}
-                className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg flex items-center gap-1.5"
+                className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Sync Now</span>
@@ -3480,7 +4836,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Gift className="w-4 h-4 text-[#635BFF]" />
+                <Gift className="w-4 h-4 text-red-600" />
                 <h3 className="text-sm font-bold text-slate-900">Refer & Earn ₹5,000</h3>
               </div>
               <button onClick={() => setIsReferModalOpen(false)} className="text-slate-400 hover:text-slate-600">
@@ -3490,20 +4846,20 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             <p className="text-xs text-slate-600">
               Invite fellow builders, developers, or subcontractors to Booshnam Software and earn ₹5,000 credit on every active project registration.
             </p>
-            <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-xs flex items-center justify-between">
-              <span className="font-mono text-purple-900 font-bold">BOOSHNAM-FIN-2026</span>
+            <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs flex items-center justify-between">
+              <span className="font-mono text-red-900 font-bold">BOOSHNAM-FIN-2026</span>
               <button 
                 onClick={() => {
                   navigator.clipboard?.writeText('https://booshnam.com/join?ref=BOOSHNAM-FIN-2026');
                   if (onShowToast) onShowToast('Referral link copied to clipboard!');
                 }}
-                className="text-[11px] font-bold text-[#635BFF] hover:underline"
+                className="text-[11px] font-bold text-red-600 hover:underline"
               >
                 Copy Link
               </button>
             </div>
             <div className="flex justify-end">
-              <button onClick={() => setIsReferModalOpen(false)} className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg">
+              <button onClick={() => setIsReferModalOpen(false)} className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg">
                 Done
               </button>
             </div>
@@ -3540,7 +4896,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </div>
             </div>
             <div className="flex justify-end">
-              <button onClick={() => setIsLeaderboardModalOpen(false)} className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg">
+              <button onClick={() => setIsLeaderboardModalOpen(false)} className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg">
                 Close
               </button>
             </div>
@@ -3578,7 +4934,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <span className="text-[10px] text-slate-500 font-medium">ID: {selectedPartyRecord.partyId || 'N/A'}</span>
                     <span className="text-slate-300">•</span>
                     <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
-                      selectedPartyRecord.type === 'Staff' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                      selectedPartyRecord.type === 'Staff' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                     }`}>
                       {selectedPartyRecord.type}
                     </span>
@@ -3593,7 +4949,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </button>
             </div>
 
-            <div className="h-1 bg-[#635BFF] w-full shrink-0" />
+            <div className="h-1 bg-red-600 w-full shrink-0" />
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
@@ -3683,7 +5039,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     setSelectedPartyRecord(null);
                     setIsNewRequestModalOpen(true);
                   }}
-                  className="w-full py-2.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Create Payment Request for {selectedPartyRecord.name}</span>
@@ -3781,7 +5137,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </div>
               <div className="pt-2 flex justify-end gap-2">
                 <button type="button" onClick={() => setIsRecordTxnModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 text-xs font-semibold bg-[#635BFF] text-white rounded-lg">Save Record</button>
+                <button type="submit" className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg">Save Record</button>
               </div>
             </form>
           </div>
@@ -3789,152 +5145,257 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       )}
 
 
-      {/* MODAL I: ADD BANK ACCOUNT */}
-      {isAddAccountModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
-                  <Landmark className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Add Bank or Cash Ledger</h3>
-                  <p className="text-[11px] text-slate-400">Syncs immediately to Expenses & Transfers</p>
-                </div>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setIsAddAccountModalOpen(false)} 
-                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+      {/* ─── ADD ACCOUNT DRAWER (Side Navigation Bar matching Reference) ─── */}
+      <AddAccountDrawer
+        isOpen={isAddAccountModalOpen}
+        onClose={() => setIsAddAccountModalOpen(false)}
+        onSaveAccount={handleSaveAccountFromDrawer}
+      />
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: EDIT OPENING BALANCE (Matching Image 2 Reference)
+      ───────────────────────────────────────────────────────────── */}
+      {openingBalanceModal && openingBalanceModal.isOpen && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setOpeningBalanceModal(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-[340px] sm:max-w-[360px] p-5 animate-in fade-in zoom-in-95 duration-150 m-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: Title & Close Button */}
+            <div className="flex items-center justify-between pb-3">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+                Opening Balance
+              </h3>
+              <button
+                type="button"
+                onClick={() => setOpeningBalanceModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5 stroke-[2]" />
               </button>
             </div>
-            
-            <form onSubmit={handleSaveAccount} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Account / Ledger Name <span className="text-red-500">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Axis Bank Site Escrow or Site Petty Cash - Tambaram" 
-                  value={newAccName}
-                  onChange={e => setNewAccName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]" 
-                />
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Bank / Institution Name <span className="text-red-500">*</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    required
-                    placeholder="e.g. Axis Bank Ltd" 
-                    value={newAccBankName}
-                    onChange={e => setNewAccBankName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Account Type</label>
-                  <select
-                    value={newAccType}
-                    onChange={e => setNewAccType(e.target.value as any)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:border-[#635BFF]"
-                  >
-                    <option value="Current">Current Account</option>
-                    <option value="Savings">Savings Account</option>
-                    <option value="Escrow">Project Escrow (RERA)</option>
-                    <option value="Petty Cash">Petty Cash Safe</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Account / Safe Number
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. 9230100482910" 
-                    value={newAccNumber}
-                    onChange={e => setNewAccNumber(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">IFSC / Branch Code</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. UTIB0001234" 
-                    value={newAccIfsc}
-                    onChange={e => setNewAccIfsc(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveOpeningBalance();
+              }}
+              className="space-y-4 pt-1"
+            >
+              {/* Floating Notch Amount Input Box */}
+              <div className="relative mt-2">
+                <div className="relative border-2 border-red-600 rounded-xl focus-within:ring-2 focus-within:ring-red-500/20 transition-all bg-white px-3.5 py-2.5">
+                  {/* Floating Notch Label */}
+                  <span className="absolute -top-2.5 left-3.5 px-1.5 bg-white text-[10px] font-bold text-red-600 uppercase tracking-wider select-none">
+                    AMOUNT
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    autoFocus
+                    placeholder="0"
+                    value={openingBalanceInput}
+                    onChange={(e) => setOpeningBalanceInput(e.target.value)}
+                    className="w-full bg-transparent text-slate-900 text-lg sm:text-xl font-medium focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Opening Balance (₹) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
-                    <input 
-                      type="number" 
-                      min="0"
-                      step="any"
-                      placeholder="0" 
-                      value={newAccBalance}
-                      onChange={e => setNewAccBalance(e.target.value)}
-                      className="w-full pl-6 pr-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-[#635BFF]" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Tally / Zoho Ledger</label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Axis Bank - Ops" 
-                    value={newAccTallyLedger}
-                    onChange={e => setNewAccTallyLedger(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-[#635BFF]" 
-                  />
-                </div>
-              </div>
-
-              <div className="p-2.5 rounded-lg bg-indigo-50/60 border border-indigo-100 text-[11px] text-indigo-900 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#635BFF] shrink-0" />
-                <span>This account will instantly become selectable in <strong>Expenses</strong> and <strong>Account Transfers</strong>.</span>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button 
-                  type="button" 
-                  onClick={() => setIsAddAccountModalOpen(false)} 
-                  className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+              {/* Bottom Right Save Button */}
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-1.5 text-xs font-bold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-2xs cursor-pointer transition-colors"
-                >
-                  Save Account
+                  Save
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          MODAL: DATE FILTER (Matching Attached Reference Image)
+      ───────────────────────────────────────────────────────────── */}
+      {isDateFilterModalOpen && (
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setIsDateFilterModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-[360px] sm:max-w-[380px] overflow-hidden animate-in fade-in zoom-in-95 duration-150 m-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: Title & Close Button */}
+            <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-800 tracking-tight">
+                Date Filter
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsDateFilterModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5 stroke-[2]" />
+              </button>
+            </div>
+
+            {/* Purple Horizontal Divider Bar - Edge to Edge */}
+            <div className="w-full h-[3px] bg-[#5932ea]" />
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 space-y-3.5">
+              {/* Start Date & End Date Pickers Row */}
+              <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+                {/* START DATE */}
+                <div className="relative border-2 border-slate-200 rounded-xl px-3 py-2 hover:border-slate-300 focus-within:border-[#5932ea] transition-all bg-white">
+                  <span className="absolute -top-2.5 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                    START DATE
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <input
+                      type="text"
+                      value={inputStartDisplay}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInputStartDisplay(val);
+                        const iso = toIsoDate(val);
+                        if (iso.length === 10) setTempStartDate(iso);
+                        setTempDatePreset('custom');
+                      }}
+                      placeholder="dd-mm-yyyy"
+                      className="w-full text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                    />
+                    <label className="cursor-pointer text-slate-800 hover:text-[#5932ea] ml-1 shrink-0 relative flex items-center">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <input
+                        type="date"
+                        value={tempStartDate}
+                        onChange={(e) => {
+                          const iso = e.target.value;
+                          setTempStartDate(iso);
+                          setInputStartDisplay(toDisplayDate(iso));
+                          setTempDatePreset('custom');
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* END DATE */}
+                <div className="relative border-2 border-slate-200 rounded-xl px-3 py-2 hover:border-slate-300 focus-within:border-[#5932ea] transition-all bg-white">
+                  <span className="absolute -top-2.5 left-3 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                    END DATE
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <input
+                      type="text"
+                      value={inputEndDisplay}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setInputEndDisplay(val);
+                        const iso = toIsoDate(val);
+                        if (iso.length === 10) setTempEndDate(iso);
+                        setTempDatePreset('custom');
+                      }}
+                      placeholder="dd-mm-yyyy"
+                      className="w-full text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none bg-transparent"
+                    />
+                    <label className="cursor-pointer text-slate-800 hover:text-[#5932ea] ml-1 shrink-0 relative flex items-center">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <input
+                        type="date"
+                        value={tempEndDate}
+                        onChange={(e) => {
+                          const iso = e.target.value;
+                          setTempEndDate(iso);
+                          setInputEndDisplay(toDisplayDate(iso));
+                          setTempDatePreset('custom');
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preset Checkbox List */}
+              <div className="space-y-2 pt-0.5">
+                {DATE_FILTER_PRESET_OPTIONS.map((opt) => {
+                  const isSelected = tempDatePreset === opt.id;
+                  return (
+                    <label
+                      key={opt.id}
+                      onClick={() => {
+                        setTempDatePreset(opt.id);
+                        setTempStartDate(opt.start);
+                        setTempEndDate(opt.end);
+                        setInputStartDisplay(toDisplayDate(opt.start));
+                        setInputEndDisplay(toDisplayDate(opt.end));
+                      }}
+                      className="flex items-center gap-2.5 cursor-pointer group select-none py-0.5"
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 rounded-[3px] flex items-center justify-center transition-colors shrink-0 ${
+                          isSelected
+                            ? 'bg-[#2563eb] text-white'
+                            : 'border border-slate-400 bg-white group-hover:border-slate-500'
+                        }`}
+                      >
+                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                      <span className={`text-xs sm:text-[13px] transition-colors ${
+                        isSelected ? 'text-slate-900 font-medium' : 'text-slate-700 group-hover:text-slate-900'
+                      }`}>
+                        {opt.label}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/* Apply Button */}
+              <div className="pt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleApplyDateFilter}
+                  className="px-5 py-1.5 bg-[#5932ea] hover:bg-[#4d28d0] text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm transition-all cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -4069,7 +5530,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-full bg-red-600/10 text-red-600 flex items-center justify-center font-bold text-xs">
                   <FileText className="w-4.5 h-4.5" />
                 </div>
                 <div>
@@ -4098,7 +5559,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       const code = Math.floor(1700 + Math.random() * 500);
                       setPartyTxnTitle(`RA11-BAGJ-${code}(2026-2027)-${activePartyOverview.name}-${cat}`);
                     }}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] cursor-pointer"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
                   >
                     <option value="Sales Invoice">Sales Invoice</option>
                     <option value="Material Sales">Material Sales</option>
@@ -4114,7 +5575,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={partyTxnProject}
                     onChange={e => setPartyTxnProject(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] cursor-pointer"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
                   >
                     <option value="Booshnam Associates Pvt Ltd">Booshnam Associates Pvt Ltd</option>
                     {projects.map(p => (
@@ -4133,7 +5594,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder={`e.g. RA11-BAGJ-1748(2026-2027)-${activePartyOverview.name}-${partyTxnCategory}`}
                   value={partyTxnTitle}
                   onChange={e => setPartyTxnTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
@@ -4150,7 +5611,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       placeholder="e.g. 133464"
                       value={partyTxnAmount}
                       onChange={e => setPartyTxnAmount(e.target.value)}
-                      className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                      className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                     />
                   </div>
                 </div>
@@ -4160,7 +5621,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     type="date"
                     value={partyTxnDate}
                     onChange={e => setPartyTxnDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -4172,7 +5633,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder="e.g. 2% TDS or 10% TDS or RETENTION AMOUNT-6970&2% TDS"
                   value={partyTxnNotes}
                   onChange={e => setPartyTxnNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600"
                 />
               </div>
 
@@ -4186,7 +5647,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4.5 py-2 text-xs font-bold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                  className="px-4.5 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[3]" />
                   <span>Create Transaction</span>
@@ -4203,7 +5664,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#635BFF] text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center">
                   <Receipt className="w-4 h-4" />
                 </div>
                 <div>
@@ -4230,7 +5691,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder="e.g. UltraTech M25 Grade RMC Pouring (45 CuM)"
                   value={newExpTitle}
                   onChange={e => setNewExpTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
@@ -4242,7 +5703,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newExpCategory}
                     onChange={(e: any) => setNewExpCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white font-medium"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white font-medium"
                   >
                     <option value="Materials">Materials</option>
                     <option value="Labour & Daily Wages">Labour & Daily Wages</option>
@@ -4266,7 +5727,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="e.g. 48000"
                     value={newExpAmount}
                     onChange={e => setNewExpAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
               </div>
@@ -4279,7 +5740,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newExpProject}
                     onChange={e => setNewExpProject(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
                   >
                     {projects.map(p => (
                       <option key={p.id} value={p.name}>{p.name}</option>
@@ -4296,7 +5757,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="e.g. Block A - 2nd Floor Slab"
                     value={newExpLocation}
                     onChange={e => setNewExpLocation(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -4312,7 +5773,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="e.g. UltraTech Cement or Site Worker"
                     value={newExpPayee}
                     onChange={e => setNewExpPayee(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -4323,7 +5784,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newExpAccount}
                     onChange={e => setNewExpAccount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white font-medium text-slate-800"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white font-medium text-slate-800"
                   >
                     {bankAccounts.map(ba => (
                       <option key={ba.id} value={ba.accountName}>
@@ -4350,7 +5811,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newExpMode}
                     onChange={(e: any) => setNewExpMode(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
                   >
                     <option value="NEFT/RTGS">NEFT / RTGS</option>
                     <option value="UPI">UPI</option>
@@ -4369,7 +5830,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     value={newExpDate}
                     onChange={e => setNewExpDate(e.target.value)}
                     placeholder="14 Jul 26"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -4380,7 +5841,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <select
                     value={newExpStatus}
                     onChange={(e: any) => setNewExpStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF] bg-white"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
                   >
                     <option value="Paid">Paid</option>
                     <option value="Approved">Approved</option>
@@ -4399,7 +5860,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     placeholder="e.g. HDFC20260714088"
                     value={newExpRef}
                     onChange={e => setNewExpRef(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -4424,7 +5885,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 </label>
                 <div className="border border-dashed border-slate-300 rounded-xl p-3 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-[#635BFF] flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
                       <Paperclip className="w-4 h-4" />
                     </div>
                     <div>
@@ -4458,7 +5919,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   placeholder="Details of delivery, batch quality check, or supervisor remarks..."
                   value={newExpNotes}
                   onChange={e => setNewExpNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                 />
               </div>
 
@@ -4472,7 +5933,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-semibold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-all cursor-pointer"
                 >
                   Record Expense
                 </button>
@@ -4490,7 +5951,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#635BFF] text-white flex flex-col items-center justify-center font-bold text-[10px]">
+                <div className="w-10 h-10 rounded-lg bg-red-600 text-white flex flex-col items-center justify-center font-bold text-[10px]">
                   <span>{selectedExpenseDetails.date.split(' ').slice(0, 2).join(' ')}</span>
                   <Receipt className="w-3.5 h-3.5 text-white/90 mt-0.5" />
                 </div>
@@ -4520,7 +5981,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <span className="text-slate-500 block text-[11px] text-right">Status</span>
                   <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded ${
                     selectedExpenseDetails.status === 'Paid'
-                      ? 'bg-[#EDE9FE] text-[#635BFF] border border-purple-200'
+                      ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
                       : selectedExpenseDetails.status === 'Approved'
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : selectedExpenseDetails.status === 'Pending Approval'
@@ -4596,7 +6057,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <button
                       type="button"
                       onClick={() => handleUpdateExpenseStatus(selectedExpenseDetails.id, 'Paid')}
-                      className="px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                      className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg cursor-pointer transition-colors"
                     >
                       Mark as Paid
                     </button>
@@ -4626,7 +6087,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/20">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-red-600/10 text-red-600 flex items-center justify-center">
                   <ArrowLeftRight className="w-5 h-5" />
                 </div>
                 <div>
@@ -4647,8 +6108,8 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             <form onSubmit={handleSaveTransfer} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
               
               {/* Account Selection Flow (From ➔ To) */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                   
                   {/* From Account */}
                   <div>
@@ -4658,7 +6119,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <select
                       value={newTrfFromAccountId}
                       onChange={(e) => setNewTrfFromAccountId(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#635BFF] shadow-2xs"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 shadow-2xs"
                     >
                       {bankAccounts.map(b => (
                         <option key={b.id} value={b.id}>
@@ -4666,14 +6127,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         </option>
                       ))}
                     </select>
-                    {(() => {
-                      const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
-                      return src ? (
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          Available Balance: <strong className="text-slate-800 font-mono">₹{src.balance.toLocaleString('en-IN')}</strong>
-                        </p>
-                      ) : null;
-                    })()}
+                    <div className="min-h-[18px] mt-1.5 flex items-center">
+                      {(() => {
+                        const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                        return src ? (
+                          <p className="text-[10px] text-slate-500">
+                            Available Balance: <strong className="text-slate-800 font-mono">₹{src.balance.toLocaleString('en-IN')}</strong>
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
 
                   {/* To Account */}
@@ -4684,7 +6147,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <select
                       value={newTrfToAccountId}
                       onChange={(e) => setNewTrfToAccountId(e.target.value)}
-                      className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#635BFF] shadow-2xs"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 shadow-2xs"
                     >
                       {bankAccounts.map(b => (
                         <option key={b.id} value={b.id}>
@@ -4692,14 +6155,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                         </option>
                       ))}
                     </select>
-                    {(() => {
-                      const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
-                      return dst ? (
-                        <p className="text-[10px] text-slate-500 mt-1">
-                          Current Balance: <strong className="text-slate-800 font-mono">₹{dst.balance.toLocaleString('en-IN')}</strong>
-                        </p>
-                      ) : null;
-                    })()}
+                    <div className="min-h-[18px] mt-1.5 flex items-center">
+                      {(() => {
+                        const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
+                        return dst ? (
+                          <p className="text-[10px] text-slate-500">
+                            Current Balance: <strong className="text-slate-800 font-mono">₹{dst.balance.toLocaleString('en-IN')}</strong>
+                          </p>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -4713,7 +6178,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
               {/* Amount Input */}
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Transfer Amount (₹) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
@@ -4726,19 +6191,19 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     onChange={(e) => setNewTrfAmount(e.target.value)}
                     placeholder="Enter amount, e.g. 50000"
                     required
-                    className="w-full pl-8 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF]"
+                    className="w-full h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
 
                 {/* Quick Preset Buttons */}
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[10px] text-slate-400">Quick Add:</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Quick Add:</span>
                   {[10000, 25000, 50000, 100000].map(val => (
                     <button
                       key={val}
                       type="button"
                       onClick={() => setNewTrfAmount(String(val))}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[10px] font-semibold cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] font-semibold cursor-pointer transition-colors"
                     >
                       +₹{val.toLocaleString('en-IN')}
                     </button>
@@ -4765,7 +6230,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               {parseFloat(newTrfAmount) > 0 && newTrfFromAccountId !== newTrfToAccountId && (
                 <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1.5">
                   <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#635BFF]" />
+                    <Sparkles className="w-3 h-3 text-red-600" />
                     <span>Projected Balances After Transfer</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[11px]">
@@ -4797,13 +6262,13 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               )}
 
               {/* Row: Mode and Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Transfer Mode</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Transfer Mode</label>
                   <select
                     value={newTrfMode}
                     onChange={(e) => setNewTrfMode(e.target.value as any)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   >
                     <option value="Cash Withdrawal">Cash Withdrawal (Site Imprest)</option>
                     <option value="IMPS / Bank Transfer">IMPS / Bank Transfer</option>
@@ -4815,36 +6280,36 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Transfer Date</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Transfer Date</label>
                   <input
                     type="text"
                     value={newTrfDate}
                     onChange={(e) => setNewTrfDate(e.target.value)}
-                    placeholder="e.g. 24 Sep 2026"
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    placeholder="e.g. 26 Sept 2026"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
               </div>
 
               {/* Row: Reference & Project */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Reference / UTR / Cheque #</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Reference / UTR / Cheque #</label>
                   <input
                     type="text"
                     value={newTrfRef}
                     onChange={(e) => setNewTrfRef(e.target.value)}
                     placeholder="e.g. UTR-998821 or CHQ-7782"
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Related Project (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Related Project (Optional)</label>
                   <select
                     value={newTrfProject}
                     onChange={(e) => setNewTrfProject(e.target.value)}
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   >
                     <option value="">General Company Accounts</option>
                     {projects.map(p => (
@@ -4856,7 +6321,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
               {/* Purpose / Narration */}
               <div>
-                <label className="block text-slate-700 font-semibold mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Purpose / Narration <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -4865,40 +6330,40 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   onChange={(e) => setNewTrfPurpose(e.target.value)}
                   placeholder="e.g. Replenish site petty cash vault for masonry wages & fuel"
                   required
-                  className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                  className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
 
               {/* Initiated By & Notes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Initiated By</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initiated By</label>
                   <input
                     type="text"
                     value={newTrfInitiatedBy}
                     onChange={(e) => setNewTrfInitiatedBy(e.target.value)}
                     placeholder="e.g. Finance Incharge"
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-semibold mb-1">Internal Notes (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Internal Notes (Optional)</label>
                   <input
                     type="text"
                     value={newTrfNotes}
                     onChange={(e) => setNewTrfNotes(e.target.value)}
                     placeholder="e.g. Approved by Managing Director"
-                    className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#635BFF]"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsNewTransferModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition-colors"
+                  className="px-5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
@@ -4908,7 +6373,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   className={`px-5 py-2 rounded-lg text-white text-xs font-bold transition-all shadow-xs ${
                     newTrfFromAccountId === newTrfToAccountId
                       ? 'bg-slate-300 cursor-not-allowed'
-                      : 'bg-[#635BFF] hover:bg-[#5046E5] cursor-pointer'
+                      : 'bg-red-600 hover:bg-red-700 cursor-pointer'
                   }`}
                 >
                   Post Contra Transfer
@@ -4929,7 +6394,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
             {/* Slip Header */}
             <div className="px-6 py-4 border-b border-slate-100 bg-[#f8fafc] flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-[#635BFF] uppercase tracking-wider block">Booshnam Associates</span>
+                <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">Booshnam Associates</span>
                 <h3 className="text-base font-bold text-slate-900">Contra Voucher Details</h3>
               </div>
               <button
@@ -4958,7 +6423,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
               </div>
 
               {/* Amount & Route Graphic */}
-              <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/40 via-purple-50/30 to-indigo-50/40 text-center">
+              <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/40 via-red-50/30 to-indigo-50/40 text-center">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Total Transferred</span>
                 <div className="text-2xl font-black text-slate-900 font-mono my-1">
                   ₹{selectedTransferDetails.amount.toLocaleString('en-IN')}
@@ -4969,7 +6434,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                     <span className="text-[10px] text-slate-400 block">From (Credit)</span>
                     <span className="font-bold text-slate-800 text-xs">{selectedTransferDetails.fromAccountName}</span>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-white shadow-xs text-[#635BFF] flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-full bg-white shadow-xs text-red-600 flex items-center justify-center font-bold">
                     ➔
                   </div>
                   <div className="text-left">
@@ -5032,7 +6497,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedTransferDetails(null)}
-                  className="px-4 py-1.5 bg-[#635BFF] hover:bg-[#5046E5] text-white font-semibold rounded-lg cursor-pointer transition-colors"
+                  className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg cursor-pointer transition-colors"
                 >
                   Close
                 </button>

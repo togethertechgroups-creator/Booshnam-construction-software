@@ -11,7 +11,6 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'quotation', name: 'Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
   { id: 'tasks', name: 'Tasks', category: 'Core Operations', description: 'Task delegation, Kanban board, team assignments & milestone deliverables' },
-  { id: 'clients', name: 'Clients', category: 'Core Operations', description: 'Client CRM directory, communication history, and portal relationship records' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },

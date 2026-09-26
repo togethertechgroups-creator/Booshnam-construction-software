@@ -159,7 +159,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         return {
           openTrigger: 'ring-2 ring-slate-400/20 border-slate-400 shadow-sm',
           chevronOpen: 'text-slate-700',
-          itemActive: 'bg-slate-100 text-slate-900 font-semibold',
+          itemActive: 'bg-slate-100 text-slate-900 font-bold',
           checkColor: 'text-slate-700',
           searchFocus: 'focus:border-slate-400 focus:ring-1 focus:ring-slate-400/20',
         };
@@ -169,7 +169,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         return {
           openTrigger: 'ring-2 ring-red-500/20 border-red-500 shadow-xs',
           chevronOpen: 'text-red-600',
-          itemActive: 'bg-red-50 text-red-700 font-semibold',
+          itemActive: 'bg-red-50 text-red-700 font-bold',
           checkColor: 'text-red-600',
           searchFocus: 'focus:border-red-500 focus:ring-1 focus:ring-red-500/20',
         };
@@ -194,7 +194,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-[5px] font-medium text-slate-800 transition-all duration-150 cursor-pointer select-none text-left shadow-2xs hover:border-slate-300 hover:bg-slate-50/50 ${
+        className={`w-full flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 transition-all duration-150 cursor-pointer select-none text-left shadow-2xs hover:border-slate-300 hover:bg-slate-50/50 ${
           isOpen ? styles.openTrigger : ''
         } ${disabled ? 'opacity-60 cursor-not-allowed bg-slate-50' : ''} ${sizeClasses} ${triggerClassName}`}
       >
@@ -204,7 +204,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           {dot && <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />}
           <span className="truncate">{selectedOption.label}</span>
           {badge !== undefined && (
-            <span className="ml-1 px-1.5 py-0.2 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-[5px]">
+            <span className="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-md">
               {badge}
             </span>
           )}
@@ -220,22 +220,22 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
       {/* Dropdown Menu Card */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1 ${
+          className={`absolute top-full mt-1.5 ${
             align === 'right' ? 'right-0' : 'left-0'
-          } z-50 w-full min-w-[200px] max-w-sm bg-white rounded-[5px] border border-slate-200 shadow-xl py-1 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-100 select-none ${dropdownClassName}`}
+          } z-50 w-full min-w-[200px] max-w-sm bg-white rounded-xl border border-slate-200/90 shadow-2xl p-1.5 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-150 select-none ring-1 ring-black/5 ${dropdownClassName}`}
         >
           {/* Search bar inside dropdown if enabled/many options */}
           {shouldShowSearch && (
-            <div className="p-1.5 border-b border-slate-100">
+            <div className="p-1 mb-1 border-b border-slate-100">
               <div className="relative flex items-center">
-                <Search className="w-3.5 h-3.5 absolute left-2 text-slate-400 pointer-events-none" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none" />
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search..."
-                  className={`w-full pl-7 pr-7 py-1 text-xs bg-slate-50 border border-slate-200 rounded-[5px] text-slate-800 placeholder:text-slate-400 outline-none ${styles.searchFocus}`}
+                  className={`w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder:text-slate-400 outline-none ${styles.searchFocus}`}
                 />
                 {searchQuery && (
                   <button
@@ -251,7 +251,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           )}
 
           {/* Options List */}
-          <div className="max-h-60 overflow-y-auto py-0.5 divide-y divide-slate-50/50">
+          <div className="max-h-60 overflow-y-auto py-0.5 space-y-0.5">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-3 text-center text-slate-400 text-xs italic">
                 No matching options
@@ -270,7 +270,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                       setIsOpen(false);
                       setSearchQuery('');
                     }}
-                    className={`w-full px-3 py-2 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer text-xs group ${
+                    className={`w-full px-3 py-2 text-left flex items-center justify-between gap-2.5 transition-colors cursor-pointer text-xs rounded-lg group ${
                       isSelected
                         ? styles.itemActive
                         : 'hover:bg-slate-50 text-slate-700 hover:text-slate-900'
@@ -282,7 +282,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                         {optDot && <span className={`w-2 h-2 rounded-full shrink-0 ${optDot}`} />}
                         <span className="truncate">{opt.label}</span>
                         {opt.badge !== undefined && (
-                          <span className="ml-auto px-1.5 py-0.2 bg-slate-100 text-slate-500 font-semibold text-[10px] rounded-[5px]">
+                          <span className="ml-auto px-1.5 py-0.5 bg-slate-100 text-slate-500 font-semibold text-[10px] rounded-md">
                             {opt.badge}
                           </span>
                         )}
@@ -294,7 +294,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
                       )}
                     </div>
                     {showCheckmark && isSelected && (
-                      <Check className={`w-3.5 h-3.5 ${styles.checkColor} shrink-0`} />
+                      <Check className={`w-4 h-4 ${styles.checkColor} shrink-0`} />
                     )}
                   </button>
                 );

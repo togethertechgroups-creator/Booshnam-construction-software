@@ -175,14 +175,14 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="text-xs font-semibold text-[#635BFF] hover:text-[#5046E5] px-2 py-1 transition-colors cursor-pointer"
+              className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSubmit}
-              className="px-5 py-1.5 text-xs font-semibold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-lg shadow-sm transition-all cursor-pointer"
+              className="px-5 py-1.5 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-all cursor-pointer"
             >
               Save
             </button>
@@ -190,13 +190,13 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
         </div>
 
         {/* Purple Accent Bar right below header */}
-        <div className="h-1 bg-[#635BFF] w-full shrink-0" />
+        <div className="h-1 bg-red-600 w-full shrink-0" />
 
         {/* Form Body with Notched Floating Outlines */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
 
           {/* 1. PARTY NAME */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               PARTY
             </span>
@@ -226,7 +226,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
             </div>
 
             {/* Phone input box */}
-            <div className="col-span-8 relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white">
+            <div className="col-span-8 relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white">
               <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
                 PHONE
               </span>
@@ -245,7 +245,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           {errors.phone && <p className="text-[11px] text-red-500 -mt-2.5 pl-2">{errors.phone}</p>}
 
           {/* 3. EMAIL */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               EMAIL
             </span>
@@ -267,7 +267,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
             <button
               type="button"
               onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
-              className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-left flex items-center justify-between text-xs text-slate-700 bg-white hover:border-slate-400 focus:outline-none focus:border-[#635BFF] focus:ring-1 focus:ring-[#635BFF] transition-all cursor-pointer"
+              className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-left flex items-center justify-between text-xs text-slate-700 bg-white hover:border-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 transition-all cursor-pointer"
             >
               <span className={partyType ? 'text-slate-900 font-medium' : 'text-slate-400'}>
                 {partyType || 'Select Party Type'}
@@ -285,12 +285,12 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
                       setPartyType(t);
                       setIsTypeDropdownOpen(false);
                     }}
-                    className={`w-full px-4 py-2 text-left text-xs flex items-center justify-between hover:bg-purple-50 transition-colors ${
-                      partyType === t ? 'text-[#635BFF] font-bold bg-purple-50/50' : 'text-slate-700'
+                    className={`w-full px-4 py-2 text-left text-xs flex items-center justify-between hover:bg-red-50 transition-colors ${
+                      partyType === t ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
                     }`}
                   >
                     <span>{t}</span>
-                    {partyType === t && <Check className="w-3.5 h-3.5 text-[#635BFF]" />}
+                    {partyType === t && <Check className="w-3.5 h-3.5 text-red-600" />}
                   </button>
                 ))}
               </div>
@@ -304,7 +304,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddressExpanded(!isAddressExpanded)}
-                className="text-xs font-bold text-[#635BFF] hover:text-[#5046E5] flex items-center gap-0.5 cursor-pointer"
+                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-0.5 cursor-pointer"
               >
                 {isAddressExpanded ? 'Done' : '+Add'}
               </button>
@@ -318,7 +318,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
                   placeholder="Street / Building / Plot No."
                   value={addressLine}
                   onChange={e => setAddressLine(e.target.value)}
-                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600"
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -326,14 +326,14 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
                     placeholder="City"
                     value={city}
                     onChange={e => setCity(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600"
                   />
                   <input
                     type="text"
                     placeholder="Pincode"
                     value={pincode}
                     onChange={e => setPincode(e.target.value)}
-                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -347,7 +347,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           </div>
 
           {/* 6. PARTY ID */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white flex items-center justify-between">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white flex items-center justify-between">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               PARTY ID
             </span>
@@ -357,7 +357,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
               readOnly={!isPartyIdEditable}
               onChange={e => setPartyId(e.target.value)}
               className={`w-full text-xs font-semibold focus:outline-none bg-transparent ${
-                isPartyIdEditable ? 'text-[#635BFF]' : 'text-slate-800'
+                isPartyIdEditable ? 'text-red-600' : 'text-slate-800'
               }`}
             />
             <button
@@ -371,7 +371,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           </div>
 
           {/* 7. DATE OF JOINING */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white flex items-center gap-2">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white flex items-center gap-2">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               DATE OF JOINING
             </span>
@@ -386,7 +386,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           </div>
 
           {/* 8. AADHAAR */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white flex items-center justify-between gap-2">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white flex items-center justify-between gap-2">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               AADHAAR
             </span>
@@ -397,7 +397,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
               placeholder="Aadhaar number"
               className="w-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent"
             />
-            <label className="border border-purple-200 bg-purple-50/50 hover:bg-purple-100 text-[#635BFF] p-2 rounded-lg cursor-pointer transition-colors shrink-0">
+            <label className="border border-red-200 bg-red-50/50 hover:bg-red-100 text-red-600 p-2 rounded-lg cursor-pointer transition-colors shrink-0">
               <Upload className="w-3.5 h-3.5" />
               <input
                 type="file"
@@ -414,7 +414,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           )}
 
           {/* 9. PAN */}
-          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-[#635BFF] focus-within:ring-1 focus-within:ring-[#635BFF] transition-all bg-white flex items-center justify-between gap-2">
+          <div className="relative border border-slate-300 rounded-xl px-3.5 pt-3 pb-2.5 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-500 transition-all bg-white flex items-center justify-between gap-2">
             <span className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase select-none">
               PAN
             </span>
@@ -425,7 +425,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
               placeholder="PAN number"
               className="w-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none bg-transparent uppercase"
             />
-            <label className="border border-purple-200 bg-purple-50/50 hover:bg-purple-100 text-[#635BFF] p-2 rounded-lg cursor-pointer transition-colors shrink-0">
+            <label className="border border-red-200 bg-red-50/50 hover:bg-red-100 text-red-600 p-2 rounded-lg cursor-pointer transition-colors shrink-0">
               <Upload className="w-3.5 h-3.5" />
               <input
                 type="file"
@@ -455,7 +455,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
                   value={openingBalance}
                   onChange={e => setOpeningBalance(e.target.value)}
                   placeholder="0"
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                 />
               </div>
 
@@ -464,7 +464,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
                 <select
                   value={status}
                   onChange={(e: any) => setStatus(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-[#635BFF]"
+                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
                 >
                   <option value="Settled">Settled</option>
                   <option value="To Receive">To Receive</option>
@@ -479,7 +479,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
           <div className="pt-2 pb-6">
             <button
               type="submit"
-              className="w-full py-2.5 text-xs font-bold bg-[#635BFF] hover:bg-[#5046E5] text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-2.5 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               <span>Create Party</span>

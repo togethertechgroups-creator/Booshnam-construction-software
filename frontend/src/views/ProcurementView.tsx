@@ -156,61 +156,63 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             </div>
 
             {/* The 3 Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              {/* Doc 1: Purchase Order */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">1. Purchase Order (PO)</span>
-                  <span className="font-mono text-xs text-brand font-bold">PO-0089</span>
-                </div>
-                <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
-                  <div>Vendor: <strong>Tata Tiscon Rebars Corp</strong></div>
-                  <div>Item: <strong>16mm TMT Fe500D Rebars</strong></div>
-                  <div>Ordered Qty: <strong>25.0 MT</strong></div>
-                  <div>Unit Rate: <strong>₹68,000 / MT</strong></div>
-                  <div className="font-bold text-slate-900 pt-1">Total Ordered: ₹17,00,000 + Tax</div>
-                </div>
+            {!selectedInvoice ? (
+              <div className="p-12 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-slate-200">
+                <ShieldCheck className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-sm font-semibold text-slate-600">No invoices pending 3-Way Match Audit</p>
+                <p className="text-xs text-slate-400 mt-1">When Purchase Orders, Goods Receipt Notes, and Vendor Invoices are created, matching verification will appear here.</p>
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  {/* Doc 1: Purchase Order */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">1. Purchase Order (PO)</span>
+                      <span className="font-mono text-xs text-brand font-bold">{selectedInvoice.po_number}</span>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
+                      <div>Vendor: <strong>{selectedInvoice.vendor_name}</strong></div>
+                      <div>Item: <strong>Consignment Order</strong></div>
+                      <div>Total Ordered: <strong>₹{selectedInvoice.total_amount.toLocaleString('en-IN')}</strong></div>
+                    </div>
+                  </div>
 
-              {/* Doc 2: GRN Receipt */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">2. Goods Receipt Note</span>
-                  <span className="font-mono text-xs text-brand font-bold">GRN-0045</span>
-                </div>
-                <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
-                  <div>Received At: <strong>Skyline Site Gate 1</strong></div>
-                  <div>Weighbridge Net: <strong>25.0 MT</strong></div>
-                  <div>Accepted Qty: <strong className="text-emerald-700">25.0 MT</strong></div>
-                  <div>Defects / Rejected: <strong>0.0 MT</strong></div>
-                  <div className="font-bold text-emerald-700 pt-1">Status: Inspected & Verified</div>
-                </div>
-              </div>
+                  {/* Doc 2: GRN Receipt */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">2. Goods Receipt Note</span>
+                      <span className="font-mono text-xs text-brand font-bold">{selectedInvoice.grn_number || 'Direct Receipt'}</span>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
+                      <div>Received: <strong>Site Delivery Verified</strong></div>
+                      <div className="font-bold text-emerald-700 pt-1">Status: Inspected & Verified</div>
+                    </div>
+                  </div>
 
-              {/* Doc 3: Vendor Invoice */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-900">3. Vendor Invoice</span>
-                  <span className="font-mono text-xs text-brand font-bold">INV-2026-081</span>
+                  {/* Doc 3: Vendor Invoice */}
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900">3. Vendor Invoice</span>
+                      <span className="font-mono text-xs text-brand font-bold">{selectedInvoice.invoice_number}</span>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
+                      <div>Invoice Ref: <strong>{selectedInvoice.vendor_invoice_ref}</strong></div>
+                      <div className="font-bold text-slate-900 pt-1">Total Payable: ₹{selectedInvoice.total_amount.toLocaleString('en-IN')}</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1 pt-2 border-t border-slate-200/80 text-slate-600">
-                  <div>Billed Quantity: <strong>25.0 MT</strong></div>
-                  <div>Billed Rate: <strong>₹68,000 / MT</strong></div>
-                  <div>Subtotal: <strong>₹17,00,000</strong></div>
-                  <div>GST 18%: <strong>₹3,06,000</strong></div>
-                  <div className="font-bold text-slate-900 pt-1">Total Payable: ₹20,06,000</div>
-                </div>
-              </div>
-            </div>
 
-            <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center justify-between">
-              <div>
-                <strong>3-Way Matching Result:</strong> Zero price variance. Accepted quantity (25.0 MT) matches billed quantity (25.0 MT). Approved for accounts payout.
-              </div>
-              <button className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold transition-colors">
-                Approve Payment
-              </button>
-            </div>
+                <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center justify-between">
+                  <div>
+                    <strong>3-Way Matching Result:</strong> Verified with linked Purchase Order and Site Delivery Note. Approved for accounts payout.
+                  </div>
+                  <button className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold transition-colors">
+                    Approve Payment
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

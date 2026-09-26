@@ -713,13 +713,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   };
 
 
-  // AFC Drawings mock list
-  const drawings = [
-    { id: 'dr-1', number: 'STR-DWG-0104', title: 'Tower A - 9th Floor Post-Tensioned Tendon Layout', discipline: 'STRUCTURAL', version: 'R2', status: 'AFC Approved', date: '2026-05-02' },
-    { id: 'dr-2', number: 'ARC-DWG-0412', title: 'Typical Floor Plan Flat 401-404 Architectural Details', discipline: 'ARCHITECTURAL', version: 'R1', status: 'AFC Approved', date: '2026-04-18' },
-    { id: 'dr-3', number: 'MEP-DWG-0220', title: 'Basement 2 Stormwater Sump & Pumping Stations', discipline: 'PLUMBING', version: 'R0', status: 'Under Review', date: '2026-05-10' },
-    { id: 'dr-4', number: 'ELC-DWG-0315', title: 'Electrical Single Line Diagram & DG Auto Transfer', discipline: 'ELECTRICAL', version: 'R3', status: 'AFC Approved', date: '2026-04-25' },
-  ];
+  // AFC Drawings list
+  const drawings: any[] = [];
 
   // ==========================================
   // VIEW 2: "Creating Project" Wizard Flow

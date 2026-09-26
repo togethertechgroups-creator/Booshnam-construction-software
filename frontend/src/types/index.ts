@@ -378,6 +378,57 @@ export interface Lead {
   probability: number;
   assigned_to_name?: string;
   source?: string;
+  notes?: string;
+  lead_type?: string;
+  company_name?: string;
+  address?: string;
+  category?: string;
+  priority?: 'High' | 'Medium' | 'Low' | string;
+  creation_date?: string;
+  last_updated?: string;
+  next_followup_date?: string;
+  status_label?: string;
+  last_contacted_date?: string;
+  followup_date?: string;
+  expected_closure_date?: string;
+  budget?: number;
+  description?: string;
+}
+
+export interface QuotationItem {
+  id: string;
+  item_code?: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unit_rate: number;
+  amount: number;
+  category?: string;
+}
+
+export interface Quotation {
+  id: string;
+  quotation_number: string;
+  date: string;
+  valid_until: string;
+  client_name: string;
+  client_phone?: string;
+  client_email?: string;
+  client_address?: string;
+  project_title: string;
+  project_id?: string;
+  department?: Department | string;
+  status: 'DRAFT' | 'SENT' | 'APPROVED' | 'REJECTED' | 'EXPIRED' | 'IN_DISCUSSION' | 'ON_HOLD' | 'CLIENT_CONFIRMED' | string;
+  subtotal: number;
+  tax_percentage: number;
+  tax_amount: number;
+  discount_amount?: number;
+  total_amount: number;
+  notes?: string;
+  terms_conditions?: string;
+  prepared_by?: string;
+  items: QuotationItem[];
+  created_at?: string;
 }
 
 export interface Asset {

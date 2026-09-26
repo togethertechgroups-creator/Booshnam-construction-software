@@ -8,6 +8,7 @@ export interface SystemModule {
 export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'dashboard', name: 'Dashboard', category: 'Core Operations', description: 'Company performance KPIs, active projects count, revenue & operations overview' },
   { id: 'projects', name: 'Projects', category: 'Core Operations', description: 'Project directory, WBS scheduling, task execution & site progress tracking' },
+  { id: 'quotation', name: 'Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
   { id: 'tasks', name: 'Tasks', category: 'Core Operations', description: 'Task delegation, Kanban board, team assignments & milestone deliverables' },
   { id: 'clients', name: 'Clients', category: 'Core Operations', description: 'Client CRM directory, communication history, and portal relationship records' },
@@ -50,7 +51,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'PROJECT_MANAGER',
     roleName: 'Project Manager',
     description: 'Overall project leadership, team delegation, budget & schedule execution',
-    allowedPages: ['dashboard', 'projects', 'tasks', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
+    allowedPages: ['dashboard', 'projects', 'quotation', 'tasks', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
     isSystemRole: true,
   },
   SUPERVISOR: {

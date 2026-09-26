@@ -206,16 +206,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     { date: '15-Sep', fullDate: '15-Sep-2026' },
   ];
 
-  // Specific employee absences mapping to reproduce exact counts
-  const ATTENDANCE_ABSENT_MAP: Record<string, string[]> = {
-    '09-Sep': ['EMP-0123', 'EMP-0124', 'EMP-0125'],
-    '10-Sep': ['EMP-0105', 'EMP-0106', 'EMP-0110', 'EMP-0115', 'EMP-0120', 'EMP-0122', 'EMP-0124', 'EMP-0125'],
-    '11-Sep': ['EMP-0103', 'EMP-0106', 'EMP-0112', 'EMP-0118', 'EMP-0121', 'EMP-0125'],
-    '12-Sep': ['EMP-0104', 'EMP-0109', 'EMP-0119', 'EMP-0123'],
-    '13-Sep': ['EMP-0102', 'EMP-0106', 'EMP-0104', 'EMP-0113', 'EMP-0117', 'EMP-0122', 'EMP-0124', 'EMP-0125'],
-    '14-Sep': ['EMP-0102', 'EMP-0105', 'EMP-0113', 'EMP-0117', 'EMP-0120', 'EMP-0122', 'EMP-0124'],
-    '15-Sep': ['EMP-0102', 'EMP-0104', 'EMP-0105', 'EMP-0103', 'EMP-0109', 'EMP-0110', 'EMP-0114', 'EMP-0115', 'EMP-0116', 'EMP-0118', 'EMP-0120', 'EMP-0121', 'EMP-0123', 'EMP-0125'],
-  };
+  // Attendance absent mapping
+  const ATTENDANCE_ABSENT_MAP: Record<string, string[]> = {};
 
   const getUnderlyingAttendanceRecords = (
     dateKey: string,
@@ -2358,13 +2350,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     onChange={(val) => setFinProjectFilter(val)}
                     options={[
                       { label: 'All Projects', value: 'All' },
-                      { label: 'CAN USE FOR NXT PROJECT', value: 'CAN USE FOR NXT PROJECT' },
-                      { label: 'Skyline Commercial Towers', value: 'Skyline Commercial Towers' },
-                      { label: 'Greenfield Luxury Villas', value: 'Greenfield Luxury Villas Phase 2' },
-                      { label: 'Metro Viaduct Section P4', value: 'Metro Viaduct Section P4' },
-                      { label: 'Apex Tech Park Block C', value: 'Apex Tech Park Block C' },
-                      { label: 'GEONIX', value: 'GEONIX' },
-                      { label: 'OVER HEADS', value: 'OVER HEADS' },
+                      ...(projects || []).map(p => ({ label: formatProjectTitle(p), value: p.name || p.id }))
                     ]}
                     triggerClassName="py-1.5 px-3 rounded-xl font-semibold shadow-xs"
                   />

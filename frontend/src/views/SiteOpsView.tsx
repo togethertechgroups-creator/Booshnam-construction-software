@@ -50,7 +50,7 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
         </div>
       </div>
 
-      {selectedDPR && (
+      {selectedDPR ? (
         <div className="space-y-6 p-6">
           {/* Top DPR Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-5">
@@ -163,7 +163,14 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
             )}
           </div>
         </div>
+      ) : (
+        <div className="p-12 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-slate-200 m-6">
+          <HardHat className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          <p className="text-sm font-semibold text-slate-600">No DPR Submitted Today</p>
+          <p className="text-xs text-slate-400 mt-1">Click "Submit Today's DPR" to log site work progress, manpower, and materials.</p>
+        </div>
       )}
     </div>
   );
 };
+

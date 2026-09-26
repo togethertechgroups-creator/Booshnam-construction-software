@@ -72,208 +72,6 @@ export interface PartyLedgerTransaction {
   type: 'SALES_INVOICE' | 'PAYMENT_IN' | 'EXPENSE' | 'PAYMENT_OUT';
 }
 
-export const INITIAL_PARTIES: PartyRecord[] = [
-  {
-    id: 'pty-1',
-    name: '(Ag & P)',
-    avatarText: '(&',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 98401 12345',
-    email: 'agandp@client.in',
-    balanceDue: 757555,
-    status: 'To Receive',
-    activeStatus: 'Active',
-    partyId: '1631',
-    dateOfJoining: '12/04/2025'
-  },
-  {
-    id: 'pty-2',
-    name: '9381025889',
-    avatarText: '9',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 93810 25889',
-    email: '9381025889@client.in',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1632',
-    dateOfJoining: '15/05/2025'
-  },
-  {
-    id: 'pty-3',
-    name: 'A & D Builders',
-    avatarText: 'A&',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 98412 88990',
-    email: 'adbuilders@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1633',
-    dateOfJoining: '02/06/2025'
-  },
-  {
-    id: 'pty-4',
-    name: 'Aadvik Construction Rettri',
-    avatarText: 'AC',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 97900 44556',
-    email: 'aadvik.rettri@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1634',
-    dateOfJoining: '10/07/2025'
-  },
-  {
-    id: 'pty-5',
-    name: 'aarkesh',
-    avatarText: 'A',
-    avatarColor: 'bg-[#7C3AED]',
-    type: 'Staff',
-    phone: '+91 90031 77889',
-    email: 'aarkesh@booshnam.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1635',
-    dateOfJoining: '01/08/2025'
-  },
-  {
-    id: 'pty-6',
-    name: 'Aarthi Gerugambakkam',
-    avatarText: 'AG',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 94440 33221',
-    email: 'aarthi.geru@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1636',
-    dateOfJoining: '14/09/2025'
-  },
-  {
-    id: 'pty-7',
-    name: 'AB Builders Jamalia',
-    avatarText: 'AB',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 98405 66778',
-    email: 'abbuilders.jamalia@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1637',
-    dateOfJoining: '20/10/2025'
-  },
-  {
-    id: 'pty-8',
-    name: 'Abdul Dawn Promoters',
-    avatarText: 'AD',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 98841 99001',
-    email: 'abduldawn.promoters@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1638',
-    dateOfJoining: '05/11/2025'
-  },
-  {
-    id: 'pty-9',
-    name: 'Abhishek Neelankandan',
-    avatarText: 'AN',
-    avatarColor: 'bg-[#1E40AF]',
-    type: 'Client',
-    phone: '+91 98409 11223',
-    email: 'abhishek.n@gmail.com',
-    balanceDue: 0,
-    status: 'Settled',
-    activeStatus: 'Active',
-    partyId: '1639',
-    dateOfJoining: '10/01/2026'
-  }
-];
-
-export const INITIAL_PARTY_TRANSACTIONS: Record<string, PartyLedgerTransaction[]> = {
-  'pty-1': [
-    {
-      id: 'ptx-1',
-      partyId: 'pty-1',
-      partyName: '(Ag & P)',
-      date: '07 Jul 2026',
-      day: '07',
-      month: 'Jul',
-      year: '2026',
-      title: 'RA11-BAGJ-1747(2026-2027)-AG&P-Ananthapur-(23pts)-Machine(Sadayan)-',
-      projectName: 'Booshnam Associates Pvt Ltd',
-      notes: '2% TDS',
-      amount: 348531.28,
-      type: 'SALES_INVOICE'
-    },
-    {
-      id: 'ptx-2',
-      partyId: 'pty-1',
-      partyName: '(Ag & P)',
-      date: '07 Jul 2026',
-      day: '07',
-      month: 'Jul',
-      year: '2026',
-      title: 'RA11-BAGJ-1770(2026-2027)-AG&P-Hindupur-Machine-(Sadayan)-(6pts)',
-      notes: '2% TDS',
-      amount: 98001,
-      type: 'SALES_INVOICE'
-    },
-    {
-      id: 'ptx-3',
-      partyId: 'pty-1',
-      partyName: '(Ag & P)',
-      date: '07 Jul 2026',
-      day: '07',
-      month: 'Jul',
-      year: '2026',
-      title: 'RA11-BAGJ-1771(2026-2027)-AG&P-Kadapa-(Machine)-Sadayan-(8pts)',
-      projectName: 'Booshnam Associates Pvt Ltd',
-      notes: '2% TDS',
-      amount: 133464,
-      type: 'SALES_INVOICE'
-    },
-    {
-      id: 'ptx-4',
-      partyId: 'pty-1',
-      partyName: '(Ag & P)',
-      date: '30 Jun 2026',
-      day: '30',
-      month: 'Jun',
-      year: '2026',
-      title: 'RA11-BAGJ-3234-AG&P-Ananthapur-(4pts)-(Machine)-Ranjith-',
-      projectName: 'Booshnam Associates Pvt Ltd',
-      notes: '2% tds',
-      amount: 58983,
-      type: 'SALES_INVOICE'
-    },
-    {
-      id: 'ptx-5',
-      partyId: 'pty-1',
-      partyName: '(Ag & P)',
-      date: '25 May 2026',
-      day: '25',
-      month: 'May',
-      year: '2026',
-      title: 'RA11-BAGJ-2034-AG & P Client-4pts-Shollinganallur-Machine',
-      notes: '10% TDS',
-      amount: 67781,
-      type: 'SALES_INVOICE'
-    }
-  ]
-};
-
 export interface FinanceTransaction {
   id: string;
   txnCode: string;
@@ -300,42 +98,6 @@ export interface BankAccountRecord {
   tallyLedgerName: string;
 }
 
-export const INITIAL_BANK_ACCOUNTS: BankAccountRecord[] = [
-  {
-    id: 'ba-1',
-    accountName: 'Booshnam Associates Operations A/c',
-    bankName: 'HDFC Bank Ltd',
-    accountNumber: '•••• •••• 4892',
-    ifscCode: 'HDFC0001234',
-    accountType: 'Current',
-    balance: 1845200,
-    status: 'Active',
-    tallyLedgerName: 'HDFC Current Account (Main)'
-  },
-  {
-    id: 'ba-2',
-    accountName: 'Project Escrow Account (RERA)',
-    bankName: 'State Bank of India',
-    accountNumber: '•••• •••• 9012',
-    ifscCode: 'SBIN0005678',
-    accountType: 'Escrow',
-    balance: 4280000,
-    status: 'Active',
-    tallyLedgerName: 'SBI Project Escrow Account'
-  },
-  {
-    id: 'ba-3',
-    accountName: 'Site Petty Cash Vault - Chromepet',
-    bankName: 'Internal Site Cash Safe',
-    accountNumber: 'PETTY-CHR-01',
-    ifscCode: 'N/A (Cash)',
-    accountType: 'Petty Cash',
-    balance: 35000,
-    status: 'Active',
-    tallyLedgerName: 'Site Imprest Cash - Chromepet'
-  }
-];
-
 export interface AccountTransferRecord {
   id: string;
   transferCode: string;
@@ -353,94 +115,6 @@ export interface AccountTransferRecord {
   status: 'Completed' | 'Pending Verification' | 'Rejected';
   notes?: string;
 }
-
-export const INITIAL_TRANSFERS: AccountTransferRecord[] = [
-  {
-    id: 'trf-1',
-    transferCode: 'TRF-2026-042',
-    date: '14 Jul 2026',
-    fromAccountId: 'ba-1',
-    fromAccountName: 'Booshnam Associates Operations A/c',
-    toAccountId: 'ba-3',
-    toAccountName: 'Site Petty Cash Vault - Chromepet',
-    amount: 50000,
-    transferMode: 'Cash Withdrawal',
-    referenceNo: 'SLIP-WDL-99401',
-    purpose: 'Site Imprest Cash & Emergency Labour Replenishment',
-    projectName: 'RO66 - Chromepet Plot Development',
-    initiatedBy: 'K. Balasubramanian (Site Incharge)',
-    status: 'Completed',
-    notes: 'Cheque self-withdrawal for on-site cash vault top-up'
-  },
-  {
-    id: 'trf-2',
-    transferCode: 'TRF-2026-041',
-    date: '11 Jul 2026',
-    fromAccountId: 'ba-2',
-    fromAccountName: 'Project Escrow Account (RERA)',
-    toAccountId: 'ba-1',
-    toAccountName: 'Booshnam Associates Operations A/c',
-    amount: 1500000,
-    transferMode: 'NEFT/RTGS',
-    referenceNo: 'SBIN20260711902',
-    purpose: 'Milestone 3 Structural Concrete Certified Release',
-    projectName: 'Villa Grande Phase 2',
-    initiatedBy: 'S. Raman (Finance Director)',
-    status: 'Completed',
-    notes: 'Architect & CA completion certificate submitted to RERA escrow desk'
-  },
-  {
-    id: 'trf-3',
-    transferCode: 'TRF-2026-040',
-    date: '08 Jul 2026',
-    fromAccountId: 'ba-1',
-    fromAccountName: 'Booshnam Associates Operations A/c',
-    toAccountId: 'ba-2',
-    toAccountName: 'Project Escrow Account (RERA)',
-    amount: 500000,
-    transferMode: 'Internal Contra',
-    referenceNo: 'HDFC20260708012',
-    purpose: 'Promoter Share Deposit for Commercial Hub Escrow',
-    projectName: 'Commercial Hub',
-    initiatedBy: 'Managing Director',
-    status: 'Completed',
-    notes: 'Mandatory 30% builder equity allocation for procurement lock'
-  },
-  {
-    id: 'trf-4',
-    transferCode: 'TRF-2026-039',
-    date: '04 Jul 2026',
-    fromAccountId: 'ba-3',
-    fromAccountName: 'Site Petty Cash Vault - Chromepet',
-    toAccountId: 'ba-1',
-    toAccountName: 'Booshnam Associates Operations A/c',
-    amount: 18000,
-    transferMode: 'Cash Deposit',
-    referenceNo: 'DEP-HDFC-44109',
-    purpose: 'Excess Site Trenching Contingency Re-deposit',
-    projectName: 'RO66 - Chromepet Plot Development',
-    initiatedBy: 'Site Accountant',
-    status: 'Completed',
-    notes: 'Surplus site cash remitted back to bank branch'
-  },
-  {
-    id: 'trf-5',
-    transferCode: 'TRF-2026-038',
-    date: '01 Jul 2026',
-    fromAccountId: 'ba-1',
-    fromAccountName: 'Booshnam Associates Operations A/c',
-    toAccountId: 'ba-3',
-    toAccountName: 'Site Petty Cash Vault - Chromepet',
-    amount: 35000,
-    transferMode: 'IMPS',
-    referenceNo: 'IMPS/260701/9921',
-    purpose: 'Monthly Petty Cash Imprest Float Creation',
-    projectName: 'RO66 - Chromepet Plot Development',
-    initiatedBy: 'Finance Executive',
-    status: 'Completed',
-    notes: 'Fixed monthly opening petty cash float for site team'
-  }
-];
 
 export interface ExpenseItem {
   id: string;
@@ -462,170 +136,11 @@ export interface ExpenseItem {
   notes?: string;
 }
 
-export const INITIAL_EXPENSES: ExpenseItem[] = [
-  {
-    id: 'exp-1',
-    expenseCode: 'EXP-2026-105',
-    date: '14 Jul 2026',
-    title: 'JCB 3DX Excavator Site Clearance & Operator (32 Hrs)',
-    category: 'Machinery & Equipment',
-    projectName: 'RO66 - Chromepet Plot Development',
-    subProjectOrLocation: 'Trench Digging & Earth Moving Sector 2',
-    partyOrVendorName: 'Ranjith Earthmovers & Machinery',
-    amount: 48000,
-    paymentMode: 'UPI',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'UPI/260714/90218',
-    billNumber: 'REM-2026-88',
-    status: 'Paid',
-    approvedBy: 'K. Balasubramanian (Site Incharge)',
-    notes: 'Site clearance and foundation trenching for boundary wall'
-  },
-  {
-    id: 'exp-2',
-    expenseCode: 'EXP-2026-104',
-    date: '13 Jul 2026',
-    title: 'UltraTech ReadyMix Concrete M25 Batch Supply (45 CuM)',
-    category: 'Materials',
-    projectName: 'Villa Grande Phase 2',
-    subProjectOrLocation: '1st Floor Slab Casting Pouring',
-    partyOrVendorName: 'UltraTech Cement Agency Ltd',
-    amount: 162000,
-    paymentMode: 'NEFT/RTGS',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'HDFC20260713008',
-    billNumber: 'UTC-CHN-9941',
-    status: 'Paid',
-    approvedBy: 'Rajesh Kumar (Project Director)',
-    notes: 'Slump tested and certified on site, 45 cubic meters'
-  },
-  {
-    id: 'exp-3',
-    expenseCode: 'EXP-2026-103',
-    date: '12 Jul 2026',
-    title: 'Masonry & Bar-Bending Gang Weekly Wage Muster (18 Workers)',
-    category: 'Labour & Daily Wages',
-    projectName: 'Residential Tower B',
-    subProjectOrLocation: 'Structural Rebar Tying Floor 3',
-    partyOrVendorName: 'Senthil Kumar (Muster Lead)',
-    amount: 94500,
-    paymentMode: 'NEFT/RTGS',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'HDFC20260712055',
-    billNumber: 'LAB-WK28-03',
-    status: 'Paid',
-    approvedBy: 'Site Engineer & HR Accounts',
-    notes: 'Weekly muster settlement for 18 barbenders and helpers'
-  },
-  {
-    id: 'exp-4',
-    expenseCode: 'EXP-2026-102',
-    date: '11 Jul 2026',
-    title: 'Site Drinking & Curing Water Tankers (12,000L x 6 Trips)',
-    category: 'Site Petty Cash',
-    projectName: 'RO66 - Chromepet Plot Development',
-    subProjectOrLocation: 'Concrete Curing & Worker Amenities',
-    partyOrVendorName: 'Sri Amman Water Supply Services',
-    amount: 7200,
-    paymentMode: 'Petty Cash',
-    paidFromAccount: 'Site Petty Cash Vault - Chromepet',
-    referenceNo: 'VOUCH-SITE-044',
-    billNumber: 'SAW-8812',
-    status: 'Paid',
-    approvedBy: 'Site Supervisor',
-    notes: 'Daily curing water supply during hot afternoon cycles'
-  },
-  {
-    id: 'exp-5',
-    expenseCode: 'EXP-2026-101',
-    date: '10 Jul 2026',
-    title: 'Fe550D TMT Reinforcement Steel 16mm & 20mm (8 Metric Tonnes)',
-    category: 'Materials',
-    projectName: 'Commercial Hub',
-    subProjectOrLocation: 'Retaining Wall & Column Cages',
-    partyOrVendorName: 'Sri Murugan Steel Traders',
-    amount: 384000,
-    paymentMode: 'NEFT/RTGS',
-    paidFromAccount: 'Project Escrow Account (RERA)',
-    referenceNo: 'SBIN20260710112',
-    billNumber: 'MST-2026-0419',
-    status: 'Approved',
-    approvedBy: 'Procurement Head & Accounts',
-    notes: 'Weight-bridge challans verified at site entry gate'
-  },
-  {
-    id: 'exp-6',
-    expenseCode: 'EXP-2026-100',
-    date: '08 Jul 2026',
-    title: 'Certified Safety Helmets, Reflective Vests & Harnesses (50 Sets)',
-    category: 'Safety & Compliance',
-    projectName: 'Commercial Hub',
-    subProjectOrLocation: 'Site Safety Induction Stores',
-    partyOrVendorName: 'Apex Safety Solutions',
-    amount: 24500,
-    paymentMode: 'Corporate Card',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'CARD-HDFC-9912',
-    billNumber: 'APX-77310',
-    status: 'Paid',
-    approvedBy: 'Safety Officer',
-    notes: 'Mandatory PPE kit reissue for subcontractor crew'
-  },
-  {
-    id: 'exp-7',
-    expenseCode: 'EXP-2026-099',
-    date: '06 Jul 2026',
-    title: 'High-Speed Diesel for 62.5 kVA Backup Generator (420 Litres)',
-    category: 'Fuel & Logistics',
-    projectName: 'Villa Grande Phase 2',
-    subProjectOrLocation: 'DG Yard - Power Backup During Grid Maintenance',
-    partyOrVendorName: 'Shell Highway Outlet Chromepet',
-    amount: 39900,
-    paymentMode: 'Corporate Card',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'CARD-HDFC-8819',
-    billNumber: 'SHL-291823',
-    status: 'Paid',
-    approvedBy: 'Electrical Engineer',
-    notes: 'Emergency generator fuel barrel filling with printed slip'
-  },
-  {
-    id: 'exp-8',
-    expenseCode: 'EXP-2026-098',
-    date: '04 Jul 2026',
-    title: 'Italian Marble & Vitrified Tile Laying Subcontract Bill #2',
-    category: 'Subcontractor',
-    projectName: 'Villa Grande Phase 2',
-    subProjectOrLocation: 'Villa 101 & 102 Interior Living Area',
-    partyOrVendorName: 'Balaji Stone Craft & Tiling',
-    amount: 145000,
-    paymentMode: 'NEFT/RTGS',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'HDFC20260704192',
-    billNumber: 'BSC-VOUCH-02',
-    status: 'Approved',
-    approvedBy: 'Architect Incharge & Accounts',
-    notes: 'Passed after joint measurement sheet verification'
-  },
-  {
-    id: 'exp-9',
-    expenseCode: 'EXP-2026-097',
-    date: '02 Jul 2026',
-    title: 'Site Electricity Bill & Temporary Transformer Inspection Fee',
-    category: 'Utilities & Admin',
-    projectName: 'Residential Tower B',
-    subProjectOrLocation: 'Substation Feeder Pillar 1',
-    partyOrVendorName: 'Tamil Nadu Electricity Board (TNEB)',
-    amount: 28400,
-    paymentMode: 'NEFT/RTGS',
-    paidFromAccount: 'Booshnam Associates Operations A/c',
-    referenceNo: 'TNEB-ONL-20260702',
-    billNumber: 'EB-BILL-449102',
-    status: 'Paid',
-    approvedBy: 'Admin & Accounts',
-    notes: 'Monthly power tariff for 50kW industrial site connection'
-  }
-];
+export const INITIAL_PARTIES: PartyRecord[] = [];
+export const INITIAL_PARTY_TRANSACTIONS: Record<string, PartyLedgerTransaction[]> = {};
+export const INITIAL_BANK_ACCOUNTS: BankAccountRecord[] = [];
+export const INITIAL_TRANSFERS: AccountTransferRecord[] = [];
+export const INITIAL_EXPENSES: ExpenseItem[] = [];
 
 interface AccountsFinanceViewProps {
   projects?: Project[];
@@ -657,12 +172,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_parties');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(p => !['pty-1', 'pty-2', 'pty-3', 'pty-4', 'pty-5', 'pty-6'].includes(p.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_parties', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
-    } catch {
-      // Fallback
-    }
-    return INITIAL_PARTIES;
+    } catch {}
+    return [];
   });
 
   useEffect(() => {
@@ -674,161 +193,40 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   }, [parties]);
 
   // Payment Requests State
-  const [paymentRequests, setPaymentRequests] = useState<PaymentRequestItem[]>([
-    {
-      id: 'pr-1',
-      requestCode: 'Payment Request # - 3',
-      date: '13 Jul 26',
-      partyName: 'Jd Ekambaram Chrompet',
-      projectName: 'RO66 - 2153 - (2026 - 2027) - Jd Ekambaram - Chromepet - (4pts)-Ranjith-(Machine)-9047499476',
-      subProjectText: 'Against Other',
-      amount: 5000,
-      status: 'Paid',
-      category: 'Machinery Hire & Operator',
-      paymentMode: 'UPI / GPay',
-      referenceNo: 'UPI/260713/88921',
-      paidDate: '13 Jul 2026',
-      notes: 'Site excavation and trench digging at Chromepet plot'
-    },
-    {
-      id: 'pr-2',
-      requestCode: 'Payment Request # - 2',
-      date: '12 Jul 26',
-      partyName: 'UltraTech Cement Agency',
-      projectName: 'Villa Grande Phase 2 - Structural Concrete Pouring',
-      subProjectText: 'Against Material PO #PO-8821',
-      amount: 145000,
-      status: 'Paid',
-      category: 'Material Supply',
-      paymentMode: 'NEFT / RTGS',
-      referenceNo: 'HDFC20260712009',
-      paidDate: '12 Jul 2026',
-      notes: 'Grade M25 RMC batch supply 40 CuM'
-    },
-    {
-      id: 'pr-3',
-      requestCode: 'Payment Request # - 1',
-      date: '10 Jul 26',
-      partyName: 'Sri Murugan Steel Traders',
-      projectName: 'Commercial Hub - TMT Rebar Batch 4',
-      subProjectText: 'Against Material PO #PO-8790',
-      amount: 82500,
-      status: 'Approved',
-      category: 'Raw Materials',
-      paymentMode: 'Cheque',
-      referenceNo: 'CHQ-449102',
-      notes: 'Fe550D TMT Steel 16mm & 20mm bundles'
-    },
-    {
-      id: 'pr-4',
-      requestCode: 'Payment Request # - 4',
-      date: '08 Jul 26',
-      partyName: 'Ranjith Earthmovers & JCB',
-      projectName: 'Green Valley Villas - Foundation Excavation',
-      subProjectText: 'Against Machinery Hire',
-      amount: 28000,
-      status: 'Pending',
-      category: 'Equipment Rental',
-      paymentMode: 'Bank Transfer',
-      notes: 'JCB 3DX 40 hours site clearance work'
-    },
-    {
-      id: 'pr-5',
-      requestCode: 'Payment Request # - 5',
-      date: '05 Jul 26',
-      partyName: 'City Electricals & Hardware',
-      projectName: 'Residential Tower B - Floor 1 Electricals',
-      subProjectText: 'Against Material PO #PO-8805',
-      amount: 42000,
-      status: 'Paid',
-      category: 'Electricals',
-      paymentMode: 'NEFT / RTGS',
-      referenceNo: 'HDFC20260705011',
-      paidDate: '06 Jul 2026',
-      notes: 'Conduits, copper wires and modular box consignment'
-    },
-    {
-      id: 'pr-6',
-      requestCode: 'Payment Request # - 6',
-      date: '02 Jul 26',
-      partyName: 'Apex Safety Solutions',
-      projectName: 'Metro Station Extension - Safety Gears',
-      subProjectText: 'Against Safety Equipments',
-      amount: 18500,
-      status: 'Rejected',
-      category: 'Safety & PPE',
-      notes: 'Rejected due to missing delivery challan stamp'
-    }
-  ]);
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequestItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_finance_payment_requests');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed.filter(pr => !['pr-1', 'pr-2', 'pr-3', 'pr-4', 'pr-5', 'pr-6'].includes(pr.id));
+      }
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_finance_payment_requests', JSON.stringify(paymentRequests));
+    } catch {}
+  }, [paymentRequests]);
 
   // Transactions State
-  const [transactions, setTransactions] = useState<FinanceTransaction[]>([
-    {
-      id: 'tx-1',
-      txnCode: 'TXN-2026-081',
-      date: '13 Jul 2026',
-      type: 'EXPENSE',
-      partyName: 'Jd Ekambaram Chrompet',
-      projectName: 'RO66 - Chromepet',
-      category: 'Machinery Hire',
-      amount: 5000,
-      mode: 'UPI',
-      referenceNo: 'UPI/260713/88921',
-      status: 'Completed'
-    },
-    {
-      id: 'tx-2',
-      txnCode: 'TXN-2026-080',
-      date: '12 Jul 2026',
-      type: 'EXPENSE',
-      partyName: 'UltraTech Cement Agency',
-      projectName: 'Villa Grande Phase 2',
-      category: 'Material Purchase',
-      amount: 145000,
-      mode: 'NEFT/RTGS',
-      referenceNo: 'HDFC20260712009',
-      status: 'Reconciled'
-    },
-    {
-      id: 'tx-3',
-      txnCode: 'TXN-2026-079',
-      date: '11 Jul 2026',
-      type: 'INCOME',
-      partyName: 'Mr. Arvind Swamy (Client)',
-      projectName: 'Villa Grande Phase 2',
-      category: 'Milestone 3 Client Receipt',
-      amount: 500000,
-      mode: 'NEFT/RTGS',
-      referenceNo: 'ICIC20260711802',
-      status: 'Reconciled'
-    },
-    {
-      id: 'tx-4',
-      txnCode: 'TXN-2026-078',
-      date: '06 Jul 2026',
-      type: 'EXPENSE',
-      partyName: 'City Electricals & Hardware',
-      projectName: 'Residential Tower B',
-      category: 'Electrical Wiring',
-      amount: 42000,
-      mode: 'NEFT/RTGS',
-      referenceNo: 'HDFC20260705011',
-      status: 'Completed'
-    },
-    {
-      id: 'tx-5',
-      txnCode: 'TXN-2026-077',
-      date: '04 Jul 2026',
-      type: 'INCOME',
-      partyName: 'Titan Real Estate Corp (Client)',
-      projectName: 'Commercial Hub',
-      category: 'Slab Casting Milestone',
-      amount: 1250000,
-      mode: 'NEFT/RTGS',
-      referenceNo: 'SBIN20260704991',
-      status: 'Reconciled'
-    }
-  ]);
+  const [transactions, setTransactions] = useState<FinanceTransaction[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_finance_transactions');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed.filter(tx => !['tx-1', 'tx-2', 'tx-3', 'tx-4', 'tx-5'].includes(tx.id));
+      }
+    } catch {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_finance_transactions', JSON.stringify(transactions));
+    } catch {}
+  }, [transactions]);
 
   // Bank Accounts State with LocalStorage Persistence
   const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>(() => {
@@ -836,10 +234,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_bank_accounts_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(ba => !['ba-1', 'ba-2', 'ba-3', 'ba-4', 'ba-5'].includes(ba.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_bank_accounts_v1', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
     } catch {}
-    return INITIAL_BANK_ACCOUNTS;
+    return [];
   });
 
   useEffect(() => {
@@ -888,9 +292,17 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const [partyTransactions, setPartyTransactions] = useState<Record<string, PartyLedgerTransaction[]>>(() => {
     try {
       const saved = localStorage.getItem('booshnam_party_transactions_v2');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          delete parsed['pty-1'];
+          delete parsed['pty-2'];
+          delete parsed['pty-3'];
+          return parsed;
+        }
+      }
     } catch {}
-    return INITIAL_PARTY_TRANSACTIONS;
+    return {};
   });
 
   useEffect(() => {
@@ -903,11 +315,15 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const [partySummaries, setPartySummaries] = useState<Record<string, { opening: number; partyPaid: number; salesInvoice: number }>>(() => {
     try {
       const saved = localStorage.getItem('booshnam_party_summaries');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          delete parsed['pty-1'];
+          return parsed;
+        }
+      }
     } catch {}
-    return {
-      'pty-1': { opening: 0, partyPaid: 2334276.91, salesInvoice: 3091831.91 }
-    };
+    return {};
   });
 
   useEffect(() => {
@@ -940,14 +356,12 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
   // KPI Metrics Baseline from Image 1 + Dynamic Party Balances
   const partyKpiMetrics = useMemo(() => {
-    let advancePaid = 3586237.38;
-    let toPay = 13098678.07;
-    let toReceive = 4559432;
-    let advanceReceived = 356104;
+    let advancePaid = 0;
+    let toPay = 0;
+    let toReceive = 0;
+    let advanceReceived = 0;
 
-    const initialIds = new Set(INITIAL_PARTIES.map(ip => ip.id));
-    const customParties = parties.filter(p => !initialIds.has(p.id));
-    for (const cp of customParties) {
+    for (const cp of parties) {
       if (cp.status === 'Advance Paid') advancePaid += cp.balanceDue;
       else if (cp.status === 'To Pay') toPay += cp.balanceDue;
       else if (cp.status === 'To Receive') toReceive += cp.balanceDue;
@@ -1428,12 +842,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_expenses_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(exp => !['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6'].includes(exp.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_expenses_v1', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
-    } catch {
-      // Fallback
-    }
-    return INITIAL_EXPENSES;
+    } catch {}
+    return [];
   });
 
   useEffect(() => {
@@ -1639,10 +1057,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_transfers_v1');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const clean = parsed.filter(tr => !['trf-1', 'trf-2', 'trf-3', 'trf-4', 'trf-5'].includes(tr.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_transfers_v1', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
     } catch {}
-    return INITIAL_TRANSFERS;
+    return [];
   });
 
   useEffect(() => {
@@ -1663,7 +1087,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const [selectedTransferDetails, setSelectedTransferDetails] = useState<AccountTransferRecord | null>(null);
 
   // New Transfer Form State
-  const [newTrfFromAccountId, setNewTrfFromAccountId] = useState('ba-1');
+  const [newTrfFromAccountId, setNewTrfFromAccountId] = useState('');
   const [newTrfToAccountId, setNewTrfToAccountId] = useState('ba-3');
   const [newTrfAmount, setNewTrfAmount] = useState('');
   const [newTrfMode, setNewTrfMode] = useState<AccountTransferRecord['transferMode']>('Cash Withdrawal');
@@ -1702,7 +1126,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   const transferMetrics = useMemo(() => {
     const totalTransferred = transfers.filter(t => t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
     const pettyCashTransfers = transfers.filter(t => t.toAccountId === 'ba-3' && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
-    const interBankTransfers = transfers.filter(t => (t.toAccountId === 'ba-1' || t.toAccountId === 'ba-2') && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    const interBankTransfers = transfers.filter(t => (Boolean(t.toAccountId)) && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
     return {
       totalTransferred,
       pettyCashTransfers,
@@ -3378,7 +2802,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setNewTrfFromAccountId(bankAccounts[0]?.id || 'ba-1');
+                      setNewTrfFromAccountId(bankAccounts[0]?.id || '');
                       setNewTrfToAccountId(bankAccounts[2]?.id || bankAccounts[1]?.id || 'ba-2');
                       setIsNewTransferModalOpen(true);
                     }}
@@ -3652,7 +3076,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
                       >
                         Transfer ➔
                       </button>
-                      {ba.id.startsWith('ba-') && !['ba-1', 'ba-2', 'ba-3'].includes(ba.id) && (
+                      {ba.id.startsWith('ba-') && true && (
                         <button
                           type="button"
                           onClick={() => handleDeleteAccount(ba.id, ba.accountName)}

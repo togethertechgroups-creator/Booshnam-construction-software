@@ -154,6 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
         { id: 'projects', label: 'Projects', icon: Home },
+        { id: 'quotation', label: 'Quotation', icon: Calculator },
         { id: 'tasks', label: 'Tasks', icon: ListTodo, badge: '11' }
       ],
       // Group 2: Clients & People

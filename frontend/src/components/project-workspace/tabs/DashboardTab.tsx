@@ -82,15 +82,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const delayedTasks = tasks.filter(t => t.status === 'BLOCKED').length;
 
   // Attendance 7-day data
-  const attendanceDays = [
-    { date: '9 Sep', target: 16, actual: 14 },
-    { date: '10 Sep', target: 16, actual: 15 },
-    { date: '11 Sep', target: 18, actual: 17 },
-    { date: '12 Sep', target: 18, actual: 16 },
-    { date: '13 Sep', target: 20, actual: 19 },
-    { date: '14 Sep', target: 20, actual: 18 },
-    { date: '15 Sep', target: 20, actual: 18 },
-  ];
+  const attendanceDays: Array<{ date: string; target: number; actual: number }> = [];
 
   // Financial stats
   const cashIn = project.cash_in || 1250000;
@@ -440,30 +432,37 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               </div>
 
               {/* 7-Day Bar Chart */}
-              <div className="h-44 flex items-end justify-between gap-3 pt-4 px-4 pb-2 border-b border-slate-100">
-                {attendanceDays.map((d, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                    <div className="w-full flex items-end justify-center gap-1 h-32">
-                      {/* Grey Target Bar */}
-                      <div 
-                        className="w-3 bg-slate-300 rounded-t-xs transition-all"
-                        style={{ height: `${(d.target / 25) * 100}%` }}
-                        title={`Target: ${d.target} workers`}
-                      />
-                      {/* Actual Bar (Red) */}
-                      <div 
-                        className="w-3 bg-red-600 rounded-t-xs transition-all"
-                        style={{ height: `${(d.actual / 25) * 100}%` }}
-                        title={`Actual: ${d.actual} workers`}
-                      />
+              {attendanceDays.length === 0 ? (
+                <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs border-b border-slate-100">
+                  <Users className="w-8 h-8 mb-2 text-slate-300" />
+                  <p>No attendance records logged for this period.</p>
+                </div>
+              ) : (
+                <div className="h-44 flex items-end justify-between gap-3 pt-4 px-4 pb-2 border-b border-slate-100">
+                  {attendanceDays.map((d, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                      <div className="w-full flex items-end justify-center gap-1 h-32">
+                        {/* Grey Target Bar */}
+                        <div 
+                          className="w-3 bg-slate-300 rounded-t-xs transition-all"
+                          style={{ height: `${(d.target / 25) * 100}%` }}
+                          title={`Target: ${d.target} workers`}
+                        />
+                        {/* Actual Bar (Red) */}
+                        <div 
+                          className="w-3 bg-red-600 rounded-t-xs transition-all"
+                          style={{ height: `${(d.actual / 25) * 100}%` }}
+                          title={`Actual: ${d.actual} workers`}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{d.date}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{d.date}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-xs text-slate-500 px-2">
-                <span>Average Daily Headcount: <strong>18 Workers</strong></span>
+                <span>Average Daily Headcount: <strong>{attendanceDays.length > 0 ? `${Math.round(attendanceDays.reduce((a, b) => a + b.actual, 0) / attendanceDays.length)} Workers` : '0 Workers'}</strong></span>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('attendance')}

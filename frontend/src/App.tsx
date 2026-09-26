@@ -17,6 +17,7 @@ import { ClientPortalView } from './views/ClientPortalView';
 import { TasksView } from './views/TasksView';
 import { PaymentsView } from './views/PaymentsView';
 import { AccountsFinanceView } from './views/AccountsFinanceView';
+import { QuotationView } from './views/QuotationView';
 import { LoginView } from './views/LoginView';
 import { MobileSiteSimulatorModal } from './components/MobileSiteSimulatorModal';
 import { GlobalConfirmationModal } from './components/GlobalConfirmationModal';
@@ -500,6 +501,16 @@ export function App() {
             <CRMView
               leads={leads}
               onConvertSuccess={handleConvertLeadSuccess}
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            />
+          )}
+
+          {currentView === 'quotation' && (
+            <QuotationView
+              projects={projects}
+              onConvertSuccess={handleConvertLeadSuccess}
+              onShowToast={showToast}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />

@@ -10,21 +10,7 @@
     <meta name="theme-color" content="#ED1C24" />
     <link rel="manifest" href="/manifest.json" />
     <title>Booshnam Associates</title>
-    <script>
-      (function() {
-        function enterFS() {
-          var d = document.documentElement;
-          var req = d.requestFullscreen || d.webkitRequestFullscreen || d.mozRequestFullScreen || d.msRequestFullscreen;
-          if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
-            req.call(d).catch(function() {});
-          }
-        }
-        document.addEventListener('DOMContentLoaded', enterFS);
-        window.addEventListener('click', enterFS, { once: true });
-        window.addEventListener('touchstart', enterFS, { once: true });
-        window.addEventListener('keydown', enterFS, { once: true });
-      })();
-    </script>
+
   </head>
   <body>
     <div id="root"></div>

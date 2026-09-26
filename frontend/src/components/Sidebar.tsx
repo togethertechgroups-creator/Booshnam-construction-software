@@ -312,11 +312,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={() => {
                         setActiveDepartmentId(dept.id);
                         setIsHeaderDropdownOpen(false);
-                        if (dept.isMainOverview) {
-                          onSelectView('company_dashboard');
-                        } else {
-                          onSelectView('projects');
-                        }
+                        onSelectView('company_dashboard');
                       }}
                       className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
                         isSelected ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'

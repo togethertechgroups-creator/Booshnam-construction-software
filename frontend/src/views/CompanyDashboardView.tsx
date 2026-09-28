@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Bell, User as UserIcon, RefreshCw, Calendar,
-  Share2, ArrowUpDown, BarChart2, Maximize2, MoreVertical, 
+  ArrowUpDown, BarChart2, Maximize2, Minimize2, MoreVertical, 
   Search, CheckCircle2, AlertTriangle, Filter, ChevronDown, 
   TrendingUp, DollarSign, Layers, ArrowDownRight,
   Settings, UserX, LogOut, CheckCheck, Clock, ShieldCheck, X,
@@ -99,6 +99,27 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
     return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
   }, []);
+
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
 
   // Header Interactive Dropdowns & Modals
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -1499,12 +1520,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-4 h-4" />
-              </button>
-              <button 
-                title="Share / Export"
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                <Share2 className="w-4 h-4" />
               </button>
               <div className="h-5 w-px bg-slate-200 hidden sm:block" />
               <UserProfileDropdown showBell={true} onShowToast={showToast} />
@@ -3115,7 +3130,17 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     <Download className="w-3.5 h-3.5 text-slate-500" />
                     <span>CSV</span>
                   </button>
-                  <Maximize2 className="w-4 h-4 text-slate-400 cursor-pointer hover:text-slate-700" />
+                  <button
+                    onClick={toggleFullscreen}
+                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    className="p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    {isFullscreen ? (
+                      <Minimize2 className="w-4 h-4 text-brand" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4 text-slate-400 hover:text-slate-700" />
+                    )}
+                  </button>
                 </div>
               </div>
 

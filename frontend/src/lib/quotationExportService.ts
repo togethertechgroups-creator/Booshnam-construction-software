@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Quotation } from '../types';
+import { getTermsConditions } from './termsService';
 
 export function numberToIndianWords(amount: number): string {
   if (!amount || isNaN(amount) || amount === 0) return 'Zero Only';
@@ -265,9 +266,13 @@ export function exportQuotationToPDF(quote: Quotation): void {
     '2. 50% payment shall be made while issuing the work order, 50% shall be made while submitting the report.',
     '3. Site shall be cleared of any obstructions, obligations, etc.',
     '4. Water shall be provided for drilling purposes.',
-    '5. If there is significant variation in soil characteristics among the boreholes, it may be necessary to conduct additional drilling to evaluate the nature of the soil at varying depths and across different locations.',
-    '6. Soil Sample will be disposed of within 2 days from the date of issue of the test report.',
   ];
+
+  // Dynamic Quotation Terms & Conditions from Settings
+  const activeQuotationTerms = (quote.terms_conditions || getTermsConditions().quotationTerms || '').trim();
+  const customTermsList = activeQuotationTerms 
+    ? activeQuotationTerms.split('\n').map(s => s.trim()).filter(Boolean)
+    : [];
 
   // -------------------------------------------------------------------------
   // SMART PAGE LAYOUT:
@@ -297,6 +302,24 @@ export function exportQuotationToPDF(quote: Quotation): void {
       doc.text(splitNote, margin, notesY);
       notesY += splitNote.length * 8 + 3;
     });
+
+    if (customTermsList.length > 0) {
+      notesY += 6;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(220, 38, 38);
+      doc.text('TERMS & CONDITIONS:', margin, notesY);
+
+      notesY += 10;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.2);
+      doc.setTextColor(51, 65, 85);
+      customTermsList.forEach((term) => {
+        const splitTerm = doc.splitTextToSize(term, pageWidth - margin * 2);
+        doc.text(splitTerm, margin, notesY);
+        notesY += splitTerm.length * 8 + 2;
+      });
+    }
 
     notesY += 24;
     // Expecting your valuable order
@@ -338,6 +361,24 @@ export function exportQuotationToPDF(quote: Quotation): void {
       doc.text(splitNote, margin, page2Y);
       page2Y += splitNote.length * 12 + 6;
     });
+
+    if (customTermsList.length > 0) {
+      page2Y += 14;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(220, 38, 38);
+      doc.text('TERMS & CONDITIONS:', margin, page2Y);
+
+      page2Y += 14;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(30, 41, 59);
+      customTermsList.forEach((term) => {
+        const splitTerm = doc.splitTextToSize(term, pageWidth - margin * 2);
+        doc.text(splitTerm, margin, page2Y);
+        page2Y += splitTerm.length * 11 + 4;
+      });
+    }
 
     page2Y += 40;
     doc.setFont('helvetica', 'bolditalic');
@@ -441,9 +482,11 @@ export function exportQuotationToWord(quote: Quotation): void {
       <li>50% payment shall be made while issuing the work order, 50% shall be made while submitting the report.</li>
       <li>Site shall be cleared of any obstructions, obligations, etc.</li>
       <li>Water shall be provided for drilling purposes.</li>
-      <li>If there is significant variation in soil characteristics among the boreholes, it may be necessary to conduct additional drilling to evaluate the nature of the soil at varying depths and across different locations.</li>
-      <li>Soil Sample will be disposed of within 2 days from the date of issue of the test report.</li>
     </ol>
+    <div style="margin-top: 15px; padding: 10px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px;">
+      <h4 style="margin: 0 0 6px 0; font-size: 9.5pt; color: #dc2626;">TERMS & CONDITIONS:</h4>
+      <p style="margin: 0; font-size: 8.5pt; color: #334155; line-height: 1.5;">${(quote.terms_conditions || getTermsConditions().quotationTerms || '').replace(/\n/g, '<br/>')}</p>
+    </div>
     <p style="text-align: center; font-style: italic; font-weight: bold; margin-top: 36px; margin-bottom: 30px; font-size: 11pt;">
       Expecting your valuable order
     </p>

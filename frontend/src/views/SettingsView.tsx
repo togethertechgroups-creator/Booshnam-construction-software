@@ -32,6 +32,15 @@ import {
 } from '../lib/staffService';
 import { getUserAccounts, saveUserAccount, UserAccount } from '../lib/authService';
 import { confirmAction } from '../lib/dialogService';
+import { 
+  getTermsConditions, 
+  saveTermsConditions, 
+  saveInvoiceTerms, 
+  saveQuotationTerms, 
+  saveSubconTerms, 
+  saveBOQTerms, 
+  savePurchaseOrderTerms 
+} from '../lib/termsService';
 
 interface Branch {
   id: string;
@@ -83,6 +92,93 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       window.removeEventListener('booshnam_projects_updated', handleUpdate);
     };
   }, []);
+
+  // ── Document & Fields (Terms & Conditions) State ──
+  const [docFieldsTab, setDocFieldsTab] = useState<'pdf_template' | 'terms_conditions' | 'number_format'>('terms_conditions');
+  const [termsData, setTermsData] = useState(() => getTermsConditions());
+  const [invoiceTermsInput, setInvoiceTermsInput] = useState(() => getTermsConditions().invoiceTerms);
+  const [quotationTermsInput, setQuotationTermsInput] = useState(() => getTermsConditions().quotationTerms);
+  const [subconTermsInput, setSubconTermsInput] = useState(() => getTermsConditions().subconTerms);
+  const [boqTermsInput, setBoqTermsInput] = useState(() => getTermsConditions().boqTerms);
+  const [poTermsInput, setPoTermsInput] = useState(() => getTermsConditions().purchaseOrderTerms);
+
+  const [isEditingInvoiceTerms, setIsEditingInvoiceTerms] = useState(false);
+  const [isEditingQuotationTerms, setIsEditingQuotationTerms] = useState(false);
+
+  const [showSubconBox, setShowSubconBox] = useState(() => Boolean(getTermsConditions().subconTerms));
+  const [showBoqBox, setShowBoqBox] = useState(() => Boolean(getTermsConditions().boqTerms));
+  const [showPoBox, setShowPoBox] = useState(() => Boolean(getTermsConditions().purchaseOrderTerms));
+
+  const [invoiceSavedTick, setInvoiceSavedTick] = useState(false);
+  const [quotationSavedTick, setQuotationSavedTick] = useState(false);
+
+  // Number format states
+  const [invPrefix, setInvPrefix] = useState('INV-2026-');
+  const [quoPrefix, setQuoPrefix] = useState('QBAG_');
+  const [poPrefix, setPoPrefix] = useState('PO-2026-');
+
+  // PDF Template states
+  const [showLetterheadHeader, setShowLetterheadHeader] = useState(true);
+  const [showBankDetailsOnPdf, setShowBankDetailsOnPdf] = useState(true);
+  const [showNablBadge, setShowNablBadge] = useState(true);
+  const [showAuthorizedSignatory, setShowAuthorizedSignatory] = useState(true);
+
+  useEffect(() => {
+    const handleSync = (e: any) => {
+      const data = e.detail || getTermsConditions();
+      setTermsData(data);
+      setInvoiceTermsInput(data.invoiceTerms);
+      setQuotationTermsInput(data.quotationTerms);
+      setSubconTermsInput(data.subconTerms);
+      setBoqTermsInput(data.boqTerms);
+      setPoTermsInput(data.purchaseOrderTerms);
+      if (data.subconTerms) setShowSubconBox(true);
+      if (data.boqTerms) setShowBoqBox(true);
+      if (data.purchaseOrderTerms) setShowPoBox(true);
+    };
+    window.addEventListener('booshnam_terms_updated', handleSync);
+    return () => window.removeEventListener('booshnam_terms_updated', handleSync);
+  }, []);
+
+  const handleSaveInvoiceTermsOnly = () => {
+    saveInvoiceTerms(invoiceTermsInput);
+    setIsEditingInvoiceTerms(false);
+    setInvoiceSavedTick(true);
+    setTimeout(() => setInvoiceSavedTick(false), 3000);
+    showToast('Invoice Terms & Conditions saved! Will automatically appear on all generated invoices.');
+  };
+
+  const handleSaveQuotationTermsOnly = () => {
+    saveQuotationTerms(quotationTermsInput);
+    setIsEditingQuotationTerms(false);
+    setQuotationSavedTick(true);
+    setTimeout(() => setQuotationSavedTick(false), 3000);
+    showToast('Quotation Terms & Conditions saved! Will automatically appear on all generated quotations.');
+  };
+
+  const handleSaveAllTermsAndConditions = () => {
+    saveTermsConditions({
+      invoiceTerms: invoiceTermsInput,
+      quotationTerms: quotationTermsInput,
+      subconTerms: subconTermsInput,
+      boqTerms: boqTermsInput,
+      purchaseOrderTerms: poTermsInput,
+      invoiceTermsUpdatedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      quotationTermsUpdatedAt: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      subconTermsUpdatedAt: showSubconBox ? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+      boqTermsUpdatedAt: showBoqBox ? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+      purchaseOrderTermsUpdatedAt: showPoBox ? new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+    });
+    setIsEditingInvoiceTerms(false);
+    setIsEditingQuotationTerms(false);
+    setInvoiceSavedTick(true);
+    setQuotationSavedTick(true);
+    setTimeout(() => {
+      setInvoiceSavedTick(false);
+      setQuotationSavedTick(false);
+    }, 3000);
+    showToast('All Terms & Conditions saved successfully! Both Invoices and Quotations updated.');
+  };
 
   const allProjects = useMemo(() => {
     try {
@@ -623,15 +719,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  // Nav Items in Settings sidebar (Removed Integrations and Subscription as requested)
+  // Nav Items in Settings horizontal navigation bar
   const navItems = [
     { id: 'company', label: 'Company' },
     { id: 'document_fields', label: 'Document & Fields' },
-    { id: 'holiday_weekoff', label: 'Holiday & Weekoff' },
-    { id: 'multi_level_approval', label: 'Multi Level Approval' },
     { id: 'payroll', label: 'Payroll' },
     { id: 'roles_access', label: 'Roles & Access' },
-    { id: 'workflow_controls', label: 'Workflow Controls' },
   ];
 
   const primaryBranch = branches.find(b => b.isPrimary) || branches[0];
@@ -648,46 +741,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Top Header Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">
-            Company Settings
-          </h1>
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+              Company Settings
+            </h1>
+          </div>
+
+          {/* Right Action Icons & Profile */}
+          <div className="flex items-center gap-4">
+            <UserProfileDropdown showBell={true} onShowToast={showToast} />
+          </div>
         </div>
 
-        {/* Right Action Icons & Profile */}
-        <div className="flex items-center gap-4">
-          <UserProfileDropdown showBell={true} onShowToast={showToast} />
-        </div>
-      </header>
-
-      {/* Main Settings Body with Sidebar + Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col md:flex-row gap-6">
-        {/* Left Settings Navigation Submenu */}
-        <aside className="w-full md:w-56 shrink-0">
-          <nav className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-2xs divide-y divide-slate-100">
+        {/* Horizontal Navigation Row directly below Header */}
+        <div className="px-4 sm:px-6 bg-white">
+          <div className="max-w-7xl mx-auto flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-2.5">
             {navItems.map((item) => {
               const isActive = activeNav === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveNav(item.id)}
+                  onClick={() => {
+                    setActiveNav(item.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   type="button"
-                  className={`w-full text-left px-4 py-3 text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border ${
                     isActive
-                      ? 'bg-red-50 text-red-600 font-bold border-l-4 border-red-600'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
+                      ? 'bg-red-50 text-red-600 font-bold border-red-200 shadow-2xs'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'
                   }`}
                 >
                   <span>{item.label}</span>
                 </button>
               );
             })}
-          </nav>
-        </aside>
+          </div>
+        </div>
+      </header>
 
-        {/* Right Settings Content Panel */}
-        <main className="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 md:p-8">
+      {/* Main Settings Body */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
+        {/* Settings Content Panel */}
+        <main className="w-full min-w-0 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 md:p-8">
           {activeNav === 'company' && (
             <div>
               {/* Horizontal Tabs: Company Details | Branches | Business Profile */}
@@ -1238,52 +1336,422 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* Submenu Views for Other Settings (Coming Soon / Rich Controls) */}
+          {/* ═════════════════════════════════════════════════════════════
+              DOCUMENT & FIELDS SECTION (With Terms & Conditions)
+          ═════════════════════════════════════════════════════════════ */}
           {activeNav === 'document_fields' && (
-            <div className="space-y-4">
-              <h2 className="text-base font-bold text-slate-900">Document & Custom Fields</h2>
-              <p className="text-xs text-slate-500">Configure global invoice prefixes, purchase order sequencing, and custom metadata fields.</p>
-              <div className="p-8 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-400">
-                Document template editor is active with Booshnam Associates Letterhead.
+            <div className="space-y-6 animate-in fade-in duration-150">
+              {/* Top Horizontal Tabs: PDF Template | Terms & Conditions | Number Format */}
+              <div className="flex items-center border-b border-slate-200 gap-6 sm:gap-8 overflow-x-auto no-scrollbar">
+                {[
+                  { id: 'pdf_template', label: 'PDF Template' },
+                  { id: 'terms_conditions', label: 'Terms & Conditions' },
+                  { id: 'number_format', label: 'Number Format' },
+                ].map((tab) => {
+                  const isActive = docFieldsTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setDocFieldsTab(tab.id as any)}
+                      className={`pb-3 text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap relative ${
+                        isActive
+                          ? 'text-red-600 border-b-2 border-red-600 font-bold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-          )}
 
-          {activeNav === 'holiday_weekoff' && (
-            <div className="space-y-4">
-              <h2 className="text-base font-bold text-slate-900">Holiday & Weekoff Configuration</h2>
-              <p className="text-xs text-slate-500">Manage statutory holidays, regional festivals, and alternate Saturday weekoff schedules.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="font-semibold text-xs text-slate-800">Weekly Offs</div>
-                  <div className="text-xs text-slate-500 mt-1">Every Sunday • 2nd & 4th Saturdays</div>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="font-semibold text-xs text-slate-800">Annual Holidays 2026</div>
-                  <div className="text-xs text-slate-500 mt-1">14 Declared statutory holidays</div>
-                </div>
-              </div>
-            </div>
-          )}
+              {/* ── TAB 2: TERMS & CONDITIONS (Matching User Screenshot) ── */}
+              {docFieldsTab === 'terms_conditions' && (
+                <div className="space-y-6 max-w-4xl">
+                  {/* Title & Subtitle */}
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Terms & Conditions</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Add Your Own Customised Terms & Conditions</p>
+                  </div>
 
-          {activeNav === 'multi_level_approval' && (
-            <div className="space-y-4">
-              <h2 className="text-base font-bold text-slate-900">Multi-Level Approval Rules</h2>
-              <p className="text-xs text-slate-500">Tiered authorization thresholds for Purchase Requests, BOQ Revisions, and Vendor Invoices.</p>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Tier 1 (&lt; ₹50,000): Project Engineer Approval</span>
-                  <span className="text-emerald-600 font-bold">Active</span>
+                  {/* 1. Invoice Terms Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800">Invoice Terms</label>
+                      <div className="flex items-center gap-2">
+                        {invoiceSavedTick && (
+                          <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Saved to Invoices</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingInvoiceTerms(!isEditingInvoiceTerms)}
+                          className="text-xs font-semibold text-slate-600 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                        >
+                          {isEditingInvoiceTerms ? 'Done Editing' : 'Edit'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveInvoiceTermsOnly}
+                          className="px-4 py-2 min-h-[36px] bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>Save Invoice Terms</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stylized Outlined Card with Floating INVOICE TERMS Tag */}
+                    <div className="relative border border-red-200 hover:border-red-300 rounded-lg p-3.5 pt-3 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500 transition shadow-2xs">
+                      <span className="absolute -top-2 left-4 bg-white px-1.5 text-[10px] font-bold text-red-600 tracking-wider">
+                        INVOICE TERMS
+                      </span>
+                      {isEditingInvoiceTerms ? (
+                        <textarea
+                          rows={3}
+                          value={invoiceTermsInput}
+                          onChange={(e) => setInvoiceTermsInput(e.target.value)}
+                          placeholder="Enter your customized invoice terms & conditions..."
+                          className="w-full text-xs text-slate-800 leading-relaxed focus:outline-none resize-none bg-transparent"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => setIsEditingInvoiceTerms(true)}
+                          className="text-xs text-slate-800 leading-relaxed cursor-text min-h-[44px]"
+                          title="Click to edit"
+                        >
+                          {invoiceTermsInput || <span className="text-slate-400 italic">No terms entered. Click to add.</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Quotation Terms Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800">Quotation Terms</label>
+                      <div className="flex items-center gap-2">
+                        {quotationSavedTick && (
+                          <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Saved to Quotations</span>
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingQuotationTerms(!isEditingQuotationTerms)}
+                          className="text-xs font-semibold text-slate-600 hover:text-red-600 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                        >
+                          {isEditingQuotationTerms ? 'Done Editing' : 'Edit'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveQuotationTermsOnly}
+                          className="px-4 py-2 min-h-[36px] bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                          <span>Save Quotation Terms</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Stylized Outlined Card with Floating QUOTATION TERMS Tag */}
+                    <div className="relative border border-red-200 hover:border-red-300 rounded-lg p-3.5 pt-3 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500 transition shadow-2xs">
+                      <span className="absolute -top-2 left-4 bg-white px-1.5 text-[10px] font-bold text-red-600 tracking-wider">
+                        QUOTATION TERMS
+                      </span>
+                      {isEditingQuotationTerms ? (
+                        <textarea
+                          rows={4}
+                          value={quotationTermsInput}
+                          onChange={(e) => setQuotationTermsInput(e.target.value)}
+                          placeholder="Enter your customized quotation terms & conditions..."
+                          className="w-full text-xs text-slate-800 leading-relaxed focus:outline-none resize-none bg-transparent"
+                          autoFocus
+                        />
+                      ) : (
+                        <div 
+                          onClick={() => setIsEditingQuotationTerms(true)}
+                          className="text-xs text-slate-800 leading-relaxed cursor-text min-h-[56px]"
+                          title="Click to edit"
+                        >
+                          {quotationTermsInput || <span className="text-slate-400 italic">No terms entered. Click to add.</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3. Subcon Terms Section */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800">Subcon Terms</label>
+                      {showSubconBox && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            saveSubconTerms(subconTermsInput);
+                            showToast('Subcon Terms saved successfully!');
+                          }}
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-semibold rounded border border-red-200 transition"
+                        >
+                          Save Subcon Terms
+                        </button>
+                      )}
+                    </div>
+                    {showSubconBox ? (
+                      <div className="relative border border-red-200 hover:border-red-300 rounded-lg p-3.5 pt-3 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500 transition shadow-2xs">
+                        <span className="absolute -top-2 left-4 bg-white px-1.5 text-[10px] font-bold text-red-600 tracking-wider">
+                          SUBCON TERMS
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={subconTermsInput}
+                          onChange={(e) => setSubconTermsInput(e.target.value)}
+                          placeholder="Enter Subcontractor agreement terms, milestone retention, defect liability, and site safety compliance..."
+                          className="w-full text-xs text-slate-800 leading-relaxed focus:outline-none resize-none bg-transparent"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowSubconBox(true)}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer underline transition-colors"
+                      >
+                        + Add Terms and Conditions
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 4. BOQ Terms Section */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800">BOQ Terms</label>
+                      {showBoqBox && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            saveBOQTerms(boqTermsInput);
+                            showToast('BOQ Terms saved successfully!');
+                          }}
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-semibold rounded border border-red-200 transition"
+                        >
+                          Save BOQ Terms
+                        </button>
+                      )}
+                    </div>
+                    {showBoqBox ? (
+                      <div className="relative border border-red-200 hover:border-red-300 rounded-lg p-3.5 pt-3 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500 transition shadow-2xs">
+                        <span className="absolute -top-2 left-4 bg-white px-1.5 text-[10px] font-bold text-red-600 tracking-wider">
+                          BOQ TERMS
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={boqTermsInput}
+                          onChange={(e) => setBoqTermsInput(e.target.value)}
+                          placeholder="Enter BOQ measurement specifications, variation thresholds, and price escalation clauses..."
+                          className="w-full text-xs text-slate-800 leading-relaxed focus:outline-none resize-none bg-transparent"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowBoqBox(true)}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer underline transition-colors"
+                      >
+                        + Add Terms and Conditions
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 5. Purchase Order Terms Section */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-800">Purchase Order Terms</label>
+                      {showPoBox && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            savePurchaseOrderTerms(poTermsInput);
+                            showToast('Purchase Order Terms saved successfully!');
+                          }}
+                          className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-[10px] font-semibold rounded border border-red-200 transition"
+                        >
+                          Save PO Terms
+                        </button>
+                      )}
+                    </div>
+                    {showPoBox ? (
+                      <div className="relative border border-red-200 hover:border-red-300 rounded-lg p-3.5 pt-3 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500 transition shadow-2xs">
+                        <span className="absolute -top-2 left-4 bg-white px-1.5 text-[10px] font-bold text-red-600 tracking-wider">
+                          PURCHASE ORDER TERMS
+                        </span>
+                        <textarea
+                          rows={3}
+                          value={poTermsInput}
+                          onChange={(e) => setPoTermsInput(e.target.value)}
+                          placeholder="Enter vendor delivery timelines, GRN inspection standards, and payment credit terms..."
+                          className="w-full text-xs text-slate-800 leading-relaxed focus:outline-none resize-none bg-transparent"
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowPoBox(true)}
+                        className="text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer underline transition-colors"
+                      >
+                        + Add Terms and Conditions
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bottom Action Bar with Save Button matching Red & White Theme */}
+                  <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+                    <p className="text-xs text-slate-500">
+                      Changes update immediately across Invoices and Quotations.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleSaveAllTermsAndConditions}
+                      className="px-7 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm transition-all cursor-pointer hover:shadow-md active:scale-95"
+                    >
+                      Save
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Tier 2 (₹50,000 - ₹5,00,000): Project Manager Approval</span>
-                  <span className="text-emerald-600 font-bold">Active</span>
+              )}
+
+              {/* ── TAB 1: PDF TEMPLATE ── */}
+              {docFieldsTab === 'pdf_template' && (
+                <div className="space-y-6 max-w-3xl">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">PDF Template & Letterhead Styling</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Customize letterhead headers, logos, and authorized signatory blocks on generated documents.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Booshnam Brand Header</span>
+                        <input
+                          type="checkbox"
+                          checked={showLetterheadHeader}
+                          onChange={(e) => setShowLetterheadHeader(e.target.checked)}
+                          className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Includes official red header bar, company brand name, and registered address.</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Bank Details for Direct Payment</span>
+                        <input
+                          type="checkbox"
+                          checked={showBankDetailsOnPdf}
+                          onChange={(e) => setShowBankDetailsOnPdf(e.target.checked)}
+                          className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Prints HDFC Bank Account No & IFSC on invoices for immediate client transfers.</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">NABL & ISO Quality Badges</span>
+                        <input
+                          type="checkbox"
+                          checked={showNablBadge}
+                          onChange={(e) => setShowNablBadge(e.target.checked)}
+                          className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Displays official quality compliance badges on footer.</p>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Digital Signatory Stamp</span>
+                        <input
+                          type="checkbox"
+                          checked={showAuthorizedSignatory}
+                          onChange={(e) => setShowAuthorizedSignatory(e.target.checked)}
+                          className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-500">Places authorized engineer and director signature stamp lines.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => showToast('PDF Template styling preferences updated')}
+                      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm"
+                    >
+                      Save PDF Settings
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-700">Tier 3 (&gt; ₹5,00,000): Managing Director / Partner Approval</span>
-                  <span className="text-emerald-600 font-bold">Active</span>
+              )}
+
+              {/* ── TAB 3: NUMBER FORMAT ── */}
+              {docFieldsTab === 'number_format' && (
+                <div className="space-y-6 max-w-2xl">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Document Numbering & Sequences</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Define standard automatic prefixes and serial numbering for system generated files.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Invoice Prefix & Format</label>
+                      <input
+                        type="text"
+                        value={invPrefix}
+                        onChange={(e) => setInvPrefix(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                      />
+                      <span className="text-[11px] text-slate-400 mt-1 block">Preview: {invPrefix}001</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Quotation Prefix & Format</label>
+                      <input
+                        type="text"
+                        value={quoPrefix}
+                        onChange={(e) => setQuoPrefix(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                      />
+                      <span className="text-[11px] text-slate-400 mt-1 block">Preview: {quoPrefix}3078</span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Purchase Order Prefix & Format</label>
+                      <input
+                        type="text"
+                        value={poPrefix}
+                        onChange={(e) => setPoPrefix(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                      />
+                      <span className="text-[11px] text-slate-400 mt-1 block">Preview: {poPrefix}042</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => showToast('Number formats saved')}
+                      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm"
+                    >
+                      Save Number Format
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -1640,23 +2108,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {activeNav === 'workflow_controls' && (
-            <div className="space-y-4">
-              <h2 className="text-base font-bold text-slate-900">Automated Workflow Controls</h2>
-              <p className="text-xs text-slate-500">System triggers for auto-locking closed budgets, site snags escalation, and daily report reminders.</p>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-red-600 focus:ring-red-500 accent-red-600" />
-                  <span className="text-xs font-medium text-slate-700">Auto-lock daily progress reports at 11:59 PM</span>
-                </label>
-                <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer">
-                  <input type="checkbox" defaultChecked className="rounded text-red-600 focus:ring-red-500 accent-red-600" />
-                  <span className="text-xs font-medium text-slate-700">Require supervisor photo verification for high-priority snags</span>
-                </label>
-              </div>
             </div>
           )}
         </main>

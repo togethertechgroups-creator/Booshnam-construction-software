@@ -14,6 +14,7 @@ import { CustomDatePicker } from '../components/CustomDatePicker';
 import { confirmAction } from '../lib/dialogService';
 import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
 import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
+import { getTermsConditions } from '../lib/termsService';
 
 interface QuotationViewProps {
   projects?: Project[];
@@ -766,7 +767,15 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   });
   const [quoteDiscount, setQuoteDiscount] = useState<number>(0);
   const [quoteNotes, setQuoteNotes] = useState('Payment: 50% advance along with work order, balance upon draft report submission.');
-  const [quoteTerms, setQuoteTerms] = useState('1. Rates are valid for 30 days.\n2. Taxes as applicable.\n3. Site access and power to be provided by client.');
+  const [quoteTerms, setQuoteTerms] = useState<string>(() => getTermsConditions().quotationTerms);
+
+  useEffect(() => {
+    const handleTermsUpdate = () => {
+      setQuoteTerms(getTermsConditions().quotationTerms);
+    };
+    window.addEventListener('booshnam_terms_updated', handleTermsUpdate);
+    return () => window.removeEventListener('booshnam_terms_updated', handleTermsUpdate);
+  }, []);
 
   const [quoteItems, setQuoteItems] = useState<QuotationItem[]>([
     {
@@ -2376,14 +2385,28 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
               {/* Totals Summary */}
               <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-3 border-t border-slate-100">
-                <div className="w-full sm:w-1/2 space-y-2">
-                  <label className="block text-xs font-bold text-slate-700">Special Notes & Payment Terms</label>
-                  <textarea
-                    rows={3}
-                    value={quoteNotes}
-                    onChange={(e) => setQuoteNotes(e.target.value)}
-                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-red-600 resize-none"
-                  />
+                <div className="w-full sm:w-1/2 space-y-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-slate-700">Special Notes & Payment Terms</label>
+                    <textarea
+                      rows={2}
+                      value={quoteNotes}
+                      onChange={(e) => setQuoteNotes(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-red-600 resize-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700">Terms & Conditions</label>
+                      <span className="text-[10px] text-slate-400">Configured in Document & Fields</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={quoteTerms}
+                      onChange={(e) => setQuoteTerms(e.target.value)}
+                      className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-red-600 resize-none"
+                    />
+                  </div>
                 </div>
 
                 <div className="w-full sm:w-72 bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200">

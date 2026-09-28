@@ -16,6 +16,7 @@ import { MOCK_PROJECTS } from '../lib/mockData';
 import { CustomSelect } from '../components/CustomSelect';
 import { AddPartyDrawer, PartyFormData } from '../components/finance/AddPartyDrawer';
 import { AddAccountDrawer, AccountFormData } from '../components/finance/AddAccountDrawer';
+import { exportInvoiceToPDF } from '../lib/invoiceExportService';
 
 export interface PaymentRequestItem {
   id: string;
@@ -50,6 +51,7 @@ export interface PartyRecord {
   aadhaarFile?: string;
   panNumber?: string;
   panFile?: string;
+  gstin?: string;
   balanceDue: number;
   status: 'To Receive' | 'To Pay' | 'Settled' | 'Advance Paid' | 'Advance Received';
   activeStatus?: 'Active' | 'Inactive';
@@ -2741,11 +2743,36 @@ const toIsoDate = (displayStr: string) => {
                             )}
                           </div>
 
-                          {/* Right Amount */}
-                          <div className="text-right shrink-0 ml-4">
+                          {/* Right Amount & Actions */}
+                          <div className="text-right shrink-0 ml-4 flex flex-col items-end">
                             <div className={`text-sm sm:text-base font-bold ${t.type === 'PAYMENT_IN' ? 'text-[#0D824B]' : 'text-slate-900'}`}>
                               {t.type === 'PAYMENT_IN' ? '+ ' : ''}₹ {t.amount.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: t.amount % 1 !== 0 ? 2 : 0 })}
                             </div>
+                            {t.type === 'SALES_INVOICE' && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  exportInvoiceToPDF({
+                                    invoice_number: t.title.includes('#') ? t.title.split('#')[1].trim() : (t.title || 'INV-2026-001'),
+                                    invoice_date: `${t.year}-${t.month}-${t.day}`,
+                                    party_name: activePartyOverview.name,
+                                    party_phone: activePartyOverview.phone,
+                                    party_address: activePartyOverview.address,
+                                    party_gst: activePartyOverview.gstin || activePartyOverview.panNumber,
+                                    project_name: t.projectName,
+                                    total_amount: t.amount,
+                                    notes: t.notes || 'Civil & Structural Construction Services / Milestone Execution',
+                                  });
+                                  if (onShowToast) onShowToast(`Generated Tax Invoice for ${activePartyOverview.name}`);
+                                }}
+                                className="mt-1 px-2 py-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md transition-colors cursor-pointer"
+                                title="Download Tax Invoice PDF with customized Terms & Conditions"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Invoice PDF</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))

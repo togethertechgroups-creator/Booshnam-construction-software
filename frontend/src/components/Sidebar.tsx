@@ -14,6 +14,7 @@ import { confirmSignOut } from '../lib/dialogService';
 import { ORGANIZATION_DEPARTMENTS, getActiveDepartment, setActiveDepartmentId, DepartmentEntity } from '../lib/departmentService';
 import { DepartmentLogo } from './DepartmentLogo';
 import { getDueFollowUpsCount } from '../lib/leadsNotificationService';
+import { getUnacknowledgedLowStockItems } from '../lib/stockNotificationService';
 
 interface SidebarProps {
   currentView: string;
@@ -32,6 +33,7 @@ interface NavGroupItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | null;
   hasBell?: boolean;
+  hasDot?: boolean;
 }
 
 const DEPARTMENT_SUB_ITEMS = [
@@ -117,6 +119,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
   }, []);
 
+  // Dynamic Low-Stock Notification Tracking for Procurement Menu
+  const [unacknowledgedLowStockCount, setUnacknowledgedLowStockCount] = useState<number>(() => {
+    return getUnacknowledgedLowStockItems().length;
+  });
+
+  useEffect(() => {
+    const syncLowStock = () => {
+      setUnacknowledgedLowStockCount(getUnacknowledgedLowStockItems().length);
+    };
+
+    syncLowStock();
+
+    window.addEventListener('booshnam_low_stock_updated', syncLowStock);
+    window.addEventListener('booshnam_stock_updated', syncLowStock);
+    window.addEventListener('storage', syncLowStock);
+
+    return () => {
+      window.removeEventListener('booshnam_low_stock_updated', syncLowStock);
+      window.removeEventListener('booshnam_stock_updated', syncLowStock);
+      window.removeEventListener('storage', syncLowStock);
+    };
+  }, []);
+
   // Synchronize available roles & permissions whenever configured
   useEffect(() => {
     const syncPermissions = () => {
@@ -190,7 +215,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       [
         { id: 'finance', label: 'Accounts & Finance', icon: Landmark },
         { id: 'payments', label: 'Payments & Ledger', icon: CreditCard },
-        { id: 'procurement', label: 'Procurement', icon: ShoppingCart },
+        { 
+          id: 'procurement', 
+          label: 'Procurement', 
+          icon: ShoppingCart,
+          badge: unacknowledgedLowStockCount > 0 ? `${unacknowledgedLowStockCount}` : null,
+          hasDot: unacknowledgedLowStockCount > 0
+        },
         { id: 'equipment', label: 'Fleet & Assets', icon: Truck }
       ],
       // Group 4: Repository, Governance & Config
@@ -290,9 +321,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   onClick={onToggle}
                   title="Expand Sidebar"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer relative"
                 >
                   <Menu className="w-4 h-4" />
+                  {unacknowledgedLowStockCount > 0 && (
+                    <span className="absolute top-1 right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                    </span>
+                  )}
                 </button>
               )}
             </div>
@@ -385,7 +422,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         )}
                       </div>
 
-                      {isOpen && item.badge && (
+                      {isOpen && item.hasDot && (
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isActive ? 'bg-white' : 'bg-amber-500'} border ${isActive ? 'border-red-600' : 'border-white'}`}></span>
+                          </span>
+                          {item.badge && (
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold shadow-xs ${
+                              isActive ? 'bg-white text-red-600' : 'bg-amber-500 text-white'
+                            }`}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {isOpen && !item.hasDot && item.badge && (
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all shadow-xs ${
                           isActive ? 'bg-white text-red-600' : 'bg-red-600 text-white'
                         }`}>
@@ -396,11 +449,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                       )}
 
-                      {/* Mini mode: badge as small glowing dot */}
-                      {!isOpen && item.badge && (
+                      {/* Mini mode: badge or hasDot as small glowing dot */}
+                      {!isOpen && (item.badge || item.hasDot) && (
                         <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 border border-white"></span>
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${item.hasDot ? 'bg-amber-400' : 'bg-red-400'} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.hasDot ? 'bg-amber-500' : 'bg-red-600'} border border-white`}></span>
                         </span>
                       )}
                     </button>

@@ -448,10 +448,7 @@ export function App() {
               invoices={invoices}
               stockItems={stock}
               projects={projects}
-              selectedProject={selectedProject}
-              onSelectProject={setSelectedProject}
-              activeRole={activeRole}
-              onShowToast={showToast}
+              initialTab={currentView === 'warehouse' ? 'stock' : undefined}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />

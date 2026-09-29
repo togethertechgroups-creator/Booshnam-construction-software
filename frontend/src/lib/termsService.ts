@@ -18,13 +18,12 @@ export const DEFAULT_TERMS: TermsConditionsData = {
     'Any changes must be requested in writing and agreed upon by both parties. Additional work or design changes may incur additional costs. Some delays may occur due to unforeseen circumstances. Late payments may result in late payment fees. All disputes are subject to India jurisdiction only',
   subconTerms: '',
   boqTerms: '',
-  purchaseOrderTerms:
-    '1. Material must strictly conform to specified IS codes and approved brand standards.\n2. Delivery must be accompanied by original Tax Invoice, Delivery Challan, and Manufacturer Test Certificates.\n3. Goods are subject to site physical inspection and laboratory testing prior to final acceptance.\n4. Damaged, non-conforming, or rejected materials will be returned at vendor expense.\n5. Payment will be released as per agreed credit terms following verification and GRN certification.',
+  purchaseOrderTerms: '',
   invoiceTermsUpdatedAt: 'Default Template',
   quotationTermsUpdatedAt: 'Default Template',
   subconTermsUpdatedAt: '',
   boqTermsUpdatedAt: '',
-  purchaseOrderTermsUpdatedAt: 'Default Template',
+  purchaseOrderTermsUpdatedAt: '',
 };
 
 const STORAGE_KEY = 'booshnam_terms_conditions_v1';

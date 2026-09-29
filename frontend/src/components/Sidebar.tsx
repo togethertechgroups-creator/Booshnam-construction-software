@@ -222,7 +222,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badge: unacknowledgedLowStockCount > 0 ? `${unacknowledgedLowStockCount}` : null,
           hasDot: unacknowledgedLowStockCount > 0
         },
-        { id: 'equipment', label: 'Fleet & Assets', icon: Truck }
+        { id: 'equipment', label: 'Assets', icon: Truck }
       ],
       // Group 4: Repository, Governance & Config
       [

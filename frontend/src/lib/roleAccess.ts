@@ -15,7 +15,7 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
   { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
-  { id: 'equipment', name: 'Fleet & Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
+  { id: 'equipment', name: 'Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
   { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
   { id: 'approvals', name: 'Approvals', category: 'Repository & Quality', description: 'Multi-tiered authorization workflow for expenses, drawings & change orders' },
   { id: 'site_ops', name: 'Reports (DPR)', category: 'Repository & Quality', description: 'Daily Progress Reports (DPR), site photos, weather logs & labour counts' },

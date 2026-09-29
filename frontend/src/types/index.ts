@@ -442,6 +442,28 @@ export interface Asset {
   current_project_name?: string;
   status: string;
   meter_hours: number;
+  code_prefix?: string;
+  code_number?: string;
+  serial_number?: string;
+  unit_rate?: number;
+  total_qty?: number;
+  available_qty?: number;
+  asset_type?: string;
+  description?: string;
+  image_url?: string;
+  assigned_to?: string;
+  assigned_date?: string;
+  in_repair_qty?: number;
+  damaged_qty?: number;
+  timeline?: {
+    id: string;
+    date: string;
+    time: string;
+    action: string;
+    qty?: number;
+    project: string;
+    assigned_to?: string;
+  }[];
 }
 
 export interface DesignDrawing {

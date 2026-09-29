@@ -41,6 +41,17 @@ import {
   saveBOQTerms, 
   savePurchaseOrderTerms 
 } from '../lib/termsService';
+import { 
+  WeeklyOffConfig, 
+  PublicHoliday, 
+  getWeeklyOffs, 
+  saveWeeklyOffs, 
+  getStoredHolidays, 
+  saveStoredHolidays, 
+  addPublicHoliday, 
+  deletePublicHoliday,
+  loadDefaultHolidays
+} from '../lib/calendarService';
 
 interface Branch {
   id: string;
@@ -62,8 +73,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleSidebar,
   activeRole,
 }) => {
-  // Navigation State
-  const [activeNav, setActiveNav] = useState<string>('company');
+  // Navigation State (Persisted in localStorage, defaults to holiday_weekoff)
+  const [activeNav, setActiveNavState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_settings_active_nav');
+      if (saved && ['company', 'document_fields', 'holiday_weekoff', 'payroll', 'roles_access'].includes(saved)) {
+        return saved;
+      }
+    } catch (e) {}
+    return 'holiday_weekoff';
+  });
+
+  const setActiveNav = (tabId: string) => {
+    setActiveNavState(tabId);
+    try {
+      localStorage.setItem('booshnam_settings_active_nav', tabId);
+    } catch (e) {}
+  };
   const [activeCompanyTab, setActiveCompanyTab] = useState<'details' | 'branches' | 'profile'>('details');
 
   // Roles & Access subtab: 'team_access' | 'roles'
@@ -92,6 +118,106 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       window.removeEventListener('booshnam_projects_updated', handleUpdate);
     };
   }, []);
+
+  // ── Holiday & Weekoff State (Matching Reference Screenshot) ──
+  const [weeklyOffs, setWeeklyOffs] = useState<WeeklyOffConfig>(() => getWeeklyOffs());
+  const [holidays, setHolidays] = useState<PublicHoliday[]>(() => getStoredHolidays());
+  const [selectedHolidayYear, setSelectedHolidayYear] = useState<number>(2026);
+  const [newHolidayDate, setNewHolidayDate] = useState<string>('');
+  const [newHolidayName, setNewHolidayName] = useState<string>('');
+
+  useEffect(() => {
+    const handleCalendarSync = () => {
+      setWeeklyOffs(getWeeklyOffs());
+      setHolidays(getStoredHolidays());
+    };
+    window.addEventListener('booshnam_calendar_updated', handleCalendarSync);
+    return () => {
+      window.removeEventListener('booshnam_calendar_updated', handleCalendarSync);
+    };
+  }, []);
+
+  const handleToggleWeeklyOff = (dayKey: keyof WeeklyOffConfig) => {
+    const updated = {
+      ...weeklyOffs,
+      [dayKey]: !weeklyOffs[dayKey],
+    };
+    setWeeklyOffs(updated);
+    saveWeeklyOffs(updated);
+    const dayNames: Record<keyof WeeklyOffConfig, string> = {
+      Su: 'Sunday',
+      Mo: 'Monday',
+      Tu: 'Tuesday',
+      We: 'Wednesday',
+      Th: 'Thursday',
+      Fr: 'Friday',
+      Sa: 'Saturday',
+    };
+    showToast(`${dayNames[dayKey]} marked as ${updated[dayKey] ? 'Weekoff' : 'Working day'}`);
+  };
+
+  const handleAddHoliday = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!newHolidayDate) {
+      showToast('Please select a date for the holiday');
+      return;
+    }
+    if (!newHolidayName.trim()) {
+      showToast('Please enter the holiday name');
+      return;
+    }
+    const added = addPublicHoliday(newHolidayName.trim(), newHolidayDate);
+    setHolidays(getStoredHolidays());
+    const yr = new Date(newHolidayDate).getFullYear();
+    if (!isNaN(yr)) setSelectedHolidayYear(yr);
+    setNewHolidayName('');
+    setNewHolidayDate('');
+    showToast(`Holiday "${added.name}" added successfully`);
+  };
+
+  const handleDeleteHoliday = (id: string, name: string) => {
+    deletePublicHoliday(id);
+    setHolidays(getStoredHolidays());
+    showToast(`Holiday "${name}" removed`);
+  };
+
+  const handleLoadOfficialHolidays = () => {
+    const loaded = loadDefaultHolidays();
+    setHolidays(loaded);
+    setSelectedHolidayYear(2026);
+    showToast('Official 2026 Gazetted Holidays loaded');
+  };
+
+  const handleClearAllHolidays = () => {
+    saveStoredHolidays([]);
+    setHolidays([]);
+    showToast('All holidays cleared');
+  };
+
+  const DAYS_LIST: Array<{ key: keyof WeeklyOffConfig; label: string; full: string }> = [
+    { key: 'Su', label: 'Su', full: 'Sunday' },
+    { key: 'Mo', label: 'Mo', full: 'Monday' },
+    { key: 'Tu', label: 'Tu', full: 'Tuesday' },
+    { key: 'We', label: 'We', full: 'Wednesday' },
+    { key: 'Th', label: 'Th', full: 'Thursday' },
+    { key: 'Fr', label: 'Fr', full: 'Friday' },
+    { key: 'Sa', label: 'Sa', full: 'Saturday' },
+  ];
+
+  const MONTHS_LIST = [
+    { num: 1, code: 'JAN' },
+    { num: 2, code: 'FEB' },
+    { num: 3, code: 'MAR' },
+    { num: 4, code: 'APR' },
+    { num: 5, code: 'MAY' },
+    { num: 6, code: 'JUN' },
+    { num: 7, code: 'JUL' },
+    { num: 8, code: 'AUG' },
+    { num: 9, code: 'SEP' },
+    { num: 10, code: 'OCT' },
+    { num: 11, code: 'NOV' },
+    { num: 12, code: 'DEC' },
+  ];
 
   // ── Document & Fields (Terms & Conditions) State ──
   const [docFieldsTab, setDocFieldsTab] = useState<'pdf_template' | 'terms_conditions' | 'number_format'>('terms_conditions');
@@ -719,10 +845,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  // Nav Items in Settings horizontal navigation bar
+  // Nav Items in Settings navigation
   const navItems = [
     { id: 'company', label: 'Company' },
     { id: 'document_fields', label: 'Document & Fields' },
+    { id: 'holiday_weekoff', label: 'Holiday & Weekoff' },
     { id: 'payroll', label: 'Payroll' },
     { id: 'roles_access', label: 'Roles & Access' },
   ];
@@ -742,22 +869,50 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Top Header Bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
+        <div className="px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
               Company Settings
             </h1>
           </div>
 
           {/* Right Action Icons & Profile */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <button
+              type="button"
+              onClick={() => showToast('Demo booking scheduled. Our product specialist will connect with you.')}
+              className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              <Calendar className="w-3.5 h-3.5 text-red-600" />
+              <span>Book Demo</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => showToast('Referral link copied! Share with your network to earn rewards.')}
+              className="hidden xl:flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              <Gift className="w-3.5 h-3.5 text-red-600" />
+              <span>Refer & Earn</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => showToast('Leaderboard: Organization is in Top 10% on-time milestone score')}
+              className="hidden xl:flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-red-600 transition-colors cursor-pointer"
+            >
+              <Trophy className="w-3.5 h-3.5 text-red-600" />
+              <span>Leaderboard</span>
+            </button>
+
             <UserProfileDropdown showBell={true} onShowToast={showToast} />
           </div>
         </div>
+      </header>
 
-        {/* Horizontal Navigation Row directly below Header */}
-        <div className="px-4 sm:px-6 bg-white">
-          <div className="max-w-7xl mx-auto flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-2.5">
+      {/* Main Settings Body: Left Navigation Sidebar + Content Area */}
+      <div className="w-full flex-1 flex flex-col md:flex-row min-w-0">
+        {/* Left Vertical Navigation Sidebar (matching screenshot) */}
+        <aside className="w-full md:w-56 lg:w-60 border-b md:border-b-0 md:border-r border-slate-200 bg-white shrink-0 p-3 sm:p-4">
+          <nav className="flex md:flex-col gap-1 overflow-x-auto no-scrollbar pb-1 md:pb-0">
             {navItems.map((item) => {
               const isActive = activeNav === item.id;
               return (
@@ -768,24 +923,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   type="button"
-                  className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border ${
+                  className={`w-full text-left px-3.5 py-2.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-150 cursor-pointer ${
                     isActive
-                      ? 'bg-red-50 text-red-600 font-bold border-red-200 shadow-2xs'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'
+                      ? 'bg-red-50 text-red-600 font-bold'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                 >
                   <span>{item.label}</span>
                 </button>
               );
             })}
-          </div>
-        </div>
-      </header>
+          </nav>
+        </aside>
 
-      {/* Main Settings Body */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
-        {/* Settings Content Panel */}
-        <main className="w-full min-w-0 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 md:p-8">
+        {/* Right Main Content Panel */}
+        <main className="flex-1 min-w-0 p-6 md:p-8 lg:p-10 bg-white">
           {activeNav === 'company' && (
             <div>
               {/* Horizontal Tabs: Company Details | Branches | Business Profile */}
@@ -1752,6 +1904,240 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── HOLIDAYS & WEEKOFF VIEW (MATCHING REFERENCE SCREENSHOT) ── */}
+          {activeNav === 'holiday_weekoff' && (
+            <div className="space-y-6 max-w-5xl animate-in fade-in duration-150">
+              {/* Top Title & Subtitle */}
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  Holidays & Weekoffs
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  One place to configure your working calendar. Tasks, Payroll, Forecasts, and date pickers all inherit from here.
+                </p>
+              </div>
+
+              {/* ── CARD 1: WEEKLY OFF DAYS ── */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  {/* Left: Icon & Title */}
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                      <Calendar className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                        Weekly off days
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Company default – projects inherit unless overridden
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Day Circles + Dots + Legend */}
+                  <div className="flex flex-col items-start lg:items-end gap-2.5">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {DAYS_LIST.map((day) => {
+                        const isWeekoff = weeklyOffs[day.key];
+                        return (
+                          <div key={day.key} className="flex flex-col items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleWeeklyOff(day.key)}
+                              title={`Click to toggle ${day.full}: currently ${isWeekoff ? 'Weekoff' : 'Working'}`}
+                              className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold border transition-all cursor-pointer select-none ${
+                                isWeekoff
+                                  ? 'border-red-300 bg-red-50 text-red-600 font-bold shadow-2xs'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                              }`}
+                            >
+                              {day.label}
+                            </button>
+                            {/* Dot Indicator: Green if Working, Red if Weekoff */}
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                isWeekoff ? 'bg-red-500' : 'bg-emerald-500'
+                              }`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600 font-medium pt-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Working
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        Weekoff
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── CARD 2: PUBLIC HOLIDAYS ── */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-2xs">
+                {/* Header with Title, Subtitle, and Year Dropdown */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                      Public holidays
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Blocked in date pickers, excluded from working day counts
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedHolidayYear}
+                      onChange={(e) => setSelectedHolidayYear(Number(e.target.value))}
+                      className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
+                    >
+                      {[2024, 2025, 2026, 2027, 2028, 2029].map((yr) => (
+                        <option key={yr} value={yr}>
+                          {yr}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Form Input Row */}
+                <div className="py-4 border-b border-slate-100">
+                  <form onSubmit={handleAddHoliday} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {/* Date Input with Calendar Icon */}
+                    <div className="relative w-full sm:w-60">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                      <input
+                        type="date"
+                        value={newHolidayDate}
+                        onChange={(e) => {
+                          setNewHolidayDate(e.target.value);
+                          if (e.target.value) {
+                            const yr = new Date(e.target.value).getFullYear();
+                            if (!isNaN(yr)) setSelectedHolidayYear(yr);
+                          }
+                        }}
+                        className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+
+                    {/* Holiday Name Input */}
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={newHolidayName}
+                        onChange={(e) => setNewHolidayName(e.target.value)}
+                        placeholder="Holiday name"
+                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      />
+                    </div>
+
+                    {/* Add Button */}
+                    <button
+                      type="submit"
+                      className="px-6 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-lg text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
+                    >
+                      Add
+                    </button>
+                  </form>
+                </div>
+
+                {/* Month-by-Month Calendar Rows Matching Reference Screenshot */}
+                <div className="divide-y divide-slate-100">
+                  {MONTHS_LIST.map((month) => {
+                    const monthHolidays = holidays.filter(
+                      (h) => h.year === selectedHolidayYear && h.month === month.num
+                    );
+
+                    return (
+                      <div
+                        key={month.num}
+                        className="flex items-center justify-between py-4 min-h-[56px] transition-colors hover:bg-slate-50/50 px-2 rounded-lg"
+                      >
+                        {/* Left Column: Month Name & Year */}
+                        <div className="w-20 shrink-0">
+                          <div className="text-xs font-black text-slate-800 tracking-wider">
+                            {month.code}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-medium">
+                            {selectedHolidayYear}
+                          </div>
+                        </div>
+
+                        {/* Right Column: Holidays or Dash */}
+                        <div className="flex-1 flex items-center justify-end">
+                          {monthHolidays.length === 0 ? (
+                            <span className="text-slate-300 font-medium select-none pr-4">
+                              —
+                            </span>
+                          ) : (
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              {monthHolidays.map((hol) => (
+                                <div
+                                  key={hol.id}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-100 rounded-lg group hover:border-red-200 transition-colors"
+                                >
+                                  <span className="text-xs font-bold text-red-600">
+                                    {hol.day} {month.code}
+                                  </span>
+                                  <span className="text-xs font-medium text-slate-800">
+                                    {hol.name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteHoliday(hol.id, hol.name)}
+                                    title="Remove holiday"
+                                    className="text-slate-400 hover:text-red-600 transition-colors p-0.5 rounded cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Helper Toolbar: Pre-populate or Clear */}
+                <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                  <span>Need standard public holidays for {selectedHolidayYear}?</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleLoadOfficialHolidays}
+                      className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                    >
+                      Load 2026 National Holidays
+                    </button>
+                    {holidays.length > 0 && (
+                      <>
+                        <span className="text-slate-300">|</span>
+                        <button
+                          type="button"
+                          onClick={handleClearAllHolidays}
+                          className="text-xs font-medium text-slate-500 hover:text-red-600 cursor-pointer"
+                        >
+                          Clear All
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

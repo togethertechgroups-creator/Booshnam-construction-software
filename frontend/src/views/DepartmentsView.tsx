@@ -9,7 +9,7 @@ import {
 import { 
   Department, Project, SoilSample, SoilLabTest, 
   SoilInvestigationReport, ArchitecturalDrawing, 
-  ProjectPaymentRequest, ProjectTransactionRecord 
+  ProjectPaymentRequest, ProjectTransactionRecord, Lead 
 } from '../types';
 import { 
   MOCK_PROJECTS, MOCK_SOIL_SAMPLES, MOCK_SOIL_LAB_TESTS, 
@@ -86,7 +86,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const [transactions, setTransactions] = useState<ProjectTransactionRecord[]>(MOCK_PROJECT_TRANSACTIONS);
 
   // Marketing Leads Local State
-  const [marketingLeads, setMarketingLeads] = useState(MOCK_LEADS);
+  const [marketingLeads, setMarketingLeads] = useState<Lead[]>(MOCK_LEADS);
 
   // Construction DPRs Local State
   const [dprs, setDprs] = useState(MOCK_DPR);

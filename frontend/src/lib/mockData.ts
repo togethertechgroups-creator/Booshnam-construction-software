@@ -85,8 +85,66 @@ export const MOCK_DPR: DPR[] = [];
 export const MOCK_SNAGS: Snag[] = [];
 export const MOCK_APPROVALS: ApprovalRequest[] = [];
 export const MOCK_LEADS: Lead[] = [];
-export const MOCK_ASSETS: Asset[] = [];
 export const MOCK_SOIL_SAMPLES: SoilSample[] = [];
+export const MOCK_ASSETS: Asset[] = [
+  {
+    id: 'ast-ba6-6',
+    asset_code: 'BA6-6',
+    serial_number: 'BA6-6',
+    code_prefix: 'BA6',
+    code_number: '6',
+    name: 'Phone',
+    category: 'Phone',
+    asset_type: 'Phone',
+    ownership: 'Company Owned',
+    hourly_cost_rate: 0,
+    unit_rate: 0,
+    total_qty: 1,
+    available_qty: 0,
+    status: 'Assigned',
+    meter_hours: 0,
+    description: 'Field inspection mobile device',
+    current_project_name: 'Site A'
+  },
+  {
+    id: 'ast-ba021-21',
+    asset_code: 'BA021-21',
+    serial_number: 'BA021-21',
+    code_prefix: 'BA021',
+    code_number: '21',
+    name: 'Laptop',
+    category: 'Laptop',
+    asset_type: 'Laptop',
+    ownership: 'Company Owned',
+    hourly_cost_rate: 0,
+    unit_rate: 0,
+    total_qty: 1,
+    available_qty: 0,
+    status: 'Assigned',
+    meter_hours: 0,
+    description: 'Office engineering laptop',
+    current_project_name: 'Site Office'
+  },
+  {
+    id: 'ast-ba003-3',
+    asset_code: 'BA003-3',
+    serial_number: 'BA003-3',
+    code_prefix: 'BA003',
+    code_number: '3',
+    name: 'Laptop',
+    category: 'Laptop',
+    asset_type: 'Laptop',
+    ownership: 'Company Owned',
+    hourly_cost_rate: 0,
+    unit_rate: 0,
+    total_qty: 1,
+    available_qty: 0,
+    status: 'Assigned',
+    meter_hours: 0,
+    description: 'Drafting workstation laptop',
+    current_project_name: 'Site Office'
+  }
+];
 export const MOCK_SOIL_LAB_TESTS: SoilLabTest[] = [];
 export const MOCK_SOIL_REPORTS: SoilInvestigationReport[] = [];
 export const MOCK_ARCHITECTURAL_DRAWINGS: ArchitecturalDrawing[] = [];

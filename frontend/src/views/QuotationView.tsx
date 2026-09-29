@@ -1203,10 +1203,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       {/* ── FIXED TOP HEADER BAR (Stays pinned in position, never moves or overlaps) ── */}
       <header className="px-6 pt-3.5 pb-0 bg-white border-b border-slate-200 shrink-0 z-30 shadow-2xs">
         <div className="flex items-center justify-between">
-          {/* Left Title: Quotation */}
+          {/* Left Title: Leads & Quotation */}
           <div>
             <h1 className="text-xl font-black text-slate-900 tracking-tight font-heading">
-              Quotation
+              Leads & Quotation
             </h1>
           </div>
 

@@ -447,6 +447,11 @@ export function App() {
               grns={grns}
               invoices={invoices}
               stockItems={stock}
+              projects={projects}
+              selectedProject={selectedProject}
+              onSelectProject={setSelectedProject}
+              activeRole={activeRole}
+              onShowToast={showToast}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />

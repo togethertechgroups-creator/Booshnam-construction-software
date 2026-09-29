@@ -6,7 +6,8 @@ import {
   TrendingUp, DollarSign, Layers, ArrowDownRight,
   Settings, UserX, LogOut, CheckCheck, Clock, ShieldCheck, X,
   Download, FileSpreadsheet, Check, PieChart, Wallet, CreditCard,
-  ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText
+  ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText,
+  Activity, HeartPulse, PlayCircle, PauseCircle, PackageCheck, FolderKanban, Sparkles, Users
 } from 'lucide-react';
 import { Project, User } from '../types';
 import { MOCK_USER, formatProjectTitle } from '../lib/mockData';
@@ -35,36 +36,14 @@ export interface UnderlyingAttendanceRecord {
   overtime_hours: number;
 }
 
-const MASTER_EMPLOYEES = [
-  // Office Staff (10 employees)
-  { employee_code: 'EMP-0101', name: 'Rajesh Chandran', role: 'Director', payroll_type: 'Office Staff' as const, salary: 150000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0102', name: 'Vikramaditya Rao', role: 'Chief Operating Officer', payroll_type: 'Office Staff' as const, salary: 125000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0103', name: 'Anandhi Venkatesh', role: 'Admin', payroll_type: 'Office Staff' as const, salary: 35000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0104', name: 'Karthik Sundaram', role: 'Business Development', payroll_type: 'Office Staff' as const, salary: 45000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0105', name: 'Meena Kumari', role: 'Collection Executive', payroll_type: 'Office Staff' as const, salary: 32000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0106', name: 'Priya Dharshini', role: 'Digital Marketing', payroll_type: 'Office Staff' as const, salary: 38000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0107', name: 'Kavitha Selvan', role: 'Accounts', payroll_type: 'Office Staff' as const, salary: 34000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0108', name: 'Suresh Narayanan', role: 'Accounts', payroll_type: 'Office Staff' as const, salary: 48000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0109', name: 'Anitha Sekar', role: 'Collection Executive', payroll_type: 'Office Staff' as const, salary: 33000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0110', name: 'Deepa Natarajan', role: 'Digital Marketing', payroll_type: 'Office Staff' as const, salary: 40000, salary_type: 'Month' as const },
-
-  // Site Staff (15 employees)
-  { employee_code: 'EMP-0111', name: 'Arun Verma', role: 'Engineer', payroll_type: 'Site Staff' as const, salary: 55000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0112', name: 'Rajesh Kannan', role: 'Engineer', payroll_type: 'Site Staff' as const, salary: 48000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0113', name: 'Karthik Nair', role: 'Project Manager', payroll_type: 'Site Staff' as const, salary: 85000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0114', name: 'Vikram Singhania', role: 'Project Manager', payroll_type: 'Site Staff' as const, salary: 90000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0115', name: 'Priya Sharma', role: 'Project Manager', payroll_type: 'Site Staff' as const, salary: 88000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0116', name: 'Ganesh Moorthy', role: 'Site Supervisor', payroll_type: 'Site Staff' as const, salary: 38000, salary_type: 'Month' as const },
-  { employee_code: 'EMP-0117', name: 'Thangavelu M', role: 'Site Safety Officer', payroll_type: 'Site Staff' as const, salary: 1050, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0118', name: 'Murugan Subramanian', role: 'Senior Mason', payroll_type: 'Site Staff' as const, salary: 950, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0119', name: 'Dharmendra Yadav', role: 'Steel Fixer', payroll_type: 'Site Staff' as const, salary: 900, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0120', name: 'Shivaji Bhosale', role: 'Carpenter', payroll_type: 'Site Staff' as const, salary: 920, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0121', name: 'Mohammed Irfan', role: 'Electrician', payroll_type: 'Site Staff' as const, salary: 1000, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0122', name: 'Basavaraj Patil', role: 'Heavy Equipment Operator', payroll_type: 'Site Staff' as const, salary: 1200, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0123', name: 'Velu Pandian', role: 'Bar Bender Specialist', payroll_type: 'Site Staff' as const, salary: 850, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0124', name: 'Manikandan S', role: 'Plumbing Technician', payroll_type: 'Site Staff' as const, salary: 880, salary_type: 'Day' as const },
-  { employee_code: 'EMP-0125', name: 'Selvaraj Mani', role: 'Finishing Mason', payroll_type: 'Site Staff' as const, salary: 950, salary_type: 'Day' as const },
-];
+const MASTER_EMPLOYEES: Array<{
+  employee_code: string;
+  name: string;
+  role: string;
+  payroll_type: 'Office Staff' | 'Site Staff';
+  salary: number;
+  salary_type: 'Day' | 'Month';
+}> = [];
 
 interface CompanyDashboardViewProps {
   projects: Project[];
@@ -131,17 +110,16 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   // Close dropdowns when clicking outside
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
-  const healthChartMenuRef = useRef<HTMLDivElement>(null);
   const healthDotsMenuRef = useRef<HTMLDivElement>(null);
   const finDownloadRef = useRef<HTMLDivElement>(null);
-  const salesChartMenuRef = useRef<HTMLDivElement>(null);
   const salesDotsMenuRef = useRef<HTMLDivElement>(null);
+  const expenseDotsMenuRef = useRef<HTMLDivElement>(null);
+  const marginDotsMenuRef = useRef<HTMLDivElement>(null);
 
-  // Sales Chart Models & Dropdown States
-  type SalesChartModel = 'bar' | 'area' | 'line' | 'horizontal';
-  const [salesChartType, setSalesChartType] = useState<SalesChartModel>('bar');
-  const [showSalesChartDropdown, setShowSalesChartDropdown] = useState(false);
+  // Financial Cards More Options Menus
   const [showSalesMoreMenu, setShowSalesMoreMenu] = useState(false);
+  const [showExpenseMoreMenu, setShowExpenseMoreMenu] = useState(false);
+  const [showMarginMoreMenu, setShowMarginMoreMenu] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -151,20 +129,20 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setShowNotificationDropdown(false);
       }
-      if (healthChartMenuRef.current && !healthChartMenuRef.current.contains(e.target as Node)) {
-        setShowChartTypeDropdown(false);
-      }
       if (healthDotsMenuRef.current && !healthDotsMenuRef.current.contains(e.target as Node)) {
         setShowHealthMenuDropdown(false);
       }
       if (finDownloadRef.current && !finDownloadRef.current.contains(e.target as Node)) {
         setShowFinDownloadDropdown(false);
       }
-      if (salesChartMenuRef.current && !salesChartMenuRef.current.contains(e.target as Node)) {
-        setShowSalesChartDropdown(false);
-      }
       if (salesDotsMenuRef.current && !salesDotsMenuRef.current.contains(e.target as Node)) {
         setShowSalesMoreMenu(false);
+      }
+      if (expenseDotsMenuRef.current && !expenseDotsMenuRef.current.contains(e.target as Node)) {
+        setShowExpenseMoreMenu(false);
+      }
+      if (marginDotsMenuRef.current && !marginDotsMenuRef.current.contains(e.target as Node)) {
+        setShowMarginMoreMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -327,10 +305,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [modalPayrollFilter, setModalPayrollFilter] = useState('All');
   const [modalWorkforceFilter, setModalWorkforceFilter] = useState('All');
 
-  // Project Health Chart Models & Underlying Sheet States
-  type ProjectHealthChartModel = 'gauge' | 'donut' | 'pie' | 'bar' | 'linear' | 'speedometer';
-  const [healthChartType, setHealthChartType] = useState<ProjectHealthChartModel>('gauge');
-  const [showChartTypeDropdown, setShowChartTypeDropdown] = useState(false);
+  // Project Health Underlying Sheet States
   const [showHealthMenuDropdown, setShowHealthMenuDropdown] = useState(false);
   const [isUnderlyingHealthPageView, setIsUnderlyingHealthPageView] = useState(false);
   const [healthSearchTerm, setHealthSearchTerm] = useState('');
@@ -338,16 +313,21 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
   // Dynamic Projects derived from projects prop (matches active department or full portfolio)
   const summaryProjects = useMemo(() => {
+    const validProjects = (projects || []).filter(p => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
+
     const rawList = activeDeptId === 'booshnam_associates'
-      ? projects
-      : projects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+      ? validProjects
+      : validProjects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
 
     if (rawList && rawList.length > 0) {
       return rawList.map((p, idx) => {
         const title = formatProjectTitle(p);
         const leadPerson = p.assigned_team && p.assigned_team.length > 0
           ? `${p.assigned_team[0].name} (${p.assigned_team[0].role})`
-          : 'Arun Verma (PM)';
+          : '-';
         
         let displayStatus: 'Ongoing' | 'Not Started' | 'Onhold' | 'Completed' = 'Ongoing';
         if (p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100)) {
@@ -360,18 +340,31 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           displayStatus = 'Ongoing';
         }
 
-        const healthStatus: 'Normal' | 'At Risk' = (p.code === 'PRJ-003' || (p.approval_pending_count !== undefined && p.approval_pending_count > 1)) ? 'At Risk' : 'Normal';
+        const assignedCode = p.code || `PRJ-00${idx + 1}`;
+        const rawHealth = (p as any).health || (p as any).health_status;
+        let healthStatus: 'Normal' | 'At Risk' = 'Normal';
+        if (rawHealth === 'At Risk' || rawHealth === 'AT_RISK' || rawHealth === 'Critical') {
+          healthStatus = 'At Risk';
+        } else if (rawHealth === 'Normal' || rawHealth === 'Healthy') {
+          healthStatus = 'Normal';
+        } else if (displayStatus === 'Onhold' || p.status === 'ON_HOLD') {
+          healthStatus = 'At Risk';
+        } else if (p.approval_pending_count !== undefined && p.approval_pending_count > 1) {
+          healthStatus = 'At Risk';
+        } else {
+          healthStatus = 'Normal';
+        }
 
         return {
           id: p.id || String(idx + 1),
-          code: p.code || `PRJ-00${idx + 1}`,
+          code: assignedCode,
           name: title,
           department: p.department,
           category: p.category || p.project_type || 'General',
           personnel: leadPerson,
           status: displayStatus,
           health: healthStatus,
-          date: p.expected_end_date || '2026-12-31',
+          date: p.expected_end_date || '-',
           progress: p.progress_percentage || 0,
           notes: healthStatus === 'At Risk'
             ? 'Critical delay in approvals or overseas equipment. Remediation active.'
@@ -414,6 +407,70 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
       healthyPercent
     };
   }, [summaryProjects]);
+
+  // Dynamic Project Health computed specifically based on selectedProjectFilter
+  const healthStats = useMemo(() => {
+    const isAll = selectedProjectFilter === 'All';
+    const list = isAll 
+      ? summaryProjects 
+      : summaryProjects.filter(p => p.name === selectedProjectFilter);
+
+    const total = list.length;
+    if (total === 0) {
+      return {
+        total: 0,
+        healthyCount: 0,
+        atRiskCount: 0,
+        percent: 100,
+        statusLabel: 'Optimal Status',
+        isAtRisk: false,
+        isSingle: false,
+        projectName: 'All Projects',
+      };
+    }
+
+    const healthyCount = list.filter(p => p.health === 'Normal').length;
+    const atRiskCount = list.filter(p => p.health === 'At Risk').length;
+    const isSingle = !isAll && total === 1;
+
+    let percent = 100;
+    let statusLabel = 'Optimal Status';
+    let isAtRisk = false;
+
+    if (isSingle) {
+      const proj = list[0];
+      if (proj.health === 'At Risk') {
+        percent = 35;
+        statusLabel = 'At Risk Alert';
+        isAtRisk = true;
+      } else {
+        percent = 100;
+        statusLabel = 'Optimal Status';
+        isAtRisk = false;
+      }
+    } else {
+      percent = total > 0 ? Math.round((healthyCount / total) * 100) : 100;
+      isAtRisk = atRiskCount > 0;
+      if (percent >= 90) {
+        statusLabel = 'Optimal Status';
+      } else if (percent >= 70) {
+        statusLabel = 'Moderate Health';
+      } else {
+        statusLabel = 'Action Required';
+      }
+    }
+
+    return {
+      total,
+      healthyCount,
+      atRiskCount,
+      percent,
+      statusLabel,
+      isAtRisk,
+      isSingle,
+      projectName: isSingle ? list[0].name : 'All Projects',
+    };
+  }, [summaryProjects, selectedProjectFilter]);
 
   const healthProjectsData = useMemo(() => {
     return summaryProjects.map(p => ({
@@ -518,6 +575,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
   // Filtered operational rows
   const filteredSummary = summaryProjects.filter(p => {
+    const matchesProject = selectedProjectFilter === 'All' || p.name === selectedProjectFilter;
     const matchesName = p.name.toLowerCase().includes(searchName.toLowerCase());
     const matchesCategory = searchCategory === '' || p.category.toLowerCase().includes(searchCategory.toLowerCase());
     const matchesPersonnel = searchPersonnel === '' || p.personnel.toLowerCase().includes(searchPersonnel.toLowerCase());
@@ -526,7 +584,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     const matchesHealth = (selectedHealthFilter === 'All' || p.health === selectedHealthFilter) &&
                           (searchHealth === 'All' || p.health === searchHealth);
     const matchesDueDate = searchDueDate === '' || p.date === searchDueDate || p.date.includes(searchDueDate);
-    return matchesName && matchesCategory && matchesPersonnel && matchesStatus && matchesHealth && matchesDueDate;
+    return matchesProject && matchesName && matchesCategory && matchesPersonnel && matchesStatus && matchesHealth && matchesDueDate;
   });
 
   // Financial Tab Filters & State
@@ -558,7 +616,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [showAdvanceReceived, setShowAdvanceReceived] = useState(true);
   const [showSettled, setShowSettled] = useState(true);
 
-  // Financial Monthly Data
+  // Financial Monthly Data (Clean Dynamic Structure)
   const finMonthlyData = [
     { month: 'Jan 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
     { month: 'Feb 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
@@ -569,10 +627,44 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     { month: 'Jul 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
   ];
 
+  const maxSales = useMemo(() => Math.max(...finMonthlyData.map(d => d.sales), 0.01), [finMonthlyData]);
+  const salesChartPoints = useMemo(() => {
+    return finMonthlyData.map((d, idx) => ({
+      x: idx * 46,
+      y: d.sales > 0 ? Math.max(15, 80 - (d.sales / maxSales) * 65) : 80,
+      val: d.sales
+    }));
+  }, [finMonthlyData, maxSales]);
+  const salesPointsStr = useMemo(() => salesChartPoints.map(p => `${p.x},${p.y}`).join(' '), [salesChartPoints]);
+
+  const maxExpense = useMemo(() => Math.max(...finMonthlyData.map(d => d.expense), 0.01), [finMonthlyData]);
+  const expenseChartPoints = useMemo(() => {
+    return finMonthlyData.map((d, idx) => ({
+      x: idx * 46,
+      y: d.expense > 0 ? Math.max(15, 80 - (d.expense / maxExpense) * 65) : 80,
+      val: d.expense
+    }));
+  }, [finMonthlyData, maxExpense]);
+  const expensePointsStr = useMemo(() => expenseChartPoints.map(p => `${p.x},${p.y}`).join(' '), [expenseChartPoints]);
+
+  const maxMargin = useMemo(() => Math.max(...finMonthlyData.map(d => d.margin), 0.01), [finMonthlyData]);
+  const marginChartPoints = useMemo(() => {
+    return finMonthlyData.map((d, idx) => ({
+      x: idx * 46,
+      y: d.margin > 0 ? Math.max(15, 80 - (d.margin / maxMargin) * 65) : 80,
+      val: d.margin
+    }));
+  }, [finMonthlyData, maxMargin]);
+  const marginPointsStr = useMemo(() => marginChartPoints.map(p => `${p.x},${p.y}`).join(' '), [marginChartPoints]);
+
   // Financial Table rows derived dynamically from projects
   const finSummaryRows = useMemo(() => {
-    if (!projects || projects.length === 0) return [];
-    return projects.map((p, idx) => {
+    const validProjects = (projects || []).filter(p => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
+    if (!validProjects || validProjects.length === 0) return [];
+    return validProjects.map((p, idx) => {
       const budget = p.estimated_budget || 0;
       const expense = (p as any).spent_budget || p.actual_cost || 0;
       return {
@@ -1508,12 +1600,93 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         /* Main Company Dashboard View (Edge-to-edge seamless) */
         <div className="flex-1 flex flex-col min-w-0 bg-white">
           {/* Edge-to-edge Header with Hamburger, Title, Refresh, Share & User Profile */}
-          <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between gap-3 bg-white sticky top-0 z-10">
-            <div className="flex items-center gap-3">
+          {/* Edge-to-edge Header with Title, Operational/Financial Tabs, Live Pulse, Refresh & User Profile */}
+          <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white sticky top-0 z-20">
+            {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
+            <div className="flex items-center gap-3.5 flex-wrap">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight font-display">Dashboard</h1>
 
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+              <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
+                <button
+                  onClick={() => setActiveTab('operational')}
+                  className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'operational' 
+                      ? 'bg-white text-slate-900 shadow-xs font-black' 
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Activity className={`w-3.5 h-3.5 ${activeTab === 'operational' ? 'text-brand' : 'text-slate-400'}`} />
+                  <span>Operational</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('financial')}
+                  className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'financial' 
+                      ? 'bg-white text-slate-900 shadow-xs font-black' 
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <DollarSign className={`w-3.5 h-3.5 ${activeTab === 'financial' ? 'text-emerald-600' : 'text-slate-400'}`} />
+                  <span>Financial</span>
+                </button>
+              </div>
+
+              {/* Project Name Filter in Header */}
+              {activeTab === 'operational' && (
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-px bg-slate-200 hidden md:block" />
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                    <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">Project:</span>
+                  </div>
+                  <div className="w-44 sm:w-56 text-xs">
+                    <CustomSelect
+                      value={selectedProjectFilter}
+                      onChange={(val) => setSelectedProjectFilter(val)}
+                      options={[
+                        { label: 'All Projects', value: 'All' },
+                        ...summaryProjects.map(p => ({ label: p.name, value: p.name }))
+                      ]}
+                      triggerClassName="py-1.5 px-3 rounded-xl text-xs bg-slate-50 hover:bg-white border-slate-200 shadow-2xs font-medium"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Status Filter Pill in Header if selected */}
+              {activeTab === 'operational' && selectedStatusFilter !== 'All' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-900 text-white shadow-xs">
+                    <span>{selectedStatusFilter}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatusFilter('All')}
+                      className="hover:text-red-300 transition-colors ml-0.5 cursor-pointer"
+                      title="Clear status filter"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-2.5">
+
+            {/* Right: Fullscreen, Refresh & User Profile */}
+            <div className="flex items-center gap-2">
+              <button 
+                type="button"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+                aria-label={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+                className={`p-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer ${
+                  isFullscreen 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+
               <button 
                 onClick={() => window.location.reload()}
                 title="Refresh Dashboard"
@@ -1526,636 +1699,322 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
             </div>
           </div>
 
-        {/* Dual Tab Buttons: Operational & Financial */}
-        <div className="px-6 pt-3 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50">
-          <button
-            onClick={() => setActiveTab('operational')}
-            className={`pb-2.5 text-xs font-bold transition-all relative ${
-              activeTab === 'operational' 
-                ? 'text-brand border-b-2 border-brand font-black' 
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Operational
-          </button>
-          <button
-            onClick={() => setActiveTab('financial')}
-            className={`pb-2.5 text-xs font-bold transition-all relative ${
-              activeTab === 'financial' 
-                ? 'text-brand border-b-2 border-brand font-black' 
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Financial
-          </button>
-        </div>
-
         {/* OPERATIONAL TAB CONTENT */}
         {activeTab === 'operational' && (
-          <div className="p-6 space-y-5">
-            {/* Top Filter Bar (Clean layout without enclosing background card) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project Name:</label>
-                <CustomSelect
-                  value={selectedProjectFilter}
-                  onChange={(val) => setSelectedProjectFilter(val)}
-                  options={[
-                    { label: 'All Projects', value: 'All' },
-                    ...summaryProjects.map(p => ({ label: p.name, value: p.name }))
-                  ]}
-                  triggerClassName="py-1.5 px-3 rounded-lg text-xs"
-                />
-              </div>
+          <div className="p-6 space-y-6">
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project Status:</label>
-                <CustomSelect
-                  value={selectedStatusFilter}
-                  onChange={(val) => setSelectedStatusFilter(val)}
-                  options={[
-                    { label: `All (${kpiCounts.total})`, value: 'All' },
-                    { label: `Ongoing (${kpiCounts.ongoing})`, value: 'Ongoing' },
-                    { label: `Not Started (${kpiCounts.notStarted})`, value: 'Not Started' },
-                    { label: `Onhold (${kpiCounts.onhold})`, value: 'Onhold' },
-                    { label: `Completed (${kpiCounts.completed})`, value: 'Completed' },
-                  ]}
-                  triggerClassName="py-1.5 px-3 rounded-lg text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Project Health:</label>
-                <CustomSelect
-                  value={selectedHealthFilter}
-                  onChange={(val) => setSelectedHealthFilter(val)}
-                  options={[
-                    { label: `All (${kpiCounts.total})`, value: 'All' },
-                    { label: `Normal (${kpiCounts.healthyCount})`, value: 'Normal' },
-                    { label: `At Risk (${kpiCounts.atRiskCount})`, value: 'At Risk' },
-                  ]}
-                  triggerClassName="py-1.5 px-3 rounded-lg text-xs"
-                />
-              </div>
-            </div>
-
-            {/* 4 KPI Cards (Dynamic counts matching Projects page!) */}
+            {/* 4 Status KPI Cards: Styled like Modern Premium Debit / Credit Cards (Inspired by Reference) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Not Started */}
-              <div 
-                onClick={() => setSelectedStatusFilter(selectedStatusFilter === 'Not Started' ? 'All' : 'Not Started')}
-                className={`p-4 rounded-xl border bg-white shadow-sm transition-all cursor-pointer text-center ${
-                  selectedStatusFilter === 'Not Started' ? 'ring-2 ring-red-400 border-red-300' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-xs font-bold text-red-500">Not Started Projects</div>
-                <div className="text-3xl font-black text-red-500 mt-2 tracking-tight">{kpiCounts.notStarted}</div>
-              </div>
+              {[
+                {
+                  status: 'Not Started',
+                  label: 'Not Started',
+                  count: kpiCounts.notStarted,
+                  stage: 'Queue',
+                  subtext: 'Pending kickoff',
+                  bgGradient: 'from-[#f43f5e] via-[#e11d48] to-[#9f1239]',
+                  shadowColor: 'shadow-rose-500/25',
+                  bgImage: '/handshake-city.jpg',
+                  blendMode: 'mix-blend-multiply',
+                  imgOpacity: 'opacity-35',
+                  imgPosition: 'inset-0 h-full w-full object-cover scale-150 object-center',
+                },
+                {
+                  status: 'Ongoing',
+                  label: 'Ongoing',
+                  count: kpiCounts.ongoing,
+                  stage: 'Active',
+                  subtext: 'Live on site',
+                  bgGradient: 'from-[#10b981] via-[#059669] to-[#047857]',
+                  shadowColor: 'shadow-emerald-500/25',
+                  bgImage: '/city-sketch.jpg',
+                  blendMode: 'mix-blend-multiply',
+                  imgOpacity: 'opacity-35',
+                  imgPosition: 'inset-0 h-full w-full object-cover scale-135 object-center',
+                },
+                {
+                  status: 'Onhold',
+                  label: 'Onhold',
+                  count: kpiCounts.onhold,
+                  stage: 'On Hold',
+                  subtext: 'Awaiting action',
+                  bgGradient: 'from-[#f59e0b] via-[#ea580c] to-[#c2410c]',
+                  shadowColor: 'shadow-amber-500/25',
+                  bgImage: '/city-sketch.jpg',
+                  blendMode: 'mix-blend-multiply',
+                  imgOpacity: 'opacity-35',
+                  imgPosition: 'inset-0 h-full w-full object-cover scale-135 object-center',
+                },
+                {
+                  status: 'Completed',
+                  label: 'Completed',
+                  count: kpiCounts.completed,
+                  stage: 'Delivered',
+                  subtext: 'Handed over',
+                  bgGradient: 'from-[#3b82f6] via-[#2563eb] to-[#1d4ed8]',
+                  shadowColor: 'shadow-blue-500/25',
+                  bgImage: '/handshake-city.jpg',
+                  blendMode: 'mix-blend-multiply',
+                  imgOpacity: 'opacity-35',
+                  imgPosition: 'inset-0 h-full w-full object-cover scale-150 object-center',
+                },
+              ].map((card) => (
+                <div
+                  key={card.status}
+                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-br ${card.bgGradient} border border-white/20 shadow-md ${card.shadowColor} select-none`}
+                >
+                  {/* Blended Background Construction Graphic */}
+                  {card.bgImage && (
+                    <img
+                      src={card.bgImage}
+                      alt=""
+                      aria-hidden="true"
+                      className={`absolute ${card.imgPosition} ${card.blendMode} ${card.imgOpacity} pointer-events-none select-none`}
+                    />
+                  )}
 
-              {/* Ongoing Projects */}
-              <div 
-                onClick={() => setSelectedStatusFilter(selectedStatusFilter === 'Ongoing' ? 'All' : 'Ongoing')}
-                className={`p-4 rounded-xl border bg-white shadow-sm transition-all cursor-pointer text-center ${
-                  selectedStatusFilter === 'Ongoing' ? 'ring-2 ring-emerald-500 border-emerald-300' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-xs font-bold text-emerald-600">Ongoing Projects</div>
-                <div className="text-3xl font-black text-emerald-600 mt-2 tracking-tight">{kpiCounts.ongoing}</div>
-              </div>
+                    {/* Card Content */}
+                    <div className="relative z-10 flex flex-col justify-between">
+                      {/* Top / Center Area: Status Name & Big Centered KPI Count */}
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-white/85 uppercase tracking-wider font-sans">
+                          {card.label}
+                        </span>
+                        <div className="text-3xl sm:text-4xl font-black text-white font-display tracking-tight leading-none mt-1 flex items-baseline justify-center gap-1.5">
+                          <span>{card.count}</span>
+                          <span className="text-xs sm:text-sm font-semibold text-white/75 font-sans tracking-normal">
+                            {card.count === 1 ? 'Project' : 'Projects'}
+                          </span>
+                        </div>
+                      </div>
 
-              {/* Onhold Projects */}
-              <div 
-                onClick={() => setSelectedStatusFilter(selectedStatusFilter === 'Onhold' ? 'All' : 'Onhold')}
-                className={`p-4 rounded-xl border bg-white shadow-sm transition-all cursor-pointer text-center ${
-                  selectedStatusFilter === 'Onhold' ? 'ring-2 ring-amber-500 border-amber-300' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-xs font-bold text-amber-500">Onhold Projects</div>
-                <div className="text-3xl font-black text-amber-500 mt-2 tracking-tight">{kpiCounts.onhold}</div>
-              </div>
+                      {/* Bottom Row: Metadata (STAGE and CURRENT STATE / STATUS) */}
+                      <div className="flex items-end justify-between mt-2.5 pt-1.5 border-t border-white/20 text-white">
+                        <div>
+                          <span className="text-[7.5px] sm:text-[8px] font-bold text-white/60 uppercase tracking-widest block font-sans">
+                            STAGE
+                          </span>
+                          <span className="text-[10px] sm:text-[10.5px] font-bold text-white tracking-wide block mt-0.5">
+                            {card.stage}
+                          </span>
+                        </div>
 
-              {/* Completed Projects */}
-              <div 
-                onClick={() => setSelectedStatusFilter(selectedStatusFilter === 'Completed' ? 'All' : 'Completed')}
-                className={`p-4 rounded-xl border bg-white shadow-sm transition-all cursor-pointer text-center ${
-                  selectedStatusFilter === 'Completed' ? 'ring-2 ring-slate-800 border-slate-400' : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div className="text-xs font-bold text-slate-700">Completed Projects</div>
-                <div className="text-3xl font-black text-slate-800 mt-2 tracking-tight">{kpiCounts.completed}</div>
-              </div>
+                        <div className="text-right">
+                          <span className="text-[7.5px] sm:text-[8px] font-bold text-white/60 uppercase tracking-widest block font-sans">
+                            STATUS
+                          </span>
+                          <div className="text-[9.5px] sm:text-[10px] font-semibold text-white/95 flex items-center justify-end gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block shadow-2xs shrink-0" />
+                            <span className="truncate">{card.subtext}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
             </div>
 
-            {/* Project Health Chart Widget with Multiple Models & Underlying Sheet */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm">Project Health</h3>
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-wide">
-                    {healthChartType === 'gauge' ? 'Semi-Circle Gauge' : 
-                     healthChartType === 'donut' ? 'Donut Chart' :
-                     healthChartType === 'pie' ? 'Pie Chart' :
-                     healthChartType === 'bar' ? 'Bar Chart' :
-                     healthChartType === 'linear' ? 'Linear Stacked' : 'Speedometer'}
-                  </span>
-                </div>
+            {/* Mid-Row: Project Health & Last 7 Days Material Received */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Left: Project Health */}
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
+                      {healthStats.isSingle ? (
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 max-w-[180px] truncate" title={healthStats.projectName}>
+                          {healthStats.projectName}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                          All Projects ({healthStats.total})
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                      {healthStats.isSingle 
+                        ? 'Individual site operational stability & risk status' 
+                        : 'Real-time risk & operational stability across portfolio'}
+                    </p>
+                  </div>
 
-                <div className="flex items-center gap-2 text-slate-900 relative">
-                  {/* Chart Model Switcher Button & Dropdown */}
-                  <div className="relative" ref={healthChartMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowChartTypeDropdown(prev => !prev);
-                        setShowHealthMenuDropdown(false);
-                      }}
-                      className={`p-1.5 rounded-[5px] transition-colors cursor-pointer flex items-center gap-1 text-slate-900 hover:text-black hover:bg-slate-100 ${
-                        showChartTypeDropdown 
-                          ? 'bg-blue-50 text-blue-700 font-bold' 
-                          : ''
-                      }`}
-                      title="Switch Chart Model"
-                      aria-label="Switch Chart Model"
-                    >
-                      <BarChart2 className="w-4 h-4 text-slate-900" />
-                      <ChevronDown className="w-3 h-3 text-slate-900" />
-                    </button>
+                  <div className="flex items-center gap-2 text-slate-900 relative">
+                    {/* Three Dots Menu Button & Dropdown */}
+                    <div className="relative" ref={healthDotsMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowHealthMenuDropdown(prev => !prev)}
+                        className={`p-1.5 rounded-lg border border-slate-200/80 transition-colors cursor-pointer text-slate-700 hover:text-black hover:bg-slate-50 flex items-center justify-center ${
+                          showHealthMenuDropdown 
+                            ? 'bg-slate-100 text-black font-bold' 
+                            : 'bg-white'
+                        }`}
+                        title="More options"
+                        aria-label="More options"
+                      >
+                        <MoreVertical className="w-4 h-4 text-slate-700" />
+                      </button>
 
-                    {showChartTypeDropdown && (
-                      <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-[5px] shadow-xl border border-slate-200 py-1.5 z-40 animate-in fade-in select-none">
-                        <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                          Select Chart Model
-                        </div>
-                        {[
-                          { id: 'gauge', label: 'Semi-Circle Gauge (Default)', icon: '🔘' },
-                          { id: 'donut', label: 'Donut Chart', icon: '🍩' },
-                          { id: 'pie', label: 'Pie Chart', icon: '🥧' },
-                          { id: 'bar', label: 'Vertical Bar Chart', icon: '📊' },
-                          { id: 'linear', label: 'Linear Stacked Bar', icon: '📏' },
-                          { id: 'speedometer', label: 'Speedometer Dial', icon: '🧭' },
-                        ].map((m) => (
+                      {showHealthMenuDropdown && (
+                        <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40 animate-in fade-in select-none">
                           <button
-                            key={m.id}
                             type="button"
                             onClick={() => {
-                              setHealthChartType(m.id as ProjectHealthChartModel);
-                              setShowChartTypeDropdown(false);
-                              showToast(`Chart updated to ${m.label}`);
+                              setShowHealthMenuDropdown(false);
+                              setIsUnderlyingHealthPageView(true); // Opens dedicated Project Health Sheet Page!
                             }}
-                            className={`w-full px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer ${
-                              healthChartType === m.id ? 'font-bold text-blue-600 bg-blue-50/50' : 'text-slate-700'
-                            }`}
+                            className="w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
                           >
-                            <div className="flex items-center gap-2">
-                              <span>{m.icon}</span>
-                              <span>{m.label}</span>
-                            </div>
-                            {healthChartType === m.id && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <span>View Underlying Data</span>
                           </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Three Dots Menu Button & Dropdown */}
-                  <div className="relative" ref={healthDotsMenuRef}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowHealthMenuDropdown(prev => !prev);
-                        setShowChartTypeDropdown(false);
-                      }}
-                      className={`p-1.5 rounded-[5px] transition-colors cursor-pointer text-slate-900 hover:text-black hover:bg-slate-100 flex items-center justify-center ${
-                        showHealthMenuDropdown 
-                          ? 'bg-slate-100 text-black font-bold' 
-                          : ''
-                      }`}
-                      title="More options"
-                      aria-label="More options"
-                    >
-                      <MoreVertical className="w-4 h-4 text-slate-900" />
-                    </button>
-
-                    {showHealthMenuDropdown && (
-                      <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40 animate-in fade-in select-none">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowHealthMenuDropdown(false);
-                            setIsUnderlyingHealthPageView(true); // Opens dedicated Project Health Sheet Page!
-                          }}
-                          className="w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
-                        >
-                          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                          <span>View Underlying Data</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowHealthMenuDropdown(false);
-                            handleExportHealthExcel();
-                          }}
-                          className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
-                        >
-                          <Download className="w-4 h-4 text-slate-400" />
-                          <span>Export Health Sheet (.xlsx)</span>
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowHealthMenuDropdown(false);
+                              handleExportHealthExcel();
+                            }}
+                            className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
+                          >
+                            <Download className="w-4 h-4 text-slate-400" />
+                            <span>Export Health Sheet (.xlsx)</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex flex-col md:flex-row items-center justify-around py-4 gap-6 min-h-[160px]">
-                {/* 1. Semi-Circle Gauge (Default Model) */}
-                {healthChartType === 'gauge' && (
-                  <div className="relative w-72 h-36 flex items-end justify-center overflow-hidden animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-around py-1 gap-4 flex-1">
+                  {/* Semi-Circle Gauge (Single Permanent Model) */}
+                  <div className="relative w-64 sm:w-72 h-32 sm:h-36 flex items-end justify-center overflow-hidden animate-in fade-in duration-200">
                     <svg viewBox="0 0 200 100" className="w-full h-full">
+                      <defs>
+                        <linearGradient id="healthArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#3B82F6" />
+                          <stop offset="50%" stopColor="#06B6D4" />
+                          <stop offset="100%" stopColor="#10B981" />
+                        </linearGradient>
+                        <linearGradient id="riskArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#EF4444" />
+                          <stop offset="50%" stopColor="#F59E0B" />
+                          <stop offset="100%" stopColor="#DC2626" />
+                        </linearGradient>
+                        <filter id="gaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                          <feDropShadow 
+                            dx="0" 
+                            dy="4" 
+                            stdDeviation="5" 
+                            floodColor={healthStats.isAtRisk ? "#EF4444" : "#06B6D4"} 
+                            floodOpacity="0.3" 
+                          />
+                        </filter>
+                      </defs>
                       {/* Background Arc */}
                       <path
                         d="M 20 100 A 80 80 0 0 1 180 100"
                         fill="none"
-                        stroke="#E2E8F0"
-                        strokeWidth="32"
+                        stroke="#F1F5F9"
+                        strokeWidth="24"
+                        strokeLinecap="round"
                       />
-                      {/* Blue Active Fill Arc (100%) */}
+                      {/* Vibrant Gradient Active Arc (Dynamic % based on healthStats.percent) */}
                       <path
                         d="M 20 100 A 80 80 0 0 1 180 100"
                         fill="none"
-                        stroke="#6088F5"
-                        strokeWidth="32"
+                        stroke={healthStats.isAtRisk ? "url(#riskArcGrad)" : "url(#healthArcGrad)"}
+                        strokeWidth="24"
                         strokeLinecap="round"
+                        strokeDasharray="251.32"
+                        strokeDashoffset={251.32 - (251.32 * Math.max(0, Math.min(100, healthStats.percent))) / 100}
+                        filter="url(#gaugeGlow)"
+                        className="transition-all duration-700 ease-out"
                       />
                     </svg>
-                    <div className="absolute bottom-1 font-bold text-sm text-slate-700">
-                      100%
+                    <div className="absolute bottom-1 flex flex-col items-center justify-center pointer-events-none">
+                      <span className={`text-2xl sm:text-3xl font-black font-display tracking-tight leading-none ${
+                        healthStats.isAtRisk 
+                          ? 'bg-gradient-to-r from-red-600 via-amber-600 to-rose-600 bg-clip-text text-transparent' 
+                          : 'bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent'
+                      }`}>
+                        {healthStats.percent}%
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border mt-1 inline-flex items-center gap-1 shadow-2xs ${
+                        healthStats.isAtRisk
+                          ? 'text-rose-700 bg-rose-50 border-rose-200/80'
+                          : 'text-emerald-700 bg-emerald-50 border-emerald-200/80'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          healthStats.isAtRisk ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
+                        }`}></span>
+                        {healthStats.statusLabel}
+                      </span>
+                      {healthStats.isSingle && (
+                        <span className="text-[9px] font-medium text-slate-400 mt-0.5 max-w-[170px] truncate text-center">
+                          {healthStats.projectName}
+                        </span>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* 2. Donut Chart */}
-                {healthChartType === 'donut' && (
-                  <div className="relative w-40 h-40 flex items-center justify-center animate-in fade-in duration-200">
-                    <svg viewBox="0 0 160 160" className="w-full h-full -rotate-90">
-                      <circle cx="80" cy="80" r="54" fill="none" stroke="#F1F5F9" strokeWidth="22" />
-                      {/* Healthy: 5/6 = 83.33% */}
-                      <circle 
-                        cx="80" 
-                        cy="80" 
-                        r="54" 
-                        fill="none" 
-                        stroke="#6088F5" 
-                        strokeWidth="22" 
-                        strokeDasharray="282.7 339.3"
-                        strokeDashoffset="0"
-                        className="transition-all duration-500"
-                      />
-                      {/* At Risk: 1/6 = 16.67% */}
-                      <circle 
-                        cx="80" 
-                        cy="80" 
-                        r="54" 
-                        fill="none" 
-                        stroke="#F87171" 
-                        strokeWidth="22" 
-                        strokeDasharray="56.5 339.3"
-                        strokeDashoffset="-282.7"
-                        className="transition-all duration-500"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-xl font-black text-slate-900 leading-tight">6</span>
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Projects</span>
-                      <span className="text-[10px] font-bold text-emerald-600 mt-0.5">83.3% Healthy</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. Pie Chart */}
-                {healthChartType === 'pie' && (
-                  <div className="relative w-40 h-40 flex items-center justify-center animate-in fade-in duration-200">
-                    <svg viewBox="0 0 160 160" className="w-full h-full">
-                      {/* Healthy Wedge (83.3%): 300 degrees from 12 o'clock */}
-                      <path
-                        d="M 80,80 L 80,15 A 65,65 0 1,1 23.7,112.5 Z"
-                        fill="#6088F5"
-                        className="transition-all duration-300 hover:opacity-90"
-                      />
-                      {/* At Risk Wedge (16.7%): 60 degrees */}
-                      <path
-                        d="M 80,80 L 23.7,112.5 A 65,65 0 0,1 80,15 Z"
-                        fill="#F87171"
-                        className="transition-all duration-300 hover:opacity-90"
-                      />
-                    </svg>
-                    <div className="absolute bottom-0 text-[10px] font-bold text-slate-500 bg-white/80 px-2 py-0.5 rounded shadow-2xs">
-                      5 Healthy / 1 At Risk
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. Vertical Bar Chart */}
-                {healthChartType === 'bar' && (
-                  <div className="w-56 h-36 flex items-end justify-around gap-6 pb-2 border-b border-slate-200 px-4 animate-in fade-in duration-200">
-                    <div className="flex flex-col items-center gap-1 flex-1 h-full justify-end group">
-                      <span className="text-xs font-bold text-slate-700">5</span>
-                      <div 
-                        className="w-full max-w-[40px] bg-[#6088F5] rounded-t-lg transition-all duration-500 group-hover:bg-blue-600 shadow-sm"
-                        style={{ height: '83%' }}
-                      />
-                      <span className="text-[11px] font-semibold text-slate-600 mt-1 whitespace-nowrap">Healthy</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 flex-1 h-full justify-end group">
-                      <span className="text-xs font-bold text-red-500">1</span>
-                      <div 
-                        className="w-full max-w-[40px] bg-[#F87171] rounded-t-lg transition-all duration-500 group-hover:bg-red-500 shadow-sm"
-                        style={{ height: '17%' }}
-                      />
-                      <span className="text-[11px] font-semibold text-red-600 mt-1 whitespace-nowrap">At Risk</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. Linear Stacked Progress Bar */}
-                {healthChartType === 'linear' && (
-                  <div className="w-72 space-y-3 animate-in fade-in duration-200">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-700">Project Distribution</span>
-                      <span className="text-emerald-600 font-mono">83.3% Healthy</span>
-                    </div>
-                    <div className="h-6 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner border border-slate-200">
-                      <div 
-                        className="bg-[#6088F5] h-full transition-all duration-500 flex items-center justify-center text-[10px] font-bold text-white shadow-xs"
-                        style={{ width: '83.3%' }}
-                        title="Healthy: 5 Projects (83.3%)"
-                      >
-                        5 Healthy
-                      </div>
-                      <div 
-                        className="bg-[#F87171] h-full transition-all duration-500 flex items-center justify-center text-[10px] font-bold text-white shadow-xs"
-                        style={{ width: '16.7%' }}
-                        title="At Risk: 1 Project (16.7%)"
-                      >
-                        1
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 font-medium">
-                      <span>5 Stable Projects</span>
-                      <span>1 Delay Action</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. Speedometer Dial */}
-                {healthChartType === 'speedometer' && (
-                  <div className="relative w-64 h-36 flex flex-col items-center justify-end animate-in fade-in duration-200">
-                    <svg viewBox="0 0 200 110" className="w-full h-full">
-                      <path d="M 20 100 A 80 80 0 0 1 70 35" fill="none" stroke="#EF4444" strokeWidth="18" />
-                      <path d="M 70 35 A 80 80 0 0 1 130 35" fill="none" stroke="#FBBF24" strokeWidth="18" />
-                      <path d="M 130 35 A 80 80 0 0 1 180 100" fill="none" stroke="#10B981" strokeWidth="18" />
-                      {/* Needle pointing to ~83.3% */}
-                      <line 
-                        x1="100" 
-                        y1="100" 
-                        x2="152" 
-                        y2="46" 
-                        stroke="#1E293B" 
-                        strokeWidth="3.5" 
-                        strokeLinecap="round" 
-                      />
-                      <circle cx="100" cy="100" r="7" fill="#0F172A" />
-                    </svg>
-                    <div className="text-center -mt-3">
-                      <div className="text-sm font-black text-slate-900">83.3 / 100</div>
-                      <div className="text-[10px] font-semibold text-emerald-600">Optimal Operating Health</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Right Legend (Matches user screenshot) */}
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2 font-bold text-slate-700">
-                    <input type="checkbox" defaultChecked className="accent-blue-600 rounded" />
-                    <span>Project Health</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-6 pl-5 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded bg-[#6088F5]"></span>
-                      <span>- (Healthy)</span>
-                    </div>
-                    <span className="font-bold font-mono">{kpiCounts.healthyCount}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-6 pl-5 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded bg-red-400"></span>
-                      <span>At Risk</span>
-                    </div>
-                    <span className="font-bold font-mono text-red-500">{kpiCounts.atRiskCount}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Mid-Row: Last 7 Days Attendance & Last 7 Days Material Received (Matches Image 2!) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Left: Last 7 Days Attendance */}
-              <div 
-                className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4 relative"
-                onClick={() => setSelectedAttendanceBar(null)}
-              >
-                {/* Header: Clean title with Payroll and Workforce dropdowns and neatly aligned Reset button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3">
-                  <h3 className="font-bold text-slate-900 text-sm shrink-0 whitespace-nowrap">Last 7 Days Attendance</h3>
-                  
-                  {/* Dropdown Filters: Responsive, cleanly contained inside card */}
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <div className="w-32">
-                      <CustomSelect
-                        value={payrollType}
-                        onChange={(val) => setPayrollType(val)}
-                        options={[
-                          { label: 'All', value: 'All' },
-                          { label: 'Office Staff', value: 'Office Staff' },
-                          { label: 'Site Staff', value: 'Site Staff' },
-                        ]}
-                        prefix="Payroll: "
-                        size="sm"
-                        variant="brand"
-                      />
-                    </div>
-                    <div className="w-36">
-                      <CustomSelect
-                        value={workforceName}
-                        onChange={(val) => setWorkforceName(val)}
-                        options={[
-                          { label: 'All', value: 'All' },
-                          { label: 'Accounts', value: 'Accounts' },
-                          { label: 'Admin', value: 'Admin' },
-                          { label: 'Business Dev', value: 'Business Development' },
-                          { label: 'COO', value: 'Chief Operating Officer' },
-                          { label: 'Collection Exec', value: 'Collection Executive' },
-                          { label: 'Digital Mktg', value: 'Digital Marketing' },
-                          { label: 'Director', value: 'Director' },
-                          { label: 'Engineer', value: 'Engineer' },
-                        ]}
-                        prefix="Role: "
-                        size="sm"
-                        variant="brand"
-                        searchable={true}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPayrollType('All');
-                        setWorkforceName('All');
-                      }}
-                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-[11px] font-semibold rounded shadow-2xs cursor-pointer transition-colors shrink-0"
-                      title="Reset filters"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-
-                {/* Bar Chart Container */}
-                <div className="space-y-2 pt-2 select-none">
-                  <div className="flex items-stretch gap-2">
-                    {/* Y-Axis Label & Grid Scale */}
-                    <div className="flex items-center justify-center w-5">
-                      <span className="text-[10px] font-medium text-slate-400 -rotate-90 whitespace-nowrap select-none">
-                        No of Workers
+                  {/* Right Legend: Modern Colorful Breakdown Cards */}
+                  <div className="flex flex-col gap-2 w-full sm:w-52 min-w-[180px] text-xs">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                      <span>Distribution</span>
+                      <span className={`text-[9.5px] px-2 py-0.5 rounded-full border font-mono font-bold ${
+                        healthStats.isAtRisk 
+                          ? 'text-rose-600 bg-rose-50 border-rose-200/60' 
+                          : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
+                      }`}>
+                        {healthStats.isSingle ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
                       </span>
                     </div>
 
-                    {/* Chart Area */}
-                    <div className="flex-1 relative">
-                      {/* Y-Axis Gridlines */}
-                      <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-[10px] font-mono text-slate-400">
-                        <div className="border-b border-dashed border-slate-200 w-full flex items-center justify-between">
-                          <span className="-translate-y-2">{chartMaxWorkers > 15 ? 20 : chartMaxWorkers > 5 ? 10 : chartMaxWorkers > 0 ? chartMaxWorkers : 5}</span>
-                        </div>
-                        <div className="border-b border-dashed border-slate-100 w-full flex items-center justify-between">
-                          <span className="-translate-y-2">{chartMaxWorkers > 15 ? 10 : chartMaxWorkers > 5 ? 5 : Math.max(1, Math.round(chartMaxWorkers / 2))}</span>
-                        </div>
-                        <div className="border-b border-slate-300 w-full flex items-center justify-between">
-                          <span className="-translate-y-2">0</span>
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-blue-200/80 shadow-2xs group hover:border-blue-300 transition-all">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 shadow-xs"></div>
+                        <div>
+                          <span className="font-bold text-slate-800 text-xs block">Healthy Sites</span>
+                          <span className="text-[9.5px] text-slate-400 font-medium">On-schedule</span>
                         </div>
                       </div>
-
-                      {/* Bars */}
-                      <div 
-                        className="h-44 flex items-end justify-around gap-2 pb-1 relative z-10 pl-6 pr-2"
-                        onMouseLeave={() => {
-                          setHoveredAttendanceBar(null);
-                        }}
-                      >
-                        {attendanceData.map((d) => {
-                          const heightPercent = chartMaxWorkers > 0 ? Math.min(100, (d.count / chartMaxWorkers) * 100) : 0;
-                          const isSelected = selectedAttendanceBar === d.date;
-                          // White bubble ONLY shows on CLICK (when isSelected is true), NOT on hover!
-                          const showBubble = isSelected;
-
-                          return (
-                            <div 
-                              key={d.date} 
-                              className="flex-1 flex flex-col items-center justify-end h-full relative group cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Clicking the bar selects/pins the bubble; DOES NOT open the page
-                                setSelectedAttendanceBar(prev => prev === d.date ? null : d.date);
-                              }}
-                              onMouseEnter={(e) => {
-                                setHoveredAttendanceBar({
-                                  date: d.date,
-                                  fullDate: d.fullDate,
-                                  count: d.count,
-                                  present: d.present,
-                                  absent: d.absent,
-                                  otHours: d.otHours,
-                                  x: e.clientX,
-                                  y: e.clientY,
-                                });
-                              }}
-                              onMouseMove={(e) => {
-                                setHoveredAttendanceBar(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : {
-                                  date: d.date,
-                                  fullDate: d.fullDate,
-                                  count: d.count,
-                                  present: d.present,
-                                  absent: d.absent,
-                                  otHours: d.otHours,
-                                  x: e.clientX,
-                                  y: e.clientY,
-                                });
-                              }}
-                              onMouseLeave={() => {
-                                setHoveredAttendanceBar(null);
-                              }}
-                            >
-                              {/* "View Underlying Data" speech bubble: ONLY clicking this opens the underlying page */}
-                              {showBubble && (
-                                <div 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setHoveredAttendanceBar(null);
-                                    setSelectedAttendanceBar(null);
-                                    setSelectedModalDate(d.date);
-                                    setModalPayrollFilter(payrollType);
-                                    setModalWorkforceFilter(workforceName);
-                                    setIsUnderlyingPageView(true); // ONLY opens when user clicks "View Underlying Data"
-                                  }}
-                                  className="absolute -top-11 z-30 pb-2 flex flex-col items-center cursor-pointer animate-in fade-in zoom-in-95 duration-100"
-                                  title="Click to view underlying employee attendance data page"
-                                >
-                                  <div className="bg-white border-[1.5px] border-[#388E3C] hover:bg-[#388E3C] text-slate-800 hover:text-white px-2.5 py-1 rounded-md text-[11px] font-semibold shadow-md whitespace-nowrap transition-all flex items-center gap-1.5">
-                                    <span>View Underlying Data</span>
-                                  </div>
-                                  {/* Pointer arrow pointing down to bar */}
-                                  <div className="w-2.5 h-2.5 bg-white border-b-[1.5px] border-r-[1.5px] border-[#388E3C] rotate-45 -mt-1 shadow-2xs pointer-events-none"></div>
-                                </div>
-                              )}
-
-                              {/* Workers count number */}
-                              <span className="text-[10px] font-bold font-mono text-slate-600 group-hover:text-emerald-600 transition-colors mb-1">
-                                {d.count.toFixed(2)}
-                              </span>
-
-                              {/* The Green Bar */}
-                              <div 
-                                className={`w-full max-w-[34px] rounded-t transition-all shadow-xs ${
-                                  isSelected 
-                                    ? 'bg-[#388E3C] ring-2 ring-emerald-400 ring-offset-1 scale-102' 
-                                    : 'bg-[#4CAF50] hover:bg-[#43A047] group-hover:scale-105'
-                                }`}
-                                style={{ height: `${heightPercent}%` }}
-                              ></div>
-
-                              {/* X-axis Date label rotated -45 deg */}
-                              <span className={`text-[9px] font-mono mt-2 truncate max-w-[44px] -rotate-45 origin-left transition-colors ${
-                                isSelected ? 'text-emerald-700 font-bold' : 'text-slate-500 group-hover:text-slate-800'
-                              }`}>
-                                {d.date}..
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <span className="font-black font-display text-sm text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-100 shadow-2xs">
+                        {healthStats.healthyCount}
+                      </span>
                     </div>
-                  </div>
 
-                  <div className="text-center text-[10px] text-slate-400 font-semibold pt-4">
-                    Attendance date
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-50/80 via-white to-red-50/40 border border-rose-200/80 shadow-2xs group hover:border-rose-300 transition-all">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs"></div>
+                        <div>
+                          <span className="font-bold text-slate-800 text-xs block">At Risk</span>
+                          <span className="text-[9.5px] text-slate-400 font-medium">Action alert</span>
+                        </div>
+                      </div>
+                      <span className="font-black font-display text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-100 shadow-2xs">
+                        {healthStats.atRiskCount}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Right: Last 7 Days Material Received */}
-              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4 flex flex-col">
+              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <h3 className="font-bold text-slate-900 text-sm">Last 7 Days Material Received</h3>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs">
+                      <PackageCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm font-display">Last 7 Days Material Received</h3>
+                      <p className="text-[10px] text-slate-400 font-medium">Inbound GRN receipts & gate verification</p>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-2 text-xs">
-                    <div className="w-32">
+                    <div className="w-28 sm:w-32">
                       <CustomSelect
                         value={materialName}
                         onChange={(val) => setMaterialName(val)}
@@ -2170,7 +2029,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         variant="brand"
                       />
                     </div>
-                    <div className="w-32">
+                    <div className="w-28 sm:w-32">
                       <CustomSelect
                         value={materialCategory}
                         onChange={(val) => setMaterialCategory(val)}
@@ -2187,38 +2046,50 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   </div>
                 </div>
 
-                {/* Display Body (Matches "No Data Available" from screenshot with toggle for verified deliveries) */}
-                <div className="flex-1 flex flex-col items-center justify-center min-h-[190px]">
+                {/* Display Body: Modern state */}
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[160px]">
                   {!showMaterialData ? (
-                    <div className="text-center space-y-2">
-                      <div className="text-red-500 font-bold text-base">
-                        No Data Available
+                    <div className="text-center py-2 space-y-2.5">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 flex items-center justify-center mx-auto ring-4 ring-amber-50 shadow-2xs">
+                        <PackageCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-slate-800 font-bold text-sm font-display">No Pending Gate Deliveries</div>
+                        <p className="text-xs text-slate-500 max-w-xs mx-auto mt-0.5">
+                          All incoming site shipments are verified and logged in store inventory.
+                        </p>
                       </div>
                       <button 
                         onClick={() => setShowMaterialData(true)}
-                        className="text-[11px] text-brand hover:underline font-semibold"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
                       >
-                        View Verified Gate Deliveries (3)
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>View Verified Gate Deliveries (3)</span>
                       </button>
                     </div>
                   ) : (
                     <div className="w-full space-y-2">
                       <div className="flex items-center justify-between text-xs pb-1">
-                        <span className="font-bold text-slate-700">Recent Gate GRN Receipts</span>
-                        <button onClick={() => setShowMaterialData(false)} className="text-[10px] text-slate-400 hover:text-slate-600">Clear</button>
+                        <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Recent Gate GRN Receipts</span>
+                        </span>
+                        <button onClick={() => setShowMaterialData(false)} className="text-[11px] text-slate-400 hover:text-slate-700 font-semibold cursor-pointer">
+                          Minimize
+                        </button>
                       </div>
-                      <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg text-xs">
-                        <div className="p-2 flex justify-between">
-                          <span>16mm TMT Steel (Tata Tiscon)</span>
-                          <span className="font-bold font-mono text-emerald-700">25.0 MT</span>
+                      <div className="divide-y divide-slate-100 border border-slate-200/90 rounded-xl overflow-hidden text-xs shadow-2xs">
+                        <div className="p-2.5 flex justify-between items-center bg-slate-50/50">
+                          <span className="font-medium text-slate-800">16mm TMT Steel (Tata Tiscon)</span>
+                          <span className="font-bold font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200/80">25.0 MT</span>
                         </div>
-                        <div className="p-2 flex justify-between">
-                          <span>Ready Mix Concrete M40</span>
-                          <span className="font-bold font-mono text-emerald-700">100 CUM</span>
+                        <div className="p-2.5 flex justify-between items-center bg-white">
+                          <span className="font-medium text-slate-800">Ready Mix Concrete M40</span>
+                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200/80">100 CUM</span>
                         </div>
-                        <div className="p-2 flex justify-between">
-                          <span>PPC 53 Grade Cement</span>
-                          <span className="font-bold font-mono text-emerald-700">140 Bags</span>
+                        <div className="p-2.5 flex justify-between items-center bg-slate-50/50">
+                          <span className="font-medium text-slate-800">PPC 53 Grade Cement</span>
+                          <span className="font-bold font-mono text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">140 Bags</span>
                         </div>
                       </div>
                     </div>
@@ -2365,7 +2236,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     onChange={(val) => setFinProjectFilter(val)}
                     options={[
                       { label: 'All Projects', value: 'All' },
-                      ...(projects || []).map(p => ({ label: formatProjectTitle(p), value: p.name || p.id }))
+                      ...summaryProjects.map(p => ({ label: p.name, value: p.name }))
                     ]}
                     triggerClassName="py-1.5 px-3 rounded-xl font-semibold shadow-xs"
                   />
@@ -2469,82 +2340,25 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* ROW 1: Sales, Expense & Margin (Matching Screenshot 1) */}
+            {/* ROW 1: Sales, Expense & Margin (All Unified to Trend Line per User Request) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {/* Sales Chart Card */}
+              {/* 1. Sales Chart Card */}
               <div className="bg-white rounded-[5px] border border-slate-200 shadow-xs p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2.5">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-slate-900">Sales</h3>
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-[5px] border border-emerald-100 uppercase tracking-wide">
-                        {salesChartType === 'bar' ? 'Vertical Bar' :
-                         salesChartType === 'area' ? 'Spline Area' :
-                         salesChartType === 'line' ? 'Trend Line' : 'Horizontal Bar'}
+                        Trend Line
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1 text-slate-900 relative">
-                      {/* 1. Chart Model Switcher Button & Dropdown */}
-                      <div className="relative" ref={salesChartMenuRef}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowSalesChartDropdown(prev => !prev);
-                            setShowSalesMoreMenu(false);
-                          }}
-                          className={`p-1.5 rounded-[5px] transition-colors cursor-pointer flex items-center gap-0.5 text-slate-900 hover:text-black hover:bg-slate-100 ${
-                            showSalesChartDropdown ? 'bg-emerald-50 text-emerald-700 font-bold' : ''
-                          }`}
-                          title="Switch Sales Chart Model"
-                          aria-label="Switch Sales Chart Model"
-                        >
-                          <BarChart2 className="w-4 h-4 text-slate-900" />
-                          <ChevronDown className="w-3 h-3 text-slate-900" />
-                        </button>
-
-                        {showSalesChartDropdown && (
-                          <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-[5px] shadow-2xl border border-slate-200 py-1.5 z-40 animate-in fade-in select-none">
-                            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                              Select Chart Model
-                            </div>
-                            {[
-                              { id: 'bar', label: 'Vertical Bar Chart', icon: '📊' },
-                              { id: 'area', label: 'Spline Area Chart', icon: '📈' },
-                              { id: 'line', label: 'Trend Line Chart', icon: '📉' },
-                              { id: 'horizontal', label: 'Horizontal Bar Chart', icon: '📑' },
-                            ].map((m) => (
-                              <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => {
-                                  setSalesChartType(m.id as SalesChartModel);
-                                  setShowSalesChartDropdown(false);
-                                  showToast(`Sales chart updated to ${m.label}`);
-                                }}
-                                className={`w-full px-3 py-2 text-xs flex items-center justify-between hover:bg-slate-50 transition-colors text-left cursor-pointer ${
-                                  salesChartType === m.id ? 'font-bold text-emerald-700 bg-emerald-50/50' : 'text-slate-700'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>{m.icon}</span>
-                                  <span>{m.label}</span>
-                                </div>
-                                {salesChartType === m.id && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 2. More Options (Three Dots) Button & Dropdown */}
+                      {/* More Options (Three Dots) Button & Dropdown */}
                       <div className="relative" ref={salesDotsMenuRef}>
                         <button
                           type="button"
-                          onClick={() => {
-                            setShowSalesMoreMenu(prev => !prev);
-                            setShowSalesChartDropdown(false);
-                          }}
+                          onClick={() => setShowSalesMoreMenu(prev => !prev)}
                           className={`p-1.5 rounded-[5px] transition-colors cursor-pointer flex items-center justify-center text-slate-900 hover:text-black hover:bg-slate-100 ${
                             showSalesMoreMenu ? 'bg-slate-100 text-black font-bold' : ''
                           }`}
@@ -2587,148 +2401,40 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     </div>
                   </div>
 
-                  {/* 1. Bar Chart View */}
-                  {salesChartType === 'bar' && (
-                    <div className="h-44 flex items-end justify-between gap-2 pt-6 pb-2 border-b border-slate-100">
-                      {finMonthlyData.map((d) => {
-                        const maxSales = 5.0;
-                        const heightPercent = Math.min(100, Math.max(15, (d.sales / maxSales) * 100));
-                        return (
-                          <div key={d.month} className="flex-1 flex flex-col items-center gap-1 group">
-                            <span className="text-[10px] font-bold text-emerald-700 opacity-90 group-hover:scale-110 transition-transform">
-                              {d.sales.toFixed(2)}M
-                            </span>
-                            <div className="w-full max-w-[28px] h-32 bg-slate-50 flex items-end rounded-t-md overflow-hidden">
-                              <div
-                                className="w-full bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-md transition-all duration-500 group-hover:brightness-110 shadow-xs"
-                                style={{ height: `${heightPercent}%` }}
-                              />
-                            </div>
-                            <div className="flex flex-col items-center mt-2 select-none">
-                              <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
-                              <span className="text-[8px] font-medium text-slate-400 leading-tight">{d.month.split(' ')[1]}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* 2. Spline Area Chart View */}
-                  {salesChartType === 'area' && (
-                    <div className="h-44 pt-4 pb-2 border-b border-slate-100 flex flex-col justify-between">
-                      <div className="h-32 w-full relative">
-                        <svg className="w-full h-full overflow-visible" viewBox="0 0 280 100" preserveAspectRatio="none">
-                          <defs>
-                            <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#059669" stopOpacity="0.4" />
-                              <stop offset="100%" stopColor="#059669" stopOpacity="0.0" />
-                            </linearGradient>
-                          </defs>
-                          <polygon
-                            fill="url(#salesGrad)"
-                            points="0,100 0,45 46,12 92,18 138,58 184,38 230,32 276,12 276,100"
-                          />
-                          <polyline
-                            fill="none"
-                            stroke="#059669"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points="0,45 46,12 92,18 138,58 184,38 230,32 276,12"
-                          />
-                          {[
-                            { x: 0, y: 45, val: 2.75 },
-                            { x: 46, y: 12, val: 4.37 },
-                            { x: 92, y: 18, val: 4.12 },
-                            { x: 138, y: 58, val: 2.12 },
-                            { x: 184, y: 38, val: 3.11 },
-                            { x: 230, y: 32, val: 3.39 },
-                            { x: 276, y: 12, val: 4.38 },
-                          ].map((pt, idx) => (
-                            <circle key={idx} cx={pt.x} cy={pt.y} r="4" fill="#ffffff" stroke="#059669" strokeWidth="2.5" />
-                          ))}
-                        </svg>
-                      </div>
-                      <div className="flex items-center justify-between text-center select-none pt-1">
-                        {finMonthlyData.map((d) => (
-                          <div key={d.month} className="flex-1 flex flex-col items-center">
-                            <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
-                            <span className="text-[8px] font-medium text-slate-400 leading-tight">{d.month.split(' ')[1]}</span>
-                          </div>
+                  {/* Trend Line Chart View */}
+                  <div className="h-44 pt-4 pb-2 border-b border-slate-100 flex flex-col justify-between">
+                    <div className="h-32 w-full relative">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 280 100" preserveAspectRatio="none">
+                        <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="80" x2="280" y2="80" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <polyline
+                          fill="none"
+                          stroke="#059669"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={salesPointsStr}
+                        />
+                        {salesChartPoints.map((pt, idx) => (
+                          <g key={idx}>
+                            <circle cx={pt.x} cy={pt.y} r="4" fill="#059669" stroke="#ffffff" strokeWidth="1.5" />
+                            <text x={pt.x} y={pt.y - 8} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#047857">
+                              {pt.val.toFixed(2)}M
+                            </text>
+                          </g>
                         ))}
-                      </div>
+                      </svg>
                     </div>
-                  )}
-
-                  {/* 3. Trend Line Chart View */}
-                  {salesChartType === 'line' && (
-                    <div className="h-44 pt-4 pb-2 border-b border-slate-100 flex flex-col justify-between">
-                      <div className="h-32 w-full relative">
-                        <svg className="w-full h-full overflow-visible" viewBox="0 0 280 100" preserveAspectRatio="none">
-                          <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" strokeDasharray="3 3" />
-                          <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" strokeDasharray="3 3" />
-                          <line x1="0" y1="80" x2="280" y2="80" stroke="#f1f5f9" strokeDasharray="3 3" />
-                          <polyline
-                            fill="none"
-                            stroke="#059669"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points="0,45 46,12 92,18 138,58 184,38 230,32 276,12"
-                          />
-                          {[
-                            { x: 0, y: 45, val: 2.75 },
-                            { x: 46, y: 12, val: 4.37 },
-                            { x: 92, y: 18, val: 4.12 },
-                            { x: 138, y: 58, val: 2.12 },
-                            { x: 184, y: 38, val: 3.11 },
-                            { x: 230, y: 32, val: 3.39 },
-                            { x: 276, y: 12, val: 4.38 },
-                          ].map((pt, idx) => (
-                            <g key={idx}>
-                              <circle cx={pt.x} cy={pt.y} r="4" fill="#059669" stroke="#ffffff" strokeWidth="1.5" />
-                              <text x={pt.x} y={pt.y - 8} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#047857">
-                                {pt.val}M
-                              </text>
-                            </g>
-                          ))}
-                        </svg>
-                      </div>
-                      <div className="flex items-center justify-between text-center select-none pt-1">
-                        {finMonthlyData.map((d) => (
-                          <div key={d.month} className="flex-1 flex flex-col items-center">
-                            <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
-                            <span className="text-[8px] font-medium text-slate-400 leading-tight">{d.month.split(' ')[1]}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="flex items-center justify-between text-center select-none pt-1">
+                      {finMonthlyData.map((d) => (
+                        <div key={d.month} className="flex-1 flex flex-col items-center">
+                          <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
+                          <span className="text-[8px] font-medium text-slate-400 leading-tight mt-0.5">{d.month.split(' ')[1]}</span>
+                        </div>
+                      ))}
                     </div>
-                  )}
-
-                  {/* 4. Horizontal Bar Chart View */}
-                  {salesChartType === 'horizontal' && (
-                    <div className="h-44 overflow-y-auto space-y-1.5 pr-1 pt-1 border-b border-slate-100">
-                      {finMonthlyData.map((d) => {
-                        const maxSales = 5.0;
-                        const widthPct = Math.min(100, Math.max(10, (d.sales / maxSales) * 100));
-                        return (
-                          <div key={d.month} className="flex items-center gap-2 text-xs">
-                            <span className="w-12 text-[10px] font-bold text-slate-600 truncate">{d.month.split(' ')[0]}</span>
-                            <div className="flex-1 h-3.5 bg-slate-100 rounded-[3px] overflow-hidden flex items-center">
-                              <div
-                                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-[3px] transition-all"
-                                style={{ width: `${widthPct}%` }}
-                              />
-                            </div>
-                            <span className="w-10 text-[10px] font-bold text-emerald-700 text-right font-mono">
-                              {d.sales.toFixed(2)}M
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Total Sales Banner Card */}
@@ -2740,41 +2446,102 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Expense Chart Card */}
+              {/* 2. Expense Chart Card */}
               <div className="bg-white rounded-[5px] border border-slate-200 shadow-xs p-5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-slate-900">Expense</h3>
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">Expense</h3>
+                      <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-[5px] border border-rose-100 uppercase tracking-wide">
+                        Trend Line
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-slate-900 relative">
+                      <div className="relative" ref={expenseDotsMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setShowExpenseMoreMenu(prev => !prev)}
+                          className={`p-1.5 rounded-[5px] transition-colors cursor-pointer flex items-center justify-center text-slate-900 hover:text-black hover:bg-slate-100 ${
+                            showExpenseMoreMenu ? 'bg-slate-100 text-black font-bold' : ''
+                          }`}
+                          title="More Options"
+                          aria-label="More Options"
+                        >
+                          <MoreVertical className="w-4 h-4 text-slate-900" />
+                        </button>
+
+                        {showExpenseMoreMenu && (
+                          <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-[5px] shadow-2xl border border-slate-200 py-1.5 z-40 animate-in fade-in select-none">
+                            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                              Expense Options
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowExpenseMoreMenu(false);
+                                handleExportExcel();
+                              }}
+                              className="w-full px-3 py-2 text-xs flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Export Expense Data</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowExpenseMoreMenu(false);
+                                handleExportPDF();
+                              }}
+                              className="w-full px-3 py-2 text-xs flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Download PDF Report</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* SVG Bar Chart */}
-                  <div className="h-44 flex items-end justify-between gap-2 pt-6 pb-2 border-b border-slate-100">
-                    {finMonthlyData.map((d) => {
-                      const maxExp = 5.0;
-                      const heightPercent = Math.min(100, Math.max(15, (d.expense / maxExp) * 100));
-                      return (
-                        <div key={d.month} className="flex-1 flex flex-col items-center gap-1 group">
-                          <span className="text-[10px] font-bold text-rose-600 opacity-90 group-hover:scale-110 transition-transform">
-                            {d.expense.toFixed(2)}M
-                          </span>
-                          <div className="w-full max-w-[28px] h-32 bg-slate-50 flex items-end rounded-t-md overflow-hidden">
-                            <div
-                              className="w-full bg-gradient-to-t from-rose-500 to-pink-500 rounded-t-md transition-all duration-500 group-hover:brightness-110 shadow-xs"
-                              style={{ height: `${heightPercent}%` }}
-                            />
-                          </div>
-                          <div className="flex flex-col items-center mt-2 select-none">
-                            <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
-                            <span className="text-[8px] font-medium text-slate-400 leading-tight">{d.month.split(' ')[1]}</span>
-                          </div>
+                  {/* Expense Trend Line Chart */}
+                  <div className="h-44 pt-4 pb-2 border-b border-slate-100 flex flex-col justify-between">
+                    <div className="h-32 w-full relative">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 280 100" preserveAspectRatio="none">
+                        <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="80" x2="280" y2="80" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <polyline
+                          fill="none"
+                          stroke="#e11d48"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={expensePointsStr}
+                        />
+                        {expenseChartPoints.map((pt, idx) => (
+                          <g key={idx}>
+                            <circle cx={pt.x} cy={pt.y} r="4" fill="#e11d48" stroke="#ffffff" strokeWidth="1.5" />
+                            <text x={pt.x} y={pt.y - 8} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#be123c">
+                              {pt.val.toFixed(2)}M
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+                    </div>
+                    <div className="flex items-center justify-between text-center select-none pt-1">
+                      {finMonthlyData.map((d) => (
+                        <div key={d.month} className="flex-1 flex flex-col items-center">
+                          <span className="text-[10px] font-bold text-slate-700 leading-none">{d.month.split(' ')[0]}</span>
+                          <span className="text-[8px] font-medium text-slate-400 leading-tight mt-0.5">{d.month.split(' ')[1]}</span>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 {/* Total Expense Banner Card */}
-                <div className="mt-7 p-3 bg-rose-50/80 rounded-[5px] border border-rose-200/70 text-center">
+                <div className="mt-5 p-3 bg-rose-50/80 rounded-[5px] border border-rose-200/70 text-center">
                   <div className="text-[11px] font-bold text-rose-800">Total Expense</div>
                   <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5">
                     {(finMonthlyData.reduce((s, d) => s + d.expense, 0)).toFixed(2)}M
@@ -2782,59 +2549,89 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* Margin Chart Card */}
+              {/* 3. Margin Chart Card */}
               <div className="bg-white rounded-[5px] border border-slate-200 shadow-xs p-5 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-slate-900">Margin</h3>
-                  </div>
-
-                  {/* Bi-directional Bar Chart with 0 baseline */}
-                  <div className="h-44 flex flex-col justify-between pt-3 pb-2 border-b border-slate-100">
-                    {/* Plot area with zero center line */}
-                    <div className="relative h-32 flex items-center justify-between gap-2">
-                      <div className="absolute left-0 right-0 top-1/2 h-px bg-slate-300 border-t border-dashed border-slate-400 pointer-events-none z-0" />
-                      {finMonthlyData.map((d) => {
-                        const isNeg = d.margin < 0;
-                        const absMargin = Math.abs(d.margin);
-                        const barHeightPx = Math.min(42, Math.max(8, (absMargin / 2.0) * 42));
-                        return (
-                          <div key={d.month} className="flex-1 flex flex-col h-full items-center justify-center relative group z-10">
-                            {/* Top Half: Positive Margin Bar & Label */}
-                            <div className="w-full max-w-[24px] h-1/2 flex flex-col justify-end items-center">
-                              {!isNeg && (
-                                <>
-                                  <span className="text-[9px] font-bold text-emerald-700 mb-0.5 leading-none shrink-0 group-hover:scale-110 transition-transform">
-                                    {d.margin.toFixed(2)}M
-                                  </span>
-                                  <div
-                                    className="w-full bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-sm shadow-xs transition-all duration-300"
-                                    style={{ height: `${barHeightPx}px` }}
-                                  />
-                                </>
-                              )}
-                            </div>
-
-                            {/* Bottom Half: Negative Margin Bar & Label */}
-                            <div className="w-full max-w-[24px] h-1/2 flex flex-col justify-start items-center">
-                              {isNeg && (
-                                <>
-                                  <div
-                                    className="w-full bg-gradient-to-b from-rose-500 to-pink-600 rounded-b-sm shadow-xs transition-all duration-300"
-                                    style={{ height: `${barHeightPx}px` }}
-                                  />
-                                  <span className="text-[9px] font-bold text-rose-600 mt-1 leading-none shrink-0 group-hover:scale-110 transition-transform">
-                                    {d.margin.toFixed(2)}M
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                  <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900">Margin</h3>
+                      <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-[5px] border border-teal-100 uppercase tracking-wide">
+                        Trend Line
+                      </span>
                     </div>
 
-                    {/* Month Labels Row (Completely separated from the plot area to prevent overlap) */}
+                    <div className="flex items-center gap-1 text-slate-900 relative">
+                      <div className="relative" ref={marginDotsMenuRef}>
+                        <button
+                          type="button"
+                          onClick={() => setShowMarginMoreMenu(prev => !prev)}
+                          className={`p-1.5 rounded-[5px] transition-colors cursor-pointer flex items-center justify-center text-slate-900 hover:text-black hover:bg-slate-100 ${
+                            showMarginMoreMenu ? 'bg-slate-100 text-black font-bold' : ''
+                          }`}
+                          title="More Options"
+                          aria-label="More Options"
+                        >
+                          <MoreVertical className="w-4 h-4 text-slate-900" />
+                        </button>
+
+                        {showMarginMoreMenu && (
+                          <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-[5px] shadow-2xl border border-slate-200 py-1.5 z-40 animate-in fade-in select-none">
+                            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                              Margin Options
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowMarginMoreMenu(false);
+                                handleExportExcel();
+                              }}
+                              className="w-full px-3 py-2 text-xs flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Export Margin Data</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowMarginMoreMenu(false);
+                                handleExportPDF();
+                              }}
+                              className="w-full px-3 py-2 text-xs flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Download PDF Report</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Margin Trend Line Chart */}
+                  <div className="h-44 pt-4 pb-2 border-b border-slate-100 flex flex-col justify-between">
+                    <div className="h-32 w-full relative">
+                      <svg className="w-full h-full overflow-visible" viewBox="0 0 280 100" preserveAspectRatio="none">
+                        <line x1="0" y1="20" x2="280" y2="20" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="50" x2="280" y2="50" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <line x1="0" y1="80" x2="280" y2="80" stroke="#f1f5f9" strokeDasharray="3 3" />
+                        <polyline
+                          fill="none"
+                          stroke="#0d9488"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={marginPointsStr}
+                        />
+                        {marginChartPoints.map((pt, idx) => (
+                          <g key={idx}>
+                            <circle cx={pt.x} cy={pt.y} r="4" fill="#0d9488" stroke="#ffffff" strokeWidth="1.5" />
+                            <text x={pt.x} y={pt.y - 8} textAnchor="middle" fontSize="9" fontWeight="bold" fill="#0f766e">
+                              {pt.val.toFixed(2)}M
+                            </text>
+                          </g>
+                        ))}
+                      </svg>
+                    </div>
                     <div className="flex items-center justify-between text-center select-none pt-1">
                       {finMonthlyData.map((d) => (
                         <div key={d.month} className="flex-1 flex flex-col items-center">
@@ -2847,9 +2644,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
 
                 {/* Total Margin Banner Card */}
-                <div className="mt-7 p-3 bg-slate-50 rounded-[5px] border border-slate-200 text-center">
-                  <div className="text-[11px] font-bold text-slate-600">Total Margin</div>
-                  <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                <div className="mt-5 p-3 bg-teal-50/80 rounded-[5px] border border-teal-200/70 text-center">
+                  <div className="text-[11px] font-bold text-teal-800">Total Margin</div>
+                  <div className="text-2xl font-black text-teal-700 tracking-tight mt-0.5">
                     {(finMonthlyData.reduce((s, d) => s + d.margin, 0)).toFixed(2)}M
                   </div>
                 </div>
@@ -2890,9 +2687,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   {/* Dual Bar Chart with Concrete Tracks */}
                   <div className="h-44 flex items-end justify-between gap-2 pt-6 pb-2 border-b border-slate-100">
                     {finMonthlyData.map((d) => {
-                      const maxPay = 8.5;
-                      const inHeight = Math.min(100, Math.max(12, (d.payIn / maxPay) * 100));
-                      const outHeight = Math.min(100, Math.max(12, (d.payOut / maxPay) * 100));
+                      const maxPay = Math.max(...finMonthlyData.map(m => Math.max(m.payIn, m.payOut)), 1);
+                      const inHeight = d.payIn > 0 ? Math.min(100, Math.max(12, (d.payIn / maxPay) * 100)) : 0;
+                      const outHeight = d.payOut > 0 ? Math.min(100, Math.max(12, (d.payOut / maxPay) * 100)) : 0;
                       return (
                         <div key={d.month} className="flex-1 flex flex-col items-center group">
                           {/* Dual bar container with concrete height */}
@@ -2900,7 +2697,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             {showPaymentIn && (
                               <div className="flex-1 max-w-[14px] h-full flex flex-col justify-end items-center group/in">
                                 <span className="text-[8px] font-bold text-emerald-700 mb-1 opacity-90 group-hover/in:scale-110 transition-transform">
-                                  {d.payIn.toFixed(1)}M
+                                  {d.payIn > 0 ? `${d.payIn.toFixed(1)}M` : '-'}
                                 </span>
                                 <div
                                   className="w-full bg-gradient-to-t from-emerald-600 to-teal-500 rounded-t-[3px] shadow-xs transition-all duration-500 hover:brightness-110"
@@ -2911,7 +2708,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             {showPaymentOut && (
                               <div className="flex-1 max-w-[14px] h-full flex flex-col justify-end items-center group/out">
                                 <span className="text-[8px] font-bold text-rose-600 mb-1 opacity-90 group-hover/out:scale-110 transition-transform">
-                                  {d.payOut.toFixed(1)}M
+                                  {d.payOut > 0 ? `${d.payOut.toFixed(1)}M` : '-'}
                                 </span>
                                 <div
                                   className="w-full bg-gradient-to-t from-rose-500 to-pink-500 rounded-t-[3px] shadow-xs transition-all duration-500 hover:brightness-110"
@@ -2944,34 +2741,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                       {/* Background circle */}
                       <circle cx="18" cy="18" r="14" fill="none" stroke="#F1F5F9" strokeWidth="6" />
-                      {/* Subcon 43.2% */}
-                      {showSubconExp && (
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" strokeWidth="6"
-                          strokeDasharray="38 100" strokeDashoffset="0" className="transition-all hover:stroke-[7]" />
-                      )}
-                      {/* Other Exp 40.7% */}
-                      {showOtherExp && (
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#14B8A6" strokeWidth="6"
-                          strokeDasharray="36 100" strokeDashoffset="-38" className="transition-all hover:stroke-[7]" />
-                      )}
-                      {/* Salary 15.9% */}
-                      {showSalaryExp && (
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#F43F5E" strokeWidth="6"
-                          strokeDasharray="14 100" strokeDashoffset="-74" className="transition-all hover:stroke-[7]" />
-                      )}
-                      {/* Site Exp 0.2% */}
-                      {showSiteExp && (
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" strokeWidth="6"
-                          strokeDasharray="2 100" strokeDashoffset="-88" className="transition-all hover:stroke-[7]" />
-                      )}
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center text-center">
                       <span className="text-[11px] font-bold text-slate-400 uppercase">Total</span>
-                      <span className="text-base font-black text-slate-900 leading-none mt-0.5">21.38M</span>
+                      <span className="text-base font-black text-slate-900 leading-none mt-0.5">0.00</span>
                     </div>
                   </div>
 
-                  {/* Legend breakdown list matching Screenshot 2 */}
+                  {/* Legend breakdown list */}
                   <div className="flex-1 space-y-2 text-xs w-full">
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
                       <div className="flex items-center gap-2">
@@ -2979,7 +2756,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
                         <span className="font-semibold text-slate-700">Subcon Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">9,246,100.00</span>
+                      <span className="font-mono font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -2988,7 +2765,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-teal-500"></span>
                         <span className="font-semibold text-slate-700">Other Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">8,704,027.27</span>
+                      <span className="font-mono font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -2997,7 +2774,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>
                         <span className="font-semibold text-slate-700">Salary Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">3,389,126.53</span>
+                      <span className="font-mono font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -3006,7 +2783,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-amber-500"></span>
                         <span className="font-semibold text-slate-700">Site Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">38,052.00</span>
+                      <span className="font-mono font-bold text-slate-900">0.00</span>
                     </label>
                   </div>
                 </div>
@@ -3024,33 +2801,17 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 <div className="w-52 h-44 flex items-center justify-center shrink-0">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="14" fill="none" stroke="#F1F5F9" strokeWidth="5.5" />
-                    {showToPay && (
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#3B82F6" strokeWidth="5.5"
-                        strokeDasharray="50 100" strokeDashoffset="0" />
-                    )}
-                    {showToReceive && (
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#2DD4BF" strokeWidth="5.5"
-                        strokeDasharray="20 100" strokeDashoffset="-50" />
-                    )}
-                    {showAdvancePaid && (
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#FB7185" strokeWidth="5.5"
-                        strokeDasharray="18 100" strokeDashoffset="-70" />
-                    )}
-                    {showAdvanceReceived && (
-                      <circle cx="18" cy="18" r="14" fill="none" stroke="#FBBF24" strokeWidth="5.5"
-                        strokeDasharray="4 100" strokeDashoffset="-88" />
-                    )}
                   </svg>
                 </div>
 
-                {/* Legend Checklist with exact numbers from Screenshot 2 */}
+                {/* Legend Checklist */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 text-xs w-full">
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                       <span className="font-semibold text-slate-700">To Pay</span>
                     </div>
-                    <span className="font-mono font-bold text-blue-600">12.61M</span>
+                    <span className="font-mono font-bold text-blue-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -3058,7 +2819,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
                       <span className="font-semibold text-slate-700">To Receive</span>
                     </div>
-                    <span className="font-mono font-bold text-teal-600">4.24M</span>
+                    <span className="font-mono font-bold text-teal-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -3066,7 +2827,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
                       <span className="font-semibold text-slate-700">Advance Paid</span>
                     </div>
-                    <span className="font-mono font-bold text-rose-600">3.73M</span>
+                    <span className="font-mono font-bold text-rose-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -3074,7 +2835,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
                       <span className="font-semibold text-slate-700">Advance Received</span>
                     </div>
-                    <span className="font-mono font-bold text-amber-600">351.60K</span>
+                    <span className="font-mono font-bold text-amber-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -3088,26 +2849,26 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               </div>
             </div>
 
-            {/* ROW 3: 4 Financial KPI Cards (Matching Screenshot 3) */}
+            {/* ROW 3: 4 Financial KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 shadow-xs text-center">
                 <div className="text-xs font-bold text-emerald-800">Advance Paid</div>
-                <div className="text-2xl font-black text-emerald-600 mt-1 tracking-tight">3,728,327.38</div>
+                <div className="text-2xl font-black text-emerald-600 mt-1 tracking-tight">0.00</div>
               </div>
 
               <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/50 shadow-xs text-center">
                 <div className="text-xs font-bold text-rose-800">To Pay</div>
-                <div className="text-2xl font-black text-rose-600 mt-1 tracking-tight">12,605,555.50</div>
+                <div className="text-2xl font-black text-rose-600 mt-1 tracking-tight">0.00</div>
               </div>
 
               <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/50 shadow-xs text-center">
                 <div className="text-xs font-bold text-rose-800">To Receive</div>
-                <div className="text-2xl font-black text-rose-600 mt-1 tracking-tight">4,241,112.00</div>
+                <div className="text-2xl font-black text-rose-600 mt-1 tracking-tight">0.00</div>
               </div>
 
               <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 shadow-xs text-center">
                 <div className="text-xs font-bold text-emerald-800">Advance Received</div>
-                <div className="text-2xl font-black text-emerald-600 mt-1 tracking-tight">351,604.00</div>
+                <div className="text-2xl font-black text-emerald-600 mt-1 tracking-tight">0.00</div>
               </div>
             </div>
 

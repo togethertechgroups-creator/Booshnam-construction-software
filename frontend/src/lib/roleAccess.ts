@@ -15,7 +15,7 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
   { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
-  { id: 'equipment', name: 'Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
+  { id: 'equipment', name: 'Fleet & Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
   { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
   { id: 'approvals', name: 'Approvals', category: 'Repository & Quality', description: 'Multi-tiered authorization workflow for expenses, drawings & change orders' },
   { id: 'site_ops', name: 'Reports (DPR)', category: 'Repository & Quality', description: 'Daily Progress Reports (DPR), site photos, weather logs & labour counts' },
@@ -118,6 +118,35 @@ export function saveStoredRolePermission(permission: RoleAccessPermission): void
     const current = getStoredRolePermissions();
     current[permission.roleCode] = permission;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+
+    // Synchronize all user accounts with this role code
+    try {
+      const accountsRaw = localStorage.getItem('booshnam_user_accounts_v2');
+      if (accountsRaw) {
+        const accounts = JSON.parse(accountsRaw);
+        const updatedAccounts = accounts.map((a: any) => {
+          if (a.role_code === permission.roleCode || (permission.roleCode === 'ADMIN' && a.username === 'admin')) {
+            return { ...a, allowedPages: permission.allowedPages };
+          }
+          return a;
+        });
+        localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(updatedAccounts));
+      }
+    } catch (e) {}
+
+    // Synchronize active session if current user has this role
+    try {
+      const sessRaw = localStorage.getItem('booshnam_active_session_v2');
+      if (sessRaw) {
+        const sess = JSON.parse(sessRaw);
+        if (sess && (sess.role_code === permission.roleCode || (permission.roleCode === 'ADMIN' && sess.username === 'admin'))) {
+          const updatedSess = { ...sess, allowedPages: permission.allowedPages };
+          localStorage.setItem('booshnam_active_session_v2', JSON.stringify(updatedSess));
+          window.dispatchEvent(new CustomEvent('booshnam_session_changed', { detail: updatedSess }));
+        }
+      }
+    } catch (e) {}
+
     window.dispatchEvent(new CustomEvent('siteops_role_access_updated', { detail: permission }));
   } catch (e) {
     console.error('Failed to save role permission', e);
@@ -127,17 +156,41 @@ export function saveStoredRolePermission(permission: RoleAccessPermission): void
 export function resetRolePermissions(): Record<string, RoleAccessPermission> {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY);
+    // Reset admin accounts to default permissions
+    try {
+      const accountsRaw = localStorage.getItem('booshnam_user_accounts_v2');
+      if (accountsRaw) {
+        const accounts = JSON.parse(accountsRaw);
+        const updatedAccounts = accounts.map((a: any) => {
+          const defaultPerm = DEFAULT_ROLE_PERMISSIONS[a.role_code];
+          if (defaultPerm) {
+            return { ...a, allowedPages: defaultPerm.allowedPages };
+          }
+          return a;
+        });
+        localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(updatedAccounts));
+      }
+    } catch (e) {}
     window.dispatchEvent(new CustomEvent('siteops_role_access_updated'));
   }
   return DEFAULT_ROLE_PERMISSIONS;
 }
 
 export function isPageAllowedForRole(roleCode: string, pageId: string): boolean {
-  // Super Admin always has full access
-  if (roleCode === 'SUPER_ADMIN') return true;
   const permissions = getStoredRolePermissions();
   const config = permissions[roleCode];
   if (!config) return true; // default allow if unknown
-  const targetId = (pageId === 'finance' || pageId === 'accounts_finance') ? 'payments' : pageId;
+
+  let targetId = pageId;
+  if (pageId === 'company_dashboard') targetId = 'dashboard';
+  if (pageId === 'payroll') targetId = 'workforce';
+  if (pageId === 'crm') targetId = 'clients';
+  if (pageId === 'warehouse') targetId = 'procurement';
+  if (pageId === 'asset') targetId = 'equipment';
+  if (pageId === 'report') targetId = 'site_ops';
+  if (pageId === 'library') targetId = 'documents';
+  if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
+  if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
+
   return config.allowedPages.includes(pageId) || config.allowedPages.includes(targetId);
 }

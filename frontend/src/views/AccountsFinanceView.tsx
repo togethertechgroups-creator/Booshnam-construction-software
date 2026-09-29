@@ -163,159 +163,7 @@ export interface ExpenseItem {
   notes?: string;
 }
 
-export const INITIAL_STATEMENT_TRANSACTIONS: AccountStatementTransaction[] = [
-  {
-    id: 'st-c-1',
-    accountId: 'cash',
-    date: '26 Sep 26',
-    rawDate: '2026-09-26',
-    partyName: 'Sadhik Diamond Associates',
-    voucherCode: '#CB-265',
-    paymentType: 'Payment In',
-    type: 'Credit',
-    amount: 20000,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2522-(2026-2027)-Sadik Diamond Associates-Adambakkam-2pts-Likson-(Manual)-9600160200',
-    sourceAccountName: 'Cash Account',
-    details: 'Advance milestone payment (cash settlement)',
-  },
-  {
-    id: 'st-c-2',
-    accountId: 'cash',
-    date: '26 Sep 26',
-    rawDate: '2026-09-26',
-    partyName: 'Sadhik Diamond Associates',
-    voucherCode: '#CB-264',
-    paymentType: 'Payment In',
-    type: 'Credit',
-    amount: 20000,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2521-(2026-2027)-Sadhik Diamond Associates-Velachery-2pts-Likson-(Manual)-9600160200',
-    sourceAccountName: 'Cash Account',
-    details: 'Site mobilization cash receipt Likson',
-  },
-  {
-    id: 'st-c-3',
-    accountId: 'cash',
-    date: '25 Sep 26',
-    rawDate: '2026-09-25',
-    partyName: 'Suvamathi Builders Suki',
-    voucherCode: '#CB-259',
-    paymentType: 'Payment Out',
-    type: 'Debit',
-    amount: 2500,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2442-(2026-2027)-Suvamathi Builders-Padiyanallur-1Pt-Likson-(Manual)-9841308628',
-    sourceAccountName: 'Cash Account',
-    details: 'Site Quadination Payment (Sugi Builders)',
-  },
-  {
-    id: 'st-c-4',
-    accountId: 'cash',
-    date: '25 Sep 26',
-    rawDate: '2026-09-25',
-    partyName: 'Jegan Suki Gummidipoondi',
-    voucherCode: '#CB-260',
-    paymentType: 'Payment Out',
-    type: 'Debit',
-    amount: 2500,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2475-(2026-2027)-Jegan Suki Engineering-Gummidipoondi-1Pts-Likson-(Manual)-8124305970',
-    sourceAccountName: 'Cash Account',
-    details: 'Site Quadination payment (sugi Builders)',
-  },
-  {
-    id: 'st-c-5',
-    accountId: 'cash',
-    date: '24 Sep 26',
-    rawDate: '2026-09-24',
-    partyName: 'Apex Infra Developers',
-    voucherCode: '#CB-250',
-    paymentType: 'Payment In',
-    type: 'Credit',
-    amount: 50000,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2400-(2026-2027)-Apex Infra-Porur-Likson-(Manual)',
-    sourceAccountName: 'Cash Account',
-    details: 'Advance site mobilization cash advance',
-  },
-  {
-    id: 'st-c-6',
-    accountId: 'cash',
-    date: '24 Sep 26',
-    rawDate: '2026-09-24',
-    partyName: 'Shree Balaji Transports',
-    voucherCode: '#CB-249',
-    paymentType: 'Payment Out',
-    type: 'Debit',
-    amount: 8400,
-    paymentMode: 'Cash',
-    projectName: 'RG33-BAGJ-2388-(2026-2027)-Balaji Logistics-Site Cash',
-    sourceAccountName: 'Cash Account',
-    details: 'Diesel freight charges cash voucher',
-  },
-  // Axis Bank Statement Transactions
-  {
-    id: 'st-ax-1',
-    accountId: 'ba-axis',
-    date: '26 Sep 26',
-    rawDate: '2026-09-26',
-    partyName: 'Grand City Developers Ltd',
-    voucherCode: '#AX-101',
-    paymentType: 'Payment In',
-    type: 'Credit',
-    amount: 1500000,
-    paymentMode: 'RTGS',
-    projectName: 'RG12-(2026-2027)-Tower B Commercial Complex-Anna Salai',
-    sourceAccountName: 'Axis Bank',
-    details: 'Running Account Bill #7 Payment via RTGS',
-  },
-  {
-    id: 'st-ax-2',
-    accountId: 'ba-axis',
-    date: '25 Sep 26',
-    rawDate: '2026-09-25',
-    partyName: 'UltraTech Cement Ltd',
-    voucherCode: '#AX-102',
-    paymentType: 'Payment Out',
-    type: 'Debit',
-    amount: 450000,
-    paymentMode: 'NEFT',
-    projectName: 'RG12-(2026-2027)-Tower B Commercial Complex-Anna Salai',
-    sourceAccountName: 'Axis Bank',
-    details: 'Bulk 53 Grade OPC cement delivery batch 4',
-  },
-  {
-    id: 'st-ax-3',
-    accountId: 'ba-axis',
-    date: '24 Sep 26',
-    rawDate: '2026-09-24',
-    partyName: 'Metro Rail Infra Corp',
-    voucherCode: '#AX-103',
-    paymentType: 'Payment In',
-    type: 'Credit',
-    amount: 3500000,
-    paymentMode: 'RTGS',
-    projectName: 'RG08-(2026-2027)-Metro Depot Structural Work',
-    sourceAccountName: 'Axis Bank',
-    details: 'Milestone 3 certified progressive billing',
-  },
-  {
-    id: 'st-ax-4',
-    accountId: 'ba-axis',
-    date: '23 Sep 26',
-    rawDate: '2026-09-23',
-    partyName: 'Tata Steel Rebar Agency',
-    voucherCode: '#AX-104',
-    paymentType: 'Payment Out',
-    type: 'Debit',
-    amount: 825000,
-    paymentMode: 'NEFT',
-    projectName: 'RG08-(2026-2027)-Metro Depot Structural Work',
-    sourceAccountName: 'Axis Bank',
-    details: 'Fe550D TMT reinforcement bar supplies',
-  },
-];
+export const INITIAL_STATEMENT_TRANSACTIONS: AccountStatementTransaction[] = [];
 
 export const INITIAL_PARTIES: PartyRecord[] = [];
 export const INITIAL_PARTY_TRANSACTIONS: Record<string, PartyLedgerTransaction[]> = {};
@@ -420,9 +268,9 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       accountNumber: '50200048291048',
       ifscCode: 'HDFC0000123',
       accountType: 'Current',
-      balance: 4850000,
-      openingBalance: 4850000,
-      overdraftLimit: 1500000,
+      balance: 0,
+      openingBalance: 0,
+      overdraftLimit: 0,
       status: 'Active',
       tallyLedgerName: 'HDFC Operations Ledger',
       ibanNumber: 'IN45HDFC000012300048291048',
@@ -438,8 +286,8 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       accountNumber: '381920394851',
       ifscCode: 'SBIN0004021',
       accountType: 'Escrow',
-      balance: 12450000,
-      openingBalance: 12450000,
+      balance: 0,
+      openingBalance: 0,
       overdraftLimit: 0,
       status: 'Active',
       tallyLedgerName: 'SBI - RERA Escrow Ledger',
@@ -456,7 +304,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       accountNumber: '922020058090700',
       ifscCode: 'UTIB0000851',
       accountType: 'Current',
-      balance: 17583911.51,
+      balance: 0,
       openingBalance: 0,
       status: 'Active',
       tallyLedgerName: 'Axis Bank Current Ledger',
@@ -492,7 +340,11 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       if (savedV4) {
         const parsed = JSON.parse(savedV4);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((b: BankAccountRecord) => ({
+            ...b,
+            balance: (b.balance === 4850000 || b.balance === 12450000 || b.balance === 17583911.51) ? 0 : (b.balance || 0),
+            openingBalance: (b.openingBalance === 4850000 || b.openingBalance === 12450000) ? 0 : (b.openingBalance || 0),
+          }));
         }
       }
       // Migrate from v3 or prior
@@ -631,10 +483,44 @@ const toIsoDate = (displayStr: string) => {
     } catch {}
   }, [cashOpeningBalance]);
 
-  // Cash Account Net Cash Flow and Closing Balance
-  const cashTotalCredit = 41340367.72;
-  const cashTotalDebit = 59599585.31;
-  const cashNetFlow = cashTotalCredit - cashTotalDebit; // -18259217.59
+  // Statement Transactions with LocalStorage Persistence
+  const [statementTransactions, setStatementTransactions] = useState<AccountStatementTransaction[]>(() => {
+    try {
+      const saved = localStorage.getItem('booshnam_statement_transactions_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.filter(t => !t.id?.startsWith('st-c-') && !t.id?.startsWith('st-ax-'));
+        }
+      }
+    } catch {}
+    return INITIAL_STATEMENT_TRANSACTIONS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('booshnam_statement_transactions_v1', JSON.stringify(statementTransactions));
+    } catch {}
+  }, [statementTransactions]);
+
+  // Cash Account Net Cash Flow and Closing Balance dynamically computed from statement transactions
+  const cashTransactions = useMemo(() => {
+    return statementTransactions.filter(t => t.accountId === 'cash');
+  }, [statementTransactions]);
+
+  const cashTotalCredit = useMemo(() => {
+    return cashTransactions
+      .filter(t => t.type === 'Credit' || t.paymentType === 'Payment In')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [cashTransactions]);
+
+  const cashTotalDebit = useMemo(() => {
+    return cashTransactions
+      .filter(t => t.type === 'Debit' || t.paymentType === 'Payment Out')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [cashTransactions]);
+
+  const cashNetFlow = cashTotalCredit - cashTotalDebit;
   const cashClosingBalance = cashOpeningBalance + cashNetFlow;
 
   // Edit Opening Balance Modal State
@@ -677,26 +563,6 @@ const toIsoDate = (displayStr: string) => {
     setOpeningBalanceModal(null);
   };
 
-  // Statement Transactions with LocalStorage Persistence
-  const [statementTransactions, setStatementTransactions] = useState<AccountStatementTransaction[]>(() => {
-    try {
-      const saved = localStorage.getItem('booshnam_statement_transactions_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {}
-    return INITIAL_STATEMENT_TRANSACTIONS;
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('booshnam_statement_transactions_v1', JSON.stringify(statementTransactions));
-    } catch {}
-  }, [statementTransactions]);
-
   // Computed Active Account for Statement View
   const activeStatementAccount = useMemo(() => {
     if (!statementActiveAccountId) return null;
@@ -727,38 +593,6 @@ const toIsoDate = (displayStr: string) => {
         totalCredit: 0,
         totalDebit: 0,
         closingBalance: 0,
-      };
-    }
-
-    if (found.id === 'ba-axis') {
-      const op = found.openingBalance || 0;
-      return {
-        id: found.id,
-        name: found.bankName,
-        accountHolderName: found.accountHolderName || 'Booshnam Associates Pvt Ltd.',
-        type: found.accountType,
-        isCash: false,
-        accountNumber: found.accountNumber,
-        openingBalance: op,
-        totalCredit: 21540000.00,
-        totalDebit: 3956088.49,
-        closingBalance: op + 17583911.51,
-      };
-    }
-
-    if (found.id === 'ba-idbi') {
-      const op = found.openingBalance || 0;
-      return {
-        id: found.id,
-        name: found.bankName,
-        accountHolderName: found.accountHolderName || 'BOOSHNAM ASSOCIATES PVT LTD',
-        type: found.accountType,
-        isCash: false,
-        accountNumber: found.accountNumber,
-        openingBalance: op,
-        totalCredit: 0,
-        totalDebit: 0,
-        closingBalance: op,
       };
     }
 

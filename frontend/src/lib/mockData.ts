@@ -85,66 +85,8 @@ export const MOCK_DPR: DPR[] = [];
 export const MOCK_SNAGS: Snag[] = [];
 export const MOCK_APPROVALS: ApprovalRequest[] = [];
 export const MOCK_LEADS: Lead[] = [];
+export const MOCK_ASSETS: Asset[] = [];
 export const MOCK_SOIL_SAMPLES: SoilSample[] = [];
-export const MOCK_ASSETS: Asset[] = [
-  {
-    id: 'ast-ba6-6',
-    asset_code: 'BA6-6',
-    serial_number: 'BA6-6',
-    code_prefix: 'BA6',
-    code_number: '6',
-    name: 'Phone',
-    category: 'Phone',
-    asset_type: 'Phone',
-    ownership: 'Company Owned',
-    hourly_cost_rate: 0,
-    unit_rate: 0,
-    total_qty: 1,
-    available_qty: 0,
-    status: 'Assigned',
-    meter_hours: 0,
-    description: 'Field inspection mobile device',
-    current_project_name: 'Site A'
-  },
-  {
-    id: 'ast-ba021-21',
-    asset_code: 'BA021-21',
-    serial_number: 'BA021-21',
-    code_prefix: 'BA021',
-    code_number: '21',
-    name: 'Laptop',
-    category: 'Laptop',
-    asset_type: 'Laptop',
-    ownership: 'Company Owned',
-    hourly_cost_rate: 0,
-    unit_rate: 0,
-    total_qty: 1,
-    available_qty: 0,
-    status: 'Assigned',
-    meter_hours: 0,
-    description: 'Office engineering laptop',
-    current_project_name: 'Site Office'
-  },
-  {
-    id: 'ast-ba003-3',
-    asset_code: 'BA003-3',
-    serial_number: 'BA003-3',
-    code_prefix: 'BA003',
-    code_number: '3',
-    name: 'Laptop',
-    category: 'Laptop',
-    asset_type: 'Laptop',
-    ownership: 'Company Owned',
-    hourly_cost_rate: 0,
-    unit_rate: 0,
-    total_qty: 1,
-    available_qty: 0,
-    status: 'Assigned',
-    meter_hours: 0,
-    description: 'Drafting workstation laptop',
-    current_project_name: 'Site Office'
-  }
-];
 export const MOCK_SOIL_LAB_TESTS: SoilLabTest[] = [];
 export const MOCK_SOIL_REPORTS: SoilInvestigationReport[] = [];
 export const MOCK_ARCHITECTURAL_DRAWINGS: ArchitecturalDrawing[] = [];
@@ -152,18 +94,21 @@ export const MOCK_PAYMENT_REQUESTS: ProjectPaymentRequest[] = [];
 export const MOCK_PROJECT_TRANSACTIONS: ProjectTransactionRecord[] = [];
 
 // ----------------------------------------------------
-// 11 Predefined Default Tasks Template (Section 2)
+// Predefined Default Tasks Template covering all company departments
 // ----------------------------------------------------
 export const PREDEFINED_TASKS_TEMPLATE: PredefinedTaskTemplate[] = [
-  { id: 1, code: 'TSK-01', title: 'Quotation', department: 'MARKETING', default_priority: 'HIGH', description: 'Prepare commercial cost estimation and send quote to prospective client.' },
-  { id: 2, code: 'TSK-02', title: 'Site Visit', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Field team site reconnaissance and boundary survey verification.' },
-  { id: 3, code: 'TSK-03', title: 'Site Investigation', department: 'SOIL_INVESTIGATION', default_priority: 'URGENT', description: 'Geotechnical borehole drilling, visual stratum inspection, and GPS log.' },
-  { id: 4, code: 'TSK-04', title: 'Photo/Video Sharing with Client', department: 'CONSTRUCTION', default_priority: 'MEDIUM', description: 'Upload geofenced live site photos and 360 videos for client transparency.' },
-  { id: 5, code: 'TSK-05', title: 'Collect Client Details', department: 'MARKETING', default_priority: 'MEDIUM', description: 'Gather KYC documents, title deed copy, municipal approval number, and GST.' },
-  { id: 6, code: 'TSK-06', title: 'Screenshot Upload', department: 'ARCHITECTURE', default_priority: 'LOW', description: 'Upload CAD viewports, structural cross-sections, and satellite plot overlays.' },
-  { id: 7, code: 'TSK-07', title: 'Sample Collection', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Extract disturbed and undisturbed soil core samples at designated bore points.' },
-  { id: 8, code: 'TSK-08', title: 'Laboratory Test', department: 'SOIL_INVESTIGATION', default_priority: 'URGENT', description: 'Perform California Bearing Ratio (CBR), SPT, and moisture tests in certified lab.' },
-  { id: 9, code: 'TSK-09', title: 'Report Preparation', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Draft comprehensive soil test report with safe bearing capacity recommendations.' },
-  { id: 10, code: 'TSK-10', title: 'Report Binding', department: 'SOIL_INVESTIGATION', default_priority: 'MEDIUM', description: 'Hardcover binding and preparation of official technical documentation dossiers.' },
-  { id: 11, code: 'TSK-11', title: 'Document Signing', department: 'ACCOUNTS', default_priority: 'HIGH', description: 'Digital and wet signatures from licensed Geotechnical Engineer, Architect, & Client.' },
+  { id: 1, code: 'TSK-01', title: 'Quotation & Scope Verification', department: 'MARKETING', default_priority: 'HIGH', description: 'Prepare commercial cost estimation and send quote to prospective client.' },
+  { id: 2, code: 'TSK-02', title: 'Boundary & Topographical Survey', department: 'SURVEY', default_priority: 'HIGH', description: 'Field team site reconnaissance, DGPS boundary demarcation, and contour survey.' },
+  { id: 3, code: 'TSK-03', title: 'Soil Investigation & Borehole Drilling', department: 'SOIL_INVESTIGATION', default_priority: 'URGENT', description: 'Geotechnical borehole drilling, visual stratum inspection, and GPS log.' },
+  { id: 4, code: 'TSK-04', title: 'Soil Core Sample Collection & Lab Testing', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Extract soil core samples and perform California Bearing Ratio (CBR), SPT, and moisture tests.' },
+  { id: 5, code: 'TSK-05', title: 'Material Testing (Concrete Cube & Rebar Tensile)', department: 'MATERIAL_TESTING', default_priority: 'URGENT', description: 'Concrete cube compression tests, steel rebar tensile & bend tests, aggregate durability.' },
+  { id: 6, code: 'TSK-06', title: 'Bitumen & Aggregate Durability Lab Test', department: 'MATERIAL_TESTING', default_priority: 'HIGH', description: 'Laboratory quality audit for bitumen mix, aggregate gradation, and impact value.' },
+  { id: 7, code: 'TSK-07', title: 'Structural Analysis & Load Calculation', department: 'STRUCTURAL', default_priority: 'HIGH', description: 'RCC & steel structural design, dead/live load analysis, foundation sizing & stability checks.' },
+  { id: 8, code: 'TSK-08', title: 'Structural Foundation Vetting & Proof Checking', department: 'STRUCTURAL', default_priority: 'URGENT', description: 'Vetting of foundation drawings, structural safety compliance, and peer review sign-off.' },
+  { id: 9, code: 'TSK-09', title: 'Architectural Working Drawings & 3D Render', department: 'ARCHITECTURE', default_priority: 'MEDIUM', description: 'Detailed floor plans, cross-sections, elevation layouts, and client approved 3D renders.' },
+  { id: 10, code: 'TSK-10', title: 'Civil Construction & Earthwork Execution', department: 'CONSTRUCTION', default_priority: 'HIGH', description: 'Site mobilization, excavation, PCC, footing reinforcement, and column casting.' },
+  { id: 11, code: 'TSK-11', title: 'Site Inspection Logs & Photo/Video Upload', department: 'CONSTRUCTION', default_priority: 'MEDIUM', description: 'Upload geofenced live site photos, 360 inspection videos, and QA/QC checklist.' },
+  { id: 12, code: 'TSK-12', title: 'Soil & Structural Investigation Report Dossier', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Draft comprehensive engineering investigation report with safe bearing capacity (SBC) recommendations.' },
+  { id: 13, code: 'TSK-13', title: 'Billing, Invoicing & Sign-off Dossier', department: 'ACCOUNTS', default_priority: 'HIGH', description: 'Digital signatures from licensed engineers, milestone invoice generation, and client hand-off.' },
 ];
+

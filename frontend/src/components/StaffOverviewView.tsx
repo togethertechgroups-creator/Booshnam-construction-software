@@ -119,7 +119,12 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       const raw = localStorage.getItem('booshnam_projects_v2');
       if (raw) {
         const p = JSON.parse(raw);
-        if (Array.isArray(p)) return p;
+        if (Array.isArray(p)) {
+          return p.filter((x: any) => 
+            !x.id?.startsWith('proj-') &&
+            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (x.name || x.title || x.client_name || '').includes(t))
+          );
+        }
       }
     } catch (e) {}
     return [];

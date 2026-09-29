@@ -1,0 +1,150 @@
+import { User, Project, TaskItem, WorkerAttendance, MOMItem, MaterialItem, EquipmentItem } from './types';
+
+export const DEMO_USERS: User[] = [
+  {
+    id: 'u1',
+    username: 'murugan',
+    name: 'Murugan V',
+    email: 'murugan@booshnam.com',
+    phone: '+91 90475 49682',
+    role: 'Site Engineer',
+    role_code: 'SITE_ENGINEER',
+    department: 'Civil Engineering',
+    status: 'ACTIVE',
+    allowedPages: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'mom', 'files', 'dpr'],
+    permissions: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_approve: false },
+    is_org_admin: false,
+  },
+  {
+    id: 'u2',
+    username: 'suresh',
+    name: 'Suresh Kumar',
+    email: 'suresh@booshnam.com',
+    phone: '+91 98402 34567',
+    role: 'Site Supervisor',
+    role_code: 'SUPERVISOR',
+    department: 'Site Operations',
+    status: 'ACTIVE',
+    allowedPages: ['dashboard', 'projects', 'tasks', 'attendance', 'equipment', 'mom', 'dpr'],
+    permissions: { can_view: true, can_create: true, can_edit: false, can_delete: false, can_approve: false },
+    is_org_admin: false,
+  },
+  {
+    id: 'u3',
+    username: 'admin',
+    name: 'Rajesh Chandran',
+    email: 'admin@siteops.io',
+    phone: '+91 98401 23456',
+    role: 'Super Admin',
+    role_code: 'SUPER_ADMIN',
+    department: 'Executive Management',
+    status: 'ACTIVE',
+    allowedPages: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'mom', 'files', 'finance', 'dpr', 'users_admin'],
+    permissions: { can_view: true, can_create: true, can_edit: true, can_delete: true, can_approve: true, approval_limit: 10000000 },
+    is_org_admin: true,
+  },
+];
+
+export const DEMO_PROJECTS: Project[] = [
+  {
+    id: 'proj-runway-2516',
+    code: 'RG33-BAGJ-2516',
+    name: 'RUN WAY (VELMURUGAN)',
+    shortName: 'RU',
+    client_name: 'VELMURUGAN',
+    site_location: 'CUMBUM , THENI',
+    status: 'Ongoing',
+    progress: 8,
+    value: 2500000,
+    startDate: '28-09-2026',
+    endDate: '28-09-2027',
+    actualStartDate: '28-09-2026',
+    actualEndDate: '--',
+    scheduledTasks: 13,
+    completedTasks: 1,
+    keyPersonnel: ['Murugan (Site Engineer)', 'Suresh Kumar (Supervisor)', 'Priya (Director)'],
+  },
+  {
+    id: 'proj-metro-001',
+    code: 'RG33-BAGJ-2480',
+    name: 'Metro Viaduct Elevated P4',
+    shortName: 'MV',
+    client_name: 'BMRCL Infrastructure',
+    site_location: 'BANGALORE',
+    status: 'Ongoing',
+    progress: 35,
+    value: 12000000,
+    startDate: '15-05-2026',
+    endDate: '30-10-2027',
+    actualStartDate: '20-05-2026',
+    actualEndDate: '--',
+    scheduledTasks: 13,
+    completedTasks: 4,
+    keyPersonnel: ['Murugan (Site Engineer)', 'Arumugam (Foreman)'],
+  },
+  {
+    id: 'proj-villa-002',
+    code: 'RG33-BAGJ-2410',
+    name: 'Greenfield Luxury Villas Phase 2',
+    shortName: 'GV',
+    client_name: 'Salarpuria Living',
+    site_location: 'COIMBATORE',
+    status: 'Ongoing',
+    progress: 62,
+    value: 4800000,
+    startDate: '01-02-2026',
+    endDate: '15-01-2027',
+    actualStartDate: '05-02-2026',
+    actualEndDate: '--',
+    scheduledTasks: 13,
+    completedTasks: 8,
+    keyPersonnel: ['Suresh Kumar (Supervisor)', 'Murugan (Site Engineer)'],
+  },
+];
+
+export const INITIAL_TASKS: TaskItem[] = [
+  { id: 't1', code: 'TSK-01', title: 'Quotation & Scope Verification', department: 'MARKETING', priority: 'HIGH', status: 'COMPLETED', dueDate: '28-09-2026', assignedTo: 'Site Engineer' },
+  { id: 't2', code: 'TSK-02', title: 'Boundary & Topographical Survey', department: 'SURVEY', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '05-10-2026', assignedTo: 'Surveyor Team' },
+  { id: 't3', code: 'TSK-03', title: 'Soil Investigation & Borehole Drilling', department: 'SOIL_INVESTIGATION', priority: 'URGENT', status: 'NOT_STARTED', dueDate: '12-10-2026', assignedTo: 'Geotech Team' },
+  { id: 't4', code: 'TSK-04', title: 'Soil Core Sample Collection & Lab Testing', department: 'SOIL_INVESTIGATION', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '18-10-2026', assignedTo: 'QC Lab' },
+  { id: 't5', code: 'TSK-05', title: 'Material Testing (Concrete Cube & Rebar)', department: 'MATERIAL_TESTING', priority: 'URGENT', status: 'NOT_STARTED', dueDate: '25-10-2026', assignedTo: 'Testing Lab' },
+  { id: 't6', code: 'TSK-06', title: 'Bitumen & Aggregate Durability Lab Test', department: 'MATERIAL_TESTING', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '02-11-2026', assignedTo: 'Testing Lab' },
+  { id: 't7', code: 'TSK-07', title: 'Structural Analysis & Load Calculation', department: 'STRUCTURAL', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '10-11-2026', assignedTo: 'Design Engineer' },
+  { id: 't8', code: 'TSK-08', title: 'Structural Foundation Vetting & Proof Checking', department: 'STRUCTURAL', priority: 'URGENT', status: 'NOT_STARTED', dueDate: '20-11-2026', assignedTo: 'Chief Consultant' },
+  { id: 't9', code: 'TSK-09', title: 'Architectural Working Drawings & 3D Render', department: 'ARCHITECTURE', priority: 'MEDIUM', status: 'NOT_STARTED', dueDate: '30-11-2026', assignedTo: 'Architect' },
+  { id: 't10', code: 'TSK-10', title: 'Civil Construction & Earthwork Execution', department: 'CONSTRUCTION', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '15-12-2026', assignedTo: 'Civil Supervisor' },
+  { id: 't11', code: 'TSK-11', title: 'Site Inspection Logs & Photo Upload', department: 'CONSTRUCTION', priority: 'MEDIUM', status: 'NOT_STARTED', dueDate: '22-12-2026', assignedTo: 'Site Engineer' },
+  { id: 't12', code: 'TSK-12', title: 'Soil & Structural Investigation Report', department: 'SOIL_INVESTIGATION', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '10-01-2027', assignedTo: 'Chief Geotech' },
+  { id: 't13', code: 'TSK-13', title: 'Billing, Invoicing & Sign-off Dossier', department: 'ACCOUNTS', priority: 'HIGH', status: 'NOT_STARTED', dueDate: '28-09-2027', assignedTo: 'Finance Dept' },
+];
+
+export const INITIAL_WORKERS: WorkerAttendance[] = [
+  { id: 'w1', name: 'Suresh K', role: 'Head Mason', status: 'present', checkIn: '08:30 AM' },
+  { id: 'w2', name: 'Arumugam P', role: 'Carpenter Foreman', status: 'present', checkIn: '08:45 AM' },
+  { id: 'w3', name: 'Murugan V', role: 'General Helper', status: 'absent' },
+  { id: 'w4', name: 'Selvan T', role: 'Steel Fixer Lead', status: 'present', checkIn: '09:00 AM' },
+  { id: 'w5', name: 'Balu M', role: 'Site Electrician', status: 'half-day', checkIn: '09:15 AM' },
+  { id: 'w6', name: 'Kannan R', role: 'Plumbing Specialist', status: 'absent' },
+];
+
+export const INITIAL_MOMS: MOMItem[] = [
+  {
+    id: 'mom-1',
+    title: 'Site Kick-off & Boundary Demarcation Review',
+    date: '28-09-2026',
+    attendees: 'Velmurugan (Client), Murugan (Site Engineer), Suresh (Supervisor)',
+    decisions: 'Boundary pegs finalized along eastern flank; excavation machinery scheduled for next Monday.',
+  },
+];
+
+export const INITIAL_MATERIALS: MaterialItem[] = [
+  { id: 'm1', itemName: 'UltraTech Cement (53 Grade OPC)', category: 'Cement', quantityRequested: 500, quantityReceived: 200, unit: 'Bags', status: 'APPROVED' },
+  { id: 'm2', itemName: 'TMT 12mm Fe550D Rebar Steel', category: 'Steel', quantityRequested: 5, quantityReceived: 5, unit: 'Tons', status: 'RECEIVED' },
+  { id: 'm3', itemName: 'M-Sand for Concrete Casting', category: 'Aggregates', quantityRequested: 400, quantityReceived: 150, unit: 'CFT', status: 'PENDING' },
+];
+
+export const INITIAL_EQUIPMENT: EquipmentItem[] = [
+  { id: 'eq-1', name: 'JCB 3DX Excavator', type: 'Earthmoving', operator: 'Rajendran (Operator)', hoursWorked: 48, status: 'OPERATIONAL' },
+  { id: 'eq-2', name: 'Hydraulic Concrete Mixer 10/7', type: 'Concreting', operator: 'Muthu (Operator)', hoursWorked: 26, status: 'OPERATIONAL' },
+  { id: 'eq-3', name: 'Needle Vibrator (Petrol)', type: 'Compaction', operator: 'Selvan (Lead)', hoursWorked: 14, status: 'STANDBY' },
+];

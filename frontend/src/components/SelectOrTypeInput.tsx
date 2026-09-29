@@ -77,7 +77,7 @@ export const SelectOrTypeInput: React.FC<SelectOrTypeInputProps> = ({
           }}
           onFocus={() => setIsOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-3 pr-16 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition shadow-2xs"
+          className={`w-full pl-3 ${value ? 'pr-14' : 'pr-8'} py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition shadow-2xs`}
         />
 
         <div className="absolute right-2 flex items-center gap-0.5">

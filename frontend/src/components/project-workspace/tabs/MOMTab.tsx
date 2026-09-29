@@ -69,13 +69,13 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
   const [meetingName, setMeetingName] = useState('');
   const [meetingDate, setMeetingDate] = useState('2026-09-17');
   const [attendeeInput, setAttendeeInput] = useState('');
-  const [selectedAttendees, setSelectedAttendees] = useState<string[]>(['Likson (Site Eng)', 'Priya']);
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [isAttendeeSuggestionsOpen, setIsAttendeeSuggestionsOpen] = useState(false);
   const [agenda, setAgenda] = useState('');
   const [resolution, setResolution] = useState('');
 
-  // Project label display (matching Image 2)
-  const projectLabel = project.name || 'RG33-BAGJ-2486-(2026-2027)-Babu Aditya Builders-Perumbakkam-2pts-Likson-(Manual)-9445001570';
+  // Project label display
+  const projectLabel = project.name || 'Project';
 
   // Filter meetings
   const filteredMeetings = meetings.filter((item) => {
@@ -118,7 +118,7 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
   const handleOpenNewMOM = () => {
     setMeetingName('');
     setMeetingDate(new Date().toISOString().split('T')[0]);
-    setSelectedAttendees(['Likson (Site Eng)', 'Priya']);
+    setSelectedAttendees([]);
     setAttendeeInput('');
     setAgenda('');
     setResolution('');
@@ -191,7 +191,7 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
       title: meetingName.trim(),
       date: meetingDate || '2026-09-17',
       project_name: projectLabel,
-      attendees: selectedAttendees.length > 0 ? selectedAttendees : ['Likson (Site Eng)'],
+      attendees: selectedAttendees,
       agenda: agenda.trim(),
       resolution: resolution.trim(),
       notes: resolution.trim() || agenda.trim() || 'Meeting notes recorded.',

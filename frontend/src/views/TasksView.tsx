@@ -43,7 +43,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskDept, setNewTaskDept] = useState<Department>('CONSTRUCTION');
   const [newTaskPriority, setNewTaskPriority] = useState<'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
-  const [newTaskAssignee, setNewTaskAssignee] = useState('Likson (Site Engineer)');
+  const [newTaskAssignee, setNewTaskAssignee] = useState('');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
 
   // Comments inside task drawer

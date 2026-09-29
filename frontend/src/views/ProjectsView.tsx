@@ -6,7 +6,8 @@ import {
   MoreVertical, Bell, Settings,
   User, ExternalLink, ChevronRight, Filter, TrendingUp,
   CheckSquare, Sparkles, Phone, Mail, MapPin, Briefcase,
-  DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2
+  DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2, Building2, ChevronLeft, ArrowRight, Maximize2, Minimize2, Compass,
+  Trash2, AlertTriangle
 } from 'lucide-react';
 import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department } from '../types';
 import { ProjectTopNav, WorkspaceTabId } from '../components/project-workspace/ProjectTopNav';
@@ -33,6 +34,14 @@ import { PREDEFINED_TASKS_TEMPLATE, formatProjectTitle } from '../lib/mockData';
 import { getStaffMembers, getStaffTeamOptions, StaffMember } from '../lib/staffService';
 import { addNotification } from '../lib/notificationService';
 import { confirmAction, setFormDirty, clearFormDirty } from '../lib/dialogService';
+import { 
+  ORGANIZATION_DEPARTMENTS, 
+  getActiveDepartmentId, 
+  setActiveDepartmentId, 
+  normalizeDepartmentId, 
+  getIndividualDepartments 
+} from '../lib/departmentService';
+import { DepartmentLogo } from '../components/DepartmentLogo';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -85,16 +94,36 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
+  // Active Department State (Synchronized with global switcher)
+  const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
+
+  useEffect(() => {
+    const handleDeptChange = (e: any) => {
+      const newId = e.detail || getActiveDepartmentId();
+      setActiveDeptId(newId);
+    };
+    window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
+    return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
+  }, []);
+
   // Wizard state for Creating Project
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [newProjectName, setNewProjectName] = useState('');
   const [newClientName, setNewClientName] = useState('');
   const [newAddress, setNewAddress] = useState('');
   const [newCity, setNewCity] = useState('');
-  const [newEstimatedBudget, setNewEstimatedBudget] = useState('0');
-  const [newDepartment, setNewDepartment] = useState<string>('CONSTRUCTION');
+  const [newEstimatedBudget, setNewEstimatedBudget] = useState('');
+  const [newDepartment, setNewDepartment] = useState<string>(() => {
+    const current = getActiveDepartmentId();
+    return current === 'booshnam_associates' ? 'CONSTRUCTION' : current;
+  });
   const [newProjectType, setNewProjectType] = useState('Residential Construction');
 
+  useEffect(() => {
+    if (activeDeptId !== 'booshnam_associates') {
+      setNewDepartment(activeDeptId);
+    }
+  }, [activeDeptId]);
   const [selectedPM, setSelectedPM] = useState('');
   const [selectedEngineer, setSelectedEngineer] = useState('');
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
@@ -117,6 +146,42 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     description: ''
   });
   const [wizardError, setWizardError] = useState('');
+  const [taskDeptFilter, setTaskDeptFilter] = useState<'ALL' | Department>('ALL');
+  const [isWizardFullscreen, setIsWizardFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFs = () => setIsWizardFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFs);
+    return () => document.removeEventListener('fullscreenchange', handleFs);
+  }, []);
+
+  const toggleWizardFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  const formatINR = (val: string | number) => {
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num) || num === 0) return '₹ 0';
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
+  };
+
+  const getLakhsCroresText = (val: string | number) => {
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num) || num === 0) return '';
+    if (num >= 10000000) {
+      return `≈ ${(num / 10000000).toFixed(2)} Cr`;
+    }
+    if (num >= 100000) {
+      return `≈ ${(num / 100000).toFixed(2)} Lakhs`;
+    }
+    return '';
+  };
 
   // Dynamic Staff Directory State
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
@@ -132,6 +197,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const supervisorOptions = useMemo(() => getStaffTeamOptions('SUPERVISOR', staffList), [staffList]);
   const accountsOptions = useMemo(() => getStaffTeamOptions('ACCOUNTS', staffList), [staffList]);
   const allStaffOptions = useMemo(() => getStaffTeamOptions('ALL', staffList), [staffList]);
+
+  // Default company accountant assigned to all projects automatically if available
+  const defaultAccountsStaff = useMemo(() => {
+    return staffList.find(s => s.role_code === 'ACCOUNTS' || s.department?.toLowerCase().includes('account')) 
+      || staffList.find(s => s.role_name?.toLowerCase().includes('account'))
+      || null;
+  }, [staffList]);
 
   // Additional Team Members in Step 2 of wizard
   const [additionalTeam, setAdditionalTeam] = useState<Array<{ name: string; role: string; phone?: string; email?: string }>>([]);
@@ -159,23 +231,40 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   // Local projects fallback with persistent localStorage support
   const [localProjects, setLocalProjects] = useState<Project[]>(() => {
-    if (propProjects && propProjects.length > 0) return propProjects;
-    try {
-      const saved = localStorage.getItem('booshnam_projects_v2');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {}
-    return [];
+    const raw = (propProjects && propProjects.length > 0) ? propProjects : (() => {
+      try {
+        const saved = localStorage.getItem('booshnam_projects_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return [];
+    })();
+
+    return raw.filter((p: any) => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
   });
-  const allProjects = (propProjects && propProjects.length > 0) ? propProjects : localProjects;
+
+  const allProjects = useMemo(() => {
+    const list = (propProjects && propProjects.length > 0) ? propProjects : localProjects;
+    return list.filter((p: any) => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
+  }, [propProjects, localProjects]);
 
   // Listen for project updates from other tabs or components
   useEffect(() => {
     const handleProjectsUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
-        setLocalProjects(e.detail);
+        const clean = e.detail.filter((p: any) => 
+          !p.id?.startsWith('proj-') &&
+          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+        );
+        setLocalProjects(clean);
       }
     };
     window.addEventListener('booshnam_projects_updated', handleProjectsUpdated);
@@ -222,6 +311,61 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       }
       return next;
     });
+  };
+
+  const isSuperAdmin = currentUser?.role_code === 'SUPER_ADMIN' || 
+    currentUser?.role_name?.toLowerCase() === 'super admin' ||
+    currentUser?.role_name === 'Owner / Director' ||
+    currentUser?.first_name?.toLowerCase() === 'priya';
+
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+
+  const handleDeleteProject = (proj: Project) => {
+    if (!isSuperAdmin) {
+      onShowToast?.('Permission Denied: Only Super Admin can delete projects.');
+      return;
+    }
+    setIsDeletingProject(true);
+    try {
+      const updated = allProjects.filter(p => p.id !== proj.id);
+      handleUpdateProjects(updated);
+
+      // Clean up project-specific local storage
+      const cleanupKeys = [
+        `booshnam_wbs_tasks_v2_${proj.id}`,
+        `booshnam_cost_plan_v2_${proj.id}`,
+        `booshnam_material_req_v2_${proj.id}`,
+        `booshnam_purchase_orders_v2_${proj.id}`,
+        `booshnam_grn_receipts_v2_${proj.id}`,
+        `booshnam_invoices_v2_${proj.id}`,
+        `booshnam_snags_v2_${proj.id}`,
+        `booshnam_dpr_v2_${proj.id}`,
+        `booshnam_mom_v1_${proj.id}`,
+        `booshnam_drawings_v2_${proj.id}`,
+        `booshnam_soil_samples_v2_${proj.id}`,
+        `booshnam_soil_tests_v2_${proj.id}`,
+        `booshnam_soil_reports_v2_${proj.id}`,
+      ];
+      cleanupKeys.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+
+      if (activeProject?.id === proj.id) {
+        setActiveProject(null);
+      }
+      if (selectedProject?.id === proj.id && onSelectProject) {
+        onSelectProject(updated[0] || null);
+      }
+
+      onShowToast?.(`Project "${formatProjectTitle(proj)}" deleted successfully.`);
+      setProjectToDelete(null);
+    } catch (err) {
+      console.error('Failed to delete project', err);
+      onShowToast?.('Failed to delete project. Please try again.');
+    } finally {
+      setIsDeletingProject(false);
+    }
   };
 
   const isSuperOrAdmin = !currentUser.role_code || 
@@ -349,6 +493,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         if (!matchesCat) return false;
       }
 
+      // Active Department Filter (When specific department is selected in switcher)
+      if (activeDeptId !== 'booshnam_associates') {
+        const pDept = normalizeDepartmentId(p.department as string);
+        if (pDept !== activeDeptId) return false;
+      }
+
       return true;
     }).sort((a, b) => {
       const aPinned = pinnedIds.has(a.id);
@@ -357,7 +507,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks]);
+  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId]);
 
 
   // Handle open project details
@@ -454,7 +604,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setNewClientName('');
     setNewAddress('');
     setNewCity('');
-    setNewEstimatedBudget('0');
+    setNewEstimatedBudget('');
     setSelectedPM('');
     setSelectedEngineer('');
     setSelectedSupervisor('');
@@ -495,8 +645,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-pm-${Date.now()}`,
         name: selectedPM.trim(),
         role: s?.designation || s?.role_name || 'Project Manager',
-        phone: s?.phone ? `+91 ${s.phone}` : '+91 98401 23456',
-        email: s?.email || 'pm@siteops.io'
+        phone: s?.phone ? `+91 ${s.phone}` : '',
+        email: s?.email || ''
       });
     }
     if (selectedEngineer.trim()) {
@@ -505,8 +655,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-eng-${Date.now()}`,
         name: selectedEngineer.trim(),
         role: s?.designation || s?.role_name || 'Site Engineer',
-        phone: s?.phone ? `+91 ${s.phone}` : '+91 94440 06047',
-        email: s?.email || 'engineer@siteops.io'
+        phone: s?.phone ? `+91 ${s.phone}` : '',
+        email: s?.email || ''
       });
     }
     if (selectedSupervisor.trim()) {
@@ -515,18 +665,18 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-sup-${Date.now()}`,
         name: selectedSupervisor.trim(),
         role: s?.designation || s?.role_name || 'Site Supervisor',
-        phone: s?.phone ? `+91 ${s.phone}` : '+91 98408 12345',
-        email: s?.email || 'supervisor@siteops.io'
+        phone: s?.phone ? `+91 ${s.phone}` : '',
+        email: s?.email || ''
       });
     }
-    if (selectedAccounts.trim()) {
-      const s = findStaff(selectedAccounts);
+    // Automatically assign the default company accountant to manage project accounts if available
+    if (defaultAccountsStaff) {
       assignedTeam.push({
-        id: s?.id || `team-acc-${Date.now()}`,
-        name: selectedAccounts.trim(),
-        role: s?.designation || s?.role_name || 'Accounts',
-        phone: s?.phone ? `+91 ${s.phone}` : '+91 98403 45678',
-        email: s?.email || 'accounts@siteops.io'
+        id: defaultAccountsStaff.id || `team-acc-default`,
+        name: defaultAccountsStaff.name,
+        role: (defaultAccountsStaff as any).designation || (defaultAccountsStaff as any).role_name || 'Accounts',
+        phone: defaultAccountsStaff.phone ? `+91 ${defaultAccountsStaff.phone}` : '',
+        email: defaultAccountsStaff.email || ''
       });
     }
     // Also include any additional team members added in Step 2:
@@ -548,7 +698,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     // Generate WBSTasks for the non-excluded predefined tasks (Requirement Section 1 & 2)
     const activeTasks = wizardTasks.filter(t => selectedTaskIds.includes(t.id));
     const generatedTasks: WBSTask[] = activeTasks.map((pt, idx) => {
-      const taskAssignee = selectedEngineer || selectedPM || 'Project Lead';
+      const taskAssignee = pt.department === 'SOIL_INVESTIGATION' ? (selectedEngineer || 'Site Engineer') : (selectedPM || 'Project Lead');
       return {
         id: `task-${Date.now()}-${pt.id}`,
         project: newProjId,
@@ -598,13 +748,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       resolvedCategory = 'Residential';
     }
 
+    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS[6]; // defaults to Construction
+
     const newProj: Project = {
       id: newProjId,
       code: code,
       name: displayName,
       client_name: cleanClientName || cleanProjName,
-      department: 'CONSTRUCTION',
-      department_name: 'Civil Construction',
+      department: newDepartment,
+      department_name: deptObj.name,
       project_type: newProjectType,
       location: `${newAddress ? newAddress + ', ' : ''}${newCity || 'Chennai'}`,
       address: newAddress || 'Site Address',
@@ -657,7 +809,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setNewClientName('');
     setNewAddress('');
     setNewCity('');
-    setNewEstimatedBudget('0');
+    setNewEstimatedBudget('');
     setSelectedPM('');
     setSelectedEngineer('');
     setSelectedSupervisor('');
@@ -681,685 +833,1042 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const drawings: any[] = [];
 
   // ==========================================
-  // VIEW 2: "Creating Project" Wizard Flow
+  // VIEW 2: "Creating Project" Full-Screen Setup Studio
   // ==========================================
   if (viewMode === 'create') {
+    const activeTasksCount = wizardTasks.filter(t => selectedTaskIds.includes(t.id)).length;
+    const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment || d.name === newDepartment) || ORGANIZATION_DEPARTMENTS[0];
+    const displayedWizardTasks = taskDeptFilter === 'ALL'
+      ? wizardTasks
+      : wizardTasks.filter(t => t.department === taskDeptFilter);
+
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-start py-6 px-4">
-        {/* Cancel Icon in the Right Corner */}
-        <div className="w-full max-w-4xl flex items-center justify-end mb-4">
-          <button 
-            type="button"
-            onClick={handleCancelWizard}
-            className="p-2 hover:bg-slate-200/80 rounded-full text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-            title="Cancel"
-            aria-label="Cancel"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Wizard Container */}
-        <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-6">Creating Project</h1>
-
-          {/* Stepper Header */}
-          <div className="w-full max-w-md mb-8">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 mb-2 px-1">
-              <span className={wizardStep === 1 ? 'text-red-600 font-bold' : 'text-slate-600'}>
-                1. Details
-              </span>
-              <span className={wizardStep === 2 ? 'text-red-600 font-bold' : 'text-slate-600'}>
-                2. Team
-              </span>
-              <span className={wizardStep === 3 ? 'text-red-600 font-bold' : 'text-slate-400'}>
-                3. Predefined Tasks
-              </span>
-            </div>
-
-            <div className="relative flex items-center justify-between">
-              {/* Step 1 Circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 z-10 transition-all ${
-                wizardStep === 1 
-                  ? 'border-red-600 bg-white text-red-600 shadow-sm ring-4 ring-red-50' 
-                  : 'border-red-600 bg-red-600 text-white'
-              }`}>
-                {wizardStep > 1 ? <Check className="w-4 h-4" /> : '1'}
-              </div>
-
-              {/* Connecting Line 1 */}
-              <div className={`flex-1 h-0.5 mx-2 transition-all ${
-                wizardStep >= 2 ? 'bg-red-600' : 'bg-slate-200'
-              }`} />
-
-              {/* Step 2 Circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 z-10 transition-all ${
-                wizardStep === 2 
-                  ? 'border-red-600 bg-white text-red-600 shadow-sm ring-4 ring-red-50' 
-                  : wizardStep > 2 ? 'border-red-600 bg-red-600 text-white' : 'border-slate-300 bg-white text-slate-400'
-              }`}>
-                {wizardStep > 2 ? <Check className="w-4 h-4" /> : '2'}
-              </div>
-
-              {/* Connecting Line 2 */}
-              <div className={`flex-1 h-0.5 mx-2 transition-all ${
-                wizardStep === 3 ? 'bg-red-600' : 'bg-slate-200'
-              }`} />
-
-              {/* Step 3 Circle */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border-2 z-10 transition-all ${
-                wizardStep === 3 
-                  ? 'border-red-600 bg-white text-red-600 shadow-sm ring-4 ring-red-50' 
-                  : 'border-slate-300 bg-white text-slate-400'
-              }`}>
-                3
-              </div>
+      <div className="min-h-screen w-full bg-slate-100/75 flex flex-col antialiased">
+        {/* ── TOP FULL-SCREEN HEADER BAR ── */}
+        <header className="w-full bg-white border-b border-slate-200/90 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+          {/* Left: Branding & Title */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleCancelWizard}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Back to Projects"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Creating Project</h1>
             </div>
           </div>
 
-          {/* STEP 1: Project Details */}
-          {wizardStep === 1 && (
-            <div className="w-full bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Project Details</h2>
-                <p className="text-xs text-slate-500 mt-0.5">Enter key project parameters and client contact information</p>
-              </div>
+          {/* Center: Modern Stepper */}
+          <div className="flex items-center gap-1 sm:gap-2 bg-slate-50 border border-slate-200/80 px-2 sm:px-3 py-1.5 rounded-2xl shadow-2xs">
+            {/* Step 1 Pill */}
+            <button
+              type="button"
+              onClick={() => setWizardStep(1)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                wizardStep === 1
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : wizardStep > 1
+                  ? 'text-slate-700 hover:bg-slate-200/60'
+                  : 'text-slate-400'
+              }`}
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                wizardStep === 1 ? 'bg-white/20 text-white' : wizardStep > 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+              }`}>
+                {wizardStep > 1 ? <Check className="w-3 h-3" /> : '1'}
+              </span>
+              <span className="hidden md:inline">1. Details</span>
+            </button>
 
-              {wizardError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{wizardError}</span>
-                </div>
-              )}
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Project Name *</label>
-                  <input
-                    type="text"
-                    value={newProjectName}
-                    onChange={(e) => {
-                      setNewProjectName(e.target.value);
-                      if (wizardError) setWizardError('');
-                    }}
-                    placeholder="e.g. RG33 Villa Complex or Commercial Plaza"
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition"
-                    autoFocus
-                  />
-                </div>
+            {/* Step 2 Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                if (newProjectName.trim()) setWizardStep(2);
+                else setWizardError('Please enter a Project Name');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                wizardStep === 2
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : wizardStep > 2
+                  ? 'text-slate-700 hover:bg-slate-200/60'
+                  : 'text-slate-400'
+              }`}
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                wizardStep === 2 ? 'bg-white/20 text-white' : wizardStep > 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+              }`}>
+                {wizardStep > 2 ? <Check className="w-3 h-3" /> : '2'}
+              </span>
+              <span className="hidden md:inline">2. Team</span>
+            </button>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Client / Owner Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      placeholder="e.g. Anbu Foundation / Ramesh"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition"
-                    />
-                  </div>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Project Type / Category</label>
-                    <CustomSelect
-                      value={newProjectType}
-                      onChange={(val) => setNewProjectType(val)}
-                      options={[
-                        'Residential Construction',
-                        'Commercial Complex',
-                        'Industrial Construction',
-                        'Architectural Design & Planning',
-                        'Infrastructure Project'
-                      ]}
-                      size="md"
-                      variant="brand"
-                    />
-                  </div>
-                </div>
+            {/* Step 3 Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                if (newProjectName.trim()) setWizardStep(3);
+                else setWizardError('Please enter a Project Name');
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                wizardStep === 3
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-400'
+              }`}
+            >
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
+                wizardStep === 3 ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
+              }`}>
+                3
+              </span>
+              <span className="hidden md:inline">3. Predefined Tasks</span>
+            </button>
+          </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Address / Site Location</label>
-                    <input
-                      type="text"
-                      value={newAddress}
-                      onChange={(e) => setNewAddress(e.target.value)}
-                      placeholder="e.g. Plot 42, Pattabiram Main Rd"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition"
-                    />
-                  </div>
+          {/* Right: Fullscreen Mode & Close Button */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleWizardFullscreen}
+              className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
+              title={isWizardFullscreen ? "Exit Fullscreen" : "Fullscreen Studio Mode"}
+            >
+              {isWizardFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+            <button 
+              type="button"
+              onClick={handleCancelWizard}
+              className="p-2 hover:bg-red-50 hover:text-red-600 rounded-xl text-slate-400 transition-colors cursor-pointer border border-transparent hover:border-red-100"
+              title="Close Wizard"
+              aria-label="Close Wizard"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">City</label>
-                    <input
-                      type="text"
-                      value={newCity}
-                      onChange={(e) => setNewCity(e.target.value)}
-                      placeholder="e.g. Chennai, Bangalore"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition"
-                    />
-                  </div>
-                </div>
+        {/* ── MAIN EXPANSIVE 12-COLUMN STUDIO CANVAS ── */}
+        <main className="flex-1 w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* ── LEFT/CENTER (8 COLUMNS): ACTIVE WIZARD STEP ── */}
+            <div className="lg:col-span-8 space-y-6">
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Estimated Budget (₹ INR)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={newEstimatedBudget}
-                    onChange={(e) => setNewEstimatedBudget(e.target.value)}
-                    onFocus={() => {
-                      if (newEstimatedBudget === '0') setNewEstimatedBudget('');
-                    }}
-                    onBlur={() => {
-                      if (!newEstimatedBudget.trim()) setNewEstimatedBudget('0');
-                    }}
-                    placeholder="0"
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition"
-                  />
-                </div>
-              </div>
-
-              {/* Continue Button */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleWizardContinueToStep2}
-                  className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center cursor-pointer"
-                >
-                  Continue to Team Assignment (Step 2)
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: Add Team member */}
-          {wizardStep === 2 && (
-            <div className="w-full bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Assign Key Team Members</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Assign site engineers, project managers, and supervisors for daily field operations.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {/* Project Manager */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5 text-red-600" />
-                      Project Manager
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Lead / Execution</span>
-                  </div>
-                  <SelectOrTypeInput
-                    value={selectedPM}
-                    onChange={setSelectedPM}
-                    options={pmOptions}
-                    placeholder="Select or type Project Manager name..."
-                  />
-                </div>
-
-                {/* Site Engineer */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <UserCheck className="w-3.5 h-3.5 text-red-600" />
-                      Site Engineer
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Technical / Field</span>
-                  </div>
-                  <SelectOrTypeInput
-                    value={selectedEngineer}
-                    onChange={setSelectedEngineer}
-                    options={engineerOptions}
-                    placeholder="Select or type Site Engineer name..."
-                  />
-                </div>
-
-                {/* Site Supervisor */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
-                      Site Supervisor / Safety
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Daily Manpower</span>
-                  </div>
-                  <SelectOrTypeInput
-                    value={selectedSupervisor}
-                    onChange={setSelectedSupervisor}
-                    options={supervisorOptions}
-                    placeholder="Select or type Site Supervisor / Safety name..."
-                  />
-                </div>
-
-                {/* Accounts & Finance */}
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
-                    <span className="flex items-center gap-1.5">
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                      Accounts & Billing
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Cash In / Out</span>
-                  </div>
-                  <SelectOrTypeInput
-                    value={selectedAccounts}
-                    onChange={setSelectedAccounts}
-                    options={accountsOptions}
-                    placeholder="Select or type Accounts Manager name..."
-                  />
-                </div>
-
-                {/* Additional Key Team Members Section */}
-                <div className="pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-indigo-600" />
-                      Additional Team Members ({additionalTeam.length})
-                    </span>
-                    {!showAddExtraMember && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAddExtraMember(true)}
-                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Plus className="w-3 h-3" /> Add More Staff
-                      </button>
-                    )}
-                  </div>
-
-                  {/* List of Added Members */}
-                  {additionalTeam.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {additionalTeam.map((m, idx) => (
-                        <div key={idx} className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-slate-800">{m.name}</span>
-                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded">
-                              {m.role}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setAdditionalTeam(prev => prev.filter((_, i) => i !== idx))}
-                            className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Inline Form to Add Extra Member */}
-                  {showAddExtraMember && (
-                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-3">
-                      <div className="text-[11px] font-semibold text-indigo-900">
-                        Assign Any Staff with Custom Designation
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-600 mb-1">
-                            Staff Member *
-                          </label>
-                          <SelectOrTypeInput
-                            value={extraMemberName}
-                            onChange={(val) => {
-                              setExtraMemberName(val);
-                              const found = staffList.find(s => s.name.toLowerCase().trim() === val.toLowerCase().trim());
-                              if (found && !extraMemberRole) {
-                                setExtraMemberRole(found.designation || found.role_name || '');
-                              }
-                            }}
-                            options={allStaffOptions}
-                            placeholder="Select staff or type name..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-600 mb-1">
-                            Designation / Role on Project
-                          </label>
-                          <input
-                            type="text"
-                            value={extraMemberRole}
-                            onChange={(e) => setExtraMemberRole(e.target.value)}
-                            placeholder="e.g. Architect, Quality Auditor..."
-                            className="w-full h-10 px-3 border border-slate-200 rounded-lg text-xs font-medium bg-white focus:outline-none focus:border-indigo-600"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-end gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAddExtraMember(false);
-                            setExtraMemberName('');
-                            setExtraMemberRole('');
-                          }}
-                          className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleAddExtraMember}
-                          disabled={!extraMemberName.trim()}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg cursor-pointer flex items-center gap-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          Assign Staff
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setWizardStep(1)}
-                  className="w-1/3 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleWizardContinueToStep3}
-                  className="w-2/3 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>Continue to Predefined Tasks (Step 3)</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Predefined Tasks & Workflow Generation (Requirements Section 1 & 2) */}
-          {wizardStep === 3 && (
-            <div className="w-full bg-white p-6 sm:p-8 rounded-2xl border border-slate-100 shadow-sm space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    Automatic Predefined Tasks
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Uncheck any task to exclude it from this project. Click Edit to customize any task or Add Task to add new ones.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={selectAllTasks}
-                    className="text-xs font-semibold text-red-600 hover:text-red-700 px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 transition cursor-pointer"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={deselectAllTasks}
-                    className="text-xs font-semibold text-slate-600 hover:text-slate-800 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
-                  >
-                    Deselect All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingCustomTask(true)}
-                    className="text-xs font-semibold text-white px-2.5 py-1 rounded bg-red-600 hover:bg-red-700 transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Task</span>
-                  </button>
-                  <span className="text-xs font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
-                    {selectedTaskIds.length} / {wizardTasks.length} Active
-                  </span>
-                </div>
-              </div>
-
-              {/* Inline Form to Add Custom Predefined Task */}
-              {isAddingCustomTask && (
-                <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-xl space-y-3 animate-in fade-in">
-                  <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                    <span className="flex items-center gap-1.5">
-                      <Plus className="w-4 h-4 text-amber-600" />
-                      Add New Predefined Task to Project
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingCustomTask(false)}
-                      className="text-slate-400 hover:text-slate-600 p-1"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {/* STEP 1: Project Details */}
+              {wizardStep === 1 && (
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1">Task Title *</label>
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                        Project Details
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Enter key project parameters, commercial classification, and client contact information.
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                      Step 1 of 3
+                    </span>
+                  </div>
+
+                  {wizardError && (
+                    <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                      <span className="font-semibold">{wizardError}</span>
+                    </div>
+                  )}
+
+                  {/* Section A: Project Identity */}
+                  <div className="space-y-4">
+                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
+                      General Identity
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Project Name <span className="text-red-500">*</span>
+                      </label>
                       <input
                         type="text"
-                        value={customTaskForm.title}
-                        onChange={(e) => setCustomTaskForm({ ...customTaskForm, title: e.target.value })}
-                        placeholder="e.g. Foundation Excavation & Leveling"
-                        className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white text-xs font-medium"
+                        value={newProjectName}
+                        onChange={(e) => {
+                          setNewProjectName(e.target.value);
+                          if (wizardError) setWizardError('');
+                        }}
+                        className="w-full px-4 py-3 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
+                        autoFocus
                       />
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Client Name</label>
+                        <input
+                          type="text"
+                          value={newClientName}
+                          onChange={(e) => setNewClientName(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Department / Division <span className="text-red-500">*</span>
+                        </label>
+                        <CustomSelect
+                          value={newDepartment}
+                          onChange={(val) => setNewDepartment(val)}
+                          options={ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+                            label: d.name,
+                            value: d.id,
+                          }))}
+                          size="md"
+                          variant="brand"
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block font-semibold text-slate-700 mb-1 text-xs">Priority</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type / Category</label>
                       <CustomSelect
-                        value={customTaskForm.default_priority}
-                        onChange={(val) => setCustomTaskForm({ ...customTaskForm, default_priority: val as any })}
+                        value={newProjectType}
+                        onChange={(val) => setNewProjectType(val)}
                         options={[
-                          { label: 'Urgent', value: 'URGENT', dotColor: 'bg-rose-500' },
-                          { label: 'High', value: 'HIGH', dotColor: 'bg-amber-500' },
-                          { label: 'Medium', value: 'MEDIUM', dotColor: 'bg-sky-500' },
-                          { label: 'Low', value: 'LOW', dotColor: 'bg-slate-400' },
+                          'Residential Construction',
+                          'Commercial Complex',
+                          'Soil Investigation & Testing',
+                          'Architectural Design & Planning',
+                          'Infrastructure Project'
                         ]}
-                        size="sm"
+                        size="md"
                         variant="brand"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1 text-xs">Description</label>
-                    <input
-                      type="text"
-                      value={customTaskForm.description}
-                      onChange={(e) => setCustomTaskForm({ ...customTaskForm, description: e.target.value })}
-                      placeholder="Brief details about the task execution..."
-                      className="w-full h-9 px-3 border border-slate-200 rounded-lg bg-white text-xs font-medium"
-                    />
+                  {/* Section B: Location & Financials */}
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
+                      Location & Financials
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Address / Site Location</label>
+                        <input
+                          type="text"
+                          value={newAddress}
+                          onChange={(e) => setNewAddress(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">City</label>
+                        <input
+                          type="text"
+                          value={newCity}
+                          onChange={(e) => setNewCity(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-slate-700">Estimated Budget (₹ INR)</label>
+                        {newEstimatedBudget && parseFloat(newEstimatedBudget) > 0 && (
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                            {formatINR(newEstimatedBudget)} {getLakhsCroresText(newEstimatedBudget)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-2.5 text-base font-bold text-slate-500 select-none">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={newEstimatedBudget}
+                          onChange={(e) => setNewEstimatedBudget(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-1">
+                  {/* Continue Button */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                     <button
                       type="button"
-                      onClick={() => setIsAddingCustomTask(false)}
-                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                      onClick={handleCancelWizard}
+                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
-                      onClick={handleAddCustomPredefinedTask}
-                      disabled={!customTaskForm.title.trim()}
-                      className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs"
+                      onClick={handleWizardContinueToStep2}
+                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add to Tasks</span>
+                      <span>Continue to Team Assignment (Step 2)</span>
+                      <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Tasks List */}
-              <div className="max-h-96 overflow-y-auto pr-1 space-y-2.5">
-                {wizardTasks.map((t) => {
-                  const isChecked = selectedTaskIds.includes(t.id);
-                  const isBeingEdited = editingTask?.id === t.id;
-                  const deptColors: Record<string, string> = {
-                    SOIL_INVESTIGATION: 'bg-amber-100 text-amber-800 border-amber-200',
-                    ARCHITECTURE: 'bg-red-100 text-red-800 border-red-200',
-                    MARKETING: 'bg-sky-100 text-sky-800 border-sky-200',
-                    CONSTRUCTION: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                    ACCOUNTS: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-                  };
+              {/* STEP 2: Team Assignment */}
+              {wizardStep === 2 && (
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <Users className="w-5 h-5 text-red-600" />
+                        Assign Key Team Members
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Designate site engineers, project managers, and supervisors for daily field operations.
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                      Step 2 of 3
+                    </span>
+                  </div>
 
-                  if (isBeingEdited && editingTask) {
-                    return (
-                      <div key={t.id} className="p-3.5 rounded-xl border border-red-300 bg-red-50/20 space-y-3">
-                        <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                          <span>Edit Task #{t.id} Details</span>
-                          <span className="text-[10px] text-slate-400">Inline Editing</span>
+                  {/* 3-Column Grid of Key Leadership Roles - Perfectly Aligned */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-stretch">
+                    {/* Project Manager */}
+                    <div className="p-4 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col justify-between transition-all">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                            <Briefcase className="w-4 h-4" />
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-100 whitespace-nowrap">
+                            Execution Lead
+                          </span>
                         </div>
+                        <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                          Project Manager
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1 h-8 line-clamp-2">
+                          Oversees timelines, project coordination, and client updates.
+                        </p>
+                      </div>
+                      <div className="mt-3.5 pt-1">
+                        <SelectOrTypeInput
+                          value={selectedPM}
+                          onChange={setSelectedPM}
+                          options={pmOptions}
+                          placeholder="Select Project Manager..."
+                        />
+                      </div>
+                    </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                    {/* Site Engineer */}
+                    <div className="p-4 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col justify-between transition-all">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+                            <UserCheck className="w-4 h-4" />
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-50 text-sky-700 border border-sky-100 whitespace-nowrap">
+                            Field Technical
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                          Site Engineer
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1 h-8 line-clamp-2">
+                          Manages structural measurements, drawings, and daily DPRs.
+                        </p>
+                      </div>
+                      <div className="mt-3.5 pt-1">
+                        <SelectOrTypeInput
+                          value={selectedEngineer}
+                          onChange={setSelectedEngineer}
+                          options={engineerOptions}
+                          placeholder="Select Site Engineer..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Site Supervisor */}
+                    <div className="p-4 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/90 rounded-2xl flex flex-col justify-between transition-all">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 whitespace-nowrap">
+                            Manpower & Safety
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                          Site Supervisor / Safety
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed mt-1 h-8 line-clamp-2">
+                          Manages worker attendance, material unloading, and safety checklist.
+                        </p>
+                      </div>
+                      <div className="mt-3.5 pt-1">
+                        <SelectOrTypeInput
+                          value={selectedSupervisor}
+                          onChange={setSelectedSupervisor}
+                          options={supervisorOptions}
+                          placeholder="Select Site Supervisor..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Key Team Members Section */}
+                  <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          Additional Team Members ({additionalTeam.length})
+                        </span>
+                        <p className="text-[11px] text-slate-500">Add draftsmen, safety officers, quality auditors, or sub-engineers.</p>
+                      </div>
+                      {!showAddExtraMember && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddExtraMember(true)}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-indigo-200/60 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add More Staff</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* List of Added Members */}
+                    {additionalTeam.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {additionalTeam.map((m, idx) => (
+                          <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center">
+                                {m.name.slice(0, 1).toUpperCase()}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-800 block leading-tight">{m.name}</span>
+                                <span className="text-[10px] text-indigo-600 font-medium">{m.role}</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setAdditionalTeam(prev => prev.filter((_, i) => i !== idx))}
+                              className="text-slate-400 hover:text-red-600 p-1.5 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Inline Form to Add Extra Member */}
+                    {showAddExtraMember && (
+                      <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
+                        <div className="text-xs font-bold text-indigo-900">
+                          Assign Staff Member with Designation
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Title</label>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                              Staff Member *
+                            </label>
+                            <SelectOrTypeInput
+                              value={extraMemberName}
+                              onChange={(val) => {
+                                setExtraMemberName(val);
+                                const found = staffList.find(s => s.name.toLowerCase().trim() === val.toLowerCase().trim());
+                                if (found && !extraMemberRole) {
+                                  setExtraMemberRole(found.designation || found.role_name || '');
+                                }
+                              }}
+                              options={allStaffOptions}
+                              placeholder="Select staff or type name..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                              Designation / Role on Project
+                            </label>
                             <input
                               type="text"
-                              value={editingTask.title}
-                              onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                              className="w-full h-8 px-2.5 border border-slate-200 rounded-lg bg-white text-xs font-medium"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Priority</label>
-                            <CustomSelect
-                              value={editingTask.default_priority}
-                              onChange={(val) => setEditingTask({ ...editingTask, default_priority: val as any })}
-                              options={[
-                                { label: 'Urgent', value: 'URGENT', dotColor: 'bg-rose-500' },
-                                { label: 'High', value: 'HIGH', dotColor: 'bg-amber-500' },
-                                { label: 'Medium', value: 'MEDIUM', dotColor: 'bg-sky-500' },
-                                { label: 'Low', value: 'LOW', dotColor: 'bg-slate-400' },
-                              ]}
-                              size="sm"
-                              variant="brand"
+                              value={extraMemberRole}
+                              onChange={(e) => setExtraMemberRole(e.target.value)}
+                              placeholder="e.g. Architect, Quality Auditor..."
+                              className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-medium bg-white focus:outline-none focus:border-indigo-600"
                             />
                           </div>
                         </div>
-
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-600 mb-1">Description</label>
-                          <textarea
-                            rows={2}
-                            value={editingTask.description}
-                            onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                            className="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-medium resize-none"
-                          />
-                        </div>
-
                         <div className="flex items-center justify-end gap-2 pt-1">
                           <button
                             type="button"
-                            onClick={() => setEditingTask(null)}
-                            className="px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                            onClick={() => {
+                              setShowAddExtraMember(false);
+                              setExtraMemberName('');
+                              setExtraMemberRole('');
+                            }}
+                            className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
                           >
                             Cancel
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleSaveEditedTask(editingTask)}
-                            className="px-3.5 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg cursor-pointer shadow-2xs"
+                            onClick={handleAddExtraMember}
+                            disabled={!extraMemberName.trim()}
+                            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs"
                           >
-                            Save Task
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Assign Staff</span>
                           </button>
                         </div>
                       </div>
-                    );
-                  }
+                    )}
+                  </div>
 
-                  return (
-                    <div
-                      key={t.id}
-                      onClick={() => toggleTaskSelection(t.id)}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start gap-3.5 ${
-                        isChecked 
-                          ? 'bg-red-50/20 border-red-200 hover:border-red-300' 
-                          : 'bg-slate-50/60 border-slate-200 opacity-60 hover:opacity-90'
-                      }`}
+                  {/* Navigation Buttons */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(1)}
+                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      {/* Checkbox with stopPropagation to prevent double toggle */}
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          toggleTaskSelection(t.id);
-                        }}
-                        className="mt-1 w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300 cursor-pointer shrink-0"
-                      />
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Back to Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleWizardContinueToStep3}
+                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <span>Continue to Predefined Tasks (Step 3)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`text-xs font-bold ${isChecked ? 'text-slate-900' : 'text-slate-500 line-through'}`}>
-                              {t.id}. {t.title}
-                            </span>
-                            <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                              {t.default_priority}
-                            </span>
-                            {!isChecked && (
-                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                                Excluded
-                              </span>
-                            )}
-                          </div>
+              {/* STEP 3: Predefined Tasks */}
+              {wizardStep === 3 && (
+                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-amber-500" />
+                        Automatic Predefined Tasks & Workflow
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Tasks pre-populated for this project. Check or uncheck to include, click Edit to customize, or add new tasks.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-bold text-slate-700 bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl">
+                        {selectedTaskIds.length} / {wizardTasks.length} Active
+                      </span>
+                    </div>
+                  </div>
 
-                          {/* Edit Button */}
-                          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              onClick={() => setEditingTask({ ...t })}
-                              className="px-2 py-1 text-slate-500 hover:text-red-600 hover:bg-white rounded-lg border border-transparent hover:border-slate-200 transition cursor-pointer flex items-center gap-1 text-[11px] font-semibold shadow-2xs"
-                              title="Edit Task Details"
-                            >
-                              <Edit2 className="w-3.5 h-3.5 text-slate-400 hover:text-red-600" />
-                              <span>Edit</span>
-                            </button>
-                          </div>
+                  {/* Filter Tabs & Toolbar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2">
+                    {/* Department Filter Tabs */}
+                    <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                      {(['ALL', 'MATERIAL_TESTING', 'STRUCTURAL', 'SOIL_INVESTIGATION', 'ARCHITECTURE', 'CONSTRUCTION', 'SURVEY', 'MARKETING', 'ACCOUNTS'] as const).map((deptKey) => {
+                        const isTabActive = taskDeptFilter === deptKey;
+                        const label = deptKey === 'ALL' ? 'All' 
+                          : deptKey === 'MATERIAL_TESTING' ? 'Material Test'
+                          : deptKey === 'STRUCTURAL' ? 'Structural'
+                          : deptKey === 'SOIL_INVESTIGATION' ? 'Soil Test' 
+                          : deptKey === 'CONSTRUCTION' ? 'Civil' 
+                          : deptKey === 'ARCHITECTURE' ? 'Architecture'
+                          : deptKey === 'SURVEY' ? 'Survey'
+                          : deptKey === 'MARKETING' ? 'Marketing'
+                          : 'Accounts';
+                        return (
+                          <button
+                            key={deptKey}
+                            type="button"
+                            onClick={() => setTaskDeptFilter(deptKey as any)}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                              isTabActive
+                                ? 'bg-white text-red-600 shadow-xs'
+                                : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={selectAllTasks}
+                        className="text-xs font-bold text-red-600 hover:text-red-700 px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 transition cursor-pointer"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={deselectAllTasks}
+                        className="text-xs font-bold text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                      >
+                        Deselect All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCustomTask(true)}
+                        className="text-xs font-bold text-white px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Task</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Inline Form to Add Custom Predefined Task */}
+                  {isAddingCustomTask && (
+                    <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-2xl space-y-3 animate-in fade-in">
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-4 h-4 text-amber-600" />
+                          Add New Predefined Task to Project
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingCustomTask(false)}
+                          className="text-slate-400 hover:text-slate-600 p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="sm:col-span-1">
+                          <label className="block font-bold text-slate-700 mb-1">Task Title *</label>
+                          <input
+                            type="text"
+                            value={customTaskForm.title}
+                            onChange={(e) => setCustomTaskForm({ ...customTaskForm, title: e.target.value })}
+                            placeholder="e.g. Concrete Cube Testing or Borehole Drilling"
+                            className="w-full h-10 px-3 border border-slate-200 rounded-xl bg-white text-xs font-medium"
+                          />
                         </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Department</label>
+                          <CustomSelect
+                            value={customTaskForm.department}
+                            onChange={(val) => setCustomTaskForm({ ...customTaskForm, department: val as any })}
+                            options={[
+                              { label: 'Material Testing', value: 'MATERIAL_TESTING' },
+                              { label: 'Structural', value: 'STRUCTURAL' },
+                              { label: 'Soil Investigation', value: 'SOIL_INVESTIGATION' },
+                              { label: 'Architecture', value: 'ARCHITECTURE' },
+                              { label: 'Construction', value: 'CONSTRUCTION' },
+                              { label: 'Survey', value: 'SURVEY' },
+                              { label: 'Marketing', value: 'MARKETING' },
+                              { label: 'Accounts', value: 'ACCOUNTS' },
+                            ]}
+                            size="sm"
+                            variant="brand"
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-bold text-slate-700 mb-1">Priority</label>
+                          <CustomSelect
+                            value={customTaskForm.default_priority}
+                            onChange={(val) => setCustomTaskForm({ ...customTaskForm, default_priority: val as any })}
+                            options={[
+                              { label: 'Urgent', value: 'URGENT', dotColor: 'bg-rose-500' },
+                              { label: 'High', value: 'HIGH', dotColor: 'bg-amber-500' },
+                              { label: 'Medium', value: 'MEDIUM', dotColor: 'bg-sky-500' },
+                              { label: 'Low', value: 'LOW', dotColor: 'bg-slate-400' },
+                            ]}
+                            size="sm"
+                            variant="brand"
+                          />
+                        </div>
+                      </div>
 
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                          {t.description}
-                        </p>
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1 text-xs">Description</label>
+                        <input
+                          type="text"
+                          value={customTaskForm.description}
+                          onChange={(e) => setCustomTaskForm({ ...customTaskForm, description: e.target.value })}
+                          placeholder="Brief details about the task execution..."
+                          className="w-full h-10 px-3 border border-slate-200 rounded-xl bg-white text-xs font-medium"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setIsAddingCustomTask(false)}
+                          className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAddCustomPredefinedTask}
+                          disabled={!customTaskForm.title.trim()}
+                          className="px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add to Tasks</span>
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setWizardStep(2)}
-                  className="w-1/3 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleWizardSubmit}
-                  className="w-2/3 py-3 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Create Project ({selectedTaskIds.length} Tasks)</span>
-                </button>
+                  {/* Tasks Grid */}
+                  <div className="max-h-[500px] overflow-y-auto pr-1 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-200">
+                    {displayedWizardTasks.map((t) => {
+                      const isChecked = selectedTaskIds.includes(t.id);
+
+                      if (editingTask && editingTask.id === t.id) {
+                        return (
+                          <div key={t.id} className="p-4 bg-red-50/40 border border-red-200 rounded-2xl space-y-3">
+                            <div className="font-bold text-xs text-red-900">Edit Predefined Task</div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-600 mb-1">Title</label>
+                                <input
+                                  type="text"
+                                  value={editingTask.title}
+                                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                                  className="w-full h-9 px-2.5 border border-slate-200 rounded-lg text-xs bg-white font-medium"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-600 mb-1">Department</label>
+                                <CustomSelect
+                                  value={editingTask.department}
+                                  onChange={(val) => setEditingTask({ ...editingTask, department: val as any })}
+                                  options={[
+                                    { label: 'Material Testing', value: 'MATERIAL_TESTING' },
+                                    { label: 'Structural', value: 'STRUCTURAL' },
+                                    { label: 'Soil Investigation', value: 'SOIL_INVESTIGATION' },
+                                    { label: 'Architecture', value: 'ARCHITECTURE' },
+                                    { label: 'Construction', value: 'CONSTRUCTION' },
+                                    { label: 'Survey', value: 'SURVEY' },
+                                    { label: 'Marketing', value: 'MARKETING' },
+                                    { label: 'Accounts', value: 'ACCOUNTS' },
+                                  ]}
+                                  size="sm"
+                                  variant="brand"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-600 mb-1">Priority</label>
+                                <CustomSelect
+                                  value={editingTask.default_priority}
+                                  onChange={(val) => setEditingTask({ ...editingTask, default_priority: val as any })}
+                                  options={[
+                                    { label: 'Urgent', value: 'URGENT', dotColor: 'bg-rose-500' },
+                                    { label: 'High', value: 'HIGH', dotColor: 'bg-amber-500' },
+                                    { label: 'Medium', value: 'MEDIUM', dotColor: 'bg-sky-500' },
+                                    { label: 'Low', value: 'LOW', dotColor: 'bg-slate-400' },
+                                  ]}
+                                  size="sm"
+                                  variant="brand"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-600 mb-1">Description</label>
+                              <textarea
+                                rows={2}
+                                value={editingTask.description}
+                                onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                                className="w-full p-2.5 border border-slate-200 rounded-xl bg-white text-xs font-medium resize-none"
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setEditingTask(null)}
+                                className="px-3.5 py-1 text-xs text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSaveEditedTask(editingTask)}
+                                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl cursor-pointer shadow-2xs"
+                              >
+                                Save Task
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => toggleTaskSelection(t.id)}
+                          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
+                            isChecked 
+                              ? 'bg-white border-red-200 hover:border-red-300 shadow-xs' 
+                              : 'bg-slate-50/70 border-slate-200 opacity-60 hover:opacity-90'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleTaskSelection(t.id);
+                            }}
+                            className="mt-1 w-4 h-4 rounded text-red-600 border-slate-300 focus:ring-red-500 cursor-pointer accent-red-600"
+                          />
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`text-xs font-bold ${isChecked ? 'text-slate-900' : 'text-slate-600'}`}>
+                                  {t.title}
+                                </span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                                  {t.department}
+                                </span>
+                                {t.default_priority && (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                    t.default_priority === 'URGENT' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                    t.default_priority === 'HIGH' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                    t.default_priority === 'MEDIUM' ? 'bg-sky-50 text-sky-700 border border-sky-200' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {t.default_priority}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingTask({ ...t })}
+                                  className="px-2.5 py-1 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg border border-transparent hover:border-slate-200 transition cursor-pointer flex items-center gap-1 text-[11px] font-semibold"
+                                  title="Edit Task Details"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-slate-400 hover:text-red-600" />
+                                  <span>Edit</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                              {t.description}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setWizardStep(2)}
+                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>Back to Team</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleWizardSubmit}
+                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/25 hover:shadow-lg hover:shadow-red-600/35 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <Check className="w-4 h-4" />
+                      <span>Create Project ({selectedTaskIds.length} Tasks)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── RIGHT (4 COLUMNS): LIVE PROJECT SUMMARY PREVIEW ── */}
+            <div className="lg:col-span-4 sticky top-20 space-y-4">
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Live Project Preview
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    Step {wizardStep} of 3
+                  </span>
+                </div>
+
+                {/* Identity Preview Card */}
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm shadow-red-500/25">
+                    {newProjectName.trim() ? newProjectName.slice(0, 2).toUpperCase() : 'PR'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-sm font-bold text-slate-900 truncate">
+                      {newProjectName.trim() || <span className="text-slate-400 italic font-normal">Untitled Project</span>}
+                    </h4>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">
+                      {newClientName.trim() ? `Client: ${newClientName}` : 'Client not specified'}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-100">
+                        {currentDeptObj?.shortName || currentDeptObj?.name || 'Department'}
+                      </span>
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 truncate max-w-[140px]">
+                        {newProjectType}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Parameters Grid */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                  <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Site Location</div>
+                    <div className="text-xs font-bold text-slate-800 truncate mt-1">
+                      {newCity.trim() || (newAddress.trim() ? newAddress : 'Location TBD')}
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Budget</div>
+                    <div className="text-xs font-bold text-emerald-700 truncate mt-1">
+                      {formatINR(newEstimatedBudget)}
+                    </div>
+                    {getLakhsCroresText(newEstimatedBudget) && (
+                      <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                        {getLakhsCroresText(newEstimatedBudget)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Team Allocation Summary */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
+                    <span>Key Leadership</span>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      {[selectedPM, selectedEngineer, selectedSupervisor].filter(Boolean).length} / 3 Assigned
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <Briefcase className="w-3 h-3 text-red-500" /> PM:
+                      </span>
+                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
+                        {selectedPM || <span className="text-slate-400 italic font-normal">Pending</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <UserCheck className="w-3 h-3 text-sky-500" /> Engineer:
+                      </span>
+                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
+                        {selectedEngineer || <span className="text-slate-400 italic font-normal">Pending</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-amber-500" /> Supervisor:
+                      </span>
+                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
+                        {selectedSupervisor || <span className="text-slate-400 italic font-normal">Pending</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                        <DollarSign className="w-3 h-3 text-emerald-500" /> Accounts:
+                      </span>
+                      {defaultAccountsStaff ? (
+                        <span className="font-semibold truncate max-w-[160px] text-emerald-700 flex items-center gap-1">
+                          {defaultAccountsStaff.name}
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded">Default</span>
+                        </span>
+                      ) : (
+                        <span className="font-semibold truncate max-w-[160px] text-slate-800">
+                          {selectedAccounts || <span className="text-slate-400 italic font-normal">Pending</span>}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Readiness Checklist */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-800">Setup Readiness</div>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      {newProjectName.trim() ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
+                      )}
+                      <span className={newProjectName.trim() ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                        Project Name & Identity
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {newDepartment ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
+                      )}
+                      <span className={newDepartment ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                        Department & Classification
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(selectedPM || selectedEngineer) ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
+                      )}
+                      <span className={(selectedPM || selectedEngineer) ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                        Site Leadership Assigned
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {selectedTaskIds.length > 0 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
+                      )}
+                      <span className={selectedTaskIds.length > 0 ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                        {selectedTaskIds.length} Workflow Tasks Selected
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+
+          </div>
+        </main>
       </div>
     );
   }
@@ -1406,6 +1915,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={onToggleSidebar}
           onBack={() => setViewMode('list')}
+          userRole={currentUser.role_code}
+          userRoleName={currentUser.role_name}
         />
 
         {/* Workspace Content Router (13 Functional Pages) */}
@@ -1413,9 +1924,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           {workspaceTab === 'dashboard' && (
             <DashboardTab
               project={activeProject}
-              tasks={tasks}
-              approvals={approvals}
-              materialRequests={materialRequests}
+              tasks={tasks.filter(t => t.project === activeProject.id || t.project_id === activeProject.id)}
+              approvals={approvals.filter(a => a.project === activeProject.id || a.project_id === activeProject.id)}
+              materialRequests={materialRequests.filter(m => m.project === activeProject.id || m.project_id === activeProject.id)}
               onNavigateTab={setWorkspaceTab}
               onOpenTeamModal={() => setIsTeamModalOpen(true)}
             />
@@ -1518,6 +2029,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             setActiveProject(upd);
             handleUpdateProjects(allProjects.map(p => p.id === upd.id ? upd : p));
           }}
+          onDeleteProject={handleDeleteProject}
+          isSuperAdmin={isSuperAdmin}
           onShowToast={onShowToast}
         />
 
@@ -1544,7 +2057,193 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   }
 
 
+  // Deterministic Avatar Generator ensuring solid background & clear contrast
+  const getProjectAvatar = (p: Project) => {
+    const title = formatProjectTitle(p);
+    const initials = p.initials || title.split('(')[0].trim().slice(0, 2).toUpperCase() || 'PR';
+    const palette = [
+      'bg-emerald-600',
+      'bg-teal-600',
+      'bg-red-600',
+      'bg-sky-600',
+      'bg-indigo-600',
+      'bg-amber-600',
+      'bg-purple-600',
+      'bg-rose-600',
+    ];
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) {
+      hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const fallbackColor = palette[Math.abs(hash) % palette.length];
+    const resolvedColor = (p.avatar_color && p.avatar_color.startsWith('bg-')) ? p.avatar_color : fallbackColor;
+    return { initials, colorClass: resolvedColor };
+  };
+
   // ==========================================
+  // ==========================================
+  // EMPLOYEE VIEW: Card-based assigned projects
+  // ==========================================
+  if (!isSuperOrAdmin) {
+    const userFirstName = currentUser.first_name || 'Employee';
+    const userRoleName = currentUser.role_name || 'Staff';
+    const today = new Date();
+    const greeting = today.getHours() < 12 ? 'Good Morning' : today.getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
+
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    return (
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50">
+        {/* Employee Top Bar */}
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+              {userFirstName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">{greeting},</p>
+              <h1 className="text-sm font-bold text-slate-900 leading-tight">{userFirstName} <span className="text-slate-400 font-normal">· {userRoleName}</span></h1>
+            </div>
+          </div>
+          <UserProfileDropdown showBell={true} onShowToast={onShowToast} />
+        </div>
+
+        {/* Home Content */}
+        <div className="flex-1 px-4 sm:px-6 py-6 space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">My Assigned Projects</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} assigned to you</p>
+            </div>
+            <div className="relative w-48">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search projects..."
+                className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 shadow-xs focus:outline-none focus:border-red-500"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-2.5 pointer-events-none" />
+            </div>
+          </div>
+
+          {filteredProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-red-50 text-red-400 flex items-center justify-center shadow-xs">
+                <Layers className="w-8 h-8" />
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-slate-800">No projects assigned</p>
+                <p className="text-xs text-slate-500 mt-1">You haven't been assigned to any projects yet.<br/>Contact your admin to get assigned.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filteredProjects.map((p) => {
+                const stats = getProjectLiveStats(p);
+                const avatar = getProjectAvatar(p);
+                const sc = stats.status === 'COMPLETED'
+                  ? { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', label: 'Completed' }
+                  : stats.status === 'PLANNING'
+                  ? { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-400', label: 'Planning' }
+                  : stats.status === 'ON_HOLD'
+                  ? { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500', label: 'On Hold' }
+                  : { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500 animate-pulse', label: 'Ongoing' };
+
+                return (
+                  <div key={p.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group">
+                    <div className={`h-1.5 ${avatar.colorClass}`} />
+                    <div className="p-5 flex-1 flex flex-col gap-3.5">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-xl ${avatar.colorClass} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm`}>
+                          {avatar.initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-red-600 transition-colors">
+                            {formatProjectTitle(p)}
+                          </h3>
+                          {p.code && (
+                            <p className="text-[10px] text-slate-400 font-mono mt-0.5 tracking-wide">{p.code}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {(p.location || p.city) && (
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{p.location || p.city}</span>
+                          </div>
+                        )}
+                        {p.client_name && p.client_name !== p.name && (
+                          <div className="flex items-center gap-2 text-xs text-slate-600">
+                            <User className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span className="truncate">{p.client_name}</span>
+                          </div>
+                        )}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${sc.bg} ${sc.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+                          {sc.label}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-3 py-3 border-t border-slate-100 text-xs">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">Start</p>
+                          <p className="font-medium text-slate-700 mt-0.5">{formatDate(p.start_date)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide">End</p>
+                          <p className="font-medium text-slate-700 mt-0.5">{formatDate(p.end_date)}</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-400 font-semibold uppercase tracking-wide">Progress</span>
+                          <span className="font-bold text-slate-700 font-mono">{stats.progress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${stats.progress === 100 ? 'bg-blue-500' : 'bg-red-500'}`} style={{ width: `${stats.progress}%` }} />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleOpenProjectDetails(p)}
+                        className="w-full mt-auto py-2.5 bg-slate-900 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        View Project
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <ProjectSettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          project={activeProject || allProjects[0] || project || ({} as Project)}
+          onUpdateProject={(upd) => {
+            setActiveProject(upd);
+            handleUpdateProjects(allProjects.map(p => p.id === upd.id ? upd : p));
+          }}
+          onDeleteProject={handleDeleteProject}
+          isSuperAdmin={false}
+          onShowToast={onShowToast}
+        />
+      </div>
+    );
+  }
+
   // VIEW 1: Projects List / Hub (Matching Screenshot 1)
   // ==========================================
   return (
@@ -1553,7 +2252,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Projects</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction initiatives</p>
+          <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction & soil investigation initiatives</p>
         </div>
 
         {/* Right Settings, Bell & User Avatar */}
@@ -1581,29 +2280,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
       {/* Main Single Card Content Body */}
       <div className="p-4 sm:p-6 space-y-6 flex-1">
-        {/* Active Staff View Restriction Banner */}
-        {!isSuperOrAdmin && (
-          <div className="bg-amber-50 border border-amber-200 rounded-[5px] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-900 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>
-                Viewing assigned projects for <strong className="font-bold">{currentUser.first_name}</strong> ({currentUser.role_name}). Only projects where you are added to the team or tasks are displayed.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                const adminUser = { first_name: 'Priya', username: 'admin', role_code: 'SUPER_ADMIN', role_name: 'Owner / Director' };
-                localStorage.setItem('siteops_user', JSON.stringify(adminUser));
-                window.dispatchEvent(new CustomEvent('siteops_user_updated', { detail: adminUser }));
-                onShowToast?.('Switched back to Super Admin view (All Projects)');
-              }}
-              className="px-3 py-1 bg-white hover:bg-amber-100 text-amber-800 font-bold rounded-[4px] border border-amber-300 transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
-            >
-              Switch to Super Admin (View All)
-            </button>
-          </div>
-        )}
 
         {/* Top 3 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1652,11 +2328,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
       </div>
 
-      {/* Filter and Action Toolbar */}
-      <div className="flex flex-col gap-3 pt-2">
-        {/* Row 1: Status, Dept, Count Badge, Stage, Search, Download, New Project */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* All / Status Dropdown */}
+
+
+      {/* ── UNIFIED FILTER & ACTION TOOLBAR ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        {/* Left: Filter Controls */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Status Dropdown */}
           <div className="w-28">
             <CustomSelect
               value={statusFilter}
@@ -1673,11 +2351,44 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
+          {/* Department Filter Dropdown */}
+          <div className="w-52">
+            <CustomSelect
+              value={activeDeptId}
+              onChange={(val) => {
+                setActiveDepartmentId(val as any);
+                setActiveDeptId(val);
+              }}
+              options={[
+                { label: `All Departments (${allProjects.length})`, value: 'booshnam_associates' },
+                ...ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+                  label: `${d.shortName} (${allProjects.filter(p => normalizeDepartmentId(p.department as string) === d.id).length})`,
+                  value: d.id,
+                }))
+              ]}
+              prefix="Dept: "
+              size="sm"
+              variant="brand"
+            />
+          </div>
 
-          {/* Count Badge */}
-          <span className="h-8 px-2.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-[5px] border border-slate-200 shadow-2xs flex items-center justify-center">
-            {filteredProjects.length}
-          </span>
+          {/* Category Dropdown */}
+          <div className="w-36">
+            <CustomSelect
+              value={categoryFilter}
+              onChange={(val) => setCategoryFilter(val)}
+              options={[
+                { label: 'Category: All', value: 'All' },
+                { label: 'Residential', value: 'Residential' },
+                { label: 'Commercial', value: 'Commercial' },
+                { label: 'Infrastructure', value: 'Infrastructure' },
+                { label: 'Testing', value: 'Testing' },
+              ]}
+              placeholder="Category"
+              size="sm"
+              variant="brand"
+            />
+          </div>
 
           {/* Stage Dropdown */}
           <div className="w-44">
@@ -1698,9 +2409,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
-          {/* Spacer to push right-side controls to the end */}
-          <div className="flex-1" />
+          {/* Count Badge */}
+          <span className="h-8 px-3 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg border border-slate-200/80 shadow-2xs flex items-center justify-center gap-1">
+            <span className="text-slate-500 font-normal">Total:</span> {filteredProjects.length}
+          </span>
+        </div>
 
+        {/* Right: Search, Download, and + New Project */}
+        <div className="flex items-center gap-2.5">
           {/* Search Projects Input */}
           <div className="relative w-52">
             <input
@@ -1721,34 +2437,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           >
             <Download className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Row 2: Category + New Project Button aligned */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Category Dropdown */}
-          <div className="w-40">
-            <CustomSelect
-              value={categoryFilter}
-              onChange={(val) => setCategoryFilter(val)}
-              options={[
-                { label: 'Category: All', value: 'All' },
-                { label: 'Residential', value: 'Residential' },
-                { label: 'Commercial', value: 'Commercial' },
-                { label: 'Infrastructure', value: 'Infrastructure' },
-                { label: 'Testing', value: 'Testing' },
-              ]}
-              placeholder="Category"
-              size="sm"
-              variant="brand"
-            />
-          </div>
 
           {/* + New Project Button */}
           <button
             onClick={() => {
               setNewProjectName('');
+              setNewClientName('');
               setNewAddress('');
               setNewCity('');
+              setNewEstimatedBudget('');
               setSelectedPM('');
               setSelectedEngineer('');
               setSelectedSupervisor('');
@@ -1765,46 +2462,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
       </div>
 
-      {/* Projects List Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+      {/* ── PROJECTS LIST TABLE (PERFECT ALIGNMENT & DESIGN) ── */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mt-3">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-white text-slate-500 border-b border-slate-200 font-semibold">
+            <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider select-none">
               <tr>
-                <th className="py-3.5 px-5">Name</th>
-                <th className="py-3.5 px-5 w-36 text-center">Project Status</th>
-                <th className="py-3.5 px-5 w-48 text-center">Progress</th>
-                <th className="py-3.5 px-5 w-36 text-center">In/Out</th>
-                <th className="py-3.5 px-5 w-24 text-center">To Do</th>
-                <th className="py-3.5 px-5 w-20 text-right">
-                  <div className="flex items-center justify-end text-red-600">
-                    <button
-                      type="button"
-                      title="Add Project"
-                      onClick={() => {
-                        setNewProjectName('');
-                        setNewAddress('');
-                        setNewCity('');
-                        setSelectedPM('');
-                        setSelectedEngineer('');
-                        setSelectedSupervisor('');
-                        setSelectedAccounts('');
-                        setWizardError('');
-                        setWizardStep(1);
-                        setViewMode('create');
-                      }}
-                      className="cursor-pointer hover:opacity-80 transition"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                </th>
+                <th className="py-3.5 px-6">Name</th>
+                <th className="py-3.5 px-4 w-36 text-center">Status</th>
+                <th className="py-3.5 px-5 w-44 text-center">Progress</th>
+                <th className="py-3.5 px-5 w-48 text-center">In / Out</th>
+                <th className="py-3.5 px-5 w-20 text-center">Pin</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-14 text-center">
+                  <td colSpan={5} className="py-14 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto">
                       <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shadow-2xs">
                         <Layers className="w-6 h-6" />
@@ -1839,64 +2513,67 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   const isPinned = pinnedIds.has(p.id);
                   const stats = getProjectLiveStats(p);
                   const progressVal = stats.progress;
-                  const todoVal = stats.todo;
+                  const avatar = getProjectAvatar(p);
 
                   return (
                     <tr 
                       key={p.id} 
-                      className={`hover:bg-red-50/30 transition-colors group ${
+                      className={`hover:bg-slate-50/80 transition-colors group align-middle ${
                         isPinned ? 'bg-red-50/20' : ''
                       }`}
                     >
-                      {/* Name Column with Avatar Initials */}
-                      <td className="py-4 px-5">
+                      {/* Name Column with Avatar Initials & Clean Subtitle */}
+                      <td className="py-4 px-6 align-middle">
                         <div className="flex items-center gap-3.5">
-                          {/* Avatar Initials Circle */}
-                          <div className={`w-9 h-9 rounded-xl ${p.avatar_color || 'bg-red-600'} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs`}>
-                            {p.initials || formatProjectTitle(p).split('(')[0].trim().slice(0, 2).toUpperCase()}
+                          {/* Avatar Initials Badge - Guaranteed solid background color */}
+                          <div className={`w-10 h-10 rounded-xl ${avatar.colorClass} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs`}>
+                            {avatar.initials}
                           </div>
 
                           {/* Name Text - Clickable to open Project Details */}
-                          <div className="min-w-0 flex-1 max-w-3xl">
+                          <div className="min-w-0 flex-1 max-w-2xl">
                             <button
                               onClick={() => handleOpenProjectDetails(p)}
-                              className="text-left font-medium text-slate-900 hover:text-red-600 transition-colors line-clamp-2 cursor-pointer leading-snug group-hover:font-semibold"
+                              className="text-left font-bold text-slate-900 hover:text-red-600 transition-colors line-clamp-1 cursor-pointer leading-snug group-hover:text-red-600 text-sm"
                               title="Click to view overall project details, pending work, and finances"
                             >
                               {formatProjectTitle(p)}
                             </button>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <div className="flex items-center gap-2 mt-1 flex-wrap text-slate-500">
                               {p.client_name && p.client_name !== p.name && (
-                                <>
-                                  <span className="text-[11px] text-slate-600 font-medium">
-                                    {p.client_name}
-                                  </span>
-                                  <span className="text-slate-300">•</span>
-                                </>
+                                <span className="text-[11px] text-slate-700 font-medium">
+                                  {p.client_name}
+                                </span>
                               )}
-                              <span className="text-[11px] text-slate-400">
-                                {p.location || p.city || 'Chennai'}
-                              </span>
+                              {(p.client_name && p.client_name !== p.name) && (p.location || p.city) && (
+                                <span className="text-slate-300">•</span>
+                              )}
+                              {(p.location || p.city) && (
+                                <span className="text-[11px] text-slate-400">
+                                  {p.location || p.city}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      {/* Project Status Column */}
-                      <td className="py-4 px-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                      {/* Status Column - Dedicated Column with Clean Pill Badge */}
+                      <td className="py-4 px-4 text-center align-middle whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-2xs border ${
                           stats.status === 'COMPLETED' 
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
                             : stats.status === 'PLANNING'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : stats.status === 'ON_HOLD'
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${
                             stats.status === 'COMPLETED' ? 'bg-blue-500' :
                             stats.status === 'PLANNING' ? 'bg-amber-500' :
-                            stats.status === 'ON_HOLD' ? 'bg-rose-500' : 'bg-emerald-500'
+                            stats.status === 'ON_HOLD' ? 'bg-rose-500' :
+                            'bg-emerald-500 animate-pulse'
                           }`} />
                           <span>
                             {stats.status === 'COMPLETED' ? 'Completed' :
@@ -1907,48 +2584,64 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </td>
 
                       {/* Progress Column */}
-                      <td className="py-4 px-5 text-center">
+                      <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
                         <div className="flex flex-col items-center justify-center space-y-1.5">
                           <span className="text-xs font-bold text-slate-800 font-mono">
                             {progressVal}%
                           </span>
-                          <div className="w-32 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className="w-24 bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
                             <div 
-                              className="bg-[#10B981] h-full rounded-full transition-all duration-300"
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                progressVal === 100 ? 'bg-blue-600' : progressVal > 0 ? 'bg-emerald-500' : 'bg-slate-200'
+                              }`}
                               style={{ width: `${progressVal}%` }}
                             />
                           </div>
                         </div>
                       </td>
 
-                      {/* In/Out Column (Matching Screenshot: ₹ 0 / ₹ 0) */}
-                      <td className="py-4 px-5 text-center font-mono text-xs text-slate-700">
-                        {p.cash_in !== undefined && p.cash_out !== undefined 
-                          ? `₹ ${p.cash_in.toLocaleString()} / ₹ ${p.cash_out.toLocaleString()}`
-                          : '₹ 0 / ₹ 0'
-                        }
+                      {/* In / Out Column - Clean stacked display with aligned numbers */}
+                      <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
+                        <div className="inline-flex flex-col items-start font-mono text-xs leading-tight gap-1">
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold whitespace-nowrap">
+                            <span className="text-[10px] text-slate-400 font-sans font-semibold tracking-wider w-8 text-left">IN:</span>
+                            <span>₹ {(p.cash_in !== undefined ? p.cash_in : 0).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-600 font-medium whitespace-nowrap">
+                            <span className="text-[10px] text-slate-400 font-sans font-semibold tracking-wider w-8 text-left">OUT:</span>
+                            <span>₹ {(p.cash_out !== undefined ? p.cash_out : 0).toLocaleString('en-IN')}</span>
+                          </div>
+                        </div>
                       </td>
 
-                      {/* To Do Column (Pill Badge) */}
-                      <td className="py-4 px-5 text-center">
-                        <span className="px-3 py-1 bg-[#EEF2FF] text-[#6366F1] font-bold text-xs rounded-full">
-                          {todoVal}
-                        </span>
-                      </td>
-
-                      {/* Actions Column (Pin & 3-Dots Menu) */}
-                      <td className="py-4 px-5 text-right">
-                        <div className="flex items-center justify-end gap-2 text-slate-400">
-                          {/* Pin Button */}
+                      {/* Actions Column (Pin & Super Admin Delete Buttons) */}
+                      <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             onClick={() => togglePin(p.id)}
-                            className={`p-1.5 rounded-lg hover:bg-slate-100 transition ${
-                              isPinned ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-slate-700'
+                            className={`p-2 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center ${
+                              isPinned 
+                                ? 'text-red-600 bg-red-50 hover:bg-red-100 shadow-2xs' 
+                                : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
                             }`}
                             title={isPinned ? 'Unpin Project' : 'Pin Project to top'}
                           >
-                            <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-red-600' : ''}`} />
+                            <Pin className={`w-4 h-4 transition-transform ${isPinned ? 'fill-red-600 rotate-45' : 'group-hover:scale-110'}`} />
                           </button>
+
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(p);
+                              }}
+                              className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
+                              title="Delete Project (Super Admin Only)"
+                            >
+                              <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1970,8 +2663,61 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           setActiveProject(upd);
           handleUpdateProjects(allProjects.map(p => p.id === upd.id ? upd : p));
         }}
+        onDeleteProject={handleDeleteProject}
+        isSuperAdmin={isSuperAdmin}
         onShowToast={onShowToast}
       />
+
+      {/* Delete Project Confirmation Modal - Super Admin Only */}
+      {projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-red-100 p-6 overflow-hidden space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0 shadow-xs">
+                <Trash2 className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 text-base">Delete Project</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                    Super Admin Only
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Are you sure you want to permanently delete <strong className="text-slate-800">{formatProjectTitle(projectToDelete)}</strong>?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 text-[11px] text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                This action <strong>cannot be undone</strong>. All tasks, DPR reports, material requests, and budget records associated with this project will be permanently erased.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setProjectToDelete(null)}
+                disabled={isDeletingProject}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteProject(projectToDelete)}
+                disabled={isDeletingProject}
+                className="px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:scale-98 rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeletingProject ? 'Deleting...' : 'Yes, Delete Project'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

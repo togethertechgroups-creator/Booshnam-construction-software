@@ -58,6 +58,50 @@ export function App() {
       setCurrentView('quotation');
     }
   }, [currentView]);
+
+  // Purge legacy mock data from browser localStorage on startup
+  useEffect(() => {
+    try {
+      const stTxns = localStorage.getItem('booshnam_statement_transactions_v1');
+      if (stTxns && (stTxns.includes('st-c-') || stTxns.includes('st-ax-'))) {
+        localStorage.removeItem('booshnam_statement_transactions_v1');
+      }
+      const leads = localStorage.getItem('booshnam_leads_v2');
+      if (leads && (leads.includes('LD-101') || leads.includes('lead-101') || leads.includes('lead-1'))) {
+        localStorage.removeItem('booshnam_leads_v2');
+      }
+      const quots = localStorage.getItem('booshnam_quotations_v2');
+      if (quots && (quots.includes('QBAG/3078') || quots.includes('quo-1'))) {
+        localStorage.removeItem('booshnam_quotations_v2');
+      }
+      const banks = localStorage.getItem('booshnam_finance_bank_accounts_v4');
+      if (banks && (banks.includes('4850000') || banks.includes('12400000') || banks.includes('17583911'))) {
+        localStorage.removeItem('booshnam_finance_bank_accounts_v4');
+      }
+
+      // Purge all seed projects starting with proj- or known titles
+      const savedProjs = localStorage.getItem('booshnam_projects_v2');
+      if (savedProjs) {
+        const parsed = JSON.parse(savedProjs);
+        if (Array.isArray(parsed)) {
+          const cleanProjs = parsed.filter((p: any) => 
+            !p.id?.startsWith('proj-') &&
+            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+          );
+          if (cleanProjs.length !== parsed.length) {
+            localStorage.setItem('booshnam_projects_v2', JSON.stringify(cleanProjs));
+            setProjects(cleanProjs);
+            if (cleanProjs.length > 0) {
+              setSelectedProject(cleanProjs[0]);
+            } else {
+              setSelectedProject(null);
+            }
+            window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: cleanProjs }));
+          }
+        }
+      }
+    } catch (e) {}
+  }, []);
   const [activeRole, setActiveRole] = useState<Role>(() => {
     const acc = getCurrentUserAccount();
     if (acc) {
@@ -92,7 +136,11 @@ export function App() {
   // Save projects to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('booshnam_projects_v2', JSON.stringify(projects));
+      const clean = (projects || []).filter((p: any) => 
+        !p.id?.startsWith('proj-') &&
+        !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+      );
+      localStorage.setItem('booshnam_projects_v2', JSON.stringify(clean));
     } catch (e) {}
   }, [projects]);
 
@@ -100,7 +148,11 @@ export function App() {
   useEffect(() => {
     const handleProjectsUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
-        setProjects(e.detail);
+        const clean = e.detail.filter((p: any) => 
+          !p.id?.startsWith('proj-') &&
+          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+        );
+        setProjects(clean);
       }
     };
     window.addEventListener('booshnam_projects_updated', handleProjectsUpdated);
@@ -318,12 +370,11 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (currentUserAccount && currentUserAccount.role_code !== 'SUPER_ADMIN') {
+    if (currentUserAccount) {
       if (!isPageAllowedForActiveUser(currentView)) {
-        const first = currentUserAccount.allowedPages[0];
-        if (first) {
-          setCurrentView(first === 'dashboard' ? 'company_dashboard' : first);
-        }
+        const allowed = currentUserAccount.allowedPages?.filter(p => isPageAllowedForActiveUser(p)) || [];
+        const first = allowed[0] || 'setting';
+        setCurrentView(first === 'dashboard' ? 'company_dashboard' : first);
       }
     }
   }, [currentUserAccount, currentView]);

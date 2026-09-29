@@ -256,13 +256,8 @@ export const getOrInitializeProjects = (): Project[] => {
       if (Array.isArray(parsed) && parsed.length > 0) {
         // Filter out any previous dummy/dump seed projects
         const clean = parsed.filter((p: any) => 
-          !p.id?.startsWith('proj-gov-') && 
-          !p.id?.startsWith('proj-str-') && 
-          !p.id?.startsWith('proj-soil-') && 
-          !p.id?.startsWith('proj-art-') && 
-          !p.id?.startsWith('proj-mat-') && 
-          !p.id?.startsWith('proj-sur-') && 
-          !p.id?.startsWith('proj-arc-')
+          !p.id?.startsWith('proj-') &&
+          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
         );
 
         // Ensure every remaining project has a department

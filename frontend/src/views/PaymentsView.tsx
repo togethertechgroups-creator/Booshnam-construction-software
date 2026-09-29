@@ -109,7 +109,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
         return {
           ...r,
           status: 'PAID',
-          approved_by_accounts: 'Kavitha Selvan (Accounts)',
+          approved_by_accounts: 'Accounts',
           approval_date: new Date().toISOString().split('T')[0],
           payment_reference: txnRef
         };
@@ -153,8 +153,8 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
       id: `pay-${Date.now()}`,
       project_id: projectFilter !== 'All' ? projectFilter : projects[0]?.id || '',
       request_code: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
-      requested_by: 'Likson (Site Engineer)',
-      requested_by_name: 'Likson',
+      requested_by: 'Site Engineer',
+      requested_by_name: 'Site Engineer',
       requested_by_role: 'Site Engineer',
       request_date: new Date().toISOString().split('T')[0],
       date: new Date().toISOString().split('T')[0],

@@ -1,8 +1,15 @@
+import {
+  sendProjectAssignedPush,
+  sendTaskAssignedPush,
+  sendMaterialRequestPushToAdmin,
+  sendPaymentRequestPushToAdmin,
+} from './pushNotificationService';
+
 export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'PROJECT_ASSIGNED' | 'TASK_ASSIGNED' | 'TASK_COMPLETED' | 'PAYMENT_REQUEST' | 'GENERAL';
+  type: 'PROJECT_ASSIGNED' | 'TASK_ASSIGNED' | 'TASK_COMPLETED' | 'PAYMENT_REQUEST' | 'MATERIAL_REQUEST' | 'GENERAL';
   recipient: string; // e.g. 'Madhumitha', 'Pavani', 'Likson', 'Site Engineer', 'ADMIN', 'ALL'
   sender?: string;
   projectName?: string;
@@ -78,11 +85,12 @@ export function isNotificationForUser(
     return false;
   }
 
-  // 2. Payment Requests:
-  // Primary operational notification for Admin / Super Admin and Accounts
-  if (n.type === 'PAYMENT_REQUEST') {
+  // 2. Payment Requests & Material Requests:
+  // Primary operational notifications for Admin / Super Admin, Accounts, and Procurement
+  if (n.type === 'PAYMENT_REQUEST' || n.type === 'MATERIAL_REQUEST') {
     if (isAdmin) return true;
-    if (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance')) return true;
+    if (n.type === 'PAYMENT_REQUEST' && (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance'))) return true;
+    if (n.type === 'MATERIAL_REQUEST' && (cleanRole.includes('procure') || cleanRoleName.includes('procure') || cleanRoleName.includes('purchase'))) return true;
     if (cleanName && rec === cleanName) return true;
     return false;
   }
@@ -110,8 +118,12 @@ export function syncProjectAssignmentNotifications(): void {
   try {
     const rawProjects = localStorage.getItem('booshnam_projects_v2');
     if (!rawProjects) return;
-    const projects = JSON.parse(rawProjects);
-    if (!Array.isArray(projects)) return;
+    const parsed = JSON.parse(rawProjects);
+    if (!Array.isArray(parsed)) return;
+    const projects = parsed.filter((p: any) => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
 
     const currentNotifs = getAllRawNotifications();
     let hasNew = false;
@@ -304,6 +316,44 @@ export function addNotification(
         }));
       }
     } catch (e) {}
+  }
+
+  // Automatically dispatch push notification to mobile devices
+  try {
+    if (newNotif.type === 'PROJECT_ASSIGNED') {
+      sendProjectAssignedPush(
+        newNotif.recipient,
+        newNotif.projectName || 'Project',
+        newNotif.projectId
+      );
+    } else if (newNotif.type === 'TASK_ASSIGNED') {
+      sendTaskAssignedPush(
+        newNotif.recipient,
+        newNotif.taskName || 'Task',
+        newNotif.projectName || 'Project',
+        undefined,
+        newNotif.projectId
+      );
+    } else if (newNotif.type === 'MATERIAL_REQUEST') {
+      sendMaterialRequestPushToAdmin(
+        newNotif.sender || 'Site Engineer',
+        newNotif.taskName || 'Materials',
+        newNotif.amount || 1,
+        'units',
+        newNotif.projectName || 'Project',
+        newNotif.requestCode || 'MR'
+      );
+    } else if (newNotif.type === 'PAYMENT_REQUEST') {
+      sendPaymentRequestPushToAdmin(
+        newNotif.sender || 'Site Engineer',
+        newNotif.amount || 0,
+        newNotif.taskName || 'Vendor',
+        newNotif.projectName || 'Project',
+        newNotif.requestCode || 'PR'
+      );
+    }
+  } catch (err) {
+    console.error('Failed to trigger mobile push notification', err);
   }
 
   return newNotif;

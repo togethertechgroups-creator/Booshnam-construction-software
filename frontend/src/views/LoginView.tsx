@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Lock, User, Eye, EyeOff, ArrowRight, AlertCircle, 
   ChevronDown, ChevronRight, Check, Search, Smartphone, 
@@ -59,6 +59,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Direct Password on OTP screen
+  const [otpPassword, setOtpPassword] = useState('');
+  const [showOtpPasswordInput, setShowOtpPasswordInput] = useState(false);
+  const [showOtpPasswordEye, setShowOtpPasswordEye] = useState(false);
 
   // Shared states
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -190,6 +195,33 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         setErrorMsg(err.message || 'An error occurred during verification.');
       }
     }, 400);
+  };
+
+  // Direct Password login from OTP screen
+  const handleOtpPasswordLogin = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+
+    if (!otpPassword.trim()) {
+      setErrorMsg('Please enter your account password');
+      return;
+    }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      try {
+        const user = authenticateUser(phoneNumber, otpPassword);
+        setIsLoading(false);
+        if (user) {
+          onLoginSuccess(user);
+        } else {
+          setErrorMsg('Invalid password for this mobile number. Please verify credentials.');
+        }
+      } catch (err: any) {
+        setIsLoading(false);
+        setErrorMsg(err.message || 'An error occurred during authentication.');
+      }
+    }, 350);
   };
 
   // Staff credentials login handler
@@ -386,15 +418,29 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     <span>Sending Code...</span>
                   ) : (
                     <>
-                      <span>Next</span>
+                      <span>Next (Get OTP)</span>
                       <ChevronRight className="w-4 h-4 ml-0.5 stroke-[2.5]" />
                     </>
                   )}
                 </button>
+
+                {/* Direct Login with Password */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMsg(null);
+                    setUsername(phoneNumber);
+                    setAuthMode('credentials');
+                  }}
+                  className="w-full py-3 px-4 bg-white/15 hover:bg-white/25 active:scale-[0.99] text-white rounded-xl text-xs sm:text-sm font-bold border border-white/25 shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer backdrop-blur-xs mt-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  <span>Login with Password</span>
+                </button>
               </form>
 
               {/* Alternative staff credentials toggle */}
-              <div className="pt-3 text-center">
+              <div className="pt-2 text-center">
                 <button
                   type="button"
                   onClick={() => {
@@ -403,7 +449,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   }}
                   className="text-xs text-white/90 hover:text-white font-medium transition-colors cursor-pointer drop-shadow-xs hover:underline"
                 >
-                  Sign in with Staff Username &amp; Password
+                  Staff Account / Admin Login
                 </button>
               </div>
             </div>
@@ -497,6 +543,71 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     </button>
                   )}
                 </div>
+
+                {/* ── Direct Password Login Section (Explicitly requested: OTP is there, below it click and type password to log in) ── */}
+                <div className="mt-4 pt-3 border-t border-white/20">
+                  {!showOtpPasswordInput ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowOtpPasswordInput(true)}
+                      className="w-full py-3 px-4 bg-white/15 hover:bg-white/25 active:scale-[0.99] text-white rounded-xl text-xs sm:text-sm font-bold border border-white/25 shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer backdrop-blur-xs"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>Log In with Password</span>
+                    </button>
+                  ) : (
+                    <div className="bg-black/25 p-4 rounded-2xl border border-white/25 space-y-3 backdrop-blur-sm animate-in fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-white/90" />
+                          <span>Password for +91 {phoneNumber}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowOtpPasswordInput(false)}
+                          className="text-[11px] text-white/70 hover:text-white cursor-pointer"
+                        >
+                          Hide
+                        </button>
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type={showOtpPasswordEye ? 'text' : 'password'}
+                          required
+                          value={otpPassword}
+                          onChange={(e) => setOtpPassword(e.target.value)}
+                          placeholder="Enter account password"
+                          autoFocus
+                          className="w-full px-3.5 py-2.5 rounded-lg bg-white text-slate-900 text-xs font-semibold placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-white pr-9 shadow-inner"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOtpPasswordEye(!showOtpPasswordEye)}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showOtpPasswordEye ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleOtpPasswordLogin}
+                        disabled={isLoading}
+                        className="w-full py-2.5 bg-white hover:bg-red-50 text-[#ED1C24] rounded-lg text-xs font-bold shadow-md flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        {isLoading ? (
+                          <span>Verifying...</span>
+                        ) : (
+                          <>
+                            <span>Sign In with Password</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-[#ED1C24]" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </form>
             </div>
           )}
@@ -512,15 +623,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <span>Authorized Staff</span>
                 </div>
                 <h2 className="text-2xl font-black text-white tracking-tight drop-shadow-xs">
-                  Staff Account Login
+                  Password Login
                 </h2>
+                <p className="text-xs text-white/80 font-medium mt-0.5">
+                  Sign in using your Mobile Number or Username and Password
+                </p>
               </div>
 
               <form onSubmit={handleCredentialsLogin} className="space-y-4 pt-1">
-                {/* Username Input */}
+                {/* Username / Phone Input */}
                 <div>
                   <label className="block text-xs font-semibold text-white/95 mb-1.5 drop-shadow-xs">
-                    Username
+                    Mobile Number / Username
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -531,7 +645,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       required
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="admin"
+                      placeholder="e.g. 9840123456 or admin"
                       autoFocus
                       className="w-full pl-10 pr-4 py-3 rounded-xl border border-white/20 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-white transition-all bg-white shadow-lg shadow-black/10"
                     />

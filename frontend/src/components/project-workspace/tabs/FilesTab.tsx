@@ -34,7 +34,23 @@ const FOLDER_CATEGORIES = [
 ];
 
 export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
-  const [documents, setDocuments] = useState<ProjectDocument[]>(DEFAULT_DOCUMENTS);
+  const storageKey = `booshnam_files_v2_${project?.id || 'default'}`;
+  const [documents, setDocuments] = useState<ProjectDocument[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_DOCUMENTS;
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(documents));
+    } catch (e) {}
+  }, [documents, storageKey]);
   const folders = useMemo(() => {
     return FOLDER_CATEGORIES.map(f => ({
       ...f,

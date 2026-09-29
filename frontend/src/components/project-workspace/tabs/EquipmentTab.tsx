@@ -15,7 +15,24 @@ interface EquipmentTabProps {
 const DEFAULT_ASSETS: Asset[] = [];
 
 export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DEFAULT_ASSETS, onShowToast }) => {
-  const [equipmentList, setEquipmentList] = useState<Asset[]>(assets || []);
+  const storageKey = `booshnam_equipment_v2_${project?.id || 'default'}`;
+  const [equipmentList, setEquipmentList] = useState<Asset[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return assets && assets.length > 0 ? assets.filter(a => !a.project_id || a.project_id === project?.id) : [];
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(equipmentList));
+    } catch (e) {}
+  }, [equipmentList, storageKey]);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 

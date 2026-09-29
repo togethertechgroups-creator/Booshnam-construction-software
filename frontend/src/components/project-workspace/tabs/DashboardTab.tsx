@@ -75,11 +75,59 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const projectValue = project.estimated_budget || 0;
   const projTeam: ProjectTeamMember[] = project.assigned_team || [];
 
-  // Task metrics
-  const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
-  const inProgressTasks = tasks.filter(t => t.status === 'IN_PROGRESS').length;
-  const notStartedTasks = tasks.filter(t => t.status === 'TODO').length;
-  const delayedTasks = tasks.filter(t => t.status === 'BLOCKED').length;
+  // Project MOMs (Requirement 4)
+  const [projectMoms, setProjectMoms] = useState<any[]>(() => {
+    try {
+      const raw = localStorage.getItem(`booshnam_mom_v1_${project.id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`booshnam_mom_v1_${project.id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setProjectMoms(parsed);
+      }
+    } catch (e) {}
+  }, [project.id]);
+
+  // Date format helper (converts YYYY-MM-DD to DD-MM-YYYY as requested in Requirement 4)
+  const formatDashDate = (dStr?: string) => {
+    if (!dStr) return '--';
+    if (dStr.includes('-')) {
+      const parts = dStr.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+    return dStr;
+  };
+
+  // Task metrics strictly for this project (Requirement 6)
+  const projectTasks = React.useMemo(() => {
+    let list = tasks.filter(t => t.project === project.id || t.project_id === project.id);
+    if (list.length === 0) {
+      try {
+        const raw = localStorage.getItem(`booshnam_wbs_tasks_v2_${project.id}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) list = parsed;
+        }
+      } catch (e) {}
+    }
+    return list;
+  }, [tasks, project.id]);
+
+  const completedTasks = projectTasks.filter(t => t.status === 'COMPLETED').length;
+  const inProgressTasks = projectTasks.filter(t => t.status === 'IN_PROGRESS').length;
+  const notStartedTasks = projectTasks.filter(t => t.status === 'TODO').length;
+  const delayedTasks = projectTasks.filter(t => t.status === 'BLOCKED').length;
 
   // Attendance 7-day data
   const attendanceDays: Array<{ date: string; target: number; actual: number }> = [];
@@ -281,10 +329,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   <div className="text-xs font-bold text-slate-800">Planned Dates</div>
                   <div className="flex items-center justify-between text-xs text-slate-400 font-mono py-1">
                     <div>
-                      <span className="text-slate-500">Start:</span> {project.start_date || '--'}
+                      <span className="text-slate-500">Start:</span> {formatDashDate(project.start_date)}
                     </div>
                     <div>
-                      <span className="text-slate-500">End:</span> {project.expected_end_date || '--'}
+                      <span className="text-slate-500">End:</span> {formatDashDate(project.expected_end_date)}
                     </div>
                   </div>
                 </div>
@@ -294,7 +342,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   <div className="text-xs font-bold text-slate-800">Actual Dates</div>
                   <div className="flex items-center justify-between text-xs text-slate-400 font-mono py-1">
                     <div>
-                      <span className="text-slate-500">Start:</span> {project.start_date || '--'}
+                      <span className="text-slate-500">Start:</span> {formatDashDate(project.start_date)}
                     </div>
                     <div>
                       <span className="text-slate-500">End:</span> --
@@ -308,11 +356,18 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               </div>
             </div>
 
-            {/* Card 3: MOM (Minutes of Meeting) */}
+            {/* Card 3: MOM (Minutes of Meeting - Requirement 4) */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between min-h-[220px]">
               <div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-900">MOM</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900">MOM</h3>
+                    {projectMoms.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">
+                        {projectMoms.length}
+                      </span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => onNavigateTab('mom')}
@@ -322,10 +377,21 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   </button>
                 </div>
 
-                {/* Body: No MOM found (matches user screenshot) */}
-                <div className="py-12 text-center text-xs text-slate-400">
-                  No MOM found
-                </div>
+                {/* Body: No MOM found (matches user requirement) or meetings list */}
+                {projectMoms.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-slate-400">
+                    No MOM found
+                  </div>
+                ) : (
+                  <div className="py-3 space-y-2">
+                    {projectMoms.slice(0, 3).map((m: any, idx: number) => (
+                      <div key={m.id || idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-800 truncate">{m.title || `Meeting #${idx + 1}`}</span>
+                        <span className="text-[11px] text-slate-400 font-mono shrink-0 ml-2">{m.date || '--'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-100 text-right">
@@ -405,7 +471,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 <h3 className="text-sm font-bold text-slate-900">Task progress</h3>
                 <div className="flex flex-col items-center justify-center py-12">
                   <span className="text-4xl font-black text-slate-900 tracking-tight">
-                    {tasks.length || 0}
+                    {projectTasks.length || 0}
                   </span>
                   <span className="text-xs text-slate-400 mt-1">Total Scheduled Tasks</span>
                 </div>

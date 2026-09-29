@@ -6,18 +6,97 @@ import {
   ArrowRight, ShieldCheck, Sparkles, AlertTriangle,
   Upload, FileText, Image as ImageIcon, Eye, ExternalLink, Camera
 } from 'lucide-react';
-import { Project, WBSTask } from '../../../types';
+import { Project, WBSTask, Department } from '../../../types';
 import { getStaffMembers } from '../../../lib/staffService';
 import { addNotification } from '../../../lib/notificationService';
 import { addProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { confirmAction, setFormDirty, clearFormDirty, confirmNavigationIfDirty } from '../../../lib/dialogService';
 import { CustomSelect } from '../../CustomSelect';
+import { PREDEFINED_TASKS_TEMPLATE } from '../../../lib/mockData';
 
 interface TaskTabProps {
   project: Project;
   tasks?: WBSTask[];
   onShowToast?: (msg: string) => void;
 }
+
+export const TASK_DEPARTMENT_OPTIONS: { id: Department; label: string }[] = [
+  { id: 'MATERIAL_TESTING', label: 'Material Testing' },
+  { id: 'STRUCTURAL', label: 'Structural' },
+  { id: 'SOIL_INVESTIGATION', label: 'Soil Investigation' },
+  { id: 'ARCHITECTURE', label: 'Architecture' },
+  { id: 'CONSTRUCTION', label: 'Construction' },
+  { id: 'SURVEY', label: 'Survey' },
+  { id: 'ACCOUNTS', label: 'Accounts & Finance' },
+  { id: 'MARKETING', label: 'Marketing' },
+  { id: 'GOVERNMENT_PROJECT', label: 'Government Projects' },
+  { id: 'ART_SCULPTURE', label: 'Art & Sculpture' },
+];
+
+export const getDeptLabel = (dept?: string): string => {
+  if (!dept) return 'Construction';
+  const found = TASK_DEPARTMENT_OPTIONS.find(d => d.id === dept);
+  if (found) return found.label;
+  if (dept === 'CBE_SOIL_INVESTIGATION') return 'Soil Investigation';
+  if (dept === 'MARKETING') return 'Marketing';
+  return dept;
+};
+
+export const getDeptBadgeStyle = (dept?: string): string => {
+  switch (dept) {
+    case 'MATERIAL_TESTING':
+      return 'bg-amber-50 text-amber-800 border-amber-200';
+    case 'STRUCTURAL':
+      return 'bg-blue-50 text-blue-800 border-blue-200';
+    case 'SOIL_INVESTIGATION':
+    case 'CBE_SOIL_INVESTIGATION':
+      return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    case 'ARCHITECTURE':
+      return 'bg-purple-50 text-purple-800 border-purple-200';
+    case 'SURVEY':
+      return 'bg-cyan-50 text-cyan-800 border-cyan-200';
+    case 'ACCOUNTS':
+      return 'bg-teal-50 text-teal-800 border-teal-200';
+    case 'GOVERNMENT_PROJECT':
+      return 'bg-rose-50 text-rose-800 border-rose-200';
+    case 'ART_SCULPTURE':
+      return 'bg-orange-50 text-orange-800 border-orange-200';
+    case 'MARKETING':
+      return 'bg-pink-50 text-pink-800 border-pink-200';
+    default:
+      return 'bg-slate-100 text-slate-800 border-slate-200';
+  }
+};
+
+export const normalizeTaskDepartment = (t: Partial<WBSTask>): Department => {
+  if (t.department) {
+    if ((t.department as string) === 'CBE_SOIL_INVESTIGATION') return 'SOIL_INVESTIGATION';
+    return t.department as Department;
+  }
+  const title = (t.title || '').toLowerCase();
+  if (title.includes('concrete') || title.includes('cube') || title.includes('rebar') || title.includes('bitumen') || title.includes('material') || title.includes('laboratory') || title.includes('lab') || title.includes('durability')) {
+    return 'MATERIAL_TESTING';
+  }
+  if (title.includes('structural') || title.includes('load') || title.includes('steel') || title.includes('vetting') || title.includes('rcc') || title.includes('foundation vetting')) {
+    return 'STRUCTURAL';
+  }
+  if (title.includes('soil') || title.includes('borehole') || title.includes('spt') || title.includes('sbc') || title.includes('stratum') || title.includes('sample') || title.includes('investigation')) {
+    return 'SOIL_INVESTIGATION';
+  }
+  if (title.includes('survey') || title.includes('dgps') || title.includes('boundary') || title.includes('contour')) {
+    return 'SURVEY';
+  }
+  if (title.includes('drawing') || title.includes('cad') || title.includes('screenshot') || title.includes('architect') || title.includes('render') || title.includes('elevation')) {
+    return 'ARCHITECTURE';
+  }
+  if (title.includes('bill') || title.includes('invoice') || title.includes('signing') || title.includes('document signing') || title.includes('accounts') || title.includes('payment')) {
+    return 'ACCOUNTS';
+  }
+  if (title.includes('quote') || title.includes('quotation') || title.includes('client detail') || title.includes('marketing')) {
+    return 'MARKETING';
+  }
+  return 'CONSTRUCTION';
+};
 
 const SEED_TASKS: WBSTask[] = [];
 
@@ -33,12 +112,56 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: WBSTask) => ({
+            ...t,
+            department: normalizeTaskDepartment(t)
+          }));
+        }
       }
     } catch {
       // ignore
     }
-    return propTasks && propTasks.length > 0 ? propTasks : SEED_TASKS;
+    if (propTasks && propTasks.length > 0) {
+      return propTasks.map((t: WBSTask) => ({
+        ...t,
+        department: normalizeTaskDepartment(t)
+      }));
+    }
+    // Auto-seed with multi-department tasks so every project immediately has all departments
+    if (project?.id) {
+      const initialSeed: WBSTask[] = PREDEFINED_TASKS_TEMPLATE.map((pt, idx) => ({
+        id: `tsk-${project.id}-${pt.id}-${Date.now()}`,
+        s_no: idx + 1,
+        project: project.id,
+        project_id: project.id,
+        title: pt.title,
+        wbs_code: `1.${idx + 1}`,
+        created_by: 'System',
+        created_date: new Date().toLocaleDateString('en-GB'),
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+        actual_start: '',
+        actual_end: '',
+        forecast_end: 'Insufficient data',
+        duration_days: 14,
+        progress_percentage: 0,
+        progress_label: '0/1 lumpsum',
+        comments_count: 0,
+        status: 'TODO',
+        delay_status: 'On Track',
+        is_milestone: false,
+        assigned_to_name: registeredStaff[idx % registeredStaff.length]?.name || 'Project Staff',
+        assigned_team: [{ name: registeredStaff[idx % registeredStaff.length]?.name || 'Staff', initials: (registeredStaff[idx % registeredStaff.length]?.name || 'PS').slice(0, 2).toUpperCase() }],
+        dependencies: [],
+        tag: pt.department === 'MATERIAL_TESTING' ? 'Lab Testing' : pt.department === 'SOIL_INVESTIGATION' ? 'Field Survey' : pt.department === 'STRUCTURAL' ? 'QA / QC' : 'Client Reporting',
+        department: pt.department as Department,
+        description: pt.description,
+      }));
+      return initialSeed;
+    }
+    return SEED_TASKS;
   });
 
   // Save changes to localStorage and synchronize project progress
@@ -49,7 +172,13 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       if (project?.id && Array.isArray(taskList) && taskList.length > 0) {
         const storedProjectsRaw = localStorage.getItem('booshnam_projects_v2');
         if (storedProjectsRaw) {
-          const storedProjects: Project[] = JSON.parse(storedProjectsRaw);
+          const parsed = JSON.parse(storedProjectsRaw);
+          const storedProjects: Project[] = Array.isArray(parsed)
+            ? parsed.filter((p: any) => 
+                !p.id?.startsWith('proj-') &&
+                !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+              )
+            : [];
           const total = taskList.length;
           const completed = taskList.filter(t => t.status === 'COMPLETED').length;
           const progress = Math.round((completed / total) * 100);
@@ -86,6 +215,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // Top bar filters (Image 1)
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'IN_PROGRESS' | 'TODO'>('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState<'ALL' | Department>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
   const [tagFilter, setTagFilter] = useState<string>('ALL');
   const [startDateFilter, setStartDateFilter] = useState('');
@@ -103,6 +233,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
   // Form Fields
   const [formTitle, setFormTitle] = useState('');
+  const [formDepartment, setFormDepartment] = useState<Department>('CONSTRUCTION');
   const [formStartDate, setFormStartDate] = useState('2026-09-17');
   const [formEndDate, setFormEndDate] = useState('2026-09-18');
   const [formDuration, setFormDuration] = useState<number>(1);
@@ -161,6 +292,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
   // Filter tasks
   const filteredTasks = taskList.filter((item) => {
+    if (departmentFilter !== 'ALL') {
+      const itemDept = normalizeTaskDepartment(item);
+      if (itemDept !== departmentFilter) return false;
+    }
+
     if (statusFilter !== 'ALL') {
       if (statusFilter === 'COMPLETED' && item.status !== 'COMPLETED') return false;
       if (statusFilter === 'IN_PROGRESS' && item.status !== 'IN_PROGRESS') return false;
@@ -220,6 +356,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const handleOpenCreate = () => {
     setEditingTask(null);
     setFormTitle('');
+    setFormDepartment(departmentFilter !== 'ALL' ? departmentFilter : 'MATERIAL_TESTING');
     setFormStartDate('2026-09-17');
     setFormEndDate('2026-09-18');
     setFormDuration(1);
@@ -235,6 +372,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const handleOpenEdit = (t: WBSTask) => {
     setEditingTask(t);
     setFormTitle(t.title);
+    setFormDepartment(t.department || normalizeTaskDepartment(t));
     setFormStartDate(t.start_date || '2026-09-17');
     setFormEndDate(t.end_date || '2026-09-18');
     setFormDuration(t.duration_days || 1);
@@ -255,6 +393,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     const isDirty = Boolean(
       (formTitle.trim() && formTitle.trim() !== (editingTask?.title || '')) ||
       (formRemarks.trim() && formRemarks.trim() !== (editingTask?.completion_remarks || '')) ||
+      (formDepartment !== (editingTask?.department || normalizeTaskDepartment(editingTask || {}))) ||
       formProofUrl !== (editingTask?.completion_proof_url || null)
     );
     if (isDirty) {
@@ -265,7 +404,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     return () => {
       clearFormDirty();
     };
-  }, [isTaskDrawerOpen, formTitle, formRemarks, formProofUrl, editingTask]);
+  }, [isTaskDrawerOpen, formTitle, formDepartment, formRemarks, formProofUrl, editingTask]);
 
   const handleCloseTaskDrawer = async () => {
     const canLeave = await confirmNavigationIfDirty();
@@ -403,6 +542,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               end_date: formEndDate,
               duration_days: formDuration,
               tag: formTag,
+              department: formDepartment,
               assigned_to_name: formAssigned,
               delay_status: formDelayStatus,
               completion_proof_url: formProofUrl || t.completion_proof_url,
@@ -453,6 +593,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         assigned_team: [{ name: formAssigned, initials: formAssigned.slice(0, 2).toUpperCase() }],
         dependencies: [],
         tag: formTag,
+        department: formDepartment,
         completion_proof_url: formProofUrl || undefined,
         completion_remarks: formRemarks.trim() || undefined
       };
@@ -562,6 +703,66 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* ========================================================================= */}
+      {/* 0. ALL DEPARTMENTS NAVIGATOR BAR (Multi-Department Project Hub)             */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 shrink-0 flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-red-600" />
+            <span>Departments:</span>
+          </span>
+          {[
+            { id: 'ALL' as const, label: 'All Departments' },
+            { id: 'MATERIAL_TESTING' as const, label: 'Material Testing' },
+            { id: 'STRUCTURAL' as const, label: 'Structural' },
+            { id: 'SOIL_INVESTIGATION' as const, label: 'Soil Investigation' },
+            { id: 'ARCHITECTURE' as const, label: 'Architecture' },
+            { id: 'CONSTRUCTION' as const, label: 'Construction' },
+            { id: 'SURVEY' as const, label: 'Survey' },
+            { id: 'ACCOUNTS' as const, label: 'Accounts' },
+            { id: 'MARKETING' as const, label: 'Marketing' },
+          ].map((dept) => {
+            const isSelected = departmentFilter === dept.id;
+            const count = dept.id === 'ALL'
+              ? taskList.length
+              : taskList.filter(t => normalizeTaskDepartment(t) === dept.id).length;
+
+            return (
+              <button
+                key={dept.id}
+                type="button"
+                onClick={() => setDepartmentFilter(dept.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-2xs ${
+                  isSelected
+                    ? 'bg-red-600 text-white shadow-xs'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 hover:border-slate-300'
+                }`}
+              >
+                <span>{dept.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFormDepartment(departmentFilter !== 'ALL' ? departmentFilter : 'MATERIAL_TESTING');
+            handleOpenCreate();
+          }}
+          className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Assign Department Task</span>
+        </button>
+      </div>
+
       {/* ========================================================================= */}
       {/* 1. TOP ACTION & FILTER TOOLBAR (EXACT MATCH OF IMAGE 1)                   */}
       {/* ========================================================================= */}
@@ -851,28 +1052,41 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         }}
                         onMouseLeave={() => setHoveredTaskTooltip(null)}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className={`font-bold transition-colors group-hover:text-red-600 ${
-                            isDone ? 'text-slate-900 font-semibold' : 'text-slate-900'
-                          }`}>
-                            {t.title}
-                          </span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-bold transition-colors group-hover:text-red-600 ${
+                              isDone ? 'text-slate-900 font-semibold' : 'text-slate-900'
+                            }`}>
+                              {t.title}
+                            </span>
 
-                          {/* Proof Badge if completion proof attached */}
-                          {t.completion_proof_url && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewProofModal(t.completion_proof_url || null);
-                              }}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold cursor-pointer transition-colors shadow-2xs"
-                              title="Click to view attached completion proof"
-                            >
-                              <Camera className="w-3 h-3" />
-                              <span>Proof</span>
-                            </button>
-                          )}
+                            {/* Proof Badge if completion proof attached */}
+                            {t.completion_proof_url && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewProofModal(t.completion_proof_url || null);
+                                }}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold cursor-pointer transition-colors shadow-2xs"
+                                title="Click to view attached completion proof"
+                              >
+                                <Camera className="w-3 h-3" />
+                                <span>Proof</span>
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-bold border ${getDeptBadgeStyle(t.department || normalizeTaskDepartment(t))}`}>
+                              {getDeptLabel(t.department || normalizeTaskDepartment(t))}
+                            </span>
+                            {t.wbs_code && (
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                #{t.wbs_code}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Tooltip on hover (matching Image 1) */}
@@ -1170,6 +1384,31 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     variant="brand"
                   />
                 </div>
+              </div>
+
+              {/* Department Assignment */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Department Assignment <span className="text-red-500">*</span>
+                </label>
+                <CustomSelect
+                  value={formDepartment}
+                  onChange={(val) => setFormDepartment(val as any)}
+                  options={[
+                    { label: 'Material Testing', value: 'MATERIAL_TESTING' },
+                    { label: 'Structural', value: 'STRUCTURAL' },
+                    { label: 'Soil Investigation', value: 'SOIL_INVESTIGATION' },
+                    { label: 'Architecture', value: 'ARCHITECTURE' },
+                    { label: 'Construction', value: 'CONSTRUCTION' },
+                    { label: 'Survey', value: 'SURVEY' },
+                    { label: 'Accounts & Finance', value: 'ACCOUNTS' },
+                    { label: 'Marketing', value: 'MARKETING' },
+                    { label: 'Government Projects', value: 'GOVERNMENT_PROJECT' },
+                    { label: 'Art & Sculpture', value: 'ART_SCULPTURE' },
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
               </div>
 
               {/* Assignee */}

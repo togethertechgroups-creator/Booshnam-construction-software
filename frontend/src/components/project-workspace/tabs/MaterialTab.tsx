@@ -29,10 +29,50 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
   stockItems = DEFAULT_STOCK,
   onShowToast
 }) => {
+  const stockKey = `booshnam_material_stock_v2_${project?.id || 'default'}`;
+  const indentsKey = `booshnam_material_indents_v2_${project?.id || 'default'}`;
+  const grnKey = `booshnam_material_grn_v2_${project?.id || 'default'}`;
+
   const [activeSubTab, setActiveSubTab] = useState<'stock' | 'indents' | 'grn'>('stock');
-  const [stock, setStock] = useState<StockItem[]>(stockItems);
-  const [indents, setIndents] = useState<MaterialRequest[]>(materialRequests);
-  const [receipts, setReceipts] = useState<GoodsReceiptNote[]>(grns);
+  const [stock, setStock] = useState<StockItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(stockKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return stockItems || [];
+  });
+  const [indents, setIndents] = useState<MaterialRequest[]>(() => {
+    try {
+      const saved = localStorage.getItem(indentsKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return materialRequests || [];
+  });
+  const [receipts, setReceipts] = useState<GoodsReceiptNote[]>(() => {
+    try {
+      const saved = localStorage.getItem(grnKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return grns || [];
+  });
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(stockKey, JSON.stringify(stock));
+      localStorage.setItem(indentsKey, JSON.stringify(indents));
+      localStorage.setItem(grnKey, JSON.stringify(receipts));
+    } catch (e) {}
+  }, [stock, indents, receipts, stockKey, indentsKey, grnKey]);
+
   const [search, setSearch] = useState('');
 
   // Modals

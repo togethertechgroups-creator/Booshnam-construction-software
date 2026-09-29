@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "681652407957",
+    "project_id": "booshnam-construction",
+    "storage_bucket": "booshnam-construction.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:681652407957:android:0bed4aa27659f4fb7cd59c",
+        "android_client_info": {
+          "package_name": "com.booshnammobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpyXHKC4bRu_riaC0RMlK6k5FkEldOVl0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

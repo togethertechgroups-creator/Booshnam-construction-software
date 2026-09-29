@@ -17,6 +17,7 @@ import {
   markLowStockAsViewed, 
   notifyStockChanged 
 } from '../lib/stockNotificationService';
+import { addNotification } from '../lib/notificationService';
 
 // Extended Interfaces for the End-to-End Procurement Flow
 export interface ExtendedMaterialRequest {
@@ -570,6 +571,19 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
 
     setRequests(prev => [newReq, ...prev]);
     setShowAddRequestModal(false);
+
+    // Notify Admin via in-app bell notification and mobile push notification
+    addNotification({
+      title: 'Material Request Submitted',
+      message: `${newReq.requested_by || 'Site Engineer'} requested ${newReq.quantity} ${newReq.unit} of ${newReq.material_name} for "${newReq.project_name}".`,
+      type: 'MATERIAL_REQUEST',
+      recipient: 'ADMIN',
+      sender: newReq.requested_by || 'Site Engineer',
+      projectName: newReq.project_name,
+      requestCode: newReq.request_number,
+      amount: newReq.quantity
+    });
+
     // Reset form
     setNewReqReason('');
     setNewReqAttachmentName('');

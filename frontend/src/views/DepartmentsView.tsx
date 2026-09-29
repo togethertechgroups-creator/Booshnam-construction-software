@@ -9,7 +9,7 @@ import {
 import { 
   Department, Project, SoilSample, SoilLabTest, 
   SoilInvestigationReport, ArchitecturalDrawing, 
-  ProjectPaymentRequest, ProjectTransactionRecord, Lead 
+  ProjectPaymentRequest, ProjectTransactionRecord 
 } from '../types';
 import { 
   MOCK_PROJECTS, MOCK_SOIL_SAMPLES, MOCK_SOIL_LAB_TESTS, 
@@ -69,10 +69,10 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const [labTests, setLabTests] = useState<SoilLabTest[]>(MOCK_SOIL_LAB_TESTS);
   const [reports, setReports] = useState<SoilInvestigationReport[]>(MOCK_SOIL_REPORTS);
   const [isAddSampleModalOpen, setIsAddSampleModalOpen] = useState(false);
-  const [newSampleBorehole, setNewSampleBorehole] = useState('BH-03');
-  const [newSampleDepth, setNewSampleDepth] = useState('3.5');
+  const [newSampleBorehole, setNewSampleBorehole] = useState('');
+  const [newSampleDepth, setNewSampleDepth] = useState('');
   const [newSampleType, setNewSampleType] = useState<'Undisturbed' | 'Disturbed' | 'Core'>('Undisturbed');
-  const [newSampleDesc, setNewSampleDesc] = useState('Stiff brown clay with coarse sand traces');
+  const [newSampleDesc, setNewSampleDesc] = useState('');
 
   // Architecture Local States
   const [drawings, setDrawings] = useState<ArchitecturalDrawing[]>(MOCK_ARCHITECTURAL_DRAWINGS);
@@ -86,7 +86,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const [transactions, setTransactions] = useState<ProjectTransactionRecord[]>(MOCK_PROJECT_TRANSACTIONS);
 
   // Marketing Leads Local State
-  const [marketingLeads, setMarketingLeads] = useState<Lead[]>(MOCK_LEADS);
+  const [marketingLeads, setMarketingLeads] = useState(MOCK_LEADS);
 
   // Construction DPRs Local State
   const [dprs, setDprs] = useState(MOCK_DPR);
@@ -96,6 +96,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   // Handler: Add Sample
   const handleAddSample = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newSampleBorehole.trim()) return;
     const newSmp: SoilSample = {
       id: `smp-${Date.now()}`,
       project_id: selectedProjectId,
@@ -104,7 +105,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       depth_meters: parseFloat(newSampleDepth) || 2.5,
       sample_type: newSampleType,
       collection_date: new Date().toISOString().split('T')[0],
-      collected_by: 'K. Balaji (Field Geologist)',
+      collected_by: 'Field Geologist',
       visual_classification: newSampleDesc,
       status: 'COLLECTED'
     };
@@ -405,7 +406,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <Compass className="w-4 h-4 text-amber-600" />
                 </div>
                 <div className="text-2xl font-bold text-slate-900">{samples.length}</div>
-                <div className="text-[11px] text-amber-700 mt-0.5">Boreholes BH-01, BH-02, BH-03</div>
+                <div className="text-[11px] text-amber-700 mt-0.5">
+                  {samples.length > 0 ? `Boreholes: ${Array.from(new Set(samples.map(s => s.borehole_no))).join(', ')}` : 'No boreholes logged'}
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
@@ -424,8 +427,12 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <span>Safe Bearing Capacity (SBC)</span>
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-bold text-emerald-700 font-mono">240 kN/m²</div>
-                <div className="text-[11px] text-emerald-800 mt-0.5">At 2.0m depth for footings</div>
+                <div className="text-2xl font-bold text-emerald-700 font-mono">
+                  {reports.length > 0 ? `${reports[0].safe_bearing_capacity_kn_m2 || 0} kN/m²` : '-'}
+                </div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">
+                  {reports.length > 0 ? `At ${reports[0].recommended_foundation_depth_m || 0}m depth` : 'Pending investigation'}
+                </div>
               </div>
 
               <div className="p-4 rounded-xl bg-red-50/60 border border-red-200/80">
@@ -640,7 +647,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <span>Drawing Versions</span>
                   <Clock className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="text-2xl font-bold text-slate-900">V1, V2, V3</div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {drawings.length > 0 ? Array.from(new Set(drawings.map(d => d.current_version))).join(', ') : '-'}
+                </div>
                 <div className="text-[11px] text-blue-700 mt-0.5">Full revision history maintained</div>
               </div>
 
@@ -828,7 +837,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
 
               <div className="p-4 rounded-xl bg-red-50/60 border border-red-200/80">
                 <div className="text-xs text-red-800 font-semibold mb-1">Site Visits Booked</div>
-                <div className="text-2xl font-bold text-red-900">6</div>
+                <div className="text-2xl font-bold text-red-900">
+                  {marketingLeads.filter(l => l.stage === 'CONTACTED').length}
+                </div>
                 <div className="text-[11px] text-red-700 mt-0.5">Preliminary reconnaissance</div>
               </div>
             </div>
@@ -841,7 +852,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <p className="text-[11px] text-slate-500">Collect client KYC, title deed verification, and quotation issuance</p>
                 </div>
                 <span className="text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1 rounded-lg">
-                  Conversion Rate: 68%
+                  Conversion Rate: {marketingLeads.length > 0 ? `${Math.round((marketingLeads.filter(l => l.stage === 'WON').length / marketingLeads.length) * 100)}%` : '0%'}
                 </span>
               </div>
 
@@ -904,8 +915,8 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
                 <div className="text-xs text-emerald-800 font-semibold mb-1">Active Site Engineers</div>
-                <div className="text-2xl font-bold text-slate-900">4</div>
-                <div className="text-[11px] text-emerald-700 mt-0.5">Likson, Ranjith, Rajesh, Balaji</div>
+                <div className="text-2xl font-bold text-slate-900">0</div>
+                <div className="text-[11px] text-emerald-700 mt-0.5">Field operations team</div>
               </div>
 
               <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
@@ -916,13 +927,15 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
 
               <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80">
                 <div className="text-xs text-amber-800 font-semibold mb-1">Labour On Site Today</div>
-                <div className="text-2xl font-bold text-amber-800">42 Men</div>
+                <div className="text-2xl font-bold text-amber-800">
+                  {dprs.length > 0 ? `${dprs[0]?.labour_count || 0} Men` : '0 Men'}
+                </div>
                 <div className="text-[11px] text-amber-700 mt-0.5">Masons, bar benders, helpers</div>
               </div>
 
               <div className="p-4 rounded-xl bg-red-50/60 border border-red-200/80">
                 <div className="text-xs text-red-800 font-semibold mb-1">Site Photos/Videos</div>
-                <div className="text-2xl font-bold text-red-900">18</div>
+                <div className="text-2xl font-bold text-red-900">0</div>
                 <div className="text-[11px] text-red-700 mt-0.5">Shared to Client Portal</div>
               </div>
             </div>
@@ -978,20 +991,20 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200/80">
                 <div className="text-xs text-indigo-800 font-semibold mb-1">Total Invoiced</div>
-                <div className="text-2xl font-bold text-slate-900">₹ 42.5 L</div>
+                <div className="text-2xl font-bold text-slate-900">₹ 0.00</div>
                 <div className="text-[11px] text-indigo-700 mt-0.5">Milestone billing to clients</div>
               </div>
 
               <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
                 <div className="text-xs text-emerald-800 font-semibold mb-1">Total Received</div>
-                <div className="text-2xl font-bold text-emerald-700">₹ 35.0 L</div>
-                <div className="text-[11px] text-emerald-800 mt-0.5">82% collection efficiency</div>
+                <div className="text-2xl font-bold text-emerald-700">₹ 0.00</div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">Collection efficiency</div>
               </div>
 
               <div className="p-4 rounded-xl bg-rose-50/60 border border-rose-200/80">
                 <div className="text-xs text-rose-800 font-semibold mb-1">Expenses & Vendor Payouts</div>
-                <div className="text-2xl font-bold text-rose-700">₹ 21.8 L</div>
-                <div className="text-[11px] text-rose-800 mt-0.5">Material, labor, soil lab fees</div>
+                <div className="text-2xl font-bold text-rose-700">₹ 0.00</div>
+                <div className="text-[11px] text-rose-800 mt-0.5">Material, labor, site expenses</div>
               </div>
 
               <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80">

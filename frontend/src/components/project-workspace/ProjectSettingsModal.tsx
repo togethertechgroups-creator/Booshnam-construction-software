@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ChevronDown, Check, Plus, Trash2, Layers, Info, Edit2, Users, Phone, Mail, FileText, Landmark } from 'lucide-react';
+import { X, ChevronDown, Check, Plus, Trash2, Layers, Info, Edit2, Users, Phone, Mail, FileText, Landmark, AlertTriangle } from 'lucide-react';
 import { Project, ProjectTeamMember } from '../../types';
 import { AddPartyView } from './AddPartyView';
 import { CustomSelect } from '../CustomSelect';
@@ -9,6 +9,8 @@ interface ProjectSettingsModalProps {
   onClose: () => void;
   project: Project;
   onUpdateProject: (updated: Project) => void;
+  onDeleteProject?: (project: Project) => void;
+  isSuperAdmin?: boolean;
   onShowToast?: (msg: string) => void;
 }
 
@@ -19,9 +21,12 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
   onClose,
   project,
   onUpdateProject,
+  onDeleteProject,
+  isSuperAdmin = false,
   onShowToast
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('details');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Form State - Always initialized completely empty/blank as requested
   const [code, setCode] = useState('');
@@ -698,32 +703,101 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3.5 pt-5 border-t border-slate-100 mt-5 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              if (activeTab === 'details') {
-                const form = document.getElementById('project-settings-form') as HTMLFormElement;
-                if (form) form.requestSubmit();
-              } else {
-                handleSubmit(e as any);
-              }
-            }}
-            className="px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
-          >
-            <Check className="w-4 h-4 stroke-[2.5]" />
-            <span>Save Changes</span>
-          </button>
+        <div className="flex items-center justify-between gap-3.5 pt-5 border-t border-slate-100 mt-5 shrink-0">
+          <div>
+            {isSuperAdmin && onDeleteProject && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-4 py-2.5 text-xs font-bold text-red-600 hover:text-white bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Delete Project (Super Admin Only)"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete Project</span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                if (activeTab === 'details') {
+                  const form = document.getElementById('project-settings-form') as HTMLFormElement;
+                  if (form) form.requestSubmit();
+                } else {
+                  handleSubmit(e as any);
+                }
+              }}
+              className="px-6 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-sm flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>Save Changes</span>
+            </button>
+          </div>
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal - Super Admin Only */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-red-100 p-6 overflow-hidden space-y-5 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0 shadow-xs">
+                <Trash2 className="w-6 h-6 stroke-[2.2]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 text-base">Delete Project</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                    Super Admin Only
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Are you sure you want to permanently delete <strong className="text-slate-800">{project?.name || 'this project'}</strong>?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3.5 text-[11px] text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="leading-relaxed">
+                This action <strong>cannot be undone</strong>. All tasks, DPR reports, material requests, and budget records associated with this project will be permanently erased.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onClose();
+                  onDeleteProject?.(project);
+                }}
+                className="px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:scale-98 rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Yes, Delete Project</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

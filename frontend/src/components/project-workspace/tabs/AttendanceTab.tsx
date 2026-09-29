@@ -20,7 +20,24 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({
   attendance = DEFAULT_ATTENDANCE,
   onShowToast
 }) => {
-  const [records, setRecords] = useState<AttendanceRecord[]>(attendance || []);
+  const storageKey = `booshnam_attendance_v2_${project?.id || 'default'}`;
+  const [records, setRecords] = useState<AttendanceRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return attendance && attendance.length > 0 ? attendance.filter(a => !a.project_id || a.project_id === project?.id) : [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(records));
+    } catch (e) {}
+  }, [records, storageKey]);
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isPunchOpen, setIsPunchOpen] = useState(false);

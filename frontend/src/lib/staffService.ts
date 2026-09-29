@@ -19,164 +19,7 @@ export interface StaffMember {
   created_at: string;
 }
 
-const DEFAULT_STAFF_MEMBERS: StaffMember[] = [
-  {
-    id: 'staff-1',
-    employee_code: 'EMP-0101',
-    name: 'Rajesh Chandran',
-    role_code: 'SUPER_ADMIN',
-    role_name: 'Super Admin',
-    department: 'Executive Management',
-    designation: 'Managing Director',
-    dob: '1982-05-14',
-    doj: '2018-01-10',
-    phone: '9840123456',
-    email: 'rajesh@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 150000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: true,
-    username: 'admin',
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-2',
-    employee_code: 'EMP-0103',
-    name: 'Anandhi Venkatesh',
-    role_code: 'ADMIN',
-    role_name: 'Admin',
-    department: 'Office Administration',
-    designation: 'Operations Admin',
-    dob: '1990-08-22',
-    doj: '2021-03-15',
-    phone: '9840234567',
-    email: 'anandhi@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 45000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: true,
-    username: 'anandhi.admin',
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-3',
-    employee_code: 'EMP-0111',
-    name: 'Arun Verma',
-    role_code: 'SITE_ENGINEER',
-    role_name: 'Site Engineer',
-    department: 'Civil Engineering',
-    designation: 'Lead Site Engineer',
-    dob: '1993-11-04',
-    doj: '2022-07-01',
-    phone: '9840345678',
-    email: 'arun@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 55000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: true,
-    username: 'arun.verma',
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-4',
-    employee_code: 'EMP-0116',
-    name: 'Ravi Kumar',
-    role_code: 'SUPERVISOR',
-    role_name: 'Supervisor',
-    department: 'Site Operations',
-    designation: 'Site Operations Supervisor',
-    dob: '1988-02-18',
-    doj: '2023-01-10',
-    phone: '9840456789',
-    email: 'ravi.k@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 1200,
-    salary_type: 'Day',
-    status: 'ACTIVE',
-    has_login_account: true,
-    username: 'ravi.kumar',
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-5',
-    employee_code: 'EMP-0107',
-    name: 'Kavitha Selvan',
-    role_code: 'ACCOUNTS',
-    role_name: 'Accounts',
-    department: 'Finance & Accounts',
-    designation: 'Senior Accountant',
-    dob: '1991-09-30',
-    doj: '2022-10-15',
-    phone: '9840567890',
-    email: 'kavitha@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 40000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: false,
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-6',
-    employee_code: 'EMP-0105',
-    name: 'Meena Kumari',
-    role_code: 'ARCHITECT',
-    role_name: 'Architect',
-    department: 'Architecture & Design',
-    designation: 'Architectural Designer',
-    dob: '1994-06-12',
-    doj: '2023-05-02',
-    phone: '9840678901',
-    email: 'meena@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 48000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: false,
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-7',
-    employee_code: 'EMP-0112',
-    name: 'Balaji Govind',
-    role_code: 'PROJECT_MANAGER',
-    role_name: 'Project Manager',
-    department: 'Project Management',
-    designation: 'Project Manager',
-    dob: '1989-03-21',
-    doj: '2021-06-15',
-    phone: '9840567890',
-    email: 'balaji@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 85000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: false,
-    created_at: '2024-01-01'
-  },
-  {
-    id: 'staff-8',
-    employee_code: 'EMP-0113',
-    name: 'Likson',
-    role_code: 'SITE_ENGINEER',
-    role_name: 'Site Engineer',
-    department: 'Civil Engineering',
-    designation: 'Site Engineer - Field Ops',
-    dob: '1995-08-10',
-    doj: '2023-02-01',
-    phone: '9444006047',
-    email: 'likson@booshnam.com',
-    employment_type: 'Full-time',
-    salary: 48000,
-    salary_type: 'Month',
-    status: 'ACTIVE',
-    has_login_account: false,
-    created_at: '2024-01-01'
-  }
-];
+const DEFAULT_STAFF_MEMBERS: StaffMember[] = [];
 
 export interface StaffSelectOption {
   name: string;
@@ -273,18 +116,49 @@ export function getStaffTeamOptions(
 
 const STAFF_STORAGE_KEY = 'booshnam_staff_members_v2';
 
+const LEGACY_MOCK_STAFF_NAMES = [
+  'Rajesh Chandran',
+  'Anandhi Venkatesh',
+  'Arun Verma',
+  'Ravi Kumar',
+  'Kavitha Selvan',
+  'Meena Kumari',
+  'Balaji Govind',
+  'Likson',
+];
+
+const LEGACY_MOCK_STAFF_IDS = [
+  'staff-1',
+  'staff-2',
+  'staff-3',
+  'staff-4',
+  'staff-5',
+  'staff-6',
+  'staff-7',
+  'staff-8',
+];
+
 export function getStaffMembers(): StaffMember[] {
-  if (typeof window === 'undefined') return DEFAULT_STAFF_MEMBERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STAFF_STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(DEFAULT_STAFF_MEMBERS));
-      return DEFAULT_STAFF_MEMBERS;
+      return [];
     }
-    return JSON.parse(raw);
+    const parsed: StaffMember[] = JSON.parse(raw);
+    // Filter out the legacy pre-seeded mock staff members by exact ID or name
+    const cleaned = parsed.filter(s => 
+      !LEGACY_MOCK_STAFF_IDS.includes(s.id) &&
+      !LEGACY_MOCK_STAFF_NAMES.includes(s.name)
+    );
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(cleaned));
+      return cleaned;
+    }
+    return parsed;
   } catch (e) {
     console.error('Failed to get staff members', e);
-    return DEFAULT_STAFF_MEMBERS;
+    return [];
   }
 }
 
@@ -300,6 +174,37 @@ export function saveStaffMember(staff: StaffMember): StaffMember[] {
   }
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(updated));
+
+    // Synchronize linked user accounts with updated staff role and name
+    try {
+      const accRaw = localStorage.getItem('booshnam_user_accounts_v2');
+      if (accRaw) {
+        const accounts = JSON.parse(accRaw);
+        const cleanPhone = (staff.phone || '').replace(/\D/g, '');
+        let hasAccChange = false;
+        const updatedAccounts = accounts.map((a: any) => {
+          const aPhone = (a.phone || '').replace(/\D/g, '');
+          const aUser = a.username.replace(/\D/g, '');
+          const isMatch = (a.staff_id && a.staff_id === staff.id) || 
+                          (cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)));
+          if (isMatch) {
+            hasAccChange = true;
+            return {
+              ...a,
+              role_code: staff.role_code,
+              role_name: staff.role_name || staff.designation,
+              staff_name: staff.name
+            };
+          }
+          return a;
+        });
+        if (hasAccChange) {
+          localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(updatedAccounts));
+          window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updatedAccounts }));
+        }
+      }
+    } catch (err) {}
+
     window.dispatchEvent(new CustomEvent('booshnam_staff_updated', { detail: updated }));
   } catch (e) {
     console.error('Failed to save staff member', e);
@@ -309,14 +214,37 @@ export function saveStaffMember(staff: StaffMember): StaffMember[] {
 
 export function deleteStaffMember(id: string): StaffMember[] {
   const current = getStaffMembers();
+  const target = current.find(s => s.id === id);
   const updated = current.filter(s => s.id !== id);
   try {
     localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(updated));
+    if (target?.phone) {
+      try {
+        const accRaw = localStorage.getItem('booshnam_user_accounts_v2');
+        if (accRaw) {
+          const accounts = JSON.parse(accRaw);
+          const filteredAccs = accounts.filter((a: any) => 
+            a.staff_id !== id && 
+            a.username !== target.phone && 
+            a.phone !== target.phone
+          );
+          localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(filteredAccs));
+        }
+      } catch (err) {}
+    }
     window.dispatchEvent(new CustomEvent('booshnam_staff_updated', { detail: updated }));
   } catch (e) {
     console.error('Failed to delete staff member', e);
   }
   return updated;
+}
+
+export function clearAllStaffMembers(): StaffMember[] {
+  try {
+    localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify([]));
+    window.dispatchEvent(new CustomEvent('booshnam_staff_updated', { detail: [] }));
+  } catch (e) {}
+  return [];
 }
 
 export function markStaffLoginCreated(staffId: string, username: string): void {
@@ -350,8 +278,14 @@ export function getStaffAllocatedProjects(staffName: string, roleCode?: string):
   }
   try {
     const raw = localStorage.getItem('booshnam_projects_v2');
-    const projects = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(projects) || projects.length === 0) {
+    const parsed = raw ? JSON.parse(raw) : [];
+    const projects = Array.isArray(parsed)
+      ? parsed.filter((p: any) => 
+          !p.id?.startsWith('proj-') &&
+          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+        )
+      : [];
+    if (projects.length === 0) {
       return { totalProjects: 0, allocatedProjects: [], isAllAccess: false };
     }
 
@@ -430,8 +364,12 @@ export function toggleStaffProjectAllocation(staffName: string, staffRole: strin
   try {
     const raw = localStorage.getItem('booshnam_projects_v2');
     if (!raw) return false;
-    const projects = JSON.parse(raw);
-    if (!Array.isArray(projects)) return false;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return false;
+    const projects = parsed.filter((p: any) => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
 
     const cleanName = staffName.toLowerCase().trim();
     let isNowAllocated = false;
@@ -476,8 +414,12 @@ export function removeAllStaffProjectAllocations(staffName: string): void {
   try {
     const raw = localStorage.getItem('booshnam_projects_v2');
     if (!raw) return;
-    const projects = JSON.parse(raw);
-    if (!Array.isArray(projects)) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    const projects = parsed.filter((p: any) => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+    );
 
     const cleanName = staffName.toLowerCase().trim();
 

@@ -16,4 +16,5 @@ build/
 local.properties
 .venv/
 backend/.venv/
+mobile/screen_*.png
 

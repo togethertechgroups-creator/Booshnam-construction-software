@@ -7,7 +7,7 @@ import {
   Settings, UserX, LogOut, CheckCheck, Clock, ShieldCheck, X,
   Download, FileSpreadsheet, Check, PieChart, Wallet, CreditCard,
   ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText,
-  Activity, HeartPulse, PlayCircle, PauseCircle, PackageCheck, FolderKanban, Sparkles, Users
+  Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users
 } from 'lucide-react';
 import { Project, User } from '../types';
 import { MOCK_USER, formatProjectTitle } from '../lib/mockData';
@@ -179,12 +179,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('All');
   const [selectedHealthFilter, setSelectedHealthFilter] = useState('All');
   
-  // Attendance & Material filters
+  // Attendance filters
   const [payrollType, setPayrollType] = useState('All');
   const [workforceName, setWorkforceName] = useState('All');
-  const [materialName, setMaterialName] = useState('All');
-  const [materialCategory, setMaterialCategory] = useState('All');
-  const [showMaterialData, setShowMaterialData] = useState(false);
 
   // Table Search filters
   const [searchName, setSearchName] = useState('');
@@ -315,7 +312,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const summaryProjects = useMemo(() => {
     const validProjects = (projects || []).filter(p => 
       !p.id?.startsWith('proj-') &&
-      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
     );
 
     const rawList = activeDeptId === 'booshnam_associates'
@@ -661,7 +658,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const finSummaryRows = useMemo(() => {
     const validProjects = (projects || []).filter(p => 
       !p.id?.startsWith('proj-') &&
-      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
     );
     if (!validProjects || validProjects.length === 0) return [];
     return validProjects.map((p, idx) => {
@@ -1703,7 +1700,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         {activeTab === 'operational' && (
           <div className="p-6 space-y-6">
 
-            {/* 4 Status KPI Cards: Styled like Modern Premium Debit / Credit Cards (Inspired by Reference) */}
+            {/* 4 Status KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 {
@@ -1714,10 +1711,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   subtext: 'Pending kickoff',
                   bgGradient: 'from-[#f43f5e] via-[#e11d48] to-[#9f1239]',
                   shadowColor: 'shadow-rose-500/25',
-                  bgImage: '/handshake-city.jpg',
-                  blendMode: 'mix-blend-multiply',
-                  imgOpacity: 'opacity-35',
-                  imgPosition: 'inset-0 h-full w-full object-cover scale-150 object-center',
                 },
                 {
                   status: 'Ongoing',
@@ -1727,10 +1720,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   subtext: 'Live on site',
                   bgGradient: 'from-[#10b981] via-[#059669] to-[#047857]',
                   shadowColor: 'shadow-emerald-500/25',
-                  bgImage: '/city-sketch.jpg',
-                  blendMode: 'mix-blend-multiply',
-                  imgOpacity: 'opacity-35',
-                  imgPosition: 'inset-0 h-full w-full object-cover scale-135 object-center',
                 },
                 {
                   status: 'Onhold',
@@ -1740,10 +1729,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   subtext: 'Awaiting action',
                   bgGradient: 'from-[#f59e0b] via-[#ea580c] to-[#c2410c]',
                   shadowColor: 'shadow-amber-500/25',
-                  bgImage: '/city-sketch.jpg',
-                  blendMode: 'mix-blend-multiply',
-                  imgOpacity: 'opacity-35',
-                  imgPosition: 'inset-0 h-full w-full object-cover scale-135 object-center',
                 },
                 {
                   status: 'Completed',
@@ -1753,28 +1738,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   subtext: 'Handed over',
                   bgGradient: 'from-[#3b82f6] via-[#2563eb] to-[#1d4ed8]',
                   shadowColor: 'shadow-blue-500/25',
-                  bgImage: '/handshake-city.jpg',
-                  blendMode: 'mix-blend-multiply',
-                  imgOpacity: 'opacity-35',
-                  imgPosition: 'inset-0 h-full w-full object-cover scale-150 object-center',
                 },
               ].map((card) => (
                 <div
                   key={card.status}
                   className={`relative overflow-hidden rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-br ${card.bgGradient} border border-white/20 shadow-md ${card.shadowColor} select-none`}
                 >
-                  {/* Blended Background Construction Graphic */}
-                  {card.bgImage && (
-                    <img
-                      src={card.bgImage}
-                      alt=""
-                      aria-hidden="true"
-                      className={`absolute ${card.imgPosition} ${card.blendMode} ${card.imgOpacity} pointer-events-none select-none`}
-                    />
-                  )}
-
-                    {/* Card Content */}
-                    <div className="relative z-10 flex flex-col justify-between">
+                  {/* Card Content */}
+                  <div className="relative z-10 flex flex-col justify-between">
                       {/* Top / Center Area: Status Name & Big Centered KPI Count */}
                       <div className="flex flex-col items-center justify-center text-center">
                         <span className="text-[10px] sm:text-[11px] font-bold text-white/85 uppercase tracking-wider font-sans">
@@ -1814,80 +1785,133 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 ))}
             </div>
 
-            {/* Mid-Row: Project Health & Last 7 Days Material Received */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Left: Project Health */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            {/* Mid-Row: Project Health (Full Width Balanced Card) */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
+                    {healthStats.isSingle ? (
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 max-w-[200px] truncate" title={healthStats.projectName}>
+                        {healthStats.projectName}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                        All Projects ({healthStats.total})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                    {healthStats.isSingle 
+                      ? 'Individual site operational stability & risk status' 
+                      : 'Real-time risk & operational stability across portfolio'}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-slate-900 relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsUnderlyingHealthPageView(true)}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-slate-700 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
+                    title="Open detailed health sheet view"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>View Underlying Data</span>
+                  </button>
+
+                  {/* Three Dots Menu Button & Dropdown */}
+                  <div className="relative" ref={healthDotsMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowHealthMenuDropdown(prev => !prev)}
+                      className={`p-1.5 rounded-lg border border-slate-200/80 transition-colors cursor-pointer text-slate-700 hover:text-black hover:bg-slate-50 flex items-center justify-center ${
+                        showHealthMenuDropdown 
+                          ? 'bg-slate-100 text-black font-bold' 
+                          : 'bg-white'
+                      }`}
+                      title="More options"
+                      aria-label="More options"
+                    >
+                      <MoreVertical className="w-4 h-4 text-slate-700" />
+                    </button>
+
+                    {showHealthMenuDropdown && (
+                      <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40 animate-in fade-in select-none">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowHealthMenuDropdown(false);
+                            setIsUnderlyingHealthPageView(true); // Opens dedicated Project Health Sheet Page!
+                          }}
+                          className="w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors text-left cursor-pointer sm:hidden"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                          <span>View Underlying Data</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowHealthMenuDropdown(false);
+                            handleExportHealthExcel();
+                          }}
+                          className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
+                        >
+                          <Download className="w-4 h-4 text-slate-400" />
+                          <span>Export Health Sheet (.xlsx)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3-Section Balanced Content: Left (Stability Status) | Center (Gauge) | Right (Distribution Breakdown) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center py-2">
+                {/* Left: Overall Health Stability Overview */}
+                <div className="flex flex-col justify-center space-y-2.5 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Operational Stability
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 shadow-2xs ${
+                      healthStats.isAtRisk 
+                        ? 'text-rose-700 bg-rose-50 border-rose-200' 
+                        : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        healthStats.isAtRisk ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
+                      }`}></span>
+                      {healthStats.statusLabel}
+                    </span>
+                  </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
-                      {healthStats.isSingle ? (
-                        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 max-w-[180px] truncate" title={healthStats.projectName}>
-                          {healthStats.projectName}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                          All Projects ({healthStats.total})
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                    <div className="text-sm font-bold text-slate-800 font-display">
                       {healthStats.isSingle 
-                        ? 'Individual site operational stability & risk status' 
-                        : 'Real-time risk & operational stability across portfolio'}
+                        ? `${healthStats.projectName} Status` 
+                        : 'Portfolio Health Rating'}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      {healthStats.isAtRisk
+                        ? `${healthStats.atRiskCount} site(s) currently flagged with milestone risks or operational delays.`
+                        : 'All active project sites are progressing within schedule targets and normal health tolerances.'
+                      }
                     </p>
                   </div>
-
-                  <div className="flex items-center gap-2 text-slate-900 relative">
-                    {/* Three Dots Menu Button & Dropdown */}
-                    <div className="relative" ref={healthDotsMenuRef}>
-                      <button
-                        type="button"
-                        onClick={() => setShowHealthMenuDropdown(prev => !prev)}
-                        className={`p-1.5 rounded-lg border border-slate-200/80 transition-colors cursor-pointer text-slate-700 hover:text-black hover:bg-slate-50 flex items-center justify-center ${
-                          showHealthMenuDropdown 
-                            ? 'bg-slate-100 text-black font-bold' 
-                            : 'bg-white'
-                        }`}
-                        title="More options"
-                        aria-label="More options"
-                      >
-                        <MoreVertical className="w-4 h-4 text-slate-700" />
-                      </button>
-
-                      {showHealthMenuDropdown && (
-                        <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40 animate-in fade-in select-none">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowHealthMenuDropdown(false);
-                              setIsUnderlyingHealthPageView(true); // Opens dedicated Project Health Sheet Page!
-                            }}
-                            className="w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
-                          >
-                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                            <span>View Underlying Data</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowHealthMenuDropdown(false);
-                              handleExportHealthExcel();
-                            }}
-                            className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
-                          >
-                            <Download className="w-4 h-4 text-slate-400" />
-                            <span>Export Health Sheet (.xlsx)</span>
-                          </button>
-                        </div>
-                      )}
+                  <div className="pt-1 flex items-center gap-3 text-xs text-slate-600 font-medium">
+                    <div className="flex items-center gap-1.5">
+                      <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
+                      <span>{healthStats.isSingle ? '1 Site Tracked' : `${healthStats.total} Sites Tracked`}</span>
+                    </div>
+                    <span className="text-slate-300">•</span>
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{healthStats.percent}% Health Score</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between sm:justify-around py-1 gap-4 flex-1">
-                  {/* Semi-Circle Gauge (Single Permanent Model) */}
+                {/* Center: Semi-Circle Gauge */}
+                <div className="flex flex-col items-center justify-center">
                   <div className="relative w-64 sm:w-72 h-32 sm:h-36 flex items-end justify-center overflow-hidden animate-in fade-in duration-200">
                     <svg viewBox="0 0 200 100" className="w-full h-full">
                       <defs>
@@ -1957,143 +1981,46 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Right Legend: Modern Colorful Breakdown Cards */}
-                  <div className="flex flex-col gap-2 w-full sm:w-52 min-w-[180px] text-xs">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
-                      <span>Distribution</span>
-                      <span className={`text-[9.5px] px-2 py-0.5 rounded-full border font-mono font-bold ${
-                        healthStats.isAtRisk 
-                          ? 'text-rose-600 bg-rose-50 border-rose-200/60' 
-                          : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
-                      }`}>
-                        {healthStats.isSingle ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-blue-200/80 shadow-2xs group hover:border-blue-300 transition-all">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 shadow-xs"></div>
-                        <div>
-                          <span className="font-bold text-slate-800 text-xs block">Healthy Sites</span>
-                          <span className="text-[9.5px] text-slate-400 font-medium">On-schedule</span>
-                        </div>
-                      </div>
-                      <span className="font-black font-display text-sm text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-100 shadow-2xs">
-                        {healthStats.healthyCount}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-50/80 via-white to-red-50/40 border border-rose-200/80 shadow-2xs group hover:border-rose-300 transition-all">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs"></div>
-                        <div>
-                          <span className="font-bold text-slate-800 text-xs block">At Risk</span>
-                          <span className="text-[9.5px] text-slate-400 font-medium">Action alert</span>
-                        </div>
-                      </div>
-                      <span className="font-black font-display text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-100 shadow-2xs">
-                        {healthStats.atRiskCount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: Last 7 Days Material Received */}
-              <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4 flex flex-col justify-between">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-xs">
-                      <PackageCheck className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-900 text-sm font-display">Last 7 Days Material Received</h3>
-                      <p className="text-[10px] text-slate-400 font-medium">Inbound GRN receipts & gate verification</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-28 sm:w-32">
-                      <CustomSelect
-                        value={materialName}
-                        onChange={(val) => setMaterialName(val)}
-                        options={[
-                          { label: 'All', value: 'All' },
-                          { label: 'TMT Steel', value: 'Steel' },
-                          { label: 'Cement', value: 'Cement' },
-                          { label: 'RMC Concrete', value: 'RMC' },
-                        ]}
-                        prefix="Material: "
-                        size="sm"
-                        variant="brand"
-                      />
-                    </div>
-                    <div className="w-28 sm:w-32">
-                      <CustomSelect
-                        value={materialCategory}
-                        onChange={(val) => setMaterialCategory(val)}
-                        options={[
-                          { label: 'All', value: 'All' },
-                          { label: 'Civil', value: 'Civil' },
-                          { label: 'Finishing', value: 'Finishing' },
-                        ]}
-                        prefix="Category: "
-                        size="sm"
-                        variant="brand"
-                      />
-                    </div>
-                  </div>
                 </div>
 
-                {/* Display Body: Modern state */}
-                <div className="flex-1 flex flex-col items-center justify-center min-h-[160px]">
-                  {!showMaterialData ? (
-                    <div className="text-center py-2 space-y-2.5">
-                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 flex items-center justify-center mx-auto ring-4 ring-amber-50 shadow-2xs">
-                        <PackageCheck className="w-5 h-5" />
-                      </div>
+                {/* Right: Distribution Breakdown Cards */}
+                <div className="flex flex-col gap-2 w-full max-w-sm mx-auto md:mx-0 md:ml-auto text-xs">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                    <span>Distribution Breakdown</span>
+                    <span className={`text-[9.5px] px-2 py-0.5 rounded-full border font-mono font-bold ${
+                      healthStats.isAtRisk 
+                        ? 'text-rose-600 bg-rose-50 border-rose-200/60' 
+                        : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
+                    }`}>
+                      {healthStats.isSingle ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-blue-200/80 shadow-2xs group hover:border-blue-300 transition-all">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 shadow-xs"></div>
                       <div>
-                        <div className="text-slate-800 font-bold text-sm font-display">No Pending Gate Deliveries</div>
-                        <p className="text-xs text-slate-500 max-w-xs mx-auto mt-0.5">
-                          All incoming site shipments are verified and logged in store inventory.
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => setShowMaterialData(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-brand to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>View Verified Gate Deliveries (3)</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-full space-y-2">
-                      <div className="flex items-center justify-between text-xs pb-1">
-                        <span className="font-bold text-slate-700 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Recent Gate GRN Receipts</span>
-                        </span>
-                        <button onClick={() => setShowMaterialData(false)} className="text-[11px] text-slate-400 hover:text-slate-700 font-semibold cursor-pointer">
-                          Minimize
-                        </button>
-                      </div>
-                      <div className="divide-y divide-slate-100 border border-slate-200/90 rounded-xl overflow-hidden text-xs shadow-2xs">
-                        <div className="p-2.5 flex justify-between items-center bg-slate-50/50">
-                          <span className="font-medium text-slate-800">16mm TMT Steel (Tata Tiscon)</span>
-                          <span className="font-bold font-mono text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200/80">25.0 MT</span>
-                        </div>
-                        <div className="p-2.5 flex justify-between items-center bg-white">
-                          <span className="font-medium text-slate-800">Ready Mix Concrete M40</span>
-                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200/80">100 CUM</span>
-                        </div>
-                        <div className="p-2.5 flex justify-between items-center bg-slate-50/50">
-                          <span className="font-medium text-slate-800">PPC 53 Grade Cement</span>
-                          <span className="font-bold font-mono text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200/80">140 Bags</span>
-                        </div>
+                        <span className="font-bold text-slate-800 text-xs block">Healthy Sites</span>
+                        <span className="text-[9.5px] text-slate-400 font-medium">On-schedule</span>
                       </div>
                     </div>
-                  )}
+                    <span className="font-black font-display text-sm text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-100 shadow-2xs">
+                      {healthStats.healthyCount}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-50/80 via-white to-red-50/40 border border-rose-200/80 shadow-2xs group hover:border-rose-300 transition-all">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs"></div>
+                      <div>
+                        <span className="font-bold text-slate-800 text-xs block">At Risk</span>
+                        <span className="text-[9.5px] text-slate-400 font-medium">Action alert</span>
+                      </div>
+                    </div>
+                    <span className="font-black font-display text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-100 shadow-2xs">
+                      {healthStats.atRiskCount}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

@@ -93,13 +93,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
     const cleanDept = (department || '').toUpperCase();
     if (cleanDept.includes('SOIL')) {
-      return ['projects', 'tasks', 'site_ops', 'documents', 'setting', 'dept_soil', 'departments'];
+      return ['projects', 'site_ops', 'documents', 'setting', 'dept_soil', 'departments'];
     }
     if (cleanDept.includes('ARCH')) {
-      return ['projects', 'departments', 'dept_architecture', 'tasks', 'approvals', 'documents', 'setting'];
+      return ['projects', 'departments', 'dept_architecture', 'approvals', 'documents', 'setting'];
     }
     if (cleanDept.includes('CONST') || cleanDept.includes('CIVIL')) {
-      return ['projects', 'tasks', 'site_ops', 'workforce', 'equipment', 'snags', 'dept_construction', 'documents', 'setting'];
+      return ['projects', 'site_ops', 'workforce', 'equipment', 'dept_construction', 'documents', 'setting'];
     }
     if (cleanDept.includes('ACCOUNT') || cleanDept.includes('FINANCE')) {
       return ['finance', 'payments', 'procurement', 'approvals', 'dept_accounts', 'setting'];
@@ -108,22 +108,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return ['quotation', 'dept_marketing', 'setting'];
     }
     if (cleanDept.includes('SURVEY')) {
-      return ['projects', 'tasks', 'site_ops', 'documents', 'setting'];
+      return ['projects', 'site_ops', 'documents', 'setting'];
     }
     if (cleanDept.includes('MATERIAL')) {
-      return ['projects', 'tasks', 'site_ops', 'documents', 'setting'];
+      return ['projects', 'site_ops', 'documents', 'setting'];
     }
     if (cleanDept.includes('STRUCT')) {
-      return ['projects', 'tasks', 'documents', 'approvals', 'setting'];
+      return ['projects', 'documents', 'approvals', 'setting'];
     }
     if (cleanDept.includes('GOV')) {
-      return ['projects', 'tasks', 'site_ops', 'documents', 'setting'];
+      return ['projects', 'site_ops', 'documents', 'setting'];
     }
     if (roleCode === 'ACCOUNTS') return ['finance', 'payments', 'procurement', 'approvals', 'setting'];
-    if (roleCode === 'ARCHITECT') return ['projects', 'departments', 'tasks', 'approvals', 'documents', 'setting'];
-    if (roleCode === 'SITE_ENGINEER') return ['projects', 'tasks', 'site_ops', 'payments', 'documents', 'approvals', 'snags', 'setting'];
-    if (roleCode === 'SUPERVISOR') return ['projects', 'tasks', 'workforce', 'site_ops', 'snags', 'documents', 'approvals', 'setting'];
-    return ['projects', 'tasks', 'site_ops', 'documents', 'setting'];
+    if (roleCode === 'ARCHITECT') return ['projects', 'departments', 'approvals', 'documents', 'setting'];
+    if (roleCode === 'SITE_ENGINEER') return ['projects', 'site_ops', 'payments', 'documents', 'approvals', 'setting'];
+    if (roleCode === 'SUPERVISOR') return ['projects', 'workforce', 'site_ops', 'documents', 'approvals', 'setting'];
+    return ['projects', 'site_ops', 'documents', 'setting'];
   };
 
   useEffect(() => {
@@ -606,7 +606,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setIsCreatingNewRole(true);
       setCustomRoleName('');
       setCustomRoleDesc('');
-      setModalSelectedPages(['projects', 'tasks', 'documents', 'setting']);
+      setModalSelectedPages(['projects', 'documents', 'setting']);
     } else {
       setIsCreatingNewRole(false);
       setModalRoleCode(code);
@@ -750,7 +750,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'dashboard': return LayoutGrid;
       case 'projects': return Home;
       case 'departments': return Layers;
-      case 'tasks': return ListTodo;
       case 'clients': return UserCheck;
       case 'workforce': return Users;
       case 'finance': return Landmark;
@@ -760,7 +759,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'documents': return BookOpen;
       case 'approvals': return ShieldCheck;
       case 'site_ops': return FileText;
-      case 'snags': return ClipboardCheck;
       case 'setting': return SettingsIcon;
       default: return Layers;
     }

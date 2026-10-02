@@ -2,6 +2,21 @@ import { User, Project, TaskItem, WorkerAttendance, MOMItem, MaterialItem, Equip
 
 export const DEMO_USERS: User[] = [
   {
+    id: 'u-velmurugan',
+    username: 'velmurugan',
+    name: 'Velmurugan',
+    email: 'velmurugan@booshnam.com',
+    phone: '+91 90475 49682',
+    role: 'Site Engineer',
+    role_code: 'SITE_ENGINEER',
+    department: 'Civil Engineering',
+    status: 'ACTIVE',
+    allowedPages: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'mom', 'files', 'dpr'],
+    permissions: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_approve: false },
+    is_org_admin: false,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop',
+  },
+  {
     id: 'u1',
     username: 'murugan',
     name: 'Murugan V',
@@ -14,6 +29,7 @@ export const DEMO_USERS: User[] = [
     allowedPages: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'mom', 'files', 'dpr'],
     permissions: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_approve: false },
     is_org_admin: false,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop',
   },
   {
     id: 'u2',

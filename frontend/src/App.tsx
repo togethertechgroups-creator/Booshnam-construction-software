@@ -52,10 +52,13 @@ export function App() {
   const [currentUserAccount, setCurrentUserAccountState] = useState<UserAccount | null>(() => getCurrentUserAccount());
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
 
-  // If clients or crm view is requested, route to quotation which contains the full Leads CRM & Quotations hub
+  // If clients, crm, tasks, or snags view is requested, route appropriately
   useEffect(() => {
     if (currentView === 'clients' || currentView === 'crm') {
       setCurrentView('quotation');
+    }
+    if (currentView === 'tasks' || currentView === 'snags') {
+      setCurrentView('projects');
     }
   }, [currentView]);
 
@@ -234,14 +237,18 @@ export function App() {
     }
   };
 
-  const showToast = (msg: string) => {
-    setNotificationMsg(msg);
+  const showToast = (msg: any) => {
+    if (!msg) return;
+    const text = typeof msg === 'string' ? msg : (msg.message || msg.title || String(msg));
+    setNotificationMsg(text);
     setTimeout(() => setNotificationMsg(null), 3500);
   };
 
   useEffect(() => {
     const handleToastEvent = (e: any) => {
-      if (e.detail) showToast(e.detail);
+      if (!e.detail) return;
+      const text = typeof e.detail === 'string' ? e.detail : (e.detail.message || e.detail.title || String(e.detail));
+      showToast(text);
     };
     window.addEventListener('siteops_toast', handleToastEvent);
     return () => window.removeEventListener('siteops_toast', handleToastEvent);
@@ -420,7 +427,7 @@ export function App() {
       {notificationMsg && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 animate-bounce">
           <span className="w-2 h-2 rounded-full bg-brand"></span>
-          <span>{notificationMsg}</span>
+          <span>{typeof notificationMsg === 'string' ? notificationMsg : (notificationMsg as any)?.message || (notificationMsg as any)?.title || ''}</span>
         </div>
       )}
 

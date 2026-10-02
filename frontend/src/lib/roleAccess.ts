@@ -10,7 +10,6 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'projects', name: 'Projects', category: 'Core Operations', description: 'Project directory, WBS scheduling, task execution & site progress tracking' },
   { id: 'quotation', name: 'Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
-  { id: 'tasks', name: 'Tasks', category: 'Core Operations', description: 'Task delegation, Kanban board, team assignments & milestone deliverables' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
@@ -19,7 +18,6 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
   { id: 'approvals', name: 'Approvals', category: 'Repository & Quality', description: 'Multi-tiered authorization workflow for expenses, drawings & change orders' },
   { id: 'site_ops', name: 'Reports (DPR)', category: 'Repository & Quality', description: 'Daily Progress Reports (DPR), site photos, weather logs & labour counts' },
-  { id: 'snags', name: 'Snags & QA', category: 'Repository & Quality', description: 'Defect logging, snag lists, photo proof verification & quality punch lists' },
   { id: 'setting', name: 'Settings', category: 'Administration', description: 'Company profile, branches, business configuration, roles & permissions' },
 ];
 
@@ -50,28 +48,28 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'PROJECT_MANAGER',
     roleName: 'Project Manager',
     description: 'Overall project leadership, team delegation, budget & schedule execution',
-    allowedPages: ['dashboard', 'projects', 'quotation', 'tasks', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'snags', 'setting'],
+    allowedPages: ['dashboard', 'projects', 'quotation', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   SUPERVISOR: {
     roleCode: 'SUPERVISOR',
     roleName: 'Supervisor',
     description: 'Assigned project supervision, daily progress, attendance & site operations',
-    allowedPages: ['projects', 'tasks', 'workforce', 'site_ops', 'snags', 'documents', 'approvals', 'setting'],
+    allowedPages: ['projects', 'workforce', 'site_ops', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   SITE_ENGINEER: {
     roleCode: 'SITE_ENGINEER',
     roleName: 'Site Engineer',
     description: 'Assigned project execution, daily DPR updates, material tracking & payment requests',
-    allowedPages: ['projects', 'tasks', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'snags', 'setting'],
+    allowedPages: ['projects', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   ARCHITECT: {
     roleCode: 'ARCHITECT',
     roleName: 'Architect',
     description: 'Drawings, 3D models, architectural hub version management & drawing approvals',
-    allowedPages: ['projects', 'departments', 'tasks', 'approvals', 'documents', 'setting'],
+    allowedPages: ['projects', 'departments', 'approvals', 'documents', 'setting'],
     isSystemRole: true,
   },
   CLIENT: {
@@ -92,20 +90,29 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'EMPLOYEE',
     roleName: 'Other Staff / Employee',
     description: 'Field task execution, attendance, daily work logs & documents',
-    allowedPages: ['tasks', 'site_ops', 'documents', 'setting'],
+    allowedPages: ['projects', 'site_ops', 'documents', 'setting'],
     isSystemRole: true,
   },
 };
 
-const STORAGE_KEY = 'booshnam_role_permissions_v1';
+const STORAGE_KEY = 'booshnam_role_permissions_v2';
 
 export function getStoredRolePermissions(): Record<string, RoleAccessPermission> {
   if (typeof window === 'undefined') return DEFAULT_ROLE_PERMISSIONS;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('booshnam_role_permissions_v1');
     if (!raw) return DEFAULT_ROLE_PERMISSIONS;
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_ROLE_PERMISSIONS, ...parsed };
+    const merged: Record<string, RoleAccessPermission> = { ...DEFAULT_ROLE_PERMISSIONS, ...parsed };
+    // Filter out obsolete 'tasks' and 'snags' standalone module IDs
+    const sanitized: Record<string, RoleAccessPermission> = {};
+    for (const [code, perm] of Object.entries(merged)) {
+      sanitized[code] = {
+        ...perm,
+        allowedPages: (perm.allowedPages || []).filter(p => p !== 'tasks' && p !== 'snags')
+      };
+    }
+    return sanitized;
   } catch (e) {
     console.error('Failed to parse stored role permissions', e);
     return DEFAULT_ROLE_PERMISSIONS;

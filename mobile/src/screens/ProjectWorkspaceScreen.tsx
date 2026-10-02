@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { COLORS, SHADOWS } from '../theme';
+import { ArrowLeft, MapPin } from 'lucide-react-native';
 import { Project, User, TaskItem, WorkerAttendance, MOMItem, MaterialItem, EquipmentItem, SystemModuleId } from '../types';
 import { INITIAL_TASKS, INITIAL_WORKERS, INITIAL_MOMS, INITIAL_MATERIALS, INITIAL_EQUIPMENT } from '../mockData';
 
@@ -152,7 +153,7 @@ export default function ProjectWorkspaceScreen({ project, user, onBack }: Projec
       <View style={[styles.topBar, SHADOWS.sm]}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
-            <Text style={styles.backIcon}>←</Text>
+            <ArrowLeft size={20} color="#0f172a" strokeWidth={2.4} />
           </TouchableOpacity>
 
           <View style={styles.projectBadge}>
@@ -167,7 +168,10 @@ export default function ProjectWorkspaceScreen({ project, user, onBack }: Projec
               </View>
             </View>
             <View style={styles.metaRow}>
-              <Text style={styles.metaText}>📍 Site: {project.site_location}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MapPin size={11} color="#64748b" strokeWidth={2.2} style={{ marginRight: 3 }} />
+                <Text style={styles.metaText}>Site: {project.site_location}</Text>
+              </View>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.metaText}>Client: {project.client_name}</Text>
             </View>

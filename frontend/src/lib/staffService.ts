@@ -183,6 +183,10 @@ export function saveStaffMember(staff: StaffMember): StaffMember[] {
         const cleanPhone = (staff.phone || '').replace(/\D/g, '');
         let hasAccChange = false;
         const updatedAccounts = accounts.map((a: any) => {
+          // Never modify SUPER_ADMIN accounts through staff update
+          if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
+            return a;
+          }
           const aPhone = (a.phone || '').replace(/\D/g, '');
           const aUser = a.username.replace(/\D/g, '');
           const isMatch = (a.staff_id && a.staff_id === staff.id) || 
@@ -224,9 +228,11 @@ export function deleteStaffMember(id: string): StaffMember[] {
         if (accRaw) {
           const accounts = JSON.parse(accRaw);
           const filteredAccs = accounts.filter((a: any) => 
-            a.staff_id !== id && 
-            a.username !== target.phone && 
-            a.phone !== target.phone
+            a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super' || (
+              a.staff_id !== id && 
+              a.username !== target.phone && 
+              a.phone !== target.phone
+            )
           );
           localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(filteredAccs));
         }

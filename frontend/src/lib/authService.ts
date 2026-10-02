@@ -76,6 +76,11 @@ export function getUserAccounts(): UserAccount[] {
     let hasChanges = cleaned.length !== parsed.length;
 
     cleaned = cleaned.map(a => {
+      // Never allow Super Admin accounts to be altered by staff member records
+      if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
+        return a;
+      }
+
       // Find linked staff member
       const aPhone = (a.phone || '').replace(/\D/g, '');
       const aUser = a.username.replace(/\D/g, '');
@@ -94,9 +99,6 @@ export function getUserAccounts(): UserAccount[] {
             role_name: linkedStaff.role_name || linkedStaff.designation
           };
         }
-      } else if (a.username === 'superadmin' || (a.phone === '9840123456' && a.role_code !== 'SUPER_ADMIN')) {
-        hasChanges = true;
-        a = { ...a, role_code: 'SUPER_ADMIN', role_name: 'Super Admin' };
       } else if (a.username === 'admin' && a.role_code !== 'ADMIN') {
         hasChanges = true;
         a = { ...a, role_code: 'ADMIN', role_name: 'Admin' };
@@ -150,10 +152,12 @@ export function deleteUserAccount(identifier: string): void {
   const clean = identifier.trim().toLowerCase();
   const cleanDigits = identifier.replace(/\D/g, '');
   const updated = current.filter(a => 
-    a.id !== identifier && 
-    a.staff_id !== identifier && 
-    a.username.toLowerCase() !== clean &&
-    (!cleanDigits || a.phone?.replace(/\D/g, '') !== cleanDigits)
+    a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super' || (
+      a.id !== identifier && 
+      a.staff_id !== identifier && 
+      a.username.toLowerCase() !== clean &&
+      (!cleanDigits || a.phone?.replace(/\D/g, '') !== cleanDigits)
+    )
   );
   try {
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
@@ -168,9 +172,13 @@ export function syncStaffRoleToAccount(staffId: string, phone: string, newRoleCo
   const targetPages = allowedPages || storedPerms[newRoleCode]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id);
 
   const updatedAccounts = accounts.map(a => {
+    // Never allow staff sync to mutate Super Admin accounts
+    if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
+      return a;
+    }
     const aPhone = (a.phone || '').replace(/\D/g, '');
     const aUser = a.username.replace(/\D/g, '');
-    const isMatch = a.staff_id === staffId || (cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)));
+    const isMatch = (a.staff_id && a.staff_id === staffId) || (cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)));
     if (isMatch) {
       return {
         ...a,
@@ -186,12 +194,12 @@ export function syncStaffRoleToAccount(staffId: string, phone: string, newRoleCo
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedAccounts));
     window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updatedAccounts }));
 
-    // Also update active session if currently logged in user matches
+    // Never demote or change the active session if currently logged in as Super Admin
     const active = getCurrentUserAccount();
-    if (active) {
+    if (active && active.role_code !== 'SUPER_ADMIN' && active.username !== 'superadmin' && active.id !== 'usr-super') {
       const activePhone = (active.phone || '').replace(/\D/g, '');
       const activeUser = active.username.replace(/\D/g, '');
-      if (active.staff_id === staffId || (cleanPhone && cleanPhone.length >= 7 && (activePhone.endsWith(cleanPhone) || cleanPhone.endsWith(activePhone) || activeUser.endsWith(cleanPhone) || cleanPhone.endsWith(activeUser)))) {
+      if ((active.staff_id && active.staff_id === staffId) || (cleanPhone && cleanPhone.length >= 7 && (activePhone.endsWith(cleanPhone) || cleanPhone.endsWith(activePhone) || activeUser.endsWith(cleanPhone) || cleanPhone.endsWith(activeUser)))) {
         const updatedActive = {
           ...active,
           role_code: newRoleCode,
@@ -274,6 +282,12 @@ export function getCurrentUserAccount(): UserAccount | null {
       return null;
     }
     const acc: UserAccount = JSON.parse(raw);
+
+    // If currently logged in as Super Admin, preserve Super Admin session completely
+    if (acc.role_code === 'SUPER_ADMIN' || acc.username === 'superadmin' || acc.id === 'usr-super') {
+      return acc;
+    }
+
     const allStaff = getStaffMembers();
     const aPhone = (acc.phone || '').replace(/\D/g, '');
     const aUser = acc.username.replace(/\D/g, '');

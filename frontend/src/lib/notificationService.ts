@@ -305,7 +305,7 @@ export function addNotification(
         }
       }
 
-      if (activeName && isNotificationForUser(newNotif, activeName, activeRoleCode, activeRoleName)) {
+      if (!notif.silentToast && activeName && isNotificationForUser(newNotif, activeName, activeRoleCode, activeRoleName)) {
         window.dispatchEvent(new CustomEvent('siteops_toast', {
           detail: {
             title: newNotif.title,

@@ -3,7 +3,8 @@ import {
   Users, User, MapPin, CheckCircle2, AlertTriangle, Shield,
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
-  Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info
+  Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
+  Camera, Eye
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -22,6 +23,15 @@ import { MOCK_ROLES } from '../lib/mockData';
 import { StaffOverviewView } from '../components/StaffOverviewView';
 import { getStoredRolePermissions, ALL_SYSTEM_MODULES } from '../lib/roleAccess';
 import { saveUserAccount, UserAccount } from '../lib/authService';
+import { LivePhotoAttendanceModal } from '../components/LivePhotoAttendanceModal';
+import { LivePhotoViewModal } from '../components/LivePhotoViewModal';
+import {
+  getAllStaffAttendanceRecords,
+  getStaffLatestRecordToday,
+  updateStaffAttendanceStatus,
+  StaffAttendanceRecord,
+  getTodayDateString
+} from '../lib/staffAttendanceService';
 
 
 interface WorkforceViewProps {
@@ -43,11 +53,17 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   canViewCost,
   isSidebarOpen,
   onToggleSidebar,
-  initialTab = 'staff',
+  initialTab = 'payroll',
   onNavigate,
   onShowToast
 }) => {
   const [mainTab, setMainTab] = useState<'staff' | 'payroll'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setMainTab(initialTab);
+    }
+  }, [initialTab]);
   const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [searchStaffQuery, setSearchStaffQuery] = useState('');
@@ -57,17 +73,41 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access' | 'leave_dashboard'>('details');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
+  // Live Photo Punch & Verification Modals State
+  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
+  const [punchModalStaffId, setPunchModalStaffId] = useState<string | undefined>(undefined);
+  const [viewPhotoRecord, setViewPhotoRecord] = useState<StaffAttendanceRecord | null>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>(() => getAllStaffAttendanceRecords());
+
+  // Listen to live staff attendance updates across modals / mobile simulator
+  useEffect(() => {
+    const handleAttendanceUpdate = (e: any) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setAttendanceRecords(e.detail);
+      } else {
+        setAttendanceRecords(getAllStaffAttendanceRecords());
+      }
+    };
+    window.addEventListener('booshnam_staff_attendance_updated', handleAttendanceUpdate);
+    return () => window.removeEventListener('booshnam_staff_attendance_updated', handleAttendanceUpdate);
+  }, []);
+
   // Attendance status per staff member
-  type AttendanceStatus = 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave';
+  type AttendanceStatus = 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave' | 'Late' | 'Half-day' | 'Overtime';
   const [staffAttendanceStatus, setStaffAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
   const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
-  const getAttendanceStatus = (staffId: string): AttendanceStatus =>
-    staffAttendanceStatus[staffId] ?? 'Present';
+  const getAttendanceStatus = (staffId: string): AttendanceStatus => {
+    if (staffAttendanceStatus[staffId]) return staffAttendanceStatus[staffId];
+    const rec = attendanceRecords.find(r => r.staff_id === staffId && r.date === getTodayDateString());
+    if (rec) return rec.status as AttendanceStatus;
+    return 'Present';
+  };
 
   const setAttendanceStatus = (staffId: string, status: AttendanceStatus) => {
     setStaffAttendanceStatus(prev => ({ ...prev, [staffId]: status }));
+    updateStaffAttendanceStatus(staffId, status as any);
     setOpenAttendanceDropdown(null);
     triggerToast(`Attendance marked as ${status}`);
   };
@@ -93,9 +133,12 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
   const attendanceOptions: { label: AttendanceStatus; color: string; bg: string; border: string }[] = [
     { label: 'Present', color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-200' },
+    { label: 'Late', color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200' },
+    { label: 'Half-day', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
+    { label: 'Overtime', color: 'text-purple-700', bg: 'bg-purple-100', border: 'border-purple-200' },
     { label: 'Absent', color: 'text-red-700', bg: 'bg-red-100', border: 'border-red-200' },
     { label: 'Weekoff', color: 'text-indigo-700', bg: 'bg-indigo-100', border: 'border-indigo-200' },
-    { label: 'Paid Leave', color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200' },
+    { label: 'Paid Leave', color: 'text-teal-700', bg: 'bg-teal-100', border: 'border-teal-200' },
   ];
 
   const allProjectsList = useMemo(() => {
@@ -358,19 +401,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           </div>
         </div>
 
-        {/* Main Tab Navigation: Staff & Access | Payroll */}
+        {/* Main Tab Navigation: Payroll | Staff Management */}
         <div className="flex items-center gap-3 flex-wrap mt-2 md:mt-0">
           {!selectedStaffForOverview && (
             <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
-              <button
-                onClick={() => setMainTab('staff')}
-                className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'staff'
-                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                  }`}
-              >
-                Staff and Access
-              </button>
               <button
                 onClick={() => setMainTab('payroll')}
                 className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'payroll'
@@ -379,6 +413,15 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   }`}
               >
                 Payroll
+              </button>
+              <button
+                onClick={() => setMainTab('staff')}
+                className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'staff'
+                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
+                    : 'text-slate-500 hover:text-slate-900'
+                  }`}
+              >
+                Staff Management
               </button>
             </div>
           )}
@@ -664,29 +707,53 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   <CustomSelect
                     value="active"
                     onChange={() => { }}
-                    options={[{ label: 'Active', value: 'active' }, { label: 'Inactive', value: 'inactive' }]}
+                    options={[{ label: 'Active Staff', value: 'active' }, { label: 'All Staff', value: 'all' }]}
                     triggerClassName="text-xs font-semibold text-indigo-600 border-none bg-transparent hover:bg-slate-50 px-2 rounded"
                   />
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPunchModalStaffId(undefined);
+                      setIsPunchModalOpen(true);
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm shadow-emerald-600/20 transition cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Punch Attendance (Live Photo)</span>
+                  </button>
 
-
-                  <div className="relative w-64 hidden sm:block">
+                  <div className="relative w-56 hidden sm:block">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="Search Payroll"
+                      placeholder="Search Staff / Code..."
                       className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     />
                   </div>
 
-                  <div className="text-right ml-4">
-                    <div className="text-sm font-bold text-slate-900">{staffList.length} Present</div>
+                  <div className="text-right ml-2">
+                    <div className="text-sm font-bold text-slate-900">
+                      {staffList.filter(s => {
+                        const st = getAttendanceStatus(s.id);
+                        return st === 'Present' || st === 'Late' || st === 'Half-day' || st === 'Overtime';
+                      }).length} Present / {staffList.length} Total
+                    </div>
                     <div className="text-[10px] font-medium text-slate-500 flex items-center gap-2 mt-0.5">
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-slate-300 rounded-sm"></span> 0 Absent</span>
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-indigo-800 rounded-sm"></span> 0 Paid Leave</span>
-                      <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-indigo-600 rounded-sm"></span> 0 Weekoff</span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-red-400 rounded-sm"></span>
+                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Absent').length} Absent
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-sm"></span>
+                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Paid Leave').length} Leave
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-sm"></span>
+                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Weekoff').length} Weekoff
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -697,41 +764,138 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                       <tr>
-                        <th className="py-3 px-6">Name</th>
-                        <th className="py-3 px-6"></th>
-                        <th className="py-3 px-6"></th>
-                        <th className="py-3 px-6 text-right">Attendance Status</th>
+                        <th className="py-3.5 px-6">Staff Member</th>
+                        <th className="py-3.5 px-6">Live Verification Photo</th>
+                        <th className="py-3.5 px-6">Punch Time (In / Out)</th>
+                        <th className="py-3.5 px-6">GPS Geofence Location</th>
+                        <th className="py-3.5 px-6 text-right">Attendance Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {staffList.map((staff, idx) => {
                         const colors = ['bg-indigo-600', 'bg-purple-600', 'bg-blue-600', 'bg-indigo-800'];
                         const color = colors[idx % colors.length];
+                        const staffRecord = attendanceRecords.find(r => r.staff_id === staff.id && r.date === getTodayDateString()) || getStaffLatestRecordToday(staff.id);
+
                         return (
                           <tr key={staff.id} className="hover:bg-slate-50 transition-colors group">
-                            <td className="py-4 px-6 flex items-center gap-4">
-                              <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
-                                {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}>
-                                  {staff.designation} - {staff.name}
+                            {/* 1. Staff Member Info */}
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
+                                  {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                 </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">{staff.designation}</div>
+                                <div>
+                                  <div
+                                    className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors"
+                                    onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
+                                  >
+                                    {staff.name}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                    <span className="font-mono text-slate-400">({staff.employee_code})</span>
+                                    <span>•</span>
+                                    <span>{staff.designation}</span>
+                                  </div>
+                                </div>
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-slate-600 font-mono font-medium">₹ {staff.salary.toLocaleString()}</td>
+
+                            {/* 2. Live Verification Photo */}
                             <td className="py-4 px-6">
-                              <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-                                <MapPin className="w-3.5 h-3.5 text-red-500" />
-                                10:12 AM - continue
+                              {staffRecord?.verification_photo ? (
+                                <div className="flex items-center gap-2.5">
+                                  <div
+                                    onClick={() => setViewPhotoRecord(staffRecord)}
+                                    className="relative group/photo cursor-pointer shrink-0 w-11 h-11 rounded-lg overflow-hidden border-2 border-emerald-400 shadow-2xs hover:scale-105 transition-transform"
+                                    title="Click to view full photo proof"
+                                  >
+                                    <img
+                                      src={staffRecord.verification_photo}
+                                      alt={`${staff.name} live punch`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Eye className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setViewPhotoRecord(staffRecord)}
+                                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition cursor-pointer border border-emerald-200"
+                                    >
+                                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                      <span>Live Verified</span>
+                                    </button>
+                                    <div className="text-[10px] text-slate-400 mt-0.5">Click photo to view</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPunchModalStaffId(staff.id);
+                                    setIsPunchModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg text-[11px] font-semibold transition cursor-pointer"
+                                >
+                                  <Camera className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Punch Live Selfie</span>
+                                </button>
+                              )}
+                            </td>
+
+                            {/* 3. Punch Time (In / Out) */}
+                            <td className="py-4 px-6">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-xs font-mono">
+                                  <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <span>In: {staffRecord?.clock_in_time || '--:--'}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-mono">
+                                  <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                  <span>Out: {staffRecord?.clock_out_time || (staffRecord ? 'On Duty (Active)' : '--:--')}</span>
+                                </div>
                               </div>
                             </td>
+
+                            {/* 4. GPS Geofence Location */}
                             <td className="py-4 px-6">
-                              <div className="flex items-center justify-end gap-3">
-                                <div className="flex items-center gap-1 text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">
-                                  <Clock className="w-3.5 h-3.5" /> 1 Shift
+                              {staffRecord ? (
+                                <div className="space-y-0.5">
+                                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+                                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>{staffRecord.distance_from_site_meters}m from site</span>
+                                  </div>
+                                  <div className="text-[10px] text-emerald-600 font-medium">
+                                    Inside Geofence Verified
+                                  </div>
                                 </div>
+                              ) : (
+                                <div className="text-slate-400 text-xs flex items-center gap-1">
+                                  <MapPin className="w-3.5 h-3.5 text-slate-300" />
+                                  <span>Pending Check-in</span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* 5. Attendance Status & Actions */}
+                            <td className="py-4 px-6">
+                              <div className="flex items-center justify-end gap-2.5">
+                                {/* Quick Punch button for this specific staff */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPunchModalStaffId(staff.id);
+                                    setIsPunchModalOpen(true);
+                                  }}
+                                  title="Punch with live photo"
+                                  className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-emerald-200"
+                                >
+                                  <Camera className="w-4 h-4" />
+                                </button>
+
                                 {/* Attendance Status Dropdown */}
                                 <div
                                   className="relative"
@@ -745,16 +909,18 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                         <button
                                           type="button"
                                           onClick={(e) => handleToggleAttendanceDropdown(staff.id, e)}
-                                          className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-3 py-1.5 rounded font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90'}
+                                          className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90'}
                                         >
                                           {status}
                                           <span className="text-[10px]">▼</span>
                                         </button>
 
                                         {openAttendanceDropdown === staff.id && dropdownPos && (
-                                          <div className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
+                                          <div
+                                            className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
                                             style={{ top: dropdownPos.top, right: dropdownPos.right }}
-                                            onMouseDown={(e) => e.stopPropagation()}>
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                          >
                                             {attendanceOptions.map((option) => (
                                               <button
                                                 key={option.label}
@@ -772,9 +938,11 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                     );
                                   })()}
                                 </div>
+
                                 <button
                                   onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
-                                  className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded hover:bg-slate-100 text-slate-400 transition-colors"
+                                  title="Staff Profile & Leave Dashboard"
+                                  className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer"
                                 >
                                   <ArrowRight className="w-4 h-4" />
                                 </button>
@@ -1257,6 +1425,26 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* ── MODAL: LIVE PHOTO ATTENDANCE PUNCH ── */}
+      <LivePhotoAttendanceModal
+        isOpen={isPunchModalOpen}
+        onClose={() => setIsPunchModalOpen(false)}
+        staffList={staffList}
+        initialStaffId={punchModalStaffId}
+        onSuccess={(msg) => triggerToast(msg)}
+      />
+
+      {/* ── MODAL: LIVE PHOTO PROOF VIEWER ── */}
+      <LivePhotoViewModal
+        record={viewPhotoRecord}
+        onClose={() => setViewPhotoRecord(null)}
+        onRecapture={(staffId) => {
+          setViewPhotoRecord(null);
+          setPunchModalStaffId(staffId);
+          setIsPunchModalOpen(true);
+        }}
+      />
     </div>
   );
 };

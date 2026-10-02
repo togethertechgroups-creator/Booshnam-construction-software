@@ -86,6 +86,11 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    externalNativeBuild {
+        cmake {
+            buildStagingDirectory file("C:/tmp/booshnam_cxx")
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

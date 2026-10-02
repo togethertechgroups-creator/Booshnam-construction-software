@@ -12,11 +12,16 @@ const projectRoot = __dirname;
 // Adding both paths lets Metro compute SHA-1 regardless of which drive Gradle runs from.
 const longPathRoot = 'D:\\Togethertech Projects\\booshnam\\Booshnam-construction-software\\mobile';
 
+const defaultConfig = getDefaultConfig(projectRoot);
+
 const config = {
   watchFolders: [
     projectRoot,
     longPathRoot,
   ],
+  resolver: {
+    sourceExts: [...defaultConfig.resolver.sourceExts, 'mjs', 'cjs'],
+  },
 };
 
-module.exports = mergeConfig(getDefaultConfig(projectRoot), config);
+module.exports = mergeConfig(defaultConfig, config);

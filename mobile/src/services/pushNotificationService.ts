@@ -40,7 +40,8 @@ export async function registerDeviceToken(userPhone?: string, roleCode?: string)
     // Subscribe to broadcast topics
     await subscribeToTopic(messaging, 'all');
     if (roleCode) {
-      await subscribeToTopic(messaging, `role_${roleCode.toLowerCase()}`);
+      const sanitizedRole = roleCode.trim().toLowerCase().replace(/[^a-zA-Z0-9-_.~%]/g, '_');
+      await subscribeToTopic(messaging, `role_${sanitizedRole}`);
     } else {
       await subscribeToTopic(messaging, 'role_site_engineer');
       await subscribeToTopic(messaging, 'role_admin');

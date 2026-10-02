@@ -104,7 +104,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
     } else {
       setExistingAccountId(null);
       const rolePerm = DEFAULT_ROLE_PERMISSIONS[staff.role_code];
-      setAllowedPages(rolePerm ? rolePerm.allowedPages : ['projects', 'tasks', 'site_ops', 'documents']);
+      setAllowedPages(rolePerm ? rolePerm.allowedPages : ['projects', 'site_ops', 'documents']);
       const suggestedUsername = staff.username || staff.name.toLowerCase().replace(/[^a-z0-9]/g, '.');
       setUsername(suggestedUsername);
       setPassword('password123');
@@ -139,7 +139,6 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       case 'dashboard': return LayoutGrid;
       case 'projects': return Home;
       case 'departments': return Layers;
-      case 'tasks': return ListTodo;
       case 'clients': return UserCheck;
       case 'workforce': return Users;
       case 'finance': return Landmark;
@@ -149,7 +148,6 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       case 'documents': return BookOpen;
       case 'approvals': return ShieldCheck;
       case 'site_ops': return FileText;
-      case 'snags': return ClipboardCheck;
       case 'setting': return Settings;
       default: return Shield;
     }
@@ -227,7 +225,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       setAllowedPages(rolePerm.allowedPages);
       onShowToast(`Reset permissions to default for ${staff.role_name}`);
     } else {
-      setAllowedPages(['projects', 'tasks', 'site_ops', 'documents']);
+      setAllowedPages(['projects', 'site_ops', 'documents']);
     }
   };
 

@@ -94,7 +94,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search tasks, POs, DPRs, snags..."
+            placeholder="Search projects, POs, DPRs, drawings..."
             className="pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand w-64 transition-all"
           />
         </div>

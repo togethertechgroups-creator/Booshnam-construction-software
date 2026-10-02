@@ -268,8 +268,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             icon: Calculator, 
             badge: followUpsCount > 0 ? `${followUpsCount}` : null,
             hasBell: followUpsCount > 0
-          },
-          { id: 'tasks', label: 'Tasks', icon: ListTodo, badge: '11' }
+          }
         ]
       },
       // Group 2: Workforce & Payroll
@@ -302,7 +301,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'documents', label: 'Documents', icon: BookOpen },
           { id: 'approvals', label: 'Approvals', icon: ShieldCheck, badge: pendingApprovalsCount > 0 ? `${pendingApprovalsCount}` : null },
           { id: 'site_ops', label: 'Reports (DPR)', icon: FileText },
-          { id: 'snags', label: 'Snags & QA', icon: ClipboardCheck },
           { id: 'setting', label: 'Settings', icon: Settings }
         ]
       }

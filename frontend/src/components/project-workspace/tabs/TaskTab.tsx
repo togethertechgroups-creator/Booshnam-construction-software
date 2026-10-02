@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Plus, Search, Calendar, ChevronDown, GitBranch, RefreshCw, 
+  Plus, Search, Calendar, ChevronDown, ChevronRight, ChevronUp, GitBranch, RefreshCw, 
   Download, MessageSquare, Clock, User, Users, Check, CheckCircle2, 
   Trash2, Edit3, MoreVertical, X, List, Flag, Layers, PlusCircle, 
   ArrowRight, ShieldCheck, Sparkles, AlertTriangle,
-  Upload, FileText, Image as ImageIcon, Eye, ExternalLink, Camera
+  Upload, FileText, Image as ImageIcon, Eye, ExternalLink, Camera,
+  Send, Package, HardHat, Truck, CheckSquare, Square
 } from 'lucide-react';
 import { Project, WBSTask, Department } from '../../../types';
 import { getStaffMembers } from '../../../lib/staffService';
@@ -18,6 +19,64 @@ interface TaskTabProps {
   project: Project;
   tasks?: WBSTask[];
   onShowToast?: (msg: string) => void;
+}
+
+export interface TaskToDoItem {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
+export interface TaskMaterialResource {
+  id: string;
+  name: string;
+  quantity: string;
+  unit: string;
+}
+
+export interface TaskWorkforceResource {
+  id: string;
+  role: string;
+  count: number;
+}
+
+export interface TaskEquipmentResource {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export interface TaskProgressEntry {
+  id: string;
+  user: string;
+  amount: string;
+  date: string;
+  note?: string;
+  proof_url?: string;
+}
+
+export interface TaskMessageEntry {
+  id: string;
+  user: string;
+  text: string;
+  time: string;
+}
+
+export interface TaskStatusLogEntry {
+  id: string;
+  text: string;
+  timestamp: string;
+  user?: string;
+}
+
+export interface TaskExtraMeta {
+  todos?: TaskToDoItem[];
+  materials?: TaskMaterialResource[];
+  workforce?: TaskWorkforceResource[];
+  equipment?: TaskEquipmentResource[];
+  progressUpdates?: TaskProgressEntry[];
+  messages?: TaskMessageEntry[];
+  statusLogs?: TaskStatusLogEntry[];
 }
 
 export const TASK_DEPARTMENT_OPTIONS: { id: Department; label: string }[] = [
@@ -245,6 +304,70 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const [previewProofModal, setPreviewProofModal] = useState<string | null>(null);
   const proofFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Drawer Tab (Progress / Resources / Delay & Status logs matching Screenshots 2 & 3)
+  const [drawerTab, setDrawerTab] = useState<'progress' | 'resources' | 'logs'>('progress');
+  const [isDatesExpanded, setIsDatesExpanded] = useState(true);
+  const [isStatusMenuOpen, setIsStatusMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isAddToDoOpen, setIsAddToDoOpen] = useState(false);
+  const [newToDoText, setNewToDoText] = useState('');
+  const [isEditingTitleInline, setIsEditingTitleInline] = useState(false);
+  const [inlineTitleValue, setInlineTitleValue] = useState('');
+  const [messageInput, setMessageInput] = useState('');
+
+  // Accordions for Resources Tab (Screenshot 3)
+  const [expandedResources, setExpandedResources] = useState<{
+    material: boolean;
+    workforce: boolean;
+    equipment: boolean;
+  }>({
+    material: true,
+    workforce: true,
+    equipment: true,
+  });
+
+  // Resource Modals (Screenshot 3: [Add] buttons)
+  const [activeResourceModal, setActiveResourceModal] = useState<'material' | 'workforce' | 'equipment' | null>(null);
+  const [resMatName, setResMatName] = useState('');
+  const [resMatQty, setResMatQty] = useState('');
+  const [resMatUnit, setResMatUnit] = useState('Bags');
+
+  const [resWorkRole, setResWorkRole] = useState('');
+  const [resWorkCount, setResWorkCount] = useState<number>(1);
+
+  const [resEquipName, setResEquipName] = useState('');
+  const [resEquipCount, setResEquipCount] = useState<number>(1);
+
+  // Progress Modal (Screenshot 2: + Progress button)
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+  const [progressAmountInput, setProgressAmountInput] = useState('1 lumpsum');
+  const [progressNoteInput, setProgressNoteInput] = useState('');
+  const [progressIsCompleted, setProgressIsCompleted] = useState(true);
+
+  // Assignee Modal
+  const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false);
+
+  // Task Extra Meta persistent storage
+  const [taskMetadataMap, setTaskMetadataMap] = useState<Record<string, TaskExtraMeta>>(() => {
+    try {
+      const raw = localStorage.getItem(`booshnam_task_meta_${project?.id || 'default'}`);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return {};
+  });
+
+  const saveTaskMeta = (taskId: string, updater: (prev: TaskExtraMeta) => TaskExtraMeta) => {
+    setTaskMetadataMap((prevMap) => {
+      const prevMeta = prevMap[taskId] || {};
+      const updated = updater(prevMeta);
+      const newMap = { ...prevMap, [taskId]: updated };
+      try {
+        localStorage.setItem(`booshnam_task_meta_${project?.id || 'default'}`, JSON.stringify(newMap));
+      } catch (e) {}
+      return newMap;
+    });
+  };
+
   const currentUser = useMemo(() => {
     try {
       const stored = localStorage.getItem('siteops_user');
@@ -356,6 +479,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const handleOpenCreate = () => {
     setEditingTask(null);
     setFormTitle('');
+    setInlineTitleValue('');
+    setIsEditingTitleInline(false);
     setFormDepartment(departmentFilter !== 'ALL' ? departmentFilter : 'MATERIAL_TESTING');
     setFormStartDate('2026-09-17');
     setFormEndDate('2026-09-18');
@@ -365,13 +490,18 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     setFormDelayStatus('On Track');
     setFormProofUrl(null);
     setFormRemarks('');
+    setIsStatusMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setIsAddToDoOpen(false);
     setIsTaskDrawerOpen(true);
   };
 
-  // Open Drawer for Edit
+  // Open Drawer for Edit / Detail View (Screenshots 2 & 3)
   const handleOpenEdit = (t: WBSTask) => {
     setEditingTask(t);
     setFormTitle(t.title);
+    setInlineTitleValue(t.title);
+    setIsEditingTitleInline(false);
     setFormDepartment(t.department || normalizeTaskDepartment(t));
     setFormStartDate(t.start_date || '2026-09-17');
     setFormEndDate(t.end_date || '2026-09-18');
@@ -381,7 +511,303 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     setFormDelayStatus(t.delay_status || 'On Track');
     setFormProofUrl(t.completion_proof_url || null);
     setFormRemarks(t.completion_remarks || '');
+    setDrawerTab('progress');
+    setIsDatesExpanded(true);
+    setIsStatusMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setIsAddToDoOpen(false);
     setIsTaskDrawerOpen(true);
+  };
+
+  // Computed current task metadata with realistic defaults matching Screenshots 2 & 3
+  const currentTaskMeta = useMemo<TaskExtraMeta>(() => {
+    if (!editingTask) return {};
+    const meta = taskMetadataMap[editingTask.id];
+    if (meta) return meta;
+
+    const isDone = editingTask.status === 'COMPLETED';
+    const defaultTodos: TaskToDoItem[] = [
+      { id: 'todo-1', text: 'Prepare initial bill of quantities (BOQ)', completed: isDone },
+      { id: 'todo-2', text: 'Verify material unit rates from suppliers', completed: isDone },
+      { id: 'todo-3', text: 'Send formal quotation to client for review', completed: isDone },
+    ];
+
+    const defaultProgress: TaskProgressEntry[] = isDone ? [
+      {
+        id: 'prog-1',
+        user: editingTask.completed_by || 'Dasari Uma Sri Devi',
+        amount: editingTask.progress_label || '1 lumpsum ✓',
+        date: editingTask.completed_at || 'Sep 30, 26',
+        note: editingTask.completion_remarks || 'Quotation estimation submitted and approved by client.'
+      }
+    ] : [];
+
+    const defaultLogs: TaskStatusLogEntry[] = [
+      { id: 'log-1', text: `Task created by ${editingTask.created_by || 'Pavani'}`, timestamp: editingTask.created_date || '17 Sep 26, 09:30 AM' },
+      ...(isDone ? [
+        { id: 'log-2', text: 'Status changed to Ongoing', timestamp: '17 Sep 26, 10:00 AM' },
+        { id: 'log-3', text: 'Status changed to Completed', timestamp: '30 Sep 26, 11:45 AM' },
+        { id: 'log-4', text: 'Delay status: On Time', timestamp: '30 Sep 26, 11:45 AM' },
+      ] : [])
+    ];
+
+    return {
+      todos: defaultTodos,
+      materials: [],
+      workforce: [],
+      equipment: [],
+      progressUpdates: defaultProgress,
+      messages: [],
+      statusLogs: defaultLogs
+    };
+  }, [editingTask, taskMetadataMap]);
+
+  // Quick Status Switcher (Screenshot 2: Completed ▾ / Ongoing ▾ / Start ▾)
+  const handleQuickStatusChange = (newStatus: 'COMPLETED' | 'IN_PROGRESS' | 'TODO') => {
+    if (!editingTask) return;
+    setIsStatusMenuOpen(false);
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const isDone = newStatus === 'COMPLETED';
+    const isOngoing = newStatus === 'IN_PROGRESS';
+
+    const nextProgress = isDone ? 100 : isOngoing ? 50 : 0;
+    const nextLabel = isDone ? '1/1 lumpsum' : isOngoing ? '0.5/1 lumpsum' : '0/1 lumpsum';
+    const nextActualStart = isDone || isOngoing ? (editingTask.actual_start || editingTask.start_date || todayStr) : '';
+    const nextActualEnd = isDone ? (editingTask.actual_end || editingTask.end_date || todayStr) : '';
+    const nextDelay = isDone ? 'On Time' : isOngoing ? 'On Track' : 'At Risk';
+
+    const updatedTask: WBSTask = {
+      ...editingTask,
+      status: newStatus,
+      progress_percentage: nextProgress,
+      progress_label: nextLabel,
+      actual_start: nextActualStart,
+      actual_end: nextActualEnd,
+      delay_status: nextDelay,
+      completed_by: isDone ? (currentUser.first_name || currentUser.username || 'Staff') : editingTask.completed_by,
+      completed_at: isDone ? todayStr : editingTask.completed_at
+    };
+
+    setEditingTask(updatedTask);
+    setTaskList(prev => prev.map(t => t.id === editingTask.id ? updatedTask : t));
+
+    // Log the event in timeline
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      statusLogs: [
+        {
+          id: `log-${Date.now()}`,
+          text: `Status changed to ${isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Start'}`,
+          timestamp: `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          user: currentUser.first_name || 'Staff'
+        },
+        ...(prev.statusLogs || [])
+      ],
+      ...(isDone ? {
+        progressUpdates: [
+          {
+            id: `prog-${Date.now()}`,
+            user: currentUser.first_name || 'Dasari Uma Sri Devi',
+            amount: '1 lumpsum ✓',
+            date: todayStr,
+            note: 'Marked completed from task status switcher.'
+          },
+          ...(prev.progressUpdates || [])
+        ]
+      } : {})
+    }));
+
+    onShowToast?.(`Task status updated to ${isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Start'}`);
+  };
+
+  // Inline Title Save
+  const handleSaveInlineTitle = () => {
+    if (!editingTask || !inlineTitleValue.trim()) return;
+    const updated = { ...editingTask, title: inlineTitleValue.trim() };
+    setEditingTask(updated);
+    setTaskList(prev => prev.map(t => t.id === editingTask.id ? updated : t));
+    setIsEditingTitleInline(false);
+    onShowToast?.('Task name updated');
+  };
+
+  // To-Do Checklist Actions
+  const handleAddToDo = () => {
+    if (!editingTask || !newToDoText.trim()) return;
+    const newItem: TaskToDoItem = {
+      id: `todo-${Date.now()}`,
+      text: newToDoText.trim(),
+      completed: false
+    };
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      todos: [...(prev.todos || []), newItem]
+    }));
+    setNewToDoText('');
+    onShowToast?.('To-Do item added');
+  };
+
+  const handleToggleToDo = (todoId: string) => {
+    if (!editingTask) return;
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      todos: (prev.todos || []).map(td => td.id === todoId ? { ...td, completed: !td.completed } : td)
+    }));
+  };
+
+  const handleDeleteToDo = (todoId: string) => {
+    if (!editingTask) return;
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      todos: (prev.todos || []).filter(td => td.id !== todoId)
+    }));
+  };
+
+  // Resource Actions (Screenshot 3: Material, Workforce, Equipment)
+  const handleAddMaterial = () => {
+    if (!editingTask || !resMatName.trim()) return;
+    const newRes: TaskMaterialResource = {
+      id: `mat-${Date.now()}`,
+      name: resMatName.trim(),
+      quantity: resMatQty.trim() || '1',
+      unit: resMatUnit.trim() || 'Bags'
+    };
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      materials: [...(prev.materials || []), newRes]
+    }));
+    setResMatName('');
+    setResMatQty('');
+    setActiveResourceModal(null);
+    onShowToast?.(`Material "${newRes.name}" added to task`);
+  };
+
+  const handleDeleteMaterial = (matId: string) => {
+    if (!editingTask) return;
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      materials: (prev.materials || []).filter(m => m.id !== matId)
+    }));
+    onShowToast?.('Material removed');
+  };
+
+  const handleAddWorkforce = () => {
+    if (!editingTask || !resWorkRole.trim()) return;
+    const newRes: TaskWorkforceResource = {
+      id: `work-${Date.now()}`,
+      role: resWorkRole.trim(),
+      count: resWorkCount || 1
+    };
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      workforce: [...(prev.workforce || []), newRes]
+    }));
+    setResWorkRole('');
+    setResWorkCount(1);
+    setActiveResourceModal(null);
+    onShowToast?.(`Workforce "${newRes.role}" added to task`);
+  };
+
+  const handleDeleteWorkforce = (workId: string) => {
+    if (!editingTask) return;
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      workforce: (prev.workforce || []).filter(w => w.id !== workId)
+    }));
+    onShowToast?.('Workforce removed');
+  };
+
+  const handleAddEquipment = () => {
+    if (!editingTask || !resEquipName.trim()) return;
+    const newRes: TaskEquipmentResource = {
+      id: `eq-${Date.now()}`,
+      name: resEquipName.trim(),
+      count: resEquipCount || 1
+    };
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      equipment: [...(prev.equipment || []), newRes]
+    }));
+    setResEquipName('');
+    setResEquipCount(1);
+    setActiveResourceModal(null);
+    onShowToast?.(`Equipment "${newRes.name}" added to task`);
+  };
+
+  const handleDeleteEquipment = (eqId: string) => {
+    if (!editingTask) return;
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      equipment: (prev.equipment || []).filter(e => e.id !== eqId)
+    }));
+    onShowToast?.('Equipment removed');
+  };
+
+  // Send Message Discussion
+  const handleSendMessage = () => {
+    if (!editingTask || !messageInput.trim()) return;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMsg: TaskMessageEntry = {
+      id: `msg-${Date.now()}`,
+      user: currentUser.first_name || currentUser.username || 'User',
+      text: messageInput.trim(),
+      time: `${todayStr}, ${timeStr}`
+    };
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      messages: [...(prev.messages || []), newMsg]
+    }));
+    setMessageInput('');
+    onShowToast?.('Message sent');
+  };
+
+  // Submit Progress Update (+ Progress button)
+  const handleSaveProgressUpdate = () => {
+    if (!editingTask) return;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const newEntry: TaskProgressEntry = {
+      id: `prog-${Date.now()}`,
+      user: currentUser.first_name || currentUser.username || 'Dasari Uma Sri Devi',
+      amount: progressAmountInput.trim() || '1 lumpsum',
+      date: todayStr,
+      note: progressNoteInput.trim() || undefined,
+      proof_url: formProofUrl || undefined
+    };
+
+    saveTaskMeta(editingTask.id, prev => ({
+      ...prev,
+      progressUpdates: [newEntry, ...(prev.progressUpdates || [])],
+      statusLogs: [
+        {
+          id: `log-${Date.now()}`,
+          text: `Progress recorded: ${newEntry.amount}${progressNoteInput ? ` (${progressNoteInput})` : ''}`,
+          timestamp: `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          user: currentUser.first_name || 'Staff'
+        },
+        ...(prev.statusLogs || [])
+      ]
+    }));
+
+    if (progressIsCompleted) {
+      const updatedTask: WBSTask = {
+        ...editingTask,
+        status: 'COMPLETED',
+        progress_percentage: 100,
+        progress_label: progressAmountInput.trim() || '1/1 lumpsum',
+        actual_end: editingTask.end_date || todayStr,
+        delay_status: 'On Time',
+        completion_proof_url: formProofUrl || editingTask.completion_proof_url,
+        completion_remarks: progressNoteInput || editingTask.completion_remarks,
+        completed_by: currentUser.first_name || 'Dasari Uma Sri Devi',
+        completed_at: todayStr
+      };
+      setEditingTask(updatedTask);
+      setTaskList(prev => prev.map(t => t.id === editingTask.id ? updatedTask : t));
+    }
+
+    setIsProgressModalOpen(false);
+    setProgressNoteInput('');
+    onShowToast?.('Progress recorded successfully');
   };
 
   // Dirty state tracking for Task Drawer
@@ -1281,369 +1707,1347 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. ADD / EDIT TASK DRAWER                                                 */}
+      {/* 3. TASK SLIDE-OVER DRAWER (EXACT RECREATION OF SCREENSHOTS 2 & 3)        */}
       {/* ========================================================================= */}
       {isTaskDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
-                  {editingTask ? 'EDIT TASK DETAILS' : 'CREATE NEW TASK'}
-                </span>
-                <h3 className="text-sm font-bold text-slate-900 mt-0.5">
-                  {editingTask ? editingTask.title : 'New Project Work Item'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseTaskDrawer}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+          <div className="bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+            {editingTask ? (
+              /* ================================================================= */
+              /* A. TASK DETAIL VIEW (SCREENSHOT 2 & 3)                           */
+              /* ================================================================= */
+              <div className="flex flex-col h-full overflow-hidden bg-white">
+                {/* Header (Screenshot 2) */}
+                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCloseTaskDrawer}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+                      title="Close Drawer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
 
-            {/* Red Accent Stripe */}
-            <div className="h-1 bg-red-600 w-full" />
-
-            {/* Form */}
-            <form onSubmit={handleSaveTask} className="p-6 space-y-5 overflow-y-auto flex-1">
-              {/* Task Name */}
-              <div className="relative border border-slate-300 rounded-xl p-3 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-600 transition-all bg-white">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  TASK NAME *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Foundation Soil Investigation"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full text-xs text-slate-900 bg-transparent focus:outline-none placeholder-slate-400"
-                />
-              </div>
-
-              {/* Schedule Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    START DATE
-                  </label>
-                  <input
-                    type="date"
-                    value={formStartDate}
-                    onChange={(e) => setFormStartDate(e.target.value)}
-                    className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    END DATE
-                  </label>
-                  <input
-                    type="date"
-                    value={formEndDate}
-                    onChange={(e) => setFormEndDate(e.target.value)}
-                    className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Duration & Delay */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                    DURATION (DAYS)
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={formDuration}
-                    onChange={(e) => setFormDuration(Number(e.target.value))}
-                    className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Delay Status
-                  </label>
-                  <CustomSelect
-                    value={formDelayStatus}
-                    onChange={(val) => setFormDelayStatus(val as any)}
-                    options={[
-                      { label: 'On Time', value: 'On Time', dotColor: 'bg-emerald-500' },
-                      { label: 'On Track', value: 'On Track', dotColor: 'bg-teal-500' },
-                      { label: 'At Risk', value: 'At Risk', dotColor: 'bg-rose-500' },
-                      { label: '1d Delay', value: '1d', dotColor: 'bg-amber-500' },
-                    ]}
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-              </div>
-
-              {/* Department Assignment */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Department Assignment <span className="text-red-500">*</span>
-                </label>
-                <CustomSelect
-                  value={formDepartment}
-                  onChange={(val) => setFormDepartment(val as any)}
-                  options={[
-                    { label: 'Material Testing', value: 'MATERIAL_TESTING' },
-                    { label: 'Structural', value: 'STRUCTURAL' },
-                    { label: 'Soil Investigation', value: 'SOIL_INVESTIGATION' },
-                    { label: 'Architecture', value: 'ARCHITECTURE' },
-                    { label: 'Construction', value: 'CONSTRUCTION' },
-                    { label: 'Survey', value: 'SURVEY' },
-                    { label: 'Accounts & Finance', value: 'ACCOUNTS' },
-                    { label: 'Marketing', value: 'MARKETING' },
-                    { label: 'Government Projects', value: 'GOVERNMENT_PROJECT' },
-                    { label: 'Art & Sculpture', value: 'ART_SCULPTURE' },
-                  ]}
-                  size="md"
-                  variant="brand"
-                />
-              </div>
-
-              {/* Assignee */}
-              <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  ASSIGNED TO
-                </label>
-                <input
-                  type="text"
-                  list="staff-tab-assignees"
-                  placeholder="e.g. Pavani, Madhu, Likson..."
-                  value={formAssigned}
-                  onChange={(e) => setFormAssigned(e.target.value)}
-                  className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
-                />
-                <datalist id="staff-tab-assignees">
-                  {registeredStaff.map(s => (
-                    <option key={s.id} value={s.name}>
-                      {s.name} ({s.designation || s.role_name})
-                    </option>
-                  ))}
-                </datalist>
-              </div>
-
-              {/* Tag */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Tag / Category
-                </label>
-                <CustomSelect
-                  value={formTag}
-                  onChange={(val) => setFormTag(val)}
-                  options={[
-                    'Field Survey',
-                    'Estimating',
-                    'Client Reporting',
-                    'Lab Testing',
-                    'Documentation',
-                    'QA / QC',
-                    'Final Delivery',
-                  ]}
-                  size="md"
-                  variant="brand"
-                />
-              </div>
-
-              {/* Task Completion & Proof Verification Section */}
-              <div className="border border-slate-200 rounded-[5px] p-3.5 bg-slate-50/70 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-red-600" />
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Task Completion & Proof
-                    </span>
-                  </div>
-                  {editingTask?.status === 'COMPLETED' && (
-                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-[4px] text-[10px] font-bold">
-                      Completed
-                    </span>
-                  )}
-                </div>
-
-                {editingTask?.status === 'COMPLETED' ? (
-                  /* ALREADY COMPLETED STATE */
-                  <div className="space-y-2.5 pt-1">
-                    <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-[5px] text-xs text-emerald-900 space-y-1">
-                      <div className="font-bold flex items-center gap-1.5 text-emerald-800">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Completed on {editingTask.completed_at || editingTask.actual_end}</span>
-                      </div>
-                      <div className="text-[11px] text-emerald-700">
-                        Verified by: <span className="font-semibold">{editingTask.completed_by || editingTask.assigned_to_name || 'Staff'}</span>
-                      </div>
+                    {/* Status Indicator (Screenshot 2: ● 1/1 lumpsum (Completed)) */}
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${
+                        editingTask.status === 'COMPLETED' ? 'bg-emerald-500' :
+                        editingTask.status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                        'bg-amber-500'
+                      }`} />
+                      <span>
+                        {editingTask.progress_label || (editingTask.status === 'COMPLETED' ? '1/1 lumpsum' : '0/1 lumpsum')} ({
+                          editingTask.status === 'COMPLETED' ? 'Completed' :
+                          editingTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Start'
+                        })
+                      </span>
                     </div>
+                  </div>
 
-                    {/* Proof thumbnail if available */}
-                    {(editingTask.completion_proof_url || formProofUrl) && (
-                      <div>
-                        <span className="text-[10px] font-semibold text-slate-500 block mb-1">Attached Completion Proof:</span>
-                        <div 
-                          className="relative group/proof rounded-[5px] overflow-hidden border border-slate-200 w-full max-h-40 bg-slate-900 flex items-center justify-center cursor-pointer"
-                          onClick={() => setPreviewProofModal(editingTask.completion_proof_url || formProofUrl)}
-                        >
-                          <img 
-                            src={editingTask.completion_proof_url || formProofUrl || ''} 
-                            alt="Completion Proof" 
-                            className="max-h-40 w-auto object-contain"
-                          />
-                          <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/proof:opacity-100 transition-opacity flex items-center justify-center gap-1 text-white text-xs font-semibold">
-                            <Eye className="w-4 h-4" />
-                            <span>Click to View Full Proof</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {editingTask.completion_remarks && (
-                      <div className="text-xs bg-white p-2 rounded-[5px] border border-slate-200 text-slate-700">
-                        <span className="text-[10px] font-bold text-slate-400 block uppercase">Remarks:</span>
-                        {editingTask.completion_remarks}
-                      </div>
-                    )}
-
-                    <div className="pt-1">
+                  <div className="flex items-center gap-2">
+                    {/* Status Dropdown Switcher (Screenshot 2: Completed ▾) */}
+                    <div className="relative" data-task-dropdown>
                       <button
                         type="button"
-                        onClick={handleReopenTask}
-                        className="text-xs text-slate-600 hover:text-red-600 font-semibold underline cursor-pointer"
+                        onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
+                        className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
+                          editingTask.status === 'COMPLETED'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            : editingTask.status === 'IN_PROGRESS'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
+                        }`}
                       >
-                        Reopen Task (Change to In Progress)
+                        <span>
+                          {editingTask.status === 'COMPLETED' ? 'Completed' :
+                           editingTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Start'}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                       </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* PENDING / TO COMPLETE STATE */
-                  <div className="space-y-3 pt-1">
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      Attach quotation copy, estimation document, or site photo proof sent to the client to mark this task as completed.
-                    </p>
 
-                    {/* Upload Dropzone */}
-                    <div>
-                      <input
-                        type="file"
-                        ref={proofFileInputRef}
-                        accept="image/*,.pdf,.dwg"
-                        onChange={handleProofFileChange}
-                        className="hidden"
-                      />
-                      {formProofUrl ? (
-                        <div className="relative rounded-[5px] border border-emerald-300 bg-emerald-50/30 p-2.5 flex items-center gap-3">
-                          <img
-                            src={formProofUrl}
-                            alt="Proof"
-                            onClick={() => setPreviewProofModal(formProofUrl)}
-                            className="w-14 h-14 object-cover rounded-[3px] border border-emerald-200 cursor-pointer hover:scale-105 transition-transform"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs font-bold text-emerald-800 block truncate">Proof Document Attached</span>
-                            <span className="text-[10px] text-emerald-600">Click image to preview</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <button
-                                type="button"
-                                onClick={() => proofFileInputRef.current?.click()}
-                                className="text-[10px] text-red-600 font-bold hover:underline cursor-pointer"
-                              >
-                                Change File
-                              </button>
-                              <span className="text-slate-300">•</span>
-                              <button
-                                type="button"
-                                onClick={() => setFormProofUrl(null)}
-                                className="text-[10px] text-slate-500 hover:text-red-600 font-semibold cursor-pointer"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={() => proofFileInputRef.current?.click()}
-                          className="border-2 border-dashed border-slate-300 hover:border-red-500 hover:bg-red-50/30 rounded-[5px] p-3.5 text-center cursor-pointer transition-all bg-white"
-                        >
-                          <Camera className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                          <span className="text-xs font-bold text-slate-700 block">Click to Upload Completion Proof</span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            Quotation estimate, client WhatsApp/email screenshot, or photo
-                          </span>
+                      {isStatusMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1.5 w-36 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in duration-100">
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStatusChange('COMPLETED')}
+                            className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-emerald-800 font-semibold flex items-center gap-2 cursor-pointer"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span>Completed</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStatusChange('IN_PROGRESS')}
+                            className="w-full text-left px-3.5 py-2 hover:bg-blue-50 text-blue-800 font-semibold flex items-center gap-2 cursor-pointer"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span>Ongoing</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuickStatusChange('TODO')}
+                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-800 font-semibold flex items-center gap-2 cursor-pointer"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span>Start</span>
+                          </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Completion Remarks */}
-                    <div>
-                      <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                        Completion Remarks / Notes
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Quotation estimation sent to client via WhatsApp and email"
-                        value={formRemarks}
-                        onChange={(e) => setFormRemarks(e.target.value)}
-                        className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-[5px] focus:outline-none focus:border-red-600 text-slate-900"
-                      />
-                    </div>
-
-                    {/* Prominent Complete Task Button */}
-                    {editingTask && (
+                    {/* Options ⋮ */}
+                    <div className="relative" data-task-dropdown>
                       <button
                         type="button"
-                        onClick={handleCompleteTaskWithProof}
-                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-[5px] text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+                        onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                        className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+                        title="Task Actions"
                       >
-                        <Check className="w-4 h-4" />
-                        <span>Complete Task (Submit Proof & Mark Done)</span>
+                        <MoreVertical className="w-4 h-4" />
                       </button>
+
+                      {isMoreMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsEditingTitleInline(true);
+                              setIsMoreMenuOpen(false);
+                            }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Rename Task</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              proofFileInputRef.current?.click();
+                              setIsMoreMenuOpen(false);
+                            }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                          >
+                            <Camera className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Attach Proof / Photo</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAssigneeModalOpen(true);
+                              setIsMoreMenuOpen(false);
+                            }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
+                          >
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Change Assignee</span>
+                          </button>
+                          <div className="border-t border-slate-100 my-1" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDeleteTask(editingTask.id);
+                              setIsMoreMenuOpen(false);
+                              setIsTaskDrawerOpen(false);
+                            }}
+                            className="w-full text-left px-3.5 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 font-semibold"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete Task</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Violet Accent Stripe */}
+                <div className="h-0.5 bg-indigo-600 w-full shrink-0" />
+
+                {/* Scrollable Upper Area: Title, 6-Box Grid, Dates Card */}
+                <div className="shrink-0 bg-white">
+                  {/* Task Title (Screenshot 2: Quotation) */}
+                  <div className="px-6 pt-4 pb-2">
+                    {isEditingTitleInline ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={inlineTitleValue}
+                          onChange={(e) => setInlineTitleValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveInlineTitle();
+                            if (e.key === 'Escape') setIsEditingTitleInline(false);
+                          }}
+                          autoFocus
+                          className="text-xl font-bold text-slate-900 border-b-2 border-indigo-600 focus:outline-none flex-1 bg-transparent py-0.5"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveInlineTitle}
+                          className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer"
+                          title="Save Name"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingTitleInline(false)}
+                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <h2 
+                          onClick={() => {
+                            setInlineTitleValue(editingTask.title);
+                            setIsEditingTitleInline(true);
+                          }}
+                          className="text-2xl font-extrabold text-slate-900 tracking-tight hover:text-indigo-600 transition-colors cursor-pointer group flex items-center gap-2"
+                          title="Click to rename task"
+                        >
+                          <span>{editingTask.title}</span>
+                          <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                        </h2>
+                        <button
+                          type="button"
+                          onClick={() => proofFileInputRef.current?.click()}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200"
+                          title="Upload task photo or proof"
+                        >
+                          <Camera className="w-4 h-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                {editingTask && (
+                  {/* 6-Box Attribute Grid (Screenshot 2) */}
+                  <div className="px-6 py-2">
+                    <div className="grid grid-cols-3 gap-2.5 p-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl">
+                      {/* Box 1: ASSIGN TO */}
+                      <div 
+                        onClick={() => setIsAssigneeModalOpen(true)}
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                      >
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          ASSIGN TO
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {editingTask.assigned_team && editingTask.assigned_team.length > 0 ? (
+                            <div className="flex items-center -space-x-1.5">
+                              {editingTask.assigned_team.slice(0, 2).map((m, mIdx) => (
+                                <div
+                                  key={mIdx}
+                                  className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 border-2 border-white flex items-center justify-center text-[10px] font-bold shadow-2xs"
+                                  title={m.name}
+                                >
+                                  {m.initials}
+                                </div>
+                              ))}
+                              {editingTask.assigned_team.length > 2 && (
+                                <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 border-2 border-white flex items-center justify-center text-[9px] font-bold shadow-2xs">
+                                  +{editingTask.assigned_team.length - 2}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                                {(editingTask.assigned_to_name || 'P')[0].toUpperCase()}
+                              </div>
+                              <span className="text-xs font-semibold text-slate-800 truncate max-w-[65px]">
+                                {editingTask.assigned_to_name || 'Pavani'}
+                              </span>
+                            </div>
+                          )}
+                          <Plus className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 ml-auto transition-colors" />
+                        </div>
+                      </div>
+
+                      {/* Box 2: DURATION */}
+                      <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          DURATION
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">
+                          {editingTask.duration_days || 1} wd
+                        </span>
+                      </div>
+
+                      {/* Box 3: TO DO */}
+                      <div 
+                        onClick={() => setIsAddToDoOpen(!isAddToDoOpen)}
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                      >
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          TO DO
+                        </span>
+                        {currentTaskMeta.todos && currentTaskMeta.todos.length > 0 ? (
+                          <span className="text-xs font-bold text-indigo-600 flex items-center justify-between">
+                            <span>{currentTaskMeta.todos.filter(t => t.completed).length}/{currentTaskMeta.todos.length}</span>
+                            <ChevronRight className="w-3.5 h-3.5 text-indigo-400" />
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-indigo-600 group-hover:underline">
+                            + Add To Do
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Box 4: INSPECTION FORM */}
+                      <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl cursor-pointer hover:border-slate-300 transition-colors">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          INSPECTION FORM
+                        </span>
+                        <span className="text-xs font-bold text-slate-600 flex items-center justify-between">
+                          <span>0/0</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                        </span>
+                      </div>
+
+                      {/* Box 5: DEPENDENCIES */}
+                      <div 
+                        onClick={() => setActiveDependencyTask(editingTask)}
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                      >
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          DEPENDENCIES
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                          <span>{editingTask.dependencies?.length || 0}</span>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" />
+                        </span>
+                      </div>
+
+                      {/* Box 6: TAG */}
+                      <div className="p-2.5 bg-white border border-slate-200/80 rounded-xl">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                          TAG
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700 truncate block">
+                          {editingTask.tag || '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expandable To-Do Checklist (Screenshot 2: Subtasks) */}
+                  {isAddToDoOpen && (
+                    <div className="px-6 py-2 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                            <span>To-Do Checklist ({currentTaskMeta.todos?.filter(t => t.completed).length || 0}/{currentTaskMeta.todos?.length || 0})</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddToDoOpen(false)}
+                            className="text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                          >
+                            Hide
+                          </button>
+                        </div>
+
+                        {/* Todo items list */}
+                        <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                          {currentTaskMeta.todos && currentTaskMeta.todos.map((todo) => (
+                            <div
+                              key={todo.id}
+                              className="flex items-center justify-between p-2 bg-white border border-slate-200/70 rounded-xl text-xs hover:border-indigo-200 transition-colors"
+                            >
+                              <div
+                                onClick={() => handleToggleToDo(todo.id)}
+                                className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+                              >
+                                <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shrink-0 ${
+                                  todo.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-500'
+                                }`}>
+                                  {todo.completed && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span className={`truncate ${todo.completed ? 'line-through text-slate-400' : 'text-slate-700 font-medium'}`}>
+                                  {todo.text}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteToDo(todo.id)}
+                                className="p-1 text-slate-300 hover:text-red-500 cursor-pointer transition-colors"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Add new todo input */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <input
+                            type="text"
+                            placeholder="Add a new checklist item..."
+                            value={newToDoText}
+                            onChange={(e) => setNewToDoText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddToDo();
+                              }
+                            }}
+                            className="flex-1 text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-800"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddToDo}
+                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer shrink-0"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dates Card (Screenshot 2: START 30 Sep 26 · END 30 Sep 26) */}
+                  <div className="px-6 py-2">
+                    <div className="border border-slate-200/90 rounded-2xl p-3.5 bg-white shadow-2xs">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-indigo-600" />
+                          <span>START {formatDateSnippet(editingTask.start_date)}  ·  END {formatDateSnippet(editingTask.end_date)}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsDatesExpanded(!isDatesExpanded)}
+                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                        >
+                          <span>{isDatesExpanded ? 'Hide dates' : 'View dates'}</span>
+                          {isDatesExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+
+                      {isDatesExpanded && (
+                        <div className="pt-3 mt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-xs animate-in fade-in">
+                          <div>
+                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
+                              Actual start
+                            </span>
+                            <span className="font-semibold text-slate-800">
+                              {formatDateSnippet(editingTask.actual_start) || '- - -'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
+                              Actual end
+                            </span>
+                            <span className="font-semibold text-slate-800">
+                              {formatDateSnippet(editingTask.actual_end) || '- - -'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
+                              Forecast end
+                            </span>
+                            <span className="font-bold text-red-600">
+                              {formatDateSnippet(editingTask.end_date) || '- - -'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3 Tabs Header (Screenshot 2: Progress, Resources, Delay & Status logs) */}
+                  <div className="px-6 border-b border-slate-200 mt-2">
+                    <div className="flex items-center gap-6">
+                      <button
+                        type="button"
+                        onClick={() => setDrawerTab('progress')}
+                        className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                          drawerTab === 'progress'
+                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Progress
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrawerTab('resources')}
+                        className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                          drawerTab === 'resources'
+                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Resources
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDrawerTab('logs')}
+                        className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
+                          drawerTab === 'logs'
+                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        Delay & Status logs
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tab Body */}
+                <div className="flex-1 overflow-y-auto bg-slate-50/40">
+                  {/* TAB 1: PROGRESS (Screenshot 2) */}
+                  {drawerTab === 'progress' && (
+                    <div className="p-6 space-y-4">
+                      {/* Attached Completion Proof Thumbnail */}
+                      {(editingTask.completion_proof_url || formProofUrl) && (
+                        <div className="p-3.5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              ATTACHED COMPLETION PROOF
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewProofModal(editingTask.completion_proof_url || formProofUrl)}
+                              className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View Full Proof</span>
+                            </button>
+                          </div>
+                          <div
+                            onClick={() => setPreviewProofModal(editingTask.completion_proof_url || formProofUrl)}
+                            className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center cursor-pointer max-h-48"
+                          >
+                            <img
+                              src={editingTask.completion_proof_url || formProofUrl || ''}
+                              alt="Task Completion Proof"
+                              className="w-full max-h-48 object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5">
+                              <Eye className="w-4 h-4" />
+                              <span>Click to Preview</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Progress Updates List (Screenshot 2: Dasari Uma Sri Devi · Sep 30, 26 -> 1 lumpsum ✓) */}
+                      <div className="space-y-3">
+                        {currentTaskMeta.progressUpdates && currentTaskMeta.progressUpdates.length > 0 ? (
+                          currentTaskMeta.progressUpdates.map((prog) => (
+                            <div
+                              key={prog.id}
+                              className="p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs space-y-2"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                    {prog.user.slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="text-xs font-bold text-slate-900 block leading-tight">
+                                      {prog.user}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400">
+                                      {prog.date}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[11px] font-bold">
+                                  {prog.amount}
+                                </span>
+                              </div>
+                              {prog.note && (
+                                <p className="text-xs text-slate-600 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                                  {prog.note}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="py-8 text-center text-slate-400 text-xs italic bg-white rounded-2xl border border-dashed border-slate-200">
+                            No progress logs recorded yet. Click "+ Progress" below to record progress.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Discussion Messages */}
+                      {currentTaskMeta.messages && currentTaskMeta.messages.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/70 space-y-2">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            DISCUSSION FEED
+                          </span>
+                          <div className="space-y-2">
+                            {currentTaskMeta.messages.map((m) => (
+                              <div key={m.id} className="p-3 bg-white border border-slate-200/70 rounded-xl text-xs space-y-1 shadow-2xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-slate-800">{m.user}</span>
+                                  <span className="text-[10px] text-slate-400">{m.time}</span>
+                                </div>
+                                <p className="text-slate-600">{m.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: RESOURCES (SCREENSHOT 3: Material, Workforce, Equipment) */}
+                  {drawerTab === 'resources' && (
+                    <div className="p-6 space-y-4">
+                      {/* Accordion 1: Material (Screenshot 3) */}
+                      <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                        <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedResources(prev => ({ ...prev, material: !prev.material }))}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                          >
+                            {expandedResources.material ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                            <span>Material</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveResourceModal('material')}
+                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            [Add]
+                          </button>
+                        </div>
+
+                        {expandedResources.material && (
+                          <div className="p-4">
+                            {currentTaskMeta.materials && currentTaskMeta.materials.length > 0 ? (
+                              <div className="space-y-2">
+                                {currentTaskMeta.materials.map((m) => (
+                                  <div key={m.id} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <Package className="w-4 h-4 text-amber-600" />
+                                      <div>
+                                        <span className="font-bold text-slate-800 block">{m.name}</span>
+                                        <span className="text-[11px] text-slate-500">{m.quantity} {m.unit}</span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteMaterial(m.id)}
+                                      className="p-1 text-slate-400 hover:text-red-500 cursor-pointer"
+                                      title="Remove Material"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-slate-400 text-xs italic">
+                                No material resources added yet.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Accordion 2: Workforce (Screenshot 3) */}
+                      <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                        <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedResources(prev => ({ ...prev, workforce: !prev.workforce }))}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                          >
+                            {expandedResources.workforce ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                            <span>Workforce</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveResourceModal('workforce')}
+                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            [Add]
+                          </button>
+                        </div>
+
+                        {expandedResources.workforce && (
+                          <div className="p-4">
+                            {currentTaskMeta.workforce && currentTaskMeta.workforce.length > 0 ? (
+                              <div className="space-y-2">
+                                {currentTaskMeta.workforce.map((w) => (
+                                  <div key={w.id} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <HardHat className="w-4 h-4 text-blue-600" />
+                                      <div>
+                                        <span className="font-bold text-slate-800 block">{w.role}</span>
+                                        <span className="text-[11px] text-slate-500">{w.count} Workers</span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteWorkforce(w.id)}
+                                      className="p-1 text-slate-400 hover:text-red-500 cursor-pointer"
+                                      title="Remove Workforce"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-slate-400 text-xs italic">
+                                No workforce resources added yet.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Accordion 3: Equipment (Screenshot 3) */}
+                      <div className="border border-slate-200/90 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                        <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedResources(prev => ({ ...prev, equipment: !prev.equipment }))}
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                          >
+                            {expandedResources.equipment ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                            <span>Equipment</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveResourceModal('equipment')}
+                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            [Add]
+                          </button>
+                        </div>
+
+                        {expandedResources.equipment && (
+                          <div className="p-4">
+                            {currentTaskMeta.equipment && currentTaskMeta.equipment.length > 0 ? (
+                              <div className="space-y-2">
+                                {currentTaskMeta.equipment.map((eq) => (
+                                  <div key={eq.id} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <Truck className="w-4 h-4 text-purple-600" />
+                                      <div>
+                                        <span className="font-bold text-slate-800 block">{eq.name}</span>
+                                        <span className="text-[11px] text-slate-500">{eq.count} Units</span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteEquipment(eq.id)}
+                                      className="p-1 text-slate-400 hover:text-red-500 cursor-pointer"
+                                      title="Remove Equipment"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4 text-slate-400 text-xs italic">
+                                No equipment resources added yet.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: DELAY & STATUS LOGS */}
+                  {drawerTab === 'logs' && (
+                    <div className="p-6 space-y-4">
+                      <div className="relative pl-6 space-y-4 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                        {currentTaskMeta.statusLogs && currentTaskMeta.statusLogs.length > 0 ? (
+                          currentTaskMeta.statusLogs.map((log) => (
+                            <div key={log.id} className="relative">
+                              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-2xs" />
+                              <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs text-xs space-y-1">
+                                <span className="font-bold text-slate-800 block">{log.text}</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {log.user ? `by ${log.user} · ` : ''}{log.timestamp}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-slate-400 text-xs italic bg-white p-4 rounded-xl border border-slate-200">
+                            No logs recorded yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Sticky Bottom Action Bar (Screenshot 2: + Progress, Enter Message..., Camera, Options) */}
+                <div className="p-4 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
-                      handleDeleteTask(editingTask.id);
-                      setIsTaskDrawerOpen(false);
+                      setProgressAmountInput(editingTask.status === 'COMPLETED' ? '1 lumpsum' : '1 lumpsum');
+                      setProgressIsCompleted(true);
+                      setIsProgressModalOpen(true);
                     }}
-                    className="px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Delete</span>
+                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>Progress</span>
                   </button>
-                )}
 
-                <div className="flex items-center gap-2 ml-auto">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Enter Message..."
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-800 placeholder-slate-400"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => proofFileInputRef.current?.click()}
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
+                    title="Attach photo/proof"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+
+                  {messageInput.trim() ? (
+                    <button
+                      type="button"
+                      onClick={handleSendMessage}
+                      className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer transition-colors shrink-0"
+                      title="Send Message"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                      className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200 shrink-0"
+                      title="Options"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* ================================================================= */
+              /* B. CREATE NEW TASK FORM (WHEN CLICKING + Task)                   */
+              /* ================================================================= */
+              <div className="flex flex-col h-full overflow-hidden bg-white">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+                  <div>
+                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
+                      CREATE NEW TASK
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-900 mt-0.5">
+                      New Project Work Item
+                    </h3>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCloseTaskDrawer}
-                    className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors"
-                  >
-                    Save Task
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
+
+                {/* Red Accent Stripe */}
+                <div className="h-1 bg-red-600 w-full shrink-0" />
+
+                {/* Form */}
+                <form onSubmit={handleSaveTask} className="p-6 space-y-5 overflow-y-auto flex-1">
+                  {/* Task Name */}
+                  <div className="relative border border-slate-300 rounded-xl p-3 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-600 transition-all bg-white">
+                    <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                      TASK NAME *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Quotation or Soil Investigation"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="w-full text-xs text-slate-900 bg-transparent focus:outline-none placeholder-slate-400"
+                    />
+                  </div>
+
+                  {/* Schedule Dates */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
+                      <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        START DATE
+                      </label>
+                      <input
+                        type="date"
+                        value={formStartDate}
+                        onChange={(e) => setFormStartDate(e.target.value)}
+                        className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
+                      <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        END DATE
+                      </label>
+                      <input
+                        type="date"
+                        value={formEndDate}
+                        onChange={(e) => setFormEndDate(e.target.value)}
+                        className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Duration & Delay */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
+                      <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                        DURATION (DAYS)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={formDuration}
+                        onChange={(e) => setFormDuration(Number(e.target.value))}
+                        className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                        Delay Status
+                      </label>
+                      <CustomSelect
+                        value={formDelayStatus}
+                        onChange={(val) => setFormDelayStatus(val as any)}
+                        options={[
+                          { label: 'On Time', value: 'On Time', dotColor: 'bg-emerald-500' },
+                          { label: 'On Track', value: 'On Track', dotColor: 'bg-teal-500' },
+                          { label: 'At Risk', value: 'At Risk', dotColor: 'bg-rose-500' },
+                          { label: '1d Delay', value: '1d', dotColor: 'bg-amber-500' },
+                        ]}
+                        size="md"
+                        variant="brand"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Department Assignment */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Department Assignment <span className="text-red-500">*</span>
+                    </label>
+                    <CustomSelect
+                      value={formDepartment}
+                      onChange={(val) => setFormDepartment(val as any)}
+                      options={[
+                        { label: 'Material Testing', value: 'MATERIAL_TESTING' },
+                        { label: 'Structural', value: 'STRUCTURAL' },
+                        { label: 'Soil Investigation', value: 'SOIL_INVESTIGATION' },
+                        { label: 'Architecture', value: 'ARCHITECTURE' },
+                        { label: 'Construction', value: 'CONSTRUCTION' },
+                        { label: 'Survey', value: 'SURVEY' },
+                        { label: 'Accounts & Finance', value: 'ACCOUNTS' },
+                        { label: 'Marketing', value: 'MARKETING' },
+                        { label: 'Government Projects', value: 'GOVERNMENT_PROJECT' },
+                        { label: 'Art & Sculpture', value: 'ART_SCULPTURE' },
+                      ]}
+                      size="md"
+                      variant="brand"
+                    />
+                  </div>
+
+                  {/* Assignee */}
+                  <div className="relative border border-slate-300 rounded-xl p-3 bg-white">
+                    <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                      ASSIGNED TO
+                    </label>
+                    <input
+                      type="text"
+                      list="staff-tab-assignees"
+                      placeholder="e.g. Pavani, Madhu, Likson..."
+                      value={formAssigned}
+                      onChange={(e) => setFormAssigned(e.target.value)}
+                      className="w-full text-xs text-slate-900 bg-transparent focus:outline-none"
+                    />
+                    <datalist id="staff-tab-assignees">
+                      {registeredStaff.map(s => (
+                        <option key={s.id} value={s.name}>
+                          {s.name} ({s.designation || s.role_name})
+                        </option>
+                      ))}
+                    </datalist>
+                  </div>
+
+                  {/* Tag */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                      Tag / Category
+                    </label>
+                    <CustomSelect
+                      value={formTag}
+                      onChange={(val) => setFormTag(val)}
+                      options={[
+                        'Field Survey',
+                        'Estimating',
+                        'Client Reporting',
+                        'Lab Testing',
+                        'Documentation',
+                        'QA / QC',
+                        'Final Delivery',
+                      ]}
+                      size="md"
+                      variant="brand"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCloseTaskDrawer}
+                      className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+                    >
+                      Save Task
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Input for proof / camera upload */}
+      <input
+        type="file"
+        ref={proofFileInputRef}
+        accept="image/*,.pdf,.dwg"
+        onChange={handleProofFileChange}
+        className="hidden"
+      />
+
+      {/* ========================================================================= */}
+      {/* 3A. MODAL: UPDATE PROGRESS (+ Progress Button)                            */}
+      {/* ========================================================================= */}
+      {isProgressModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                <h4 className="text-sm font-bold text-slate-900">Record Task Progress</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsProgressModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Progress Amount / Percentage
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 1 lumpsum or 100%"
+                  value={progressAmountInput}
+                  onChange={(e) => setProgressAmountInput(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Update Note / Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Quotation estimation submitted and approved by client."
+                  value={progressNoteInput}
+                  onChange={(e) => setProgressNoteInput(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 resize-none text-slate-900"
+                />
+              </div>
+
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center gap-2 cursor-pointer"
+                   onClick={() => setProgressIsCompleted(!progressIsCompleted)}>
+                <input
+                  type="checkbox"
+                  checked={progressIsCompleted}
+                  onChange={(e) => setProgressIsCompleted(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
+                />
+                <span className="text-xs font-bold text-emerald-800">
+                  Mark task status as Completed (100%)
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsProgressModalOpen(false)}
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProgressUpdate}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+              >
+                Save Progress
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3B. MODAL: ADD RESOURCE (MATERIAL / WORKFORCE / EQUIPMENT)                 */}
+      {/* ========================================================================= */}
+      {activeResourceModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                {activeResourceModal === 'material' ? <Package className="w-5 h-5 text-amber-600" /> :
+                 activeResourceModal === 'workforce' ? <HardHat className="w-5 h-5 text-blue-600" /> :
+                 <Truck className="w-5 h-5 text-purple-600" />}
+                <h4 className="text-sm font-bold text-slate-900">
+                  {activeResourceModal === 'material' ? 'Add Material Resource' :
+                   activeResourceModal === 'workforce' ? 'Add Workforce Trade' :
+                   'Add Equipment Resource'}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveResourceModal(null)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              {activeResourceModal === 'material' && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Material Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ultratech Cement 53G, Sand, TMT Steel"
+                      value={resMatName}
+                      onChange={(e) => setResMatName(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Quantity *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 50"
+                        value={resMatQty}
+                        onChange={(e) => setResMatQty(e.target.value)}
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Unit
+                      </label>
+                      <select
+                        value={resMatUnit}
+                        onChange={(e) => setResMatUnit(e.target.value)}
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      >
+                        <option value="Bags">Bags</option>
+                        <option value="MT">MT (Tons)</option>
+                        <option value="cu.m">cu.m (m³)</option>
+                        <option value="Trucks">Trucks</option>
+                        <option value="Nos">Nos</option>
+                        <option value="kg">kg</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeResourceModal === 'workforce' && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Trade / Role *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mason, Barbender, Helper, Carpenter"
+                      value={resWorkRole}
+                      onChange={(e) => setResWorkRole(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Worker Headcount *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={resWorkCount}
+                      onChange={(e) => setResWorkCount(Math.max(1, Number(e.target.value)))}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                    />
+                  </div>
+                </>
+              )}
+
+              {activeResourceModal === 'equipment' && (
+                <>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Equipment Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. JCB 3DX Excavator, Concrete Mixer, Crane"
+                      value={resEquipName}
+                      onChange={(e) => setResEquipName(e.target.value)}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Units Count *
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={resEquipCount}
+                      onChange={(e) => setResEquipCount(Math.max(1, Number(e.target.value)))}
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setActiveResourceModal(null)}
+                className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeResourceModal === 'material') handleAddMaterial();
+                  if (activeResourceModal === 'workforce') handleAddWorkforce();
+                  if (activeResourceModal === 'equipment') handleAddEquipment();
+                }}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+              >
+                Add Resource
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3C. MODAL: ASSIGN STAFF MEMBER                                            */}
+      {/* ========================================================================= */}
+      {isAssigneeModalOpen && editingTask && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                <h4 className="text-sm font-bold text-slate-900">Assign Staff Member</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAssigneeModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+              {['Pavani', 'Likson', 'Karthik', 'Suresh', 'Dinesh', 'Mohan', 'Madhan', 'Dasari Uma Sri Devi'].map((member) => (
+                <button
+                  key={member}
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...editingTask,
+                      assigned_to_name: member,
+                      assigned_team: [{ name: member, initials: member.slice(0, 2).toUpperCase() }]
+                    };
+                    setEditingTask(updated);
+                    setTaskList(prev => prev.map(t => t.id === editingTask.id ? updated : t));
+                    setIsAssigneeModalOpen(false);
+                    onShowToast?.(`Assigned to ${member}`);
+                  }}
+                  className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                    (editingTask.assigned_to_name === member)
+                      ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-bold'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[10px] text-slate-600">
+                      {member.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span>{member}</span>
+                  </div>
+                  {editingTask.assigned_to_name === member && (
+                    <Check className="w-4 h-4 text-indigo-600" />
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

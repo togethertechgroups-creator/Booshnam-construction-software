@@ -138,30 +138,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Quality Snag Health */}
+        {/* Site DPR Reports Status */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Open Snags (eSnag)</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600">
-              <AlertTriangle className="w-4 h-4" />
+            <span className="text-xs font-medium text-slate-500">Daily Progress Reports</span>
+            <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-brand">
+              <Calendar className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              2 Open
-              <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 font-bold rounded">
-                1 Critical
+              100%
+              <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 font-bold rounded">
+                Filed Today
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Rebar cover block verification pending pour
+              All active sites submitted DPR with labor logs & photos
             </div>
           </div>
           <button 
-            onClick={() => onNavigate('snags')}
+            onClick={() => onNavigate('site_ops')}
             className="text-xs font-semibold text-brand hover:underline mt-3 inline-block"
           >
-            Inspect Snags →
+            View DPR Reports →
           </button>
         </div>
 

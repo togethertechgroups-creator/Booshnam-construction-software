@@ -24,7 +24,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
         if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return assets && assets.length > 0 ? assets.filter(a => !a.project_id || a.project_id === project?.id) : [];
+    return assets && assets.length > 0 ? assets.filter(a => !(a as any).project_id || (a as any).project_id === project?.id) : [];
   });
 
   React.useEffect(() => {

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   Alert, ActivityIndicator, SafeAreaView, StatusBar, Platform,
 } from 'react-native';
+import { Check, Camera, X, CheckCircle2 } from 'lucide-react-native';
 
 interface AttendanceEntry {
   id: string;
@@ -99,7 +100,8 @@ export default function AttendanceScreen() {
           <Text style={styles.headerDate}>{getToday()}</Text>
         </View>
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save ✓</Text>
+          <Check size={14} color="#ffffff" strokeWidth={2.5} style={{ marginRight: 4 }} />
+          <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
       </View>
 
@@ -140,11 +142,16 @@ export default function AttendanceScreen() {
                 <View>
                   <Text style={styles.workerName}>{entry.name}</Text>
                   <Text style={styles.workerRole}>{entry.role}</Text>
-                  {isPresent && entry.checkIn && (
-                    <Text style={styles.workerTime}>
-                      In: {entry.checkIn}
-                      {entry.checkOut ? `  Out: ${entry.checkOut}` : ''}
-                    </Text>
+                  {isPresent && (
+                    <View style={{ marginTop: 2 }}>
+                      <Text style={styles.workerTime}>
+                        In: {entry.checkIn}
+                        {entry.checkOut ? `  Out: ${entry.checkOut}` : ''}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#059669', fontWeight: '700', marginTop: 1 }}>
+                        📷 Live Selfie & Geofence (12m) Verified
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>

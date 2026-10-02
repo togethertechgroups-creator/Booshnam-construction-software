@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, CheckCircle2, AlertTriangle, ShieldCheck, 
   MapPin, Clock, Search, Filter, Check, X, Smartphone, DollarSign 
@@ -29,7 +29,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({
         if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {}
-    return attendance && attendance.length > 0 ? attendance.filter(a => !a.project_id || a.project_id === project?.id) : [];
+    return attendance && attendance.length > 0 ? attendance.filter(a => !(a as any).project_id || (a as any).project_id === project?.id) : [];
   });
 
   useEffect(() => {

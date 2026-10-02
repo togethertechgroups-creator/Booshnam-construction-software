@@ -320,23 +320,20 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                       </div>
                     </div>
 
-                    {/* PROJECT CATEGORY */}
+                    {/* PROJECT TYPE */}
                     <div className="relative border border-slate-200/90 rounded-xl px-4 py-3 bg-white focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-all shadow-2xs">
                       <label className="absolute -top-2.5 left-3.5 bg-white px-1.5 text-[10.5px] font-semibold text-slate-400 uppercase tracking-wider pointer-events-none z-10">
-                        PROJECT CATEGORY
+                        PROJECT TYPE
                       </label>
                       <div className="relative">
                         <CustomSelect
                           value={category}
                           onChange={(val) => setCategory(val)}
                           options={[
-                            'Residential',
-                            'Commercial',
-                            'Infrastructure',
-                            'Industrial',
-                            'Institutional'
+                            'Private Construction',
+                            'Government Projects'
                           ]}
-                          placeholder="Select Category"
+                          placeholder="Select Project Type"
                           size="md"
                           variant="brand"
                           triggerClassName="border-0 shadow-none px-0 py-0 text-sm font-normal"

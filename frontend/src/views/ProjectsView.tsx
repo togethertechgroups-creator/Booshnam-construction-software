@@ -115,9 +115,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [newEstimatedBudget, setNewEstimatedBudget] = useState('');
   const [newDepartment, setNewDepartment] = useState<string>(() => {
     const current = getActiveDepartmentId();
-    return current === 'booshnam_associates' ? 'CONSTRUCTION' : current;
+    return current === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : current;
   });
-  const [newProjectType, setNewProjectType] = useState('Residential Construction');
+  const [newProjectType, setNewProjectType] = useState('Private Construction');
 
   useEffect(() => {
     if (activeDeptId !== 'booshnam_associates') {
@@ -527,9 +527,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         }
       }
 
-      // Category
+      // Category / Project Type
       if (categoryFilter !== 'All') {
-        const pCat = (p.category || 'Residential').toLowerCase();
+        const pCat = (p.category || '').toLowerCase();
         const pType = (p.project_type || '').toLowerCase();
         const targetCat = categoryFilter.toLowerCase();
         const matchesCat = pCat.includes(targetCat) || pType.includes(targetCat);
@@ -778,20 +778,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       ? `${cleanProjName} (${cleanClientName})`
       : cleanProjName;
 
-    // Resolve category correctly matching filter options: 'Residential' | 'Commercial' | 'Infrastructure' | 'Testing'
-    let resolvedCategory = 'Residential';
-    const lowerType = newProjectType.toLowerCase();
-    if (lowerType.includes('commercial')) {
-      resolvedCategory = 'Commercial';
-    } else if (lowerType.includes('infra')) {
-      resolvedCategory = 'Infrastructure';
-    } else if (lowerType.includes('soil') || lowerType.includes('test')) {
-      resolvedCategory = 'Testing';
-    } else {
-      resolvedCategory = 'Residential';
-    }
+    const lowerType = (newProjectType || '').toLowerCase();
+    const resolvedCategory = lowerType.includes('gov') ? 'Government Projects' : 'Private Construction';
 
-    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS.find(d => d.id === 'PRIVATE_CONSTRUCTION') || ORGANIZATION_DEPARTMENTS[1];
+    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS.find(d => !d.isMainOverview) || ORGANIZATION_DEPARTMENTS[0];
 
     const newProj: Project = {
       id: newProjId,
@@ -1064,7 +1054,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Department / Division <span className="text-red-500">*</span>
+                          Department / Service <span className="text-red-500">*</span>
                         </label>
                         <CustomSelect
                           value={newDepartment}
@@ -1080,16 +1070,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type / Category</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type</label>
                       <CustomSelect
                         value={newProjectType}
                         onChange={(val) => setNewProjectType(val)}
                         options={[
-                          'Residential Construction',
-                          'Commercial Complex',
-                          'Soil Investigation & Testing',
-                          'Architectural Design & Planning',
-                          'Infrastructure Project'
+                          'Private Construction',
+                          'Government Projects'
                         ]}
                         size="md"
                         variant="brand"
@@ -2415,19 +2402,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
-          {/* Category Dropdown */}
-          <div className="w-36">
+          {/* Project Type Dropdown */}
+          <div className="w-44">
             <CustomSelect
               value={categoryFilter}
               onChange={(val) => setCategoryFilter(val)}
               options={[
-                { label: 'Category: All', value: 'All' },
-                { label: 'Residential', value: 'Residential' },
-                { label: 'Commercial', value: 'Commercial' },
-                { label: 'Infrastructure', value: 'Infrastructure' },
-                { label: 'Testing', value: 'Testing' },
+                { label: 'Type: All', value: 'All' },
+                { label: 'Private Construction', value: 'Private Construction' },
+                { label: 'Government Projects', value: 'Government Projects' },
               ]}
-              placeholder="Category"
+              placeholder="Project Type"
               size="sm"
               variant="brand"
             />

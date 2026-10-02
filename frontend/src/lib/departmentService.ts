@@ -66,8 +66,8 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
   },
   {
     id: 'MATERIAL_TESTING',
-    name: 'Material testing',
-    shortName: 'Material testing',
+    name: 'Material Testing',
+    shortName: 'Material Testing',
     role: 'Super Admin',
     owner: 'Managing Director',
     logoType: 'booshnam',
@@ -120,31 +120,9 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     codePrefix: 'SCP',
   },
   {
-    id: 'PRIVATE_CONSTRUCTION',
-    name: 'Private Construction',
-    shortName: 'Private Construction',
-    role: 'Super Admin',
-    owner: 'Managing Director',
-    logoType: 'globe',
-    isMainOverview: false,
-    description: 'Residential villas, commercial complexes & private civil construction execution',
-    codePrefix: 'PCN',
-  },
-  {
-    id: 'GOVERNMENT_PROJECT',
-    name: 'Government Projects',
-    shortName: 'Government Projects',
-    role: 'Super Admin',
-    owner: 'Nivedhitha Arumugam',
-    logoType: 'booshnam',
-    isMainOverview: false,
-    description: 'Government tenders, PWD highways, public infrastructure & municipal works',
-    codePrefix: 'GOV',
-  },
-  {
     id: 'COIMBATORE_SOIL',
-    name: 'Coimbatore-Soil',
-    shortName: 'Coimbatore-Soil',
+    name: 'Coimbatore – Soil Investigation',
+    shortName: 'Coimbatore – Soil',
     role: 'Super Admin',
     owner: 'Nivedhitha Arumugam',
     logoType: 'globe',
@@ -154,8 +132,8 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
   },
   {
     id: 'COIMBATORE_MATERIAL_TESTING',
-    name: 'Coimbatore -Material Testing',
-    shortName: 'Coimbatore -Material Testing',
+    name: 'Coimbatore – Material Testing',
+    shortName: 'Coimbatore – Material Testing',
     role: 'Super Admin',
     owner: 'Nivedhitha Arumugam',
     logoType: 'booshnam',
@@ -209,7 +187,7 @@ export const getIndividualDepartments = (): DepartmentEntity[] => {
  * Normalize department identifier from string or project
  */
 export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
-  if (!raw) return 'PRIVATE_CONSTRUCTION';
+  if (!raw) return 'SOIL_INVESTIGATION';
   const clean = raw.trim().toUpperCase();
 
   // 1. Direct exact ID matches first
@@ -220,8 +198,6 @@ export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
   if (clean === 'STRUCTURAL') return 'STRUCTURAL';
   if (clean === 'ARCHITECTURAL' || clean === 'ARCHITECTURE') return 'ARCHITECTURAL';
   if (clean === 'SCULPTURE' || clean === 'ART_SCULPTURE') return 'SCULPTURE';
-  if (clean === 'PRIVATE_CONSTRUCTION' || clean === 'CONSTRUCTION') return 'PRIVATE_CONSTRUCTION';
-  if (clean === 'GOVERNMENT_PROJECT' || clean === 'GOVERNMENT_PROJECTS' || clean === 'GOVERNMENT') return 'GOVERNMENT_PROJECT';
   if (clean === 'COIMBATORE_SOIL' || clean === 'CBE_SOIL_INVESTIGATION') return 'COIMBATORE_SOIL';
   if (clean === 'COIMBATORE_MATERIAL_TESTING') return 'COIMBATORE_MATERIAL_TESTING';
 
@@ -234,16 +210,14 @@ export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
   }
 
   // 3. Keyword / partial matches
-  if (clean.includes('GOV')) return 'GOVERNMENT_PROJECT';
-  if (clean.includes('STRUCT')) return 'STRUCTURAL';
   if (clean.includes('SOIL')) return 'SOIL_INVESTIGATION';
-  if (clean.includes('SCULPT') || clean.includes('ART')) return 'SCULPTURE';
   if (clean.includes('MATERIAL') || clean.includes('MTD')) return 'MATERIAL_TESTING';
   if (clean.includes('SURVEY')) return 'SURVEYING';
+  if (clean.includes('STRUCT') || clean.includes('CONST') || clean.includes('PRIVATE') || clean.includes('GOV')) return 'STRUCTURAL';
   if (clean.includes('ARCH')) return 'ARCHITECTURAL';
-  if (clean.includes('PRIVATE') || clean.includes('CONST')) return 'PRIVATE_CONSTRUCTION';
+  if (clean.includes('SCULPT') || clean.includes('ART')) return 'SCULPTURE';
 
-  return 'PRIVATE_CONSTRUCTION';
+  return 'SOIL_INVESTIGATION';
 };
 
 /**

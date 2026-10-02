@@ -65,28 +65,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isSuperAdminView = currentView === 'company_dashboard' || currentView === 'dashboard';
 
+  const [activeAccount, setActiveAccount] = useState<UserAccount | null>(() => getCurrentUserAccount());
+
   const [activeDeptEntity, setActiveDeptEntity] = useState<DepartmentEntity>(() => {
     const acc = getCurrentUserAccount();
-    if (acc && acc.role_code !== 'SUPER_ADMIN' && acc.department) {
-      const norm = normalizeDepartmentId(acc.department);
-      return ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || getActiveDepartment();
+    if (acc && acc.department) {
+      const isSuper = acc.role_code === 'SUPER_ADMIN';
+      const isAll = acc.department === 'Executive Management' || acc.department === 'Booshnam Associates' || acc.department.toLowerCase().includes('all') || acc.department.toLowerCase().includes('director');
+      if (!isSuper || !isAll) {
+        const norm = normalizeDepartmentId(acc.department);
+        return ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || ORGANIZATION_DEPARTMENTS[1];
+      }
     }
     return getActiveDepartment();
   });
-
-  const [activeAccount, setActiveAccount] = useState<UserAccount | null>(() => getCurrentUserAccount());
 
   useEffect(() => {
     const syncDept = () => {
       const acc = getCurrentUserAccount();
       setActiveAccount(acc);
-      if (acc && acc.role_code !== 'SUPER_ADMIN' && acc.department) {
-        const norm = normalizeDepartmentId(acc.department);
-        setActiveDeptEntity(ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || getActiveDepartment());
-      } else {
-        setActiveDeptEntity(getActiveDepartment());
+      if (acc && acc.department) {
+        const isSuper = acc.role_code === 'SUPER_ADMIN';
+        const isAll = acc.department === 'Executive Management' || acc.department === 'Booshnam Associates' || acc.department.toLowerCase().includes('all') || acc.department.toLowerCase().includes('director');
+        if (!isSuper || !isAll) {
+          const norm = normalizeDepartmentId(acc.department);
+          const found = ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || ORGANIZATION_DEPARTMENTS[1];
+          setActiveDeptEntity(found);
+          try {
+            setActiveDepartmentId(norm);
+          } catch (e) {}
+          return;
+        }
       }
+      setActiveDeptEntity(getActiveDepartment());
     };
+    syncDept();
     window.addEventListener('booshnam_active_dept_changed', syncDept);
     window.addEventListener('booshnam_session_changed', syncDept);
     window.addEventListener('siteops_user_updated', syncDept);
@@ -349,146 +362,172 @@ export const Sidebar: React.FC<SidebarProps> = ({
       }`}>
 
         {/* ── Brand Header (Interactive Workspace & Department Switcher) ── */}
-        <div className="px-3 py-2.5 border-b border-slate-100 relative bg-white" ref={headerDropdownRef}>
-          {isOpen ? (
-            /* EXPANDED: Logo + Active Department / Booshnam Associates + Dropdown Chevron + hamburger toggle */
-            <div className="flex items-center justify-between gap-1.5">
-              {/* Clickable Brand / Entity Dropdown Trigger */}
-              <button
-                type="button"
-                onClick={() => setIsHeaderDropdownOpen(!isHeaderDropdownOpen)}
-                className="flex items-center gap-2.5 min-w-0 flex-1 py-1 px-1 rounded-lg hover:bg-slate-50 transition-colors text-left cursor-pointer group"
-                title={isSuperAdminUser ? "Switch between Super Admin Overview & Departments" : `${activeDeptEntity.name} • ${displayRole}`}
-              >
-                <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1">
-                    <div className="text-[13px] font-bold text-slate-900 truncate font-heading group-hover:text-[#C61D45] transition-colors leading-tight">
-                      {activeDeptEntity.name}
-                    </div>
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'}`} />
-                  </div>
-                  <div 
-                    className="text-[11px] text-teal-600 font-semibold truncate mt-0.5 leading-tight" 
-                    title={isSuperAdminUser && activeDeptEntity.isMainOverview ? 'Super Admin Overview' : isSuperAdminUser ? `Super Admin • ${activeDeptEntity.owner}` : `${displayRole} • ${displayName}`}
+        {(() => {
+          const userDept = activeAccount?.department;
+          const isSuper = resolvedUser.roleCode === 'SUPER_ADMIN';
+          const isAllDepts = !userDept || 
+            userDept === 'Executive Management' || 
+            userDept === 'Booshnam Associates' || 
+            userDept.toLowerCase().includes('all') ||
+            userDept.toLowerCase().includes('director');
+
+          const isCompanyWideSuperAdmin = isSuper && isAllDepts;
+
+          const targetDeptId = normalizeDepartmentId(userDept);
+          const availableDepts = isCompanyWideSuperAdmin
+            ? ORGANIZATION_DEPARTMENTS
+            : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && d.id === targetDeptId);
+
+          const finalAvailableDepts = availableDepts.length > 0 ? availableDepts : [ORGANIZATION_DEPARTMENTS[1]];
+          const canSwitchDepartment = isCompanyWideSuperAdmin && finalAvailableDepts.length > 1;
+
+          return (
+            <div className="px-3 py-2.5 border-b border-slate-100 relative bg-white" ref={headerDropdownRef}>
+              {isOpen ? (
+                /* EXPANDED: Logo + Active Department / Booshnam Associates + Dropdown Chevron + hamburger toggle */
+                <div className="flex items-center justify-between gap-1.5">
+                  {/* Clickable Brand / Entity Dropdown Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (canSwitchDepartment) {
+                        setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
+                      }
+                    }}
+                    className={`flex items-center gap-2.5 min-w-0 flex-1 py-1 px-1 rounded-lg transition-colors text-left group ${
+                      canSwitchDepartment ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'
+                    }`}
+                    title={canSwitchDepartment ? "Switch between Super Admin Overview & Departments" : `${activeDeptEntity.name} • ${displayRole}`}
                   >
-                    {isSuperAdminUser && activeDeptEntity.isMainOverview ? (
-                      <span className="text-slate-500 font-medium">Super Admin Overview</span>
-                    ) : isSuperAdminUser ? (
-                      <span>Super Admin • {activeDeptEntity.owner}</span>
-                    ) : (
-                      <span>{displayRole} • {displayName}</span>
-                    )}
-                  </div>
-                </div>
-              </button>
-
-              {/* Right: Hamburger toggle button */}
-              {onToggle && (
-                <button
-                  type="button"
-                  onClick={onToggle}
-                  title="Collapse Sidebar"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-                >
-                  <Menu className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          ) : (
-            /* COLLAPSED MINI: Just the logo centered, clicking opens dropdown */
-            <div className="flex flex-col items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsHeaderDropdownOpen(!isHeaderDropdownOpen)}
-                title={`${activeDeptEntity.name} - ${isSuperAdminUser ? 'Super Admin & Departments' : `${displayRole} (${displayName})`}`}
-                className="cursor-pointer hover:scale-105 transition-transform"
-              >
-                <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
-              </button>
-              {onToggle && (
-                <button
-                  type="button"
-                  onClick={onToggle}
-                  title="Expand Sidebar"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer relative"
-                >
-                  <Menu className="w-4 h-4" />
-                  {unacknowledgedLowStockCount > 0 && (
-                    <span className="absolute top-1 right-1 flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* ── DROPDOWN MENU: Exact match to user screenshot ── */}
-          {isHeaderDropdownOpen && (
-            <div className={`absolute ${isOpen ? 'left-2 w-[calc(100%-16px)]' : 'left-16 w-80'} top-[calc(100%+4px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800`}>
-              <div className="max-h-[75vh] overflow-y-auto divide-y divide-slate-100/80 scrollbar-thin scrollbar-thumb-slate-200">
-                {(() => {
-                  const userDept = activeAccount?.department;
-                  const availableDepts = (!isSuperAdminUser && userDept)
-                    ? ORGANIZATION_DEPARTMENTS.filter(d => d.id === normalizeDepartmentId(userDept) || d.name.toLowerCase().includes(userDept.toLowerCase()))
-                    : ORGANIZATION_DEPARTMENTS;
-
-                  if (availableDepts.length === 0) {
-                    return (
-                      <div className="p-4 text-center text-xs text-slate-500 font-medium">
-                        Assigned to: <strong className="text-slate-900">{activeAccount?.department || 'Assigned Department'}</strong>
+                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <div className="text-[13px] font-bold text-slate-900 truncate font-heading group-hover:text-[#C61D45] transition-colors leading-tight">
+                          {activeDeptEntity.name}
+                        </div>
+                        {canSwitchDepartment && (
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'}`} />
+                        )}
                       </div>
-                    );
-                  }
-
-                  return availableDepts.map((dept) => {
-                    const isSelected = activeDeptEntity.id === dept.id;
-                    const itemBadge = isSuperAdminUser ? dept.role : displayRole.toUpperCase();
-                    const itemSubtitle = isSuperAdminUser ? `Owner: ${dept.owner}` : `${displayRole}: ${displayName}`;
-
-                    return (
-                      <button
-                        key={dept.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveDepartmentId(dept.id);
-                          setIsHeaderDropdownOpen(false);
-                          onSelectView('company_dashboard');
-                        }}
-                        className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
-                          isSelected ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'
-                        }`}
+                      <div 
+                        className="text-[11px] text-teal-600 font-semibold truncate mt-0.5 leading-tight" 
+                        title={isCompanyWideSuperAdmin && activeDeptEntity.isMainOverview ? 'Super Admin Overview' : isSuperAdminUser ? `Super Admin • ${activeDeptEntity.name}` : `${displayRole} • ${displayName}`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <DepartmentLogo type={dept.logoType} size="md" className="group-hover:scale-105 transition-transform" />
-                          <div className="min-w-0">
-                            {/* Role Badge (Teal) */}
-                            <div className="text-[10px] font-bold text-teal-600 tracking-wide uppercase leading-tight">
-                              {itemBadge}
-                            </div>
-                            {/* Department / Company Title */}
-                            <div className="text-[12.5px] font-bold text-slate-800 truncate leading-snug">
-                              {dept.name}
-                            </div>
-                            {/* Role / Owner Subtitle */}
-                            <div className="text-[11px] text-slate-500 font-normal truncate leading-tight">
-                              {itemSubtitle}
+                        {isCompanyWideSuperAdmin && activeDeptEntity.isMainOverview ? (
+                          <span className="text-slate-500 font-medium">Super Admin Overview</span>
+                        ) : isSuperAdminUser ? (
+                          <span>Super Admin • {activeDeptEntity.name}</span>
+                        ) : (
+                          <span>{displayRole} • {displayName}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Right: Hamburger toggle button */}
+                  {onToggle && (
+                    <button
+                      type="button"
+                      onClick={onToggle}
+                      title="Collapse Sidebar"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                    >
+                      <Menu className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                /* COLLAPSED MINI: Just the logo centered, clicking opens dropdown */
+                <div className="flex flex-col items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (canSwitchDepartment) {
+                        setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
+                      }
+                    }}
+                    title={`${activeDeptEntity.name} - ${canSwitchDepartment ? 'Switch Department' : `${displayRole} (${displayName})`}`}
+                    className={canSwitchDepartment ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}
+                  >
+                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
+                  </button>
+                  {onToggle && (
+                    <button
+                      type="button"
+                      onClick={onToggle}
+                      title="Expand Sidebar"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer relative"
+                    >
+                      <Menu className="w-4 h-4" />
+                      {unacknowledgedLowStockCount > 0 && (
+                        <span className="absolute top-1 right-1 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* ── DROPDOWN MENU: Only available when multi-department access is permitted ── */}
+              {isHeaderDropdownOpen && canSwitchDepartment && (
+                <div className={`absolute ${isOpen ? 'left-2 w-[calc(100%-16px)]' : 'left-16 w-80'} top-[calc(100%+4px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800`}>
+                  <div className="max-h-[75vh] overflow-y-auto divide-y divide-slate-100/80 scrollbar-thin scrollbar-thumb-slate-200">
+                    {finalAvailableDepts.map((dept) => {
+                      const isSelected = activeDeptEntity.id === dept.id;
+                      const itemSubtitle = dept.isMainOverview 
+                        ? `Owner: ${dept.owner}` 
+                        : `${dept.codePrefix} Division`;
+
+                      return (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveDepartmentId(dept.id);
+                            setIsHeaderDropdownOpen(false);
+                            onSelectView('company_dashboard');
+                          }}
+                          className={`w-full text-left px-3.5 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                            isSelected ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <DepartmentLogo type={dept.logoType} size="md" className="group-hover:scale-105 transition-transform" />
+                            <div className="min-w-0">
+                              {/* Department Badge (Clean, NO redundant SUPER ADMIN) */}
+                              {dept.isMainOverview ? (
+                                <div className="text-[10px] font-bold text-teal-600 tracking-wide uppercase leading-tight">
+                                  Super Admin Overview
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-bold text-slate-400 tracking-wide uppercase leading-tight">
+                                  {dept.codePrefix}
+                                </div>
+                              )}
+                              {/* Department / Company Title */}
+                              <div className="text-[12.5px] font-bold text-slate-800 truncate leading-snug">
+                                {dept.name}
+                              </div>
+                              {/* Role / Owner Subtitle */}
+                              <div className="text-[11px] text-slate-500 font-normal truncate leading-tight">
+                                {itemSubtitle}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        {isSelected && (
-                          <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0 ml-1.5 shadow-xs" />
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
-              </div>
+                          {isSelected && (
+                            <div className="w-2 h-2 rounded-full bg-teal-500 shrink-0 ml-1.5 shadow-xs" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* ── Navigation Menu (White Background with #C61D45 Card Active Item) ── */}
         <nav 

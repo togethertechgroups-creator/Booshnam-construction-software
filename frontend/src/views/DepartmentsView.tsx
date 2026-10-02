@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Building2, Layers, CheckCircle2, Clock, AlertCircle, 
   FileText, Download, Upload, Plus, Eye, Check, X, 
@@ -19,6 +19,8 @@ import {
 } from '../lib/mockData';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
+import { getCurrentUserAccount } from '../lib/authService';
+import { normalizeDepartmentId } from '../lib/departmentService';
 
 interface DepartmentsViewProps {
   initialDepartment?: Department;
@@ -37,15 +39,29 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   onShowToast,
   onDepartmentChange
 }) => {
-  const [activeDept, setActiveDept] = useState<Department>(initialDepartment);
+  const userAccount = useMemo(() => getCurrentUserAccount(), []);
+  const userDept = userAccount?.department;
+  const isCompanyWideSuperAdmin = userAccount?.role_code === 'SUPER_ADMIN' && 
+    (!userDept || userDept === 'Executive Management' || userDept === 'Booshnam Associates' || userDept.toLowerCase().includes('all') || userDept.toLowerCase().includes('director'));
+  const isRestrictedDept = !isCompanyWideSuperAdmin && Boolean(userDept);
+  const restrictedDeptId = isRestrictedDept && userDept ? (normalizeDepartmentId(userDept) as Department) : null;
+
+  const [activeDept, setActiveDept] = useState<Department>(() => {
+    if (restrictedDeptId) return restrictedDeptId;
+    return initialDepartment;
+  });
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
   const deptDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (restrictedDeptId) {
+      setActiveDept(restrictedDeptId);
+      return;
+    }
     if (initialDepartment) {
       setActiveDept(initialDepartment);
     }
-  }, [initialDepartment]);
+  }, [initialDepartment, restrictedDeptId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -280,7 +296,11 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     },
   ];
 
-  const currentDeptObj = departmentOptions.find(d => 
+  const effectiveDepartmentOptions = isRestrictedDept && restrictedDeptId
+    ? departmentOptions.filter(d => d.id === restrictedDeptId)
+    : departmentOptions;
+
+  const currentDeptObj = effectiveDepartmentOptions.find(d => 
     d.id === activeDept || 
     (activeDept === 'ARCHITECTURE' && d.id === 'ARCHITECTURAL') || 
     (activeDept === 'PRIVATE_CONSTRUCTION' && d.id === 'CONSTRUCTION') || 
@@ -288,8 +308,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     (activeDept === 'CBE_SOIL_INVESTIGATION' && d.id === 'COIMBATORE_SOIL') || 
     (activeDept === 'SURVEY' && d.id === 'SURVEYING') || 
     (activeDept === 'ART_SCULPTURE' && d.id === 'SCULPTURE')
-  ) || departmentOptions[0];
+  ) || effectiveDepartmentOptions[0] || departmentOptions[0];
   const CurrentIcon = currentDeptObj.icon;
+  const canSwitchDept = !isRestrictedDept && effectiveDepartmentOptions.length > 1;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
@@ -309,14 +330,22 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
           <div className="relative" ref={deptDropdownRef}>
             <button
               type="button"
-              onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
-              className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100/90 border border-slate-300 hover:border-slate-400 rounded-lg text-xs font-semibold text-slate-800 shadow-2xs transition-all cursor-pointer group"
+              onClick={() => {
+                if (canSwitchDept) {
+                  setIsDeptDropdownOpen(!isDeptDropdownOpen);
+                }
+              }}
+              className={`flex items-center gap-2.5 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 shadow-2xs transition-all ${
+                canSwitchDept ? 'hover:bg-slate-100/90 hover:border-slate-400 cursor-pointer group' : 'cursor-default'
+              }`}
             >
               <div className="w-6 h-6 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
                 <CurrentIcon className="w-3.5 h-3.5" />
               </div>
               <div className="text-left">
-                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">Selected Division</div>
+                <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+                  {isRestrictedDept ? 'Assigned Division' : 'Selected Division'}
+                </div>
                 <div className="font-heading text-xs text-slate-900 font-bold leading-tight mt-0.5 flex items-center gap-1.5">
                   <span>{currentDeptObj.shortLabel}</span>
                   <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700">
@@ -324,19 +353,21 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   </span>
                 </div>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-1.5 transition-transform duration-200 ${isDeptDropdownOpen ? 'rotate-180 text-red-600' : ''}`} />
+              {canSwitchDept && (
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 ml-1.5 transition-transform duration-200 ${isDeptDropdownOpen ? 'rotate-180 text-red-600' : ''}`} />
+              )}
             </button>
 
             {/* Dropdown Menu */}
-            {isDeptDropdownOpen && (
+            {isDeptDropdownOpen && canSwitchDept && (
               <div className="absolute left-0 mt-1.5 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3.5 py-2 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Select Core Department</span>
-                  <span className="text-[10px] text-red-600 font-bold">10 Divisions Available</span>
+                  <span className="text-[10px] text-red-600 font-bold">{effectiveDepartmentOptions.length} Divisions Available</span>
                 </div>
 
                 <div className="p-1 space-y-1">
-                  {departmentOptions.map((dept) => {
+                  {effectiveDepartmentOptions.map((dept) => {
                     const Icon = dept.icon;
                     const isSelected = activeDept === dept.id;
                     return (

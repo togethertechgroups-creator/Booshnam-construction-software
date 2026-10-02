@@ -26,6 +26,7 @@ export interface RoleAccessPermission {
   roleName: string;
   description: string;
   allowedPages: string[];
+  department?: string;
   isSystemRole?: boolean;
 }
 

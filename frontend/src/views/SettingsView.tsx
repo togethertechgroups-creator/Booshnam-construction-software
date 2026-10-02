@@ -527,6 +527,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2>(1);
   const [modalRoleCode, setModalRoleCode] = useState<string>('ADMIN');
+  const [modalDepartment, setModalDepartment] = useState<string>('Soil Investigation');
   const [isCreatingNewRole, setIsCreatingNewRole] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
   const [customRoleDesc, setCustomRoleDesc] = useState('');
@@ -553,21 +554,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setSelectedStaffId(foundStaff.id);
         setModalRoleCode(foundStaff.role_code);
         setStaffUsername(foundStaff.username || foundStaff.name.toLowerCase().replace(/[^a-z0-9]/g, '.'));
+        setModalDepartment(foundStaff.department || 'Soil Investigation');
       }
     } else {
       setSelectedStaffId('ALL_STAFF');
       setStaffUsername('');
+      if (targetCode && (rolePermissions[targetCode] as any)?.department) {
+        setModalDepartment((rolePermissions[targetCode] as any).department);
+      } else {
+        setModalDepartment('Soil Investigation');
+      }
     }
 
     if (targetCode && rolePermissions[targetCode]) {
       setIsCreatingNewRole(false);
       setModalRoleCode(targetCode);
       setModalSelectedPages(rolePermissions[targetCode].allowedPages || []);
+      if ((rolePermissions[targetCode] as any).department) {
+        setModalDepartment((rolePermissions[targetCode] as any).department);
+      }
     } else {
       const target = targetCode || 'ADMIN';
       setIsCreatingNewRole(false);
       setModalRoleCode(target);
       setModalSelectedPages(rolePermissions[target]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id));
+      if ((rolePermissions[target] as any)?.department) {
+        setModalDepartment((rolePermissions[target] as any).department);
+      }
     }
     setStaffPassword('password123');
     setStaffConfirmPassword('password123');
@@ -584,6 +597,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const staff = staffMembers.find(s => s.id === staffId);
     if (staff) {
       setModalRoleCode(staff.role_code);
+      if (staff.department) {
+        setModalDepartment(staff.department);
+      }
       const suggestedUsername = staff.username || staff.name.toLowerCase().replace(/[^a-z0-9]/g, '.');
       setStaffUsername(suggestedUsername);
 
@@ -591,12 +607,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const accounts = getUserAccounts();
       const existingAcc = accounts.find(a => a.staff_id === staff.id || a.username.toLowerCase() === suggestedUsername.toLowerCase());
       if (existingAcc) {
+        if (existingAcc.department) {
+          setModalDepartment(existingAcc.department);
+        }
         setModalSelectedPages(existingAcc.allowedPages);
         setStaffPassword(existingAcc.password);
         setStaffConfirmPassword(existingAcc.password);
       } else {
         const rolePerm = rolePermissions[staff.role_code];
-        if (rolePerm) setModalSelectedPages(rolePerm.allowedPages);
+        if (rolePerm) {
+          setModalSelectedPages(rolePerm.allowedPages);
+          if ((rolePerm as any).department) {
+            setModalDepartment((rolePerm as any).department);
+          }
+        }
       }
     }
   };
@@ -612,6 +636,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setModalRoleCode(code);
       const perm = rolePermissions[code];
       setModalSelectedPages(perm ? perm.allowedPages : ALL_SYSTEM_MODULES.map(m => m.id));
+      if ((perm as any)?.department) {
+        setModalDepartment((perm as any).department);
+      }
     }
   };
 
@@ -668,17 +695,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       id: `usr-${Date.now()}`,
       username: staffUsername.trim().toLowerCase(),
       password: staffPassword.trim(),
+      phone: targetStaff?.phone || '',
       staff_id: targetStaff?.id,
       staff_name: targetStaff?.name || customRoleName || 'Staff Member',
       staff_code: targetStaff?.employee_code || 'EMP-SITE',
       role_code: modalRoleCode,
       role_name: roleObj.name,
+      department: modalDepartment,
       allowedPages: modalSelectedPages,
       created_at: new Date().toISOString().split('T')[0]
     };
 
     saveUserAccount(newAccount);
     if (targetStaff) {
+      const updatedStaff: StaffMember = {
+        ...targetStaff,
+        department: modalDepartment,
+        role_code: modalRoleCode,
+        role_name: roleObj.name
+      };
+      saveStaffMember(updatedStaff);
       markStaffLoginCreated(targetStaff.id, newAccount.username);
     }
 
@@ -686,14 +722,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (rolePermissions[modalRoleCode]) {
       const updatedPerm: RoleAccessPermission = {
         ...rolePermissions[modalRoleCode],
-        allowedPages: modalSelectedPages
+        allowedPages: modalSelectedPages,
+        department: modalDepartment
       };
       saveStoredRolePermission(updatedPerm);
       setRolePermissions(getStoredRolePermissions());
     }
 
     setShowAccessModal(false);
-    showToast(`Access & login created for "${newAccount.staff_name}" (User: ${newAccount.username})`);
+    showToast(`Access & login created for "${newAccount.staff_name}" (${modalDepartment})`);
   };
 
   const handleSaveRoleAccess = (e?: React.FormEvent) => {
@@ -709,23 +746,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         roleName: customRoleName.trim(),
         description: customRoleDesc.trim() || 'Custom operational role',
         allowedPages: modalSelectedPages,
+        department: modalDepartment,
         isSystemRole: false
       };
       saveStoredRolePermission(newPerm);
       setRolePermissions(getStoredRolePermissions());
       setShowAccessModal(false);
-      showToast(`Role "${newPerm.roleName}" access created successfully`);
+      showToast(`Role "${newPerm.roleName}" access created for ${modalDepartment}`);
     } else {
       const existing = rolePermissions[modalRoleCode];
       if (!existing) return;
       const updated: RoleAccessPermission = {
         ...existing,
-        allowedPages: modalSelectedPages
+        allowedPages: modalSelectedPages,
+        department: modalDepartment
       };
       saveStoredRolePermission(updated);
       setRolePermissions(getStoredRolePermissions());
       setShowAccessModal(false);
-      showToast(`Access permissions saved for "${updated.roleName}"`);
+      showToast(`Access permissions saved for "${updated.roleName}" (${modalDepartment})`);
     }
   };
 
@@ -2064,6 +2103,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                       System Role
                                     </span>
                                   )}
+                                  {role.department && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                                      {role.department}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                                   {role.description}
@@ -2476,6 +2520,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   </div>
 
+                  {/* Assigned Department / Service Selection (Strict Isolation) */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-red-600" />
+                        <span>Assigned Department / Service *</span>
+                      </label>
+                      <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                        Strict Department Isolation
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={modalDepartment}
+                        onChange={(e) => setModalDepartment(e.target.value)}
+                        className="w-full h-10 px-3 pr-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-900 bg-white appearance-none cursor-pointer focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      >
+                        {modalRoleCode === 'SUPER_ADMIN' && (
+                          <option value="Booshnam Associates">Booshnam Associates (All Departments / Company-wide Overview)</option>
+                        )}
+                        <option value="Soil Investigation">Soil Investigation</option>
+                        <option value="Material Testing">Material Testing</option>
+                        <option value="Surveying">Surveying</option>
+                        <option value="Structural">Structural</option>
+                        <option value="Architectural">Architectural</option>
+                        <option value="Sculpture">Sculpture</option>
+                        <option value="Construction (All)">Construction (All)</option>
+                        <option value="Coimbatore – Soil Investigation">Coimbatore – Soil Investigation</option>
+                        <option value="Coimbatore – Material Testing">Coimbatore – Material Testing</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5 leading-snug">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>When this user logs in, <strong>only this selected department</strong> will be visible in the sidebar switcher, dashboard, and projects. All other departments will remain strictly hidden.</span>
+                    </p>
+                  </div>
+
                   {/* Selected Staff Details Pill */}
                   {selectedStaffId !== 'ALL_STAFF' && (
                     <div className="p-3 bg-white rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
@@ -2654,8 +2736,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div className="text-sm font-bold text-slate-900">
                             {targetStaff?.name} <span className="font-mono text-xs text-red-700">({targetStaff?.employee_code})</span>
                           </div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            Assigned Role: <strong className="text-red-900">{rolePermissions[modalRoleCode]?.roleName || modalRoleCode}</strong> • {modalSelectedPages.length} Modules Authorized
+                          <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span>Assigned Role: <strong className="text-red-900">{rolePermissions[modalRoleCode]?.roleName || modalRoleCode}</strong></span>
+                            <span>•</span>
+                            <span>Dept: <strong className="text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{modalDepartment}</strong></span>
+                            <span>•</span>
+                            <span>{modalSelectedPages.length} Modules Authorized</span>
                           </div>
                         </div>
                       </div>
@@ -3051,14 +3137,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, department: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 >
-                  {ORGANIZATION_DEPARTMENTS.map((dept) => (
+                  {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map((dept) => (
                     <option key={dept.id} value={dept.name}>
                       {dept.name}
                     </option>
                   ))}
-                  <option value="Accounts & Finance">Accounts & Finance</option>
-                  <option value="Civil Engineering">Civil Engineering</option>
-                  <option value="Marketing & CRM">Marketing & CRM</option>
                 </select>
                 <p className="text-[10px] text-slate-400 mt-1">When this member logs in, they will only see and access their assigned department.</p>
               </div>

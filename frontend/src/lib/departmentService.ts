@@ -46,7 +46,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'booshnam_associates',
     name: 'Booshnam Associates',
     shortName: 'Booshnam Associates',
-    role: 'Super Admin',
+    role: 'Super Admin Overview',
     owner: 'Managing Director',
     logoType: 'booshnam',
     isMainOverview: true,
@@ -57,7 +57,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'SOIL_INVESTIGATION',
     name: 'Soil Investigation',
     shortName: 'Soil Investigation',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Managing Director',
     logoType: 'globe',
     isMainOverview: false,
@@ -68,7 +68,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'MATERIAL_TESTING',
     name: 'Material Testing',
     shortName: 'Material Testing',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Managing Director',
     logoType: 'booshnam',
     isMainOverview: false,
@@ -79,7 +79,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'SURVEYING',
     name: 'Surveying',
     shortName: 'Surveying',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Nivedhitha Arumugam',
     logoType: 'booshnam',
     isMainOverview: false,
@@ -90,7 +90,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'STRUCTURAL',
     name: 'Structural',
     shortName: 'Structural',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Managing Director',
     logoType: 'booshnam',
     isMainOverview: false,
@@ -101,7 +101,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'ARCHITECTURAL',
     name: 'Architectural',
     shortName: 'Architectural',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Managing Director',
     logoType: 'booshnam',
     isMainOverview: false,
@@ -112,7 +112,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'SCULPTURE',
     name: 'Sculpture',
     shortName: 'Sculpture',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Soil Test',
     logoType: 'globe',
     isMainOverview: false,
@@ -123,7 +123,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'CONSTRUCTION',
     name: 'Construction (All)',
     shortName: 'Construction (All)',
-    role: 'Super Admin',
+    role: 'Department',
     owner: 'Managing Director',
     logoType: 'globe',
     isMainOverview: false,
@@ -134,7 +134,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'COIMBATORE_SOIL',
     name: 'Coimbatore – Soil Investigation',
     shortName: 'Coimbatore – Soil',
-    role: 'Super Admin',
+    role: 'Coimbatore Branch',
     owner: 'Nivedhitha Arumugam',
     logoType: 'globe',
     isMainOverview: false,
@@ -145,7 +145,7 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     id: 'COIMBATORE_MATERIAL_TESTING',
     name: 'Coimbatore – Material Testing',
     shortName: 'Coimbatore – Material Testing',
-    role: 'Super Admin',
+    role: 'Coimbatore Branch',
     owner: 'Nivedhitha Arumugam',
     logoType: 'booshnam',
     isMainOverview: false,
@@ -157,10 +157,26 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
 const ACTIVE_DEPT_STORAGE_KEY = 'booshnam_active_department';
 
 /**
- * Returns current active department ID. Defaults to 'booshnam_associates' (Super Admin Overview)
+ * Returns current active department ID. If user session is tied to a specific department, returns that department.
  */
 export const getActiveDepartmentId = (): DepartmentId => {
   try {
+    const rawSession = localStorage.getItem('booshnam_active_session_v2');
+    if (rawSession) {
+      const acc = JSON.parse(rawSession);
+      const isSuper = acc.role_code === 'SUPER_ADMIN';
+      const isAllDepts = !acc.department || 
+        acc.department === 'Executive Management' || 
+        acc.department === 'Booshnam Associates' || 
+        acc.department.toLowerCase().includes('all');
+      
+      // If user is restricted to a specific department, enforce it
+      if (!isSuper || !isAllDepts) {
+        if (acc.department) {
+          return normalizeDepartmentId(acc.department);
+        }
+      }
+    }
     const saved = localStorage.getItem(ACTIVE_DEPT_STORAGE_KEY);
     if (saved && ORGANIZATION_DEPARTMENTS.some(d => d.id === saved)) {
       return saved as DepartmentId;
@@ -170,10 +186,29 @@ export const getActiveDepartmentId = (): DepartmentId => {
 };
 
 /**
- * Sets active department ID and broadcasts change event to entire application
+ * Sets active department ID and broadcasts change event to entire application.
+ * If user session is locked to a specific department, protects against unauthorized switching.
  */
 export const setActiveDepartmentId = (deptId: DepartmentId): void => {
   try {
+    const rawSession = localStorage.getItem('booshnam_active_session_v2');
+    if (rawSession) {
+      const acc = JSON.parse(rawSession);
+      const isSuper = acc.role_code === 'SUPER_ADMIN';
+      const isAllDepts = !acc.department || 
+        acc.department === 'Executive Management' || 
+        acc.department === 'Booshnam Associates' || 
+        acc.department.toLowerCase().includes('all');
+      
+      if (!isSuper || !isAllDepts) {
+        if (acc.department) {
+          const lockedId = normalizeDepartmentId(acc.department);
+          localStorage.setItem(ACTIVE_DEPT_STORAGE_KEY, lockedId);
+          window.dispatchEvent(new CustomEvent('booshnam_active_dept_changed', { detail: lockedId }));
+          return;
+        }
+      }
+    }
     localStorage.setItem(ACTIVE_DEPT_STORAGE_KEY, deptId);
   } catch (e) {}
   window.dispatchEvent(new CustomEvent('booshnam_active_dept_changed', { detail: deptId }));

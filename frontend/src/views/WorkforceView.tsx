@@ -170,7 +170,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [newStaffForm, setNewStaffForm] = useState({
     name: '',
     role_code: 'SITE_ENGINEER',
-    department: 'Civil Construction',
+    department: 'Soil Investigation',
     designation: 'Site Engineer',
     dob: '1995-05-15',
     doj: new Date().toISOString().split('T')[0],
@@ -309,12 +309,14 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     const newAccount: UserAccount = {
       id: `usr-${Date.now()}`,
       username: newStaff.phone, // Login using phone number
+      phone: newStaff.phone,
       password: staffPassword,
       staff_id: newStaff.id,
       staff_name: newStaff.name,
       staff_code: newStaff.employee_code,
       role_code: newStaff.role_code,
       role_name: newStaff.role_name,
+      department: newStaff.department,
       allowedPages: selectedPages,
       created_at: new Date().toISOString().split('T')[0]
     };
@@ -1074,12 +1076,15 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                         value={newStaffForm.department}
                         onChange={(val) => setNewStaffForm({ ...newStaffForm, department: val })}
                         options={[
-                          { label: 'Civil Construction', value: 'Civil Construction' },
-                          { label: 'Architecture & Design', value: 'Architecture & Design' },
-                          { label: 'Site Operations', value: 'Site Operations' },
-                          { label: 'Finance & Accounts', value: 'Finance & Accounts' },
-                          { label: 'Office Administration', value: 'Office Administration' },
-                          { label: 'Project Management', value: 'Project Management' },
+                          { label: 'Soil Investigation', value: 'Soil Investigation' },
+                          { label: 'Material Testing', value: 'Material Testing' },
+                          { label: 'Surveying', value: 'Surveying' },
+                          { label: 'Structural', value: 'Structural' },
+                          { label: 'Architectural', value: 'Architectural' },
+                          { label: 'Sculpture', value: 'Sculpture' },
+                          { label: 'Construction (All)', value: 'Construction (All)' },
+                          { label: 'Coimbatore – Soil Investigation', value: 'Coimbatore – Soil Investigation' },
+                          { label: 'Coimbatore – Material Testing', value: 'Coimbatore – Material Testing' },
                         ]}
                         variant="brand"
                         triggerClassName="h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 focus:border-red-500"

@@ -99,6 +99,13 @@ export function getUserAccounts(): UserAccount[] {
             role_name: linkedStaff.role_name || linkedStaff.designation
           };
         }
+        if (linkedStaff.department && a.department !== linkedStaff.department) {
+          hasChanges = true;
+          a = {
+            ...a,
+            department: linkedStaff.department
+          };
+        }
       } else if (a.username === 'admin' && a.role_code !== 'ADMIN') {
         hasChanges = true;
         a = { ...a, role_code: 'ADMIN', role_name: 'Admin' };
@@ -254,6 +261,9 @@ export function authenticateUser(usernameOrPhone: string, password: string): Use
       match.role_code = staff.role_code;
       match.role_name = staff.role_name || staff.designation;
       match.staff_name = staff.name;
+      if (staff.department) {
+        match.department = staff.department;
+      }
       const storedPerms = getStoredRolePermissions();
       if (storedPerms[staff.role_code]?.allowedPages) {
         match.allowedPages = storedPerms[staff.role_code].allowedPages;
@@ -298,11 +308,17 @@ export function getCurrentUserAccount(): UserAccount | null {
     );
 
     let changed = false;
-    if (staff && acc.role_code !== staff.role_code) {
-      acc.role_code = staff.role_code;
-      acc.role_name = staff.role_name || staff.designation;
-      acc.staff_name = staff.name;
-      changed = true;
+    if (staff) {
+      if (acc.role_code !== staff.role_code) {
+        acc.role_code = staff.role_code;
+        acc.role_name = staff.role_name || staff.designation;
+        acc.staff_name = staff.name;
+        changed = true;
+      }
+      if (staff.department && acc.department !== staff.department) {
+        acc.department = staff.department;
+        changed = true;
+      }
     }
 
     const storedPerms = getStoredRolePermissions();

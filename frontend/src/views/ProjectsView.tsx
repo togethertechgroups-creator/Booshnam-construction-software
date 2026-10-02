@@ -2680,7 +2680,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                                 setProjectToDelete(p);
                               }}
                               className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
-                              title="Delete Project (Super Admin Only)"
+                              title="Delete Project"
                             >
                               <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
                             </button>
@@ -2711,7 +2711,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         onShowToast={onShowToast}
       />
 
-      {/* Delete Project Confirmation Modal - Super Admin Only */}
+      {/* Delete Project Confirmation Modal */}
       {projectToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-red-100 p-6 overflow-hidden space-y-5 animate-in zoom-in-95 duration-200">
@@ -2720,12 +2720,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 <Trash2 className="w-6 h-6 stroke-[2.2]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 text-base">Delete Project</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
-                    Super Admin Only
-                  </span>
-                </div>
+                <h3 className="font-bold text-slate-900 text-base">Delete Project</h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Are you sure you want to permanently delete <strong className="text-slate-800">{formatProjectTitle(projectToDelete)}</strong>?
                 </p>

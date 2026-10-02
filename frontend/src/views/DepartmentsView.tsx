@@ -1624,6 +1624,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
             </div>
           </div>
         )}
+      </div>
 
       {/* MODAL 1: Add Soil Sample Modal */}
       {isAddSampleModalOpen && (

@@ -93,6 +93,7 @@ export interface Project {
   geofence_radius_meters: number;
   start_date: string;
   expected_end_date: string;
+  end_date?: string;
   estimated_budget?: number;
   actual_cost?: number;
   progress_percentage: number;
@@ -215,6 +216,8 @@ export interface MaterialRequest {
   id: string;
   request_number: string;
   project_name: string;
+  project?: string;
+  project_id?: string;
   needed_by_date: string;
   status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PO_CREATED' | 'REJECTED';
   priority: 'URGENT' | 'NORMAL' | 'LOW';
@@ -364,6 +367,8 @@ export interface ApprovalRequest {
   title: string;
   module: string;
   object_type: string;
+  project?: string;
+  project_id?: string;
   amount: number;
   requester_name: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -688,7 +693,9 @@ export interface SoilInvestigationReport {
   investigation_date: string;
   geotechnical_engineer: string;
   safe_bearing_capacity: string;
+  safe_bearing_capacity_kn_m2?: number;
   water_table_depth: string;
+  recommended_foundation_depth_m?: number;
   binding_status: 'PREPARING' | 'BOUND' | 'DIGITALLY_SIGNED' | 'DELIVERED' | 'SIGNED_AND_STAMPED';
   signed_by?: string;
   signed_date?: string;

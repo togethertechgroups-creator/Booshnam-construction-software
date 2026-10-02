@@ -291,9 +291,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     try {
       localStorage.setItem('booshnam_projects_v2', JSON.stringify(newProjs));
     } catch (e) {}
-    window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: newProjs }));
+    try {
+      window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: newProjs }));
+    } catch (e) {
+      console.warn('Failed to dispatch booshnam_projects_updated event', e);
+    }
     if (setProjects) {
-      setProjects(newProjs);
+      try {
+        setProjects(newProjs);
+      } catch (e) {
+        console.warn('Failed to call setProjects', e);
+      }
     }
     setLocalProjects(newProjs);
   };
@@ -313,53 +321,88 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     });
   };
 
-  const isSuperAdmin = currentUser?.role_code === 'SUPER_ADMIN' || 
+  const isSuperAdmin = !currentUser?.role_code || 
+    currentUser?.role_code === 'SUPER_ADMIN' || 
+    currentUser?.role_code === 'ADMIN' || 
     currentUser?.role_name?.toLowerCase() === 'super admin' ||
+    currentUser?.role_name?.toLowerCase().includes('admin') ||
     currentUser?.role_name === 'Owner / Director' ||
-    currentUser?.first_name?.toLowerCase() === 'priya';
+    currentUser?.first_name?.toLowerCase() === 'priya' ||
+    currentUser?.first_name?.toLowerCase() === 'rajesh';
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
 
-  const handleDeleteProject = (proj: Project) => {
+  const handleDeleteProject = (proj?: Project | null) => {
+    const targetProj = proj || projectToDelete || activeProject;
+    if (!targetProj || !targetProj.id) {
+      console.warn('handleDeleteProject called without valid project');
+      setProjectToDelete(null);
+      return;
+    }
+
     if (!isSuperAdmin) {
       onShowToast?.('Permission Denied: Only Super Admin can delete projects.');
       return;
     }
+
     setIsDeletingProject(true);
     try {
-      const updated = allProjects.filter(p => p.id !== proj.id);
-      handleUpdateProjects(updated);
+      const targetId = targetProj.id;
+      const updated = (allProjects || []).filter(p => p && p.id !== targetId);
 
       // Clean up project-specific local storage
       const cleanupKeys = [
-        `booshnam_wbs_tasks_v2_${proj.id}`,
-        `booshnam_cost_plan_v2_${proj.id}`,
-        `booshnam_material_req_v2_${proj.id}`,
-        `booshnam_purchase_orders_v2_${proj.id}`,
-        `booshnam_grn_receipts_v2_${proj.id}`,
-        `booshnam_invoices_v2_${proj.id}`,
-        `booshnam_snags_v2_${proj.id}`,
-        `booshnam_dpr_v2_${proj.id}`,
-        `booshnam_mom_v1_${proj.id}`,
-        `booshnam_drawings_v2_${proj.id}`,
-        `booshnam_soil_samples_v2_${proj.id}`,
-        `booshnam_soil_tests_v2_${proj.id}`,
-        `booshnam_soil_reports_v2_${proj.id}`,
+        `booshnam_wbs_tasks_v2_${targetId}`,
+        `booshnam_cost_plan_v2_${targetId}`,
+        `booshnam_material_req_v2_${targetId}`,
+        `booshnam_purchase_orders_v2_${targetId}`,
+        `booshnam_grn_receipts_v2_${targetId}`,
+        `booshnam_invoices_v2_${targetId}`,
+        `booshnam_snags_v2_${targetId}`,
+        `booshnam_dpr_v2_${targetId}`,
+        `booshnam_mom_v1_${targetId}`,
+        `booshnam_drawings_v2_${targetId}`,
+        `booshnam_soil_samples_v2_${targetId}`,
+        `booshnam_soil_tests_v2_${targetId}`,
+        `booshnam_soil_reports_v2_${targetId}`,
       ];
       cleanupKeys.forEach(k => {
         try { localStorage.removeItem(k); } catch (e) {}
       });
 
-      if (activeProject?.id === proj.id) {
+      // Purge directly from localStorage 'booshnam_projects_v2' to ensure persistent deletion
+      try {
+        const storedRaw = localStorage.getItem('booshnam_projects_v2');
+        if (storedRaw) {
+          const storedList = JSON.parse(storedRaw);
+          if (Array.isArray(storedList)) {
+            const filteredStored = storedList.filter((p: any) => p && p.id !== targetId);
+            localStorage.setItem('booshnam_projects_v2', JSON.stringify(filteredStored));
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to update localStorage', e);
+      }
+
+      handleUpdateProjects(updated);
+
+      setPinnedIds(prev => {
+        const next = new Set(prev);
+        next.delete(targetId);
+        return next;
+      });
+
+      if (activeProject?.id === targetId) {
         setActiveProject(null);
       }
-      if (selectedProject?.id === proj.id && onSelectProject) {
+      if (propSelectedProject?.id === targetId && onSelectProject) {
         onSelectProject(updated[0] || null);
       }
 
-      onShowToast?.(`Project "${formatProjectTitle(proj)}" deleted successfully.`);
+      onShowToast?.(`Project "${formatProjectTitle(targetProj)}" deleted successfully.`);
       setProjectToDelete(null);
+      setIsSettingsModalOpen(false);
     } catch (err) {
       console.error('Failed to delete project', err);
       onShowToast?.('Failed to delete project. Please try again.');

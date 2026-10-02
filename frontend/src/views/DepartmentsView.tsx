@@ -215,40 +215,87 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       desc: 'Borehole logging, lab test verification, SBC calculation & geotechnical reports',
     },
     { 
-      id: 'ARCHITECTURE' as Department, 
-      label: '2. Architecture', 
-      shortLabel: 'Architecture',
+      id: 'MATERIAL_TESTING' as Department, 
+      label: '2. Material testing', 
+      shortLabel: 'Material testing',
+      icon: Award, 
+      count: `${labTests.length} Tests`,
+      desc: 'Concrete cube compression, rebar tensile, cement & aggregate lab testing',
+    },
+    { 
+      id: 'SURVEYING' as Department, 
+      label: '3. Surveying', 
+      shortLabel: 'Surveying',
+      icon: Compass, 
+      count: `Active`,
+      desc: 'Topographic contour, DGPS boundary demarcation, levelling & GIS mapping',
+    },
+    { 
+      id: 'STRUCTURAL' as Department, 
+      label: '4. Structural', 
+      shortLabel: 'Structural',
+      icon: Building2, 
+      count: `Active`,
+      desc: 'RCC & steel structural design, load analysis, foundation calculations & vetting',
+    },
+    { 
+      id: 'ARCHITECTURAL' as Department, 
+      label: '5. Architectural', 
+      shortLabel: 'Architectural',
       icon: Layers, 
       count: `${drawings.length} Drawings`,
       desc: 'Architectural drawings, floor plans, elevations, 3D models & AFC sets',
     },
     { 
-      id: 'MARKETING' as Department, 
-      label: '3. Marketing', 
-      shortLabel: 'Marketing & CRM',
-      icon: BarChart3, 
-      count: `${marketingLeads.length} Leads`,
-      desc: 'Client CRM pipeline, incoming inquiries, site visits & conversions',
+      id: 'SCULPTURE' as Department, 
+      label: '6. Sculpture', 
+      shortLabel: 'Sculpture',
+      icon: Sparkles, 
+      count: `Artisan`,
+      desc: 'Architectural sculptures, monumental statues, murals & heritage artisan crafts',
     },
     { 
-      id: 'CONSTRUCTION' as Department, 
-      label: '4. Construction', 
-      shortLabel: 'Construction',
+      id: 'PRIVATE_CONSTRUCTION' as Department, 
+      label: '7. Private Construction', 
+      shortLabel: 'Private Construction',
       icon: HardHat, 
       count: `${dprs.length} DPRs`,
-      desc: 'Daily progress reports (DPR), site activity, manpower, weather & logs',
+      desc: 'Residential villas, commercial complexes & private civil construction execution',
     },
     { 
-      id: 'ACCOUNTS' as Department, 
-      label: '5. Accounts', 
-      shortLabel: 'Accounts & Finance',
-      icon: DollarSign, 
-      count: `${paymentRequests.length} Payments`,
-      desc: 'Project payment requests, party cashbook, vouchers & disbursements',
+      id: 'GOVERNMENT_PROJECT' as Department, 
+      label: '8. Government Projects', 
+      shortLabel: 'Government Projects',
+      icon: Shield, 
+      count: `Tenders`,
+      desc: 'Government tenders, PWD highways, public infrastructure & municipal works',
+    },
+    { 
+      id: 'COIMBATORE_SOIL' as Department, 
+      label: '9. Coimbatore-Soil', 
+      shortLabel: 'Coimbatore-Soil',
+      icon: Compass, 
+      count: `Regional`,
+      desc: 'Coimbatore regional borehole drilling, soil testing & geotechnical reports',
+    },
+    { 
+      id: 'COIMBATORE_MATERIAL_TESTING' as Department, 
+      label: '10. Coimbatore -Material Testing', 
+      shortLabel: 'Coimbatore -Material Testing',
+      icon: Award, 
+      count: `Regional`,
+      desc: 'Coimbatore regional material laboratory testing, quality certification & reports',
     },
   ];
 
-  const currentDeptObj = departmentOptions.find(d => d.id === activeDept) || departmentOptions[0];
+  const currentDeptObj = departmentOptions.find(d => 
+    d.id === activeDept || 
+    (activeDept === 'ARCHITECTURE' && d.id === 'ARCHITECTURAL') || 
+    (activeDept === 'CONSTRUCTION' && d.id === 'PRIVATE_CONSTRUCTION') || 
+    (activeDept === 'CBE_SOIL_INVESTIGATION' && d.id === 'COIMBATORE_SOIL') || 
+    (activeDept === 'SURVEY' && d.id === 'SURVEYING') || 
+    (activeDept === 'ART_SCULPTURE' && d.id === 'SCULPTURE')
+  ) || departmentOptions[0];
   const CurrentIcon = currentDeptObj.icon;
 
   return (
@@ -261,7 +308,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
               <span>Department Hub</span>
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Coordinated management across Soil Investigation, Architecture, Marketing, Construction, and Accounts
+              Coordinated management across Soil Investigation, Material Testing, Surveying, Structural, Architectural, Sculpture, Construction & Regional Branches
             </p>
           </div>
 
@@ -292,7 +339,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
               <div className="absolute left-0 mt-1.5 w-80 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3.5 py-2 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Select Core Department</span>
-                  <span className="text-[10px] text-red-600 font-bold">5 Divisions Available</span>
+                  <span className="text-[10px] text-red-600 font-bold">10 Divisions Available</span>
                 </div>
 
                 <div className="p-1 space-y-1">
@@ -394,9 +441,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       <div className="p-4 sm:p-6 space-y-6 flex-1 bg-white">
         
         {/* ========================================== */}
-        {/* DEPARTMENT 1: SOIL INVESTIGATION */}
+        {/* DEPARTMENT: SOIL INVESTIGATION / COIMBATORE-SOIL */}
         {/* ========================================== */}
-        {activeDept === 'SOIL_INVESTIGATION' && (
+        {(activeDept === 'SOIL_INVESTIGATION' || activeDept === 'COIMBATORE_SOIL' || (activeDept as string) === 'CBE_SOIL_INVESTIGATION') && (
           <div className="space-y-6">
             {/* Top KPI Metrics Banner */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -627,9 +674,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
         )}
 
         {/* ========================================== */}
-        {/* DEPARTMENT 2: ARCHITECTURE */}
+        {/* DEPARTMENT: ARCHITECTURAL */}
         {/* ========================================== */}
-        {activeDept === 'ARCHITECTURE' && (
+        {(activeDept === 'ARCHITECTURAL' || activeDept === 'ARCHITECTURE') && (
           <div className="space-y-6">
             {/* Top Stats Banner */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -908,9 +955,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
         )}
 
         {/* ========================================== */}
-        {/* DEPARTMENT 4: CONSTRUCTION */}
+        {/* DEPARTMENT: PRIVATE CONSTRUCTION / GOVERNMENT PROJECTS */}
         {/* ========================================== */}
-        {activeDept === 'CONSTRUCTION' && (
+        {(activeDept === 'PRIVATE_CONSTRUCTION' || (activeDept as string) === 'CONSTRUCTION' || activeDept === 'GOVERNMENT_PROJECT') && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
@@ -1155,7 +1202,428 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
             </div>
           </div>
         )}
-      </div>
+
+        {/* ========================================== */}
+        {/* DEPARTMENT: MATERIAL TESTING / COIMBATORE - MATERIAL TESTING */}
+        {/* ========================================== */}
+        {(activeDept === 'MATERIAL_TESTING' || activeDept === 'COIMBATORE_MATERIAL_TESTING') && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
+                <div className="flex items-center justify-between text-xs text-blue-800 font-semibold mb-1">
+                  <span>Concrete Cube Tests</span>
+                  <Award className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">24 Sets</div>
+                <div className="text-[11px] text-blue-700 mt-0.5">M25, M30 & M40 28-Day Curing</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold mb-1">
+                  <span>Rebar Tensile Quality</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">100% Passed</div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">Fe550D / Fe500 Tensile & Bend</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80">
+                <div className="flex items-center justify-between text-xs text-amber-800 font-semibold mb-1">
+                  <span>Aggregate & Sand Sieve</span>
+                  <Layers className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">Zone II M-Sand</div>
+                <div className="text-[11px] text-amber-700 mt-0.5">Fineness Modulus: 2.78</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-red-50/60 border border-red-200/80">
+                <div className="flex items-center justify-between text-xs text-red-800 font-semibold mb-1">
+                  <span>Certified Lab Reports</span>
+                  <FileCheck className="w-4 h-4 text-red-600" />
+                </div>
+                <div className="text-2xl font-bold text-red-900">18 Issued</div>
+                <div className="text-[11px] text-red-700 mt-0.5">NABL / IS Code Certified</div>
+              </div>
+            </div>
+
+            {/* Material Tests Registry Table */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    {activeDept === 'COIMBATORE_MATERIAL_TESTING' ? 'Coimbatore Branch - Material Quality Lab Test Registry' : 'Material Quality Laboratory Test Registry'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">Compressive strength, tensile testing, sieve gradation, and chemical analysis logs</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Logging new Material Lab Test Sample...')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  + New Lab Test
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Test Code</th>
+                      <th className="py-3 px-4">Material / Specimen</th>
+                      <th className="py-3 px-4">Standard</th>
+                      <th className="py-3 px-4">Target Value</th>
+                      <th className="py-3 px-4">Observed Value</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-CUB-042</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">Concrete Cube (M30) - Column Pour #3</td>
+                      <td className="py-3 px-4 text-slate-500">IS 516:2021</td>
+                      <td className="py-3 px-4 font-mono">30.0 N/mm² (28D)</td>
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">34.8 N/mm²</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => onShowToast?.('Downloading MTD-CUB-042 Certificate...')} className="text-red-600 hover:text-red-700 font-semibold text-xs cursor-pointer">Certificate</button>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-STL-019</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">16mm Fe550D TMT Rebar - Tensile Test</td>
+                      <td className="py-3 px-4 text-slate-500">IS 1786:2008</td>
+                      <td className="py-3 px-4 font-mono">550 N/mm² Yield</td>
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">585 N/mm²</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => onShowToast?.('Downloading MTD-STL-019 Certificate...')} className="text-red-600 hover:text-red-700 font-semibold text-xs cursor-pointer">Certificate</button>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-AGG-008</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">20mm Coarse Aggregate - Impact Value</td>
+                      <td className="py-3 px-4 text-slate-500">IS 2386 Pt IV</td>
+                      <td className="py-3 px-4 font-mono">&lt; 30% Impact</td>
+                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">18.4% Impact</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => onShowToast?.('Downloading MTD-AGG-008 Certificate...')} className="text-red-600 hover:text-red-700 font-semibold text-xs cursor-pointer">Certificate</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* DEPARTMENT: STRUCTURAL */}
+        {/* ========================================== */}
+        {activeDept === 'STRUCTURAL' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
+                <div className="flex items-center justify-between text-xs text-blue-800 font-semibold mb-1">
+                  <span>Structural Models</span>
+                  <Building2 className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">8 Sets</div>
+                <div className="text-[11px] text-blue-700 mt-0.5">ETABS 3D Finite Element Models</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold mb-1">
+                  <span>Vetting Status</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">Vetted & Signed</div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">Chartered Structural Engineer Vetting</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80">
+                <div className="flex items-center justify-between text-xs text-purple-800 font-semibold mb-1">
+                  <span>Seismic & Wind Zone</span>
+                  <Shield className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-900">Zone III / 39 m/s</div>
+                <div className="text-[11px] text-purple-700 mt-0.5">IS 1893:2016 & IS 875 Pt 3</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80">
+                <div className="flex items-center justify-between text-xs text-amber-800 font-semibold mb-1">
+                  <span>Bar Bending Schedules</span>
+                  <FileText className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-2xl font-bold text-amber-900">12 BBS Released</div>
+                <div className="text-[11px] text-amber-700 mt-0.5">Footing, column & slab steel cut lists</div>
+              </div>
+            </div>
+
+            {/* Structural Calculations Registry */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Structural Design & Calculation Sheets</h3>
+                  <p className="text-[11px] text-slate-500">Foundation design, column load combinations, beam shear checks & slab reinforcement</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Uploading Structural Calculation Sheet...')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  + Add Structural Sheet
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Doc Code</th>
+                      <th className="py-3 px-4">Structural Element</th>
+                      <th className="py-3 px-4">Code Standard</th>
+                      <th className="py-3 px-4">Analysis Engine</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">STR-CALC-001</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">Isolated & Combined Footing Design (SBC: 220 kN/m²)</td>
+                      <td className="py-3 px-4 text-slate-500">IS 456:2000 & IS 1904</td>
+                      <td className="py-3 px-4 font-medium text-slate-700">SAFE v20</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">APPROVED</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => onShowToast?.('Opening STR-CALC-001 details...')} className="text-red-600 hover:text-red-700 font-semibold text-xs cursor-pointer">View Calcs</button>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">STR-CALC-002</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">G+4 Column Axial & Biaxial Bending Moment Verification</td>
+                      <td className="py-3 px-4 text-slate-500">IS 13920:2016</td>
+                      <td className="py-3 px-4 font-medium text-slate-700">ETABS v21</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">APPROVED</span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => onShowToast?.('Opening STR-CALC-002 details...')} className="text-red-600 hover:text-red-700 font-semibold text-xs cursor-pointer">View Calcs</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* DEPARTMENT: SURVEYING */}
+        {/* ========================================== */}
+        {(activeDept === 'SURVEYING' || (activeDept as string) === 'SURVEY') && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-teal-50/60 border border-teal-200/80">
+                <div className="flex items-center justify-between text-xs text-teal-800 font-semibold mb-1">
+                  <span>DGPS Coordinates</span>
+                  <Compass className="w-4 h-4 text-teal-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">4 Points Fixed</div>
+                <div className="text-[11px] text-teal-700 mt-0.5">WGS84 Sub-Centimeter Accuracy</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
+                <div className="flex items-center justify-between text-xs text-blue-800 font-semibold mb-1">
+                  <span>Topographical Contour</span>
+                  <Layers className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-800">0.5m Interval</div>
+                <div className="text-[11px] text-blue-700 mt-0.5">Total Station 3D Surface Mesh</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold mb-1">
+                  <span>Boundary Clearance</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">Demarcated</div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">Zero Encroachments Verified</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80">
+                <div className="flex items-center justify-between text-xs text-amber-800 font-semibold mb-1">
+                  <span>Benchmark RL</span>
+                  <MapPin className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-2xl font-bold text-amber-900">+104.350 m</div>
+                <div className="text-[11px] text-amber-700 mt-0.5">GTS Reference Benchmark</div>
+              </div>
+            </div>
+
+            {/* Survey Station Registry */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Site Survey & Cadastral Demarcation Records</h3>
+                  <p className="text-[11px] text-slate-500">Total station points, boundary corners, Reduced Levels (RL) and road alignment benchmarks</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Adding new Land Survey Station...')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  + Add Survey Point
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Station ID</th>
+                      <th className="py-3 px-4">Location / Demarcation</th>
+                      <th className="py-3 px-4">Northing</th>
+                      <th className="py-3 px-4">Easting</th>
+                      <th className="py-3 px-4">RL (m)</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">SRV-BM-01</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">North-East Boundary Corner Stone</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">1447231.428 N</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">823190.114 E</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">+104.350 m</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">FIXED & MONUMENTED</span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">SRV-BM-02</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">South-West Main Road Entrance Center</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">1447190.052 N</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">823145.890 E</td>
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">+103.820 m</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">FIXED & MONUMENTED</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* DEPARTMENT: SCULPTURE */}
+        {/* ========================================== */}
+        {(activeDept === 'SCULPTURE' || (activeDept as string) === 'ART_SCULPTURE') && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-orange-50/60 border border-orange-200/80">
+                <div className="flex items-center justify-between text-xs text-orange-800 font-semibold mb-1">
+                  <span>Sculptural Artworks</span>
+                  <Sparkles className="w-4 h-4 text-orange-600" />
+                </div>
+                <div className="text-2xl font-bold text-slate-900">6 Projects</div>
+                <div className="text-[11px] text-orange-700 mt-0.5">Monument statues, relief murals & temple art</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold mb-1">
+                  <span>Maquette 3D Approvals</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-700">Client Signed</div>
+                <div className="text-[11px] text-emerald-800 mt-0.5">1:10 Scale clay & bronze models approved</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80">
+                <div className="flex items-center justify-between text-xs text-purple-800 font-semibold mb-1">
+                  <span>Artisan Master Craft</span>
+                  <User className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-900">14 Artisans</div>
+                <div className="text-[11px] text-purple-700 mt-0.5">Lead Sthapathis, stone carvers & foundry team</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-200/80">
+                <div className="flex items-center justify-between text-xs text-blue-800 font-semibold mb-1">
+                  <span>Installation Status</span>
+                  <HardHat className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-900">On Schedule</div>
+                <div className="text-[11px] text-blue-700 mt-0.5">Structural anchor bolt & pedestal readiness</div>
+              </div>
+            </div>
+
+            {/* Sculpture Registry */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+              <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Sculpture, Heritage & Artisan Works Catalog</h3>
+                  <p className="text-[11px] text-slate-500">Material specifications, sculptor in-charge, casting progress and architectural placement</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onShowToast?.('Adding new Sculpture Project Record...')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  + Add Sculpture Item
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Art Code</th>
+                      <th className="py-3 px-4">Artwork Title & Subject</th>
+                      <th className="py-3 px-4">Medium / Material</th>
+                      <th className="py-3 px-4">Dimensions</th>
+                      <th className="py-3 px-4">Master Sthapathi</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">SCP-001</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">Monumental Entrance Arch Relief Mural</td>
+                      <td className="py-3 px-4 text-slate-600">Granite Bas-Relief Carving</td>
+                      <td className="py-3 px-4 font-mono">18ft × 6ft</td>
+                      <td className="py-3 px-4 text-slate-700 font-medium">Sthapathi K. Arumugam</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">IN PROGRESS (75%)</span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition">
+                      <td className="py-3 px-4 font-mono font-bold text-red-900">SCP-002</td>
+                      <td className="py-3 px-4 font-semibold text-slate-800">Courtyard Bronze Heritage Fountain Sculpture</td>
+                      <td className="py-3 px-4 text-slate-600">Cast Bronze & Patina</td>
+                      <td className="py-3 px-4 font-mono">8ft Height</td>
+                      <td className="py-3 px-4 text-slate-700 font-medium">Artisan V. Balan</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">COMPLETED & READY</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* MODAL 1: Add Soil Sample Modal */}
       {isAddSampleModalOpen && (

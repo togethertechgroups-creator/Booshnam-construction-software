@@ -748,7 +748,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       resolvedCategory = 'Residential';
     }
 
-    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS[6]; // defaults to Construction
+    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS.find(d => d.id === 'PRIVATE_CONSTRUCTION') || ORGANIZATION_DEPARTMENTS[1];
 
     const newProj: Project = {
       id: newProjId,

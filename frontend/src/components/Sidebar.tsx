@@ -144,9 +144,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const getActiveDivisionLabel = () => {
     if (currentView === 'dept_soil' || currentView === 'soil_investigation') return 'Soil Investigation';
-    if (currentView === 'dept_architecture' || currentView === 'architecture') return 'Architecture';
+    if (currentView === 'dept_architecture' || currentView === 'architecture') return 'Architectural';
     if (currentView === 'dept_marketing' || currentView === 'marketing') return 'Marketing';
-    if (currentView === 'dept_construction' || currentView === 'construction_dept') return 'Construction';
+    if (currentView === 'dept_construction' || currentView === 'construction_dept') return 'Private Construction';
     if (currentView === 'dept_accounts' || currentView === 'accounts_dept') return 'Accounts';
     return null;
   };

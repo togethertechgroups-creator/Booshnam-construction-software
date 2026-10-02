@@ -2,11 +2,18 @@ import { Project } from '../types';
 
 export type DepartmentId = 
   | 'booshnam_associates'
-  | 'GOVERNMENT_PROJECT'
+  | 'SOIL_INVESTIGATION'
+  | 'MATERIAL_TESTING'
+  | 'SURVEYING'
   | 'STRUCTURAL'
+  | 'ARCHITECTURAL'
+  | 'SCULPTURE'
+  | 'PRIVATE_CONSTRUCTION'
+  | 'GOVERNMENT_PROJECT'
+  | 'COIMBATORE_SOIL'
+  | 'COIMBATORE_MATERIAL_TESTING'
   | 'CBE_SOIL_INVESTIGATION'
   | 'ART_SCULPTURE'
-  | 'MATERIAL_TESTING'
   | 'CONSTRUCTION'
   | 'SURVEY'
   | 'ARCHITECTURE';
@@ -47,19 +54,41 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     codePrefix: 'BA',
   },
   {
-    id: 'GOVERNMENT_PROJECT',
-    name: 'GOVERNMENT PROJECT',
-    shortName: 'Government Projects',
+    id: 'SOIL_INVESTIGATION',
+    name: 'Soil Investigation',
+    shortName: 'Soil Investigation',
+    role: 'Super Admin',
+    owner: 'Managing Director',
+    logoType: 'globe',
+    isMainOverview: false,
+    description: 'Geotechnical borehole drilling, SPT lab tests, stratum logs & SBC reports',
+    codePrefix: 'SOIL',
+  },
+  {
+    id: 'MATERIAL_TESTING',
+    name: 'Material testing',
+    shortName: 'Material testing',
+    role: 'Super Admin',
+    owner: 'Managing Director',
+    logoType: 'booshnam',
+    isMainOverview: false,
+    description: 'Concrete cube compression, rebar tensile, cement & aggregate lab testing',
+    codePrefix: 'MTD',
+  },
+  {
+    id: 'SURVEYING',
+    name: 'Surveying',
+    shortName: 'Surveying',
     role: 'Super Admin',
     owner: 'Nivedhitha Arumugam',
     logoType: 'booshnam',
     isMainOverview: false,
-    description: 'Government tenders, PWD highways, public infrastructure & municipal works',
-    codePrefix: 'GOV',
+    description: 'Topographic contour, DGPS boundary demarcation, levelling & GIS mapping',
+    codePrefix: 'SRV',
   },
   {
     id: 'STRUCTURAL',
-    name: 'Structural Department',
+    name: 'Structural',
     shortName: 'Structural',
     role: 'Super Admin',
     owner: 'Managing Director',
@@ -69,70 +98,70 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     codePrefix: 'STR',
   },
   {
-    id: 'CBE_SOIL_INVESTIGATION',
-    name: 'CBE-Soil Investigation',
-    shortName: 'Soil Investigation',
-    role: 'Super Admin',
-    owner: 'Nivedhitha Arumugam',
-    logoType: 'globe',
-    isMainOverview: false,
-    description: 'Geotechnical borehole drilling, SPT lab tests, stratum logs & SBC reports',
-    codePrefix: 'SOIL',
-  },
-  {
-    id: 'ART_SCULPTURE',
-    name: 'Art & Sculpture',
-    shortName: 'Art & Sculpture',
-    role: 'Super Admin',
-    owner: 'Soil Test',
-    logoType: 'globe',
-    isMainOverview: false,
-    description: 'Architectural sculptures, monumental statues, murals & heritage artisan crafts',
-    codePrefix: 'ART',
-  },
-  {
-    id: 'MATERIAL_TESTING',
-    name: 'Material Testing Department',
-    shortName: 'Material Testing',
-    role: 'Super Admin',
-    owner: 'Managing Director',
-    logoType: 'booshnam',
-    isMainOverview: false,
-    description: 'Concrete cube compression, rebar tensile, cement & aggregate lab testing',
-    codePrefix: 'MTD',
-  },
-  {
-    id: 'CONSTRUCTION',
-    name: 'Construction Department',
-    shortName: 'Construction',
-    role: 'Super Admin',
-    owner: 'Managing Director',
-    logoType: 'globe',
-    isMainOverview: false,
-    description: 'Civil construction execution, DPR site logs, equipment & contractor works',
-    codePrefix: 'CNS',
-  },
-  {
-    id: 'SURVEY',
-    name: 'SURVEY DEPARTMENT',
-    shortName: 'Survey',
-    role: 'Super Admin',
-    owner: 'Nivedhitha Arumugam',
-    logoType: 'booshnam',
-    isMainOverview: false,
-    description: 'Topographic contour, DGPS boundary demarcation, levelling & GIS mapping',
-    codePrefix: 'SRV',
-  },
-  {
-    id: 'ARCHITECTURE',
-    name: 'Architectural Department',
-    shortName: 'Architecture',
+    id: 'ARCHITECTURAL',
+    name: 'Architectural',
+    shortName: 'Architectural',
     role: 'Super Admin',
     owner: 'Managing Director',
     logoType: 'booshnam',
     isMainOverview: false,
     description: 'Architectural drawings, floor plans, elevations, 3D renders & approvals',
     codePrefix: 'ARC',
+  },
+  {
+    id: 'SCULPTURE',
+    name: 'Sculpture',
+    shortName: 'Sculpture',
+    role: 'Super Admin',
+    owner: 'Soil Test',
+    logoType: 'globe',
+    isMainOverview: false,
+    description: 'Architectural sculptures, monumental statues, murals & heritage artisan crafts',
+    codePrefix: 'SCP',
+  },
+  {
+    id: 'PRIVATE_CONSTRUCTION',
+    name: 'Private Construction',
+    shortName: 'Private Construction',
+    role: 'Super Admin',
+    owner: 'Managing Director',
+    logoType: 'globe',
+    isMainOverview: false,
+    description: 'Residential villas, commercial complexes & private civil construction execution',
+    codePrefix: 'PCN',
+  },
+  {
+    id: 'GOVERNMENT_PROJECT',
+    name: 'Government Projects',
+    shortName: 'Government Projects',
+    role: 'Super Admin',
+    owner: 'Nivedhitha Arumugam',
+    logoType: 'booshnam',
+    isMainOverview: false,
+    description: 'Government tenders, PWD highways, public infrastructure & municipal works',
+    codePrefix: 'GOV',
+  },
+  {
+    id: 'COIMBATORE_SOIL',
+    name: 'Coimbatore-Soil',
+    shortName: 'Coimbatore-Soil',
+    role: 'Super Admin',
+    owner: 'Nivedhitha Arumugam',
+    logoType: 'globe',
+    isMainOverview: false,
+    description: 'Coimbatore regional borehole drilling, soil testing & geotechnical reports',
+    codePrefix: 'CBE-S',
+  },
+  {
+    id: 'COIMBATORE_MATERIAL_TESTING',
+    name: 'Coimbatore -Material Testing',
+    shortName: 'Coimbatore -Material Testing',
+    role: 'Super Admin',
+    owner: 'Nivedhitha Arumugam',
+    logoType: 'booshnam',
+    isMainOverview: false,
+    description: 'Coimbatore branch material laboratory testing, quality certification & test reports',
+    codePrefix: 'CBE-M',
   },
 ];
 
@@ -180,17 +209,41 @@ export const getIndividualDepartments = (): DepartmentEntity[] => {
  * Normalize department identifier from string or project
  */
 export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
-  if (!raw) return 'CONSTRUCTION';
+  if (!raw) return 'PRIVATE_CONSTRUCTION';
   const clean = raw.trim().toUpperCase();
+
+  // 1. Direct exact ID matches first
+  if (clean === 'BOOSHNAM_ASSOCIATES') return 'booshnam_associates';
+  if (clean === 'SOIL_INVESTIGATION') return 'SOIL_INVESTIGATION';
+  if (clean === 'MATERIAL_TESTING') return 'MATERIAL_TESTING';
+  if (clean === 'SURVEYING' || clean === 'SURVEY') return 'SURVEYING';
+  if (clean === 'STRUCTURAL') return 'STRUCTURAL';
+  if (clean === 'ARCHITECTURAL' || clean === 'ARCHITECTURE') return 'ARCHITECTURAL';
+  if (clean === 'SCULPTURE' || clean === 'ART_SCULPTURE') return 'SCULPTURE';
+  if (clean === 'PRIVATE_CONSTRUCTION' || clean === 'CONSTRUCTION') return 'PRIVATE_CONSTRUCTION';
+  if (clean === 'GOVERNMENT_PROJECT' || clean === 'GOVERNMENT_PROJECTS' || clean === 'GOVERNMENT') return 'GOVERNMENT_PROJECT';
+  if (clean === 'COIMBATORE_SOIL' || clean === 'CBE_SOIL_INVESTIGATION') return 'COIMBATORE_SOIL';
+  if (clean === 'COIMBATORE_MATERIAL_TESTING') return 'COIMBATORE_MATERIAL_TESTING';
+
+  // 2. Coimbatore branch matches
+  if (clean.includes('COIMBATORE') || clean.includes('CBE')) {
+    if (clean.includes('MATERIAL') || clean.includes('TEST') || clean.includes('MTD')) {
+      return 'COIMBATORE_MATERIAL_TESTING';
+    }
+    return 'COIMBATORE_SOIL';
+  }
+
+  // 3. Keyword / partial matches
   if (clean.includes('GOV')) return 'GOVERNMENT_PROJECT';
   if (clean.includes('STRUCT')) return 'STRUCTURAL';
-  if (clean.includes('SOIL')) return 'CBE_SOIL_INVESTIGATION';
-  if (clean.includes('ART') || clean.includes('SCULPT')) return 'ART_SCULPTURE';
+  if (clean.includes('SOIL')) return 'SOIL_INVESTIGATION';
+  if (clean.includes('SCULPT') || clean.includes('ART')) return 'SCULPTURE';
   if (clean.includes('MATERIAL') || clean.includes('MTD')) return 'MATERIAL_TESTING';
-  if (clean.includes('SURVEY')) return 'SURVEY';
-  if (clean.includes('ARCH')) return 'ARCHITECTURE';
-  if (clean.includes('CONST')) return 'CONSTRUCTION';
-  return 'CONSTRUCTION';
+  if (clean.includes('SURVEY')) return 'SURVEYING';
+  if (clean.includes('ARCH')) return 'ARCHITECTURAL';
+  if (clean.includes('PRIVATE') || clean.includes('CONST')) return 'PRIVATE_CONSTRUCTION';
+
+  return 'PRIVATE_CONSTRUCTION';
 };
 
 /**
@@ -263,17 +316,16 @@ export const getOrInitializeProjects = (): Project[] => {
         // Ensure every remaining project has a department
         let modified = clean.length !== parsed.length;
         const normalized = clean.map((p: any) => {
-          if (!p.department) {
+          const deptId = normalizeDepartmentId(p.department || p.category || p.project_type);
+          const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === deptId) || ORGANIZATION_DEPARTMENTS[1];
+          if (p.department !== deptId || p.department_name !== deptObj.name) {
             modified = true;
-            const deptId = normalizeDepartmentId(p.category || p.project_type);
-            const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === deptId) || ORGANIZATION_DEPARTMENTS[1];
-            return {
-              ...p,
-              department: deptId,
-              department_name: deptObj.name,
-            };
           }
-          return p;
+          return {
+            ...p,
+            department: deptId,
+            department_name: deptObj.name,
+          };
         });
 
         if (modified) {

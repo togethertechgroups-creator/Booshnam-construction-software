@@ -447,7 +447,7 @@ export function App() {
 
       {/* Main Content Area */}
       <div className={`transition-all duration-300 ease-in-out flex flex-col flex-1 min-w-0 bg-white ${
-        isProfileModalOpen ? 'pl-0' : isSidebarOpen ? 'pl-[248px]' : 'pl-[68px]'
+        isProfileModalOpen ? 'pl-0' : isSidebarOpen ? 'pl-64' : 'pl-[72px]'
       } ${currentView === 'quotation' ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
         {/* View Router */}
         <main className={`flex-1 w-full min-w-0 bg-[#f8fafc] ${

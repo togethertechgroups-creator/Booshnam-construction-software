@@ -255,8 +255,16 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       desc: 'Architectural sculptures, monumental statues, murals & heritage artisan crafts',
     },
     { 
+      id: 'CONSTRUCTION' as Department, 
+      label: '7. Construction (All)', 
+      shortLabel: 'Construction (All)',
+      icon: HardHat, 
+      count: `${dprs.length} DPRs`,
+      desc: 'Civil construction execution, DPRs, site operations, residential & commercial works',
+    },
+    { 
       id: 'COIMBATORE_SOIL' as Department, 
-      label: '7. Coimbatore – Soil Investigation', 
+      label: '8. Coimbatore – Soil Investigation', 
       shortLabel: 'Coimbatore – Soil',
       icon: Compass, 
       count: `Regional`,
@@ -264,7 +272,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     },
     { 
       id: 'COIMBATORE_MATERIAL_TESTING' as Department, 
-      label: '8. Coimbatore – Material Testing', 
+      label: '9. Coimbatore – Material Testing', 
       shortLabel: 'Coimbatore – Material Testing',
       icon: Award, 
       count: `Regional`,
@@ -275,7 +283,8 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const currentDeptObj = departmentOptions.find(d => 
     d.id === activeDept || 
     (activeDept === 'ARCHITECTURE' && d.id === 'ARCHITECTURAL') || 
-    (activeDept === 'CONSTRUCTION' && d.id === 'PRIVATE_CONSTRUCTION') || 
+    (activeDept === 'PRIVATE_CONSTRUCTION' && d.id === 'CONSTRUCTION') || 
+    (activeDept === 'GOVERNMENT_PROJECT' && d.id === 'CONSTRUCTION') || 
     (activeDept === 'CBE_SOIL_INVESTIGATION' && d.id === 'COIMBATORE_SOIL') || 
     (activeDept === 'SURVEY' && d.id === 'SURVEYING') || 
     (activeDept === 'ART_SCULPTURE' && d.id === 'SCULPTURE')

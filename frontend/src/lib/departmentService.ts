@@ -120,6 +120,17 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
     codePrefix: 'SCP',
   },
   {
+    id: 'CONSTRUCTION',
+    name: 'Construction (All)',
+    shortName: 'Construction (All)',
+    role: 'Super Admin',
+    owner: 'Managing Director',
+    logoType: 'globe',
+    isMainOverview: false,
+    description: 'Comprehensive civil construction execution, residential, commercial & infrastructure',
+    codePrefix: 'CST',
+  },
+  {
     id: 'COIMBATORE_SOIL',
     name: 'Coimbatore – Soil Investigation',
     shortName: 'Coimbatore – Soil',
@@ -198,6 +209,7 @@ export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
   if (clean === 'STRUCTURAL') return 'STRUCTURAL';
   if (clean === 'ARCHITECTURAL' || clean === 'ARCHITECTURE') return 'ARCHITECTURAL';
   if (clean === 'SCULPTURE' || clean === 'ART_SCULPTURE') return 'SCULPTURE';
+  if (clean === 'CONSTRUCTION' || clean === 'CONSTRUCTION (ALL)' || clean === 'CONSTRUCTION(ALL)' || clean === 'PRIVATE_CONSTRUCTION') return 'CONSTRUCTION';
   if (clean === 'COIMBATORE_SOIL' || clean === 'CBE_SOIL_INVESTIGATION') return 'COIMBATORE_SOIL';
   if (clean === 'COIMBATORE_MATERIAL_TESTING') return 'COIMBATORE_MATERIAL_TESTING';
 
@@ -210,14 +222,15 @@ export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
   }
 
   // 3. Keyword / partial matches
+  if (clean.includes('CONST')) return 'CONSTRUCTION';
   if (clean.includes('SOIL')) return 'SOIL_INVESTIGATION';
   if (clean.includes('MATERIAL') || clean.includes('MTD')) return 'MATERIAL_TESTING';
   if (clean.includes('SURVEY')) return 'SURVEYING';
-  if (clean.includes('STRUCT') || clean.includes('CONST') || clean.includes('PRIVATE') || clean.includes('GOV')) return 'STRUCTURAL';
+  if (clean.includes('STRUCT') || clean.includes('PRIVATE') || clean.includes('GOV')) return 'STRUCTURAL';
   if (clean.includes('ARCH')) return 'ARCHITECTURAL';
   if (clean.includes('SCULPT') || clean.includes('ART')) return 'SCULPTURE';
 
-  return 'SOIL_INVESTIGATION';
+  return 'CONSTRUCTION';
 };
 
 /**

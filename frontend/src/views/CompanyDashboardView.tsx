@@ -326,12 +326,35 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           ? `${p.assigned_team[0].name} (${p.assigned_team[0].role})`
           : '-';
         
+        // Dynamically compute progress: check tasks in localStorage first, then p.progress_percentage
+        let dynamicProgress = typeof p.progress_percentage === 'number' ? p.progress_percentage : 0;
+        try {
+          const raw = localStorage.getItem(`booshnam_wbs_tasks_v2_${p.id}`);
+          if (raw) {
+            const parsedTasks = JSON.parse(raw);
+            if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
+              const taskCount = parsedTasks.length;
+              let sumTaskProg = 0;
+              parsedTasks.forEach((t: any) => {
+                if (t.status === 'COMPLETED' || t.progress_percentage === 100) {
+                  sumTaskProg += 100;
+                } else if (typeof t.progress_percentage === 'number') {
+                  sumTaskProg += t.progress_percentage;
+                }
+              });
+              dynamicProgress = Math.round(sumTaskProg / taskCount);
+            }
+          }
+        } catch (e) {}
+        dynamicProgress = Math.min(100, Math.max(0, dynamicProgress));
+
         let displayStatus: 'Ongoing' | 'Not Started' | 'Onhold' | 'Completed' = 'Ongoing';
-        if (p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100)) {
+        const pStatusUpper = String(p.status || '').toUpperCase();
+        if (pStatusUpper === 'COMPLETED' || dynamicProgress >= 100) {
           displayStatus = 'Completed';
-        } else if (p.status === 'ON_HOLD') {
+        } else if (pStatusUpper === 'ON_HOLD' || pStatusUpper === 'ONHOLD') {
           displayStatus = 'Onhold';
-        } else if (p.status === 'PLANNING' || (p.progress_percentage !== undefined && p.progress_percentage === 0)) {
+        } else if (pStatusUpper === 'PLANNING' || pStatusUpper === 'NOT_STARTED' || pStatusUpper === 'NOT STARTED') {
           displayStatus = 'Not Started';
         } else {
           displayStatus = 'Ongoing';
@@ -362,7 +385,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           status: displayStatus,
           health: healthStatus,
           date: p.expected_end_date || '-',
-          progress: p.progress_percentage || 0,
+          progress: dynamicProgress,
           notes: healthStatus === 'At Risk'
             ? 'Critical delay in approvals or overseas equipment. Remediation active.'
             : 'On schedule. Healthy operational status.'
@@ -391,7 +414,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     });
 
     const total = summaryProjects.length;
-    const healthyPercent = total > 0 ? Math.round((healthyCount / total) * 100) : 100;
+    const healthyPercent = total > 0 ? Math.round((healthyCount / total) * 100) : 0;
 
     return {
       notStarted,
@@ -418,8 +441,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         total: 0,
         healthyCount: 0,
         atRiskCount: 0,
-        percent: 100,
-        statusLabel: 'Optimal Status',
+        percent: 0,
+        statusLabel: 'No Active Projects',
         isAtRisk: false,
         isSingle: false,
         projectName: 'All Projects',
@@ -428,32 +451,41 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
     const healthyCount = list.filter(p => p.health === 'Normal').length;
     const atRiskCount = list.filter(p => p.health === 'At Risk').length;
-    const isSingle = !isAll && total === 1;
+    const isSingle = total === 1;
 
-    let percent = 100;
+    let percent = 0;
     let statusLabel = 'Optimal Status';
-    let isAtRisk = false;
+    let isAtRisk = atRiskCount > 0;
 
-    if (isSingle) {
+    if (total === 1) {
+      // Single project: show that project's exact progress %
       const proj = list[0];
-      if (proj.health === 'At Risk') {
-        percent = 35;
+      percent = Math.min(100, Math.max(0, Math.round(proj.progress || 0)));
+      isAtRisk = proj.health === 'At Risk';
+
+      if (isAtRisk) {
         statusLabel = 'At Risk Alert';
-        isAtRisk = true;
+      } else if (percent === 100) {
+        statusLabel = 'Completed';
+      } else if (percent > 0) {
+        statusLabel = 'In Progress';
       } else {
-        percent = 100;
-        statusLabel = 'Optimal Status';
-        isAtRisk = false;
+        statusLabel = 'Not Started';
       }
     } else {
-      percent = total > 0 ? Math.round((healthyCount / total) * 100) : 100;
+      // Overall portfolio progress across all projects in the selected filter
+      const totalProgressSum = list.reduce((sum, p) => sum + (p.progress || 0), 0);
+      percent = Math.round(totalProgressSum / total);
       isAtRisk = atRiskCount > 0;
-      if (percent >= 90) {
-        statusLabel = 'Optimal Status';
-      } else if (percent >= 70) {
-        statusLabel = 'Moderate Health';
+
+      if (isAtRisk) {
+        statusLabel = `${atRiskCount} Sites At Risk`;
+      } else if (percent === 100) {
+        statusLabel = 'Completed';
+      } else if (percent > 0) {
+        statusLabel = 'In Progress';
       } else {
-        statusLabel = 'Action Required';
+        statusLabel = 'Not Started';
       }
     }
 
@@ -464,8 +496,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
       percent,
       statusLabel,
       isAtRisk,
-      isSingle,
-      projectName: isSingle ? list[0].name : 'All Projects',
+      isSingle: false,
+      projectName: 'All Projects',
     };
   }, [summaryProjects, selectedProjectFilter]);
 
@@ -1433,11 +1465,11 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 Live Project Health & Operational Risk Registry
               </span>
               <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                83.3% Healthy Rate (5 / 6 Projects)
+                {kpiCounts.total > 0 ? ((kpiCounts.healthyCount / kpiCounts.total) * 100).toFixed(1) : '0.0'}% Healthy Rate ({kpiCounts.healthyCount} / {kpiCounts.total} Projects)
               </span>
             </div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Underlying Project Health Sheet — All Monitored Sites (6)
+              Underlying Project Health Sheet — All Monitored Sites ({kpiCounts.total})
             </h1>
             <p className="text-xs text-slate-500">
               Granular inspection of project stability, milestone schedule health, responsible project engineers, and critical risk mitigation logs.
@@ -1448,17 +1480,19 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6">
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Sites</div>
-              <div className="text-2xl font-black text-slate-900 mt-1">6</div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{kpiCounts.total}</div>
               <div className="text-[10px] text-slate-500 mt-0.5">Commercial, Industrial, Infra</div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-xs">
               <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Healthy / Normal</div>
-              <div className="text-2xl font-black text-blue-600 mt-1">5</div>
-              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">83.3% of Portfolio</div>
+              <div className="text-2xl font-black text-blue-600 mt-1">{kpiCounts.healthyCount}</div>
+              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                {kpiCounts.total > 0 ? ((kpiCounts.healthyCount / kpiCounts.total) * 100).toFixed(1) : '0.0'}% of Portfolio
+              </div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-red-200 shadow-xs">
               <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider">At Risk</div>
-              <div className="text-2xl font-black text-red-600 mt-1">1</div>
+              <div className="text-2xl font-black text-red-600 mt-1">{kpiCounts.atRiskCount}</div>
               <div className="text-[10px] text-red-500 font-semibold mt-0.5">Requires Mitigation</div>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
@@ -1791,34 +1825,18 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
-                    {healthStats.isSingle ? (
-                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 max-w-[200px] truncate" title={healthStats.projectName}>
-                        {healthStats.projectName}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                        All Projects ({healthStats.total})
-                      </span>
-                    )}
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                      All Projects ({healthStats.total})
+                    </span>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {healthStats.isSingle 
-                      ? 'Individual site operational stability & risk status' 
-                      : 'Real-time risk & operational stability across portfolio'}
+                    {healthStats.total === 0
+                      ? 'No project sites currently available'
+                      : 'Real-time progress & operational stability across portfolio'}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 text-slate-900 relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsUnderlyingHealthPageView(true)}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 text-slate-700 font-semibold text-xs transition-colors cursor-pointer shadow-2xs"
-                    title="Open detailed health sheet view"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>View Underlying Data</span>
-                  </button>
-
                   {/* Three Dots Menu Button & Dropdown */}
                   <div className="relative" ref={healthDotsMenuRef}>
                     <button
@@ -1837,17 +1855,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
                     {showHealthMenuDropdown && (
                       <div className="absolute right-0 mt-1.5 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-40 animate-in fade-in select-none">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowHealthMenuDropdown(false);
-                            setIsUnderlyingHealthPageView(true); // Opens dedicated Project Health Sheet Page!
-                          }}
-                          className="w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2.5 transition-colors text-left cursor-pointer sm:hidden"
-                        >
-                          <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                          <span>View Underlying Data</span>
-                        </button>
                         <button
                           type="button"
                           onClick={() => {
@@ -1873,25 +1880,31 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       Operational Stability
                     </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border inline-flex items-center gap-1 shadow-2xs ${
+                    <span className={`text-[11px] font-semibold inline-flex items-center gap-1.5 ${
                       healthStats.isAtRisk 
-                        ? 'text-rose-700 bg-rose-50 border-rose-200' 
-                        : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        ? 'text-rose-600' 
+                        : healthStats.total === 0
+                        ? 'text-slate-500'
+                        : 'text-emerald-600'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
-                        healthStats.isAtRisk ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
+                        healthStats.isAtRisk 
+                          ? 'bg-rose-500 animate-ping' 
+                          : healthStats.total === 0
+                          ? 'bg-slate-400'
+                          : 'bg-emerald-500 animate-pulse'
                       }`}></span>
                       {healthStats.statusLabel}
                     </span>
                   </div>
                   <div>
                     <div className="text-sm font-bold text-slate-800 font-display">
-                      {healthStats.isSingle 
-                        ? `${healthStats.projectName} Status` 
-                        : 'Portfolio Health Rating'}
+                      Portfolio Health Rating
                     </div>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      {healthStats.isAtRisk
+                      {healthStats.total === 0
+                        ? 'No active projects currently available in portfolio.'
+                        : healthStats.isAtRisk
                         ? `${healthStats.atRiskCount} site(s) currently flagged with milestone risks or operational delays.`
                         : 'All active project sites are progressing within schedule targets and normal health tolerances.'
                       }
@@ -1900,12 +1913,12 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   <div className="pt-1 flex items-center gap-3 text-xs text-slate-600 font-medium">
                     <div className="flex items-center gap-1.5">
                       <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{healthStats.isSingle ? '1 Site Tracked' : `${healthStats.total} Sites Tracked`}</span>
+                      <span>{healthStats.total === 1 ? '1 Site Tracked' : `${healthStats.total} Sites Tracked`}</span>
                     </div>
                     <span className="text-slate-300">•</span>
                     <div className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{healthStats.percent}% Health Score</span>
+                      <CheckCircle2 className={`w-3.5 h-3.5 ${healthStats.total === 0 ? 'text-slate-400' : 'text-emerald-600'}`} />
+                      <span>{healthStats.percent}% Overall Progress</span>
                     </div>
                   </div>
                 </div>
@@ -1960,25 +1973,28 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className={`text-2xl sm:text-3xl font-black font-display tracking-tight leading-none ${
                         healthStats.isAtRisk 
                           ? 'bg-gradient-to-r from-red-600 via-amber-600 to-rose-600 bg-clip-text text-transparent' 
+                          : healthStats.total === 0 || healthStats.percent === 0
+                          ? 'text-slate-500'
                           : 'bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-600 bg-clip-text text-transparent'
                       }`}>
                         {healthStats.percent}%
                       </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border mt-1 inline-flex items-center gap-1 shadow-2xs ${
+                      <span className={`text-xs font-semibold mt-1 inline-flex items-center gap-1.5 ${
                         healthStats.isAtRisk
-                          ? 'text-rose-700 bg-rose-50 border-rose-200/80'
-                          : 'text-emerald-700 bg-emerald-50 border-emerald-200/80'
+                          ? 'text-rose-600'
+                          : healthStats.total === 0
+                          ? 'text-slate-500'
+                          : 'text-emerald-600'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          healthStats.isAtRisk ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
+                          healthStats.isAtRisk 
+                            ? 'bg-rose-500 animate-ping' 
+                            : healthStats.total === 0
+                            ? 'bg-slate-400'
+                            : 'bg-emerald-500 animate-pulse'
                         }`}></span>
                         {healthStats.statusLabel}
                       </span>
-                      {healthStats.isSingle && (
-                        <span className="text-[9px] font-medium text-slate-400 mt-0.5 max-w-[170px] truncate text-center">
-                          {healthStats.projectName}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -1990,9 +2006,11 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     <span className={`text-[9.5px] px-2 py-0.5 rounded-full border font-mono font-bold ${
                       healthStats.isAtRisk 
                         ? 'text-rose-600 bg-rose-50 border-rose-200/60' 
+                        : healthStats.total === 0
+                        ? 'text-slate-600 bg-slate-100 border-slate-200/60'
                         : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
                     }`}>
-                      {healthStats.isSingle ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
+                      {healthStats.total === 1 ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
                     </span>
                   </div>
 

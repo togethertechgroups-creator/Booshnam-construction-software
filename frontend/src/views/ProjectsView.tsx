@@ -1053,16 +1053,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                          Department / Service <span className="text-red-500">*</span>
-                        </label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type</label>
                         <CustomSelect
-                          value={newDepartment}
-                          onChange={(val) => setNewDepartment(val)}
-                          options={ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
-                            label: d.name,
-                            value: d.id,
-                          }))}
+                          value={newProjectType}
+                          onChange={(val) => setNewProjectType(val)}
+                          options={[
+                            'Private Construction',
+                            'Government Projects'
+                          ]}
                           size="md"
                           variant="brand"
                         />
@@ -1070,14 +1068,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type</label>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                        Department / Service <span className="text-red-500">*</span>
+                      </label>
                       <CustomSelect
-                        value={newProjectType}
-                        onChange={(val) => setNewProjectType(val)}
-                        options={[
-                          'Private Construction',
-                          'Government Projects'
-                        ]}
+                        value={newDepartment}
+                        onChange={(val) => setNewDepartment(val)}
+                        options={ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+                          label: d.name,
+                          value: d.id,
+                        }))}
                         size="md"
                         variant="brand"
                       />

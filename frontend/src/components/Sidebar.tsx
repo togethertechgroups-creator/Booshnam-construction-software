@@ -356,9 +356,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         />
       )}
 
-      {/* Sidebar — expanded (w-64) or mini icon rail (w-[72px]) */}
-      <aside className={`bg-white text-slate-800 border-r border-slate-200 flex flex-col h-screen fixed left-0 top-0 z-40 select-none transition-all duration-300 ease-in-out ${
-        isOpen ? 'w-64 shadow-xs' : 'w-[72px] shadow-xs'
+      {/* Sidebar — expanded (w-[248px] / increased by 5mm) or mini icon rail (w-[68px]) */}
+      <aside className={`bg-[#C61D45] text-white border-r border-[#A81538] flex flex-col h-screen fixed left-0 top-0 z-40 select-none transition-all duration-300 ease-in-out shadow-lg shadow-black/10 ${
+        isOpen ? 'w-[248px]' : 'w-[68px]'
       }`}>
 
         {/* ── Brand Header (Interactive Workspace & Department Switcher) ── */}
@@ -382,7 +382,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const canSwitchDepartment = isCompanyWideSuperAdmin && finalAvailableDepts.length > 1;
 
           return (
-            <div className="px-3 py-2.5 border-b border-slate-100 relative bg-white" ref={headerDropdownRef}>
+            <div className="px-2.5 py-2.5 border-b border-white/15 relative bg-[#B91C3B]/30" ref={headerDropdownRef}>
               {isOpen ? (
                 /* EXPANDED: Logo + Active Department / Booshnam Associates + Dropdown Chevron + hamburger toggle */
                 <div className="flex items-center justify-between gap-1.5">
@@ -394,27 +394,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
                       }
                     }}
-                    className={`flex items-center gap-2.5 min-w-0 flex-1 py-1 px-1 rounded-lg transition-colors text-left group ${
-                      canSwitchDepartment ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'
+                    className={`flex items-center gap-2 min-w-0 flex-1 py-1 px-1 rounded-lg transition-colors text-left group ${
+                      canSwitchDepartment ? 'hover:bg-white/10 cursor-pointer' : 'cursor-default'
                     }`}
                     title={canSwitchDepartment ? "Switch between Super Admin Overview & Departments" : `${activeDeptEntity.name} • ${displayRole}`}
                   >
-                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
+                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" className="ring-1 ring-white/30" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
-                        <div className="text-[13px] font-bold text-slate-900 truncate font-heading group-hover:text-[#C61D45] transition-colors leading-tight">
+                        <div className="text-[12.5px] font-bold text-white truncate font-heading group-hover:text-rose-100 transition-colors leading-tight">
                           {activeDeptEntity.name}
                         </div>
                         {canSwitchDepartment && (
-                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'}`} />
+                          <ChevronDown className={`w-3.5 h-3.5 text-white/80 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-white' : 'group-hover:text-white'}`} />
                         )}
                       </div>
                       <div 
-                        className="text-[11px] text-teal-600 font-semibold truncate mt-0.5 leading-tight" 
+                        className="text-[10.5px] text-rose-100/90 font-medium truncate mt-0.5 leading-tight" 
                         title={isCompanyWideSuperAdmin && activeDeptEntity.isMainOverview ? 'Super Admin Overview' : isSuperAdminUser ? `Super Admin • ${activeDeptEntity.name}` : `${displayRole} • ${displayName}`}
                       >
                         {isCompanyWideSuperAdmin && activeDeptEntity.isMainOverview ? (
-                          <span className="text-slate-500 font-medium">Super Admin Overview</span>
+                          <span>Super Admin Overview</span>
                         ) : isSuperAdminUser ? (
                           <span>Super Admin • {activeDeptEntity.name}</span>
                         ) : (
@@ -430,7 +430,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       type="button"
                       onClick={onToggle}
                       title="Collapse Sidebar"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                      className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer shrink-0"
                     >
                       <Menu className="w-4 h-4" />
                     </button>
@@ -449,20 +449,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={`${activeDeptEntity.name} - ${canSwitchDepartment ? 'Switch Department' : `${displayRole} (${displayName})`}`}
                     className={canSwitchDepartment ? "cursor-pointer hover:scale-105 transition-transform" : "cursor-default"}
                   >
-                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" />
+                    <DepartmentLogo type={activeDeptEntity.logoType} size="md" className="ring-1 ring-white/30" />
                   </button>
                   {onToggle && (
                     <button
                       type="button"
                       onClick={onToggle}
                       title="Expand Sidebar"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer relative"
+                      className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer relative"
                     >
                       <Menu className="w-4 h-4" />
                       {unacknowledgedLowStockCount > 0 && (
                         <span className="absolute top-1 right-1 flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
                         </span>
                       )}
                     </button>
@@ -529,23 +529,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           );
         })()}
 
-        {/* ── Navigation Menu (White Background with #C61D45 Card Active Item) ── */}
+        {/* ── Navigation Menu (Light Red Background with All White Text) ── */}
         <nav 
-          className="flex-1 overflow-y-auto pt-1.5 pb-16 px-3 space-y-1 no-scrollbar"
+          className="flex-1 overflow-y-auto pt-2 pb-16 px-2 space-y-1 no-scrollbar"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {navSections.map((section, sIdx) => (
             <div key={sIdx} className="space-y-0.5">
               {/* Category Header Label */}
               {section.title && isOpen && (
-                <div className="text-[10px] font-bold text-slate-400 tracking-wider uppercase px-3 pt-2 pb-0.5 select-none font-display">
+                <div className="text-[10px] font-bold text-rose-200/80 tracking-wider uppercase px-2.5 pt-2 pb-0.5 select-none font-display">
                   {section.title}
                 </div>
               )}
 
               {/* Collapsed Mode Divider */}
               {!isOpen && sIdx > 0 && (
-                <div className="w-6 h-px bg-slate-200 my-1 mx-auto" />
+                <div className="w-6 h-px bg-white/20 my-1 mx-auto" />
               )}
 
               <div className={isOpen ? 'space-y-0.5' : 'space-y-1 flex flex-col items-center'}>
@@ -559,10 +559,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => onSelectView(item.id === 'dashboard' ? 'company_dashboard' : item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-all cursor-pointer group relative overflow-hidden ${
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[12.5px] transition-all cursor-pointer group relative overflow-hidden ${
                           isActive
-                            ? 'bg-[#C61D45] text-white shadow-sm shadow-[#C61D45]/20 font-bold'
-                            : 'text-slate-700 hover:text-[#C61D45] hover:bg-[#C61D45]/8 font-medium'
+                            ? 'bg-white/22 text-white font-bold backdrop-blur-xs border border-white/30 shadow-xs'
+                            : 'text-white/90 hover:text-white hover:bg-white/12 font-medium'
                         }`}
                       >
                         {isActive && item.id === 'dashboard' && (
@@ -570,19 +570,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             src="/city-sketch.jpg"
                             alt=""
                             aria-hidden="true"
-                            className="absolute right-0 top-0 h-full w-full object-cover opacity-25 mix-blend-multiply pointer-events-none select-none"
+                            className="absolute right-0 top-0 h-full w-full object-cover opacity-15 mix-blend-screen pointer-events-none select-none"
                           />
                         )}
-                        <div className="flex items-center gap-3 min-w-0 relative z-10">
+                        <div className="flex items-center gap-2.5 min-w-0 relative z-10">
                           <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                            <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-[#C61D45]'}`} />
+                            <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-white' : 'text-white/80 group-hover:text-white'}`} />
                           </div>
                           <span className="truncate leading-normal">{item.label}</span>
                         </div>
 
                         {item.badge && (
-                          <span className={`text-[10.5px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all shadow-2xs shrink-0 ${
-                            isActive ? 'bg-white text-[#C61D45]' : 'bg-[#C61D45] text-white'
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all shadow-2xs shrink-0 ${
+                            isActive ? 'bg-white text-[#C61D45]' : 'bg-white/20 text-white border border-white/30'
                           }`}>
                             {item.hasBell && (
                               <Bell className={`w-2.5 h-2.5 shrink-0 ${isActive ? 'text-[#C61D45]' : 'text-white'} fill-current`} />
@@ -603,15 +603,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       title={item.label}
                       className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer relative ${
                         isActive
-                          ? 'bg-[#C61D45] text-white shadow-sm shadow-[#C61D45]/25 font-bold'
-                          : 'text-slate-400 hover:text-[#C61D45] hover:bg-slate-100'
+                          ? 'bg-white/25 text-white shadow-sm border border-white/35 font-bold'
+                          : 'text-white/70 hover:text-white hover:bg-white/12'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <Icon className="w-4 h-4 text-white" />
                       {(item.badge || item.hasDot) && (
                         <span className="absolute top-0.5 right-0.5 flex h-2.5 w-2.5">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${item.hasDot ? 'bg-amber-400' : 'bg-[#C61D45]'} opacity-75`}></span>
-                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.hasDot ? 'bg-amber-500' : 'bg-[#C61D45]'} border border-white`}></span>
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${item.hasDot ? 'bg-amber-300' : 'bg-white'} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.hasDot ? 'bg-amber-400' : 'bg-white'} border border-[#C61D45]`}></span>
                         </span>
                       )}
                     </button>

@@ -214,10 +214,10 @@ export interface Vendor {
 
 export interface MaterialRequest {
   id: string;
-  request_number: string;
-  project_name: string;
   project?: string;
   project_id?: string;
+  request_number: string;
+  project_name: string;
   needed_by_date: string;
   status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PO_CREATED' | 'REJECTED';
   priority: 'URGENT' | 'NORMAL' | 'LOW';
@@ -364,11 +364,11 @@ export interface Snag {
 
 export interface ApprovalRequest {
   id: string;
+  project?: string;
+  project_id?: string;
   title: string;
   module: string;
   object_type: string;
-  project?: string;
-  project_id?: string;
   amount: number;
   requester_name: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -442,17 +442,39 @@ export interface Quotation {
   created_at?: string;
 }
 
+export interface AssetAllocation {
+  id: string;
+  assigned_to: string;
+  target_type: 'staff' | 'project';
+  staff_name?: string;
+  staff_role?: string;
+  quantity: number;
+  assigned_date: string;
+  return_date?: string;
+  serial_numbers?: string[];
+  remarks?: string;
+}
+
 export interface Asset {
   id: string;
   asset_code: string;
+  serial_no?: string;
   name: string;
   category: string;
+  asset_type?: string;
+  price?: number;
+  total_qty?: number;
+  available_qty?: number;
   ownership: string;
   rental_vendor_name?: string;
   hourly_cost_rate: number;
   current_project_name?: string;
+  assigned_to?: string;
   status: string;
   meter_hours: number;
+  description?: string;
+  created_at?: string;
+  allocations?: AssetAllocation[];
 }
 
 export interface DesignDrawing {
@@ -693,9 +715,9 @@ export interface SoilInvestigationReport {
   investigation_date: string;
   geotechnical_engineer: string;
   safe_bearing_capacity: string;
-  safe_bearing_capacity_kn_m2?: number;
+  safe_bearing_capacity_kn_m2?: number | string;
+  recommended_foundation_depth_m?: number | string;
   water_table_depth: string;
-  recommended_foundation_depth_m?: number;
   binding_status: 'PREPARING' | 'BOUND' | 'DIGITALLY_SIGNED' | 'DELIVERED' | 'SIGNED_AND_STAMPED';
   signed_by?: string;
   signed_date?: string;

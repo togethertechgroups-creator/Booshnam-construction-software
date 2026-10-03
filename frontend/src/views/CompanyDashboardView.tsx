@@ -1037,15 +1037,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
-      {/* Toast Feedback Alert */}
-      {toastMsg && (
-        <div className="fixed top-20 right-8 z-50 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 animate-bounce">
-          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
-
       {/* If isUnderlyingPageView is true, render dedicated Full-Page View (Not a pop-up) */}
       {isUnderlyingPageView ? (
         <div className="space-y-5 animate-in fade-in duration-200">

@@ -62,7 +62,8 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     });
   }, [options]);
 
-  const selectedOption = normalizedOptions.find((o) => o.value === value) || {
+  const selectedOption = normalizedOptions.find((o) => o.value === value) ||
+    normalizedOptions.find((o) => o.value.toLowerCase() === (value || '').toLowerCase()) || {
     label: value || placeholder,
     value: value || '',
   };
@@ -188,7 +189,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
   const dot = selectedOption.dotColor || getStatusDot(selectedOption.value);
 
   return (
-    <div ref={containerRef} className={`relative inline-block w-full ${className}`}>
+    <div ref={containerRef} className={`relative inline-block w-full ${isOpen ? 'z-30' : ''} ${className}`}>
       {/* Trigger Button */}
       <button
         type="button"

@@ -12,7 +12,6 @@ import {
   Copy, Trash2, MoreVertical, Pencil
 } from 'lucide-react';
 import { Project } from '../types';
-import { MOCK_PROJECTS } from '../lib/mockData';
 import { CustomSelect } from '../components/CustomSelect';
 import { AddPartyDrawer, PartyFormData } from '../components/finance/AddPartyDrawer';
 import { AddAccountDrawer, AccountFormData } from '../components/finance/AddAccountDrawer';
@@ -171,6 +170,81 @@ export const INITIAL_BANK_ACCOUNTS: BankAccountRecord[] = [];
 export const INITIAL_TRANSFERS: AccountTransferRecord[] = [];
 export const INITIAL_EXPENSES: ExpenseItem[] = [];
 
+// Helper to robustly extract day, month, year, and timestamp from various date string formats
+export const parseDateParts = (str?: string) => {
+  if (!str) {
+    const now = new Date();
+    return {
+      day: String(now.getDate()).padStart(2, '0'),
+      month: now.toLocaleString('en-GB', { month: 'short' }),
+      year: String(now.getFullYear()),
+      timestamp: now.getTime()
+    };
+  }
+  // Try ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return {
+        day: String(d.getDate()).padStart(2, '0'),
+        month: d.toLocaleString('en-GB', { month: 'short' }),
+        year: String(d.getFullYear()),
+        timestamp: d.getTime()
+      };
+    }
+  }
+  // Try "DD Mon YYYY" or "DD Mon YY"
+  const parts = str.trim().split(/[\s-]+/);
+  if (parts.length >= 3) {
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1];
+    let year = parts[2];
+    if (year.length === 2) year = `20${year}`;
+    const d = new Date(`${day} ${month} ${year}`);
+    const ts = isNaN(d.getTime()) ? Date.now() : d.getTime();
+    return { day, month, year, timestamp: ts };
+  }
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return {
+      day: String(d.getDate()).padStart(2, '0'),
+      month: d.toLocaleString('en-GB', { month: 'short' }),
+      year: String(d.getFullYear()),
+      timestamp: d.getTime()
+    };
+  }
+  const now = new Date();
+  return {
+    day: String(now.getDate()).padStart(2, '0'),
+    month: now.toLocaleString('en-GB', { month: 'short' }),
+    year: String(now.getFullYear()),
+    timestamp: now.getTime()
+  };
+};
+
+export interface UnifiedPartyActivityItem {
+  id: string;
+  source: 'TRANSACTION' | 'PAYMENT_REQUEST' | 'EXPENSE' | 'LEDGER';
+  sourceLabel: string;
+  date: string;
+  day: string;
+  month: string;
+  year: string;
+  timestamp: number;
+  title: string;
+  code: string;
+  projectName?: string;
+  category?: string;
+  mode?: string;
+  referenceNo?: string;
+  notes?: string;
+  amount: number;
+  type: 'INCOME' | 'EXPENSE' | 'PAYMENT_IN' | 'PAYMENT_OUT' | 'SALES_INVOICE';
+  status?: string;
+  badgeText: string;
+  badgeClass: string;
+}
+
 interface AccountsFinanceViewProps {
   projects?: Project[];
   isSidebarOpen?: boolean;
@@ -180,7 +254,7 @@ interface AccountsFinanceViewProps {
 }
 
 export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
-  projects = MOCK_PROJECTS,
+  projects = [],
   isSidebarOpen,
   onToggleSidebar,
   onShowToast,
@@ -202,7 +276,7 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const clean = parsed.filter(p => !['pty-1', 'pty-2', 'pty-3', 'pty-4', 'pty-5', 'pty-6'].includes(p.id));
+          const clean = parsed.filter(p => p.id && !/^pty-([0-9]{1,3})$/.test(p.id));
           if (clean.length !== parsed.length) {
             localStorage.setItem('booshnam_finance_parties', JSON.stringify(clean));
           }
@@ -227,7 +301,13 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_payment_requests');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed.filter(pr => !['pr-1', 'pr-2', 'pr-3', 'pr-4', 'pr-5', 'pr-6'].includes(pr.id));
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(pr => pr.id && !/^pr-([0-9]{1,3})$/.test(pr.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_payment_requests', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
     } catch {}
     return [];
@@ -245,7 +325,13 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       const saved = localStorage.getItem('booshnam_finance_transactions');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed.filter(tx => !['tx-1', 'tx-2', 'tx-3', 'tx-4', 'tx-5'].includes(tx.id));
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(tx => tx.id && !/^tx-([0-9]{1,3})$/.test(tx.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_finance_transactions', JSON.stringify(clean));
+          }
+          return clean;
+        }
       }
     } catch {}
     return [];
@@ -259,42 +345,6 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
 
   // Default initial accounts if none saved (matching Company Cash & Bank Accounts)
   const DEFAULT_BANK_ACCOUNTS: BankAccountRecord[] = [
-    {
-      id: 'ba-hdfc',
-      accountName: 'Booshnam Associates Operations A/c',
-      accountHolderName: 'Booshnam Associates Pvt Ltd',
-      bankName: 'HDFC Bank Ltd',
-      bankAddress: 'Anna Salai Main Branch, Mount Road, Chennai - 600002',
-      accountNumber: '50200048291048',
-      ifscCode: 'HDFC0000123',
-      accountType: 'Current',
-      balance: 0,
-      openingBalance: 0,
-      overdraftLimit: 0,
-      status: 'Active',
-      tallyLedgerName: 'HDFC Operations Ledger',
-      ibanNumber: 'IN45HDFC000012300048291048',
-      upiNumber: 'booshnam.ops@hdfcbank',
-      isPrimary: false
-    },
-    {
-      id: 'ba-sbi',
-      accountName: 'Greenfield Villa Project RERA Escrow',
-      accountHolderName: 'Booshnam Infra Projects LLP',
-      bankName: 'State Bank of India',
-      bankAddress: 'T. Nagar Commercial Branch, South Usman Road, Chennai - 600017',
-      accountNumber: '381920394851',
-      ifscCode: 'SBIN0004021',
-      accountType: 'Escrow',
-      balance: 0,
-      openingBalance: 0,
-      overdraftLimit: 0,
-      status: 'Active',
-      tallyLedgerName: 'SBI - RERA Escrow Ledger',
-      ibanNumber: 'IN89SBIN000402100038192039',
-      upiNumber: 'booshnam.rera@sbi',
-      isPrimary: false
-    },
     {
       id: 'ba-axis',
       accountName: 'Axis Bank Current A/c',
@@ -340,11 +390,16 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       if (savedV4) {
         const parsed = JSON.parse(savedV4);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((b: BankAccountRecord) => ({
-            ...b,
-            balance: (b.balance === 4850000 || b.balance === 12450000 || b.balance === 17583911.51) ? 0 : (b.balance || 0),
-            openingBalance: (b.openingBalance === 4850000 || b.openingBalance === 12450000) ? 0 : (b.openingBalance || 0),
-          }));
+          const filtered = parsed
+            .filter((b: BankAccountRecord) => !['ba-hdfc', 'ba-sbi', 'ba-default-1', 'ba-default-2'].includes(b.id))
+            .map((b: BankAccountRecord) => ({
+              ...b,
+              balance: (b.balance === 4850000 || b.balance === 12450000 || b.balance === 17583911.51) ? 0 : (b.balance || 0),
+              openingBalance: (b.openingBalance === 4850000 || b.openingBalance === 12450000) ? 0 : (b.openingBalance || 0),
+            }));
+          if (filtered.length > 0) {
+            return filtered;
+          }
         }
       }
       // Migrate from v3 or prior
@@ -381,15 +436,42 @@ type DateFilterPresetKey =
   | 'fy_24_25'
   | 'custom';
 
-const DATE_FILTER_PRESET_OPTIONS: { id: DateFilterPresetKey; label: string; start: string; end: string }[] = [
-  { id: 'last_week', label: 'Last Week', start: '2026-09-14', end: '2026-09-20' },
-  { id: 'this_week', label: 'This Week', start: '2026-09-21', end: '2026-09-27' },
-  { id: 'today', label: 'Today', start: '2026-09-26', end: '2026-09-26' },
-  { id: 'this_month', label: 'This Month', start: '2026-09-01', end: '2026-09-30' },
-  { id: 'last_month', label: 'Last Month', start: '2026-08-01', end: '2026-08-31' },
-  { id: 'this_year', label: 'This Year', start: '2026-01-01', end: '2026-12-31' },
-  { id: 'all', label: 'All', start: '', end: '' },
-];
+const getDynamicDatePresets = (): { id: DateFilterPresetKey; label: string; start: string; end: string }[] => {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const toYmd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  const todayStr = toYmd(now);
+
+  const dayOfWeek = now.getDay();
+  const monOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const thisWeekMon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + monOffset);
+  const thisWeekSun = new Date(thisWeekMon.getFullYear(), thisWeekMon.getMonth(), thisWeekMon.getDate() + 6);
+
+  const lastWeekMon = new Date(thisWeekMon.getFullYear(), thisWeekMon.getMonth(), thisWeekMon.getDate() - 7);
+  const lastWeekSun = new Date(lastWeekMon.getFullYear(), lastWeekMon.getMonth(), lastWeekMon.getDate() + 6);
+
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  const thisYearStart = new Date(now.getFullYear(), 0, 1);
+  const thisYearEnd = new Date(now.getFullYear(), 11, 31);
+
+  return [
+    { id: 'today', label: 'Today', start: todayStr, end: todayStr },
+    { id: 'this_week', label: 'This Week', start: toYmd(thisWeekMon), end: toYmd(thisWeekSun) },
+    { id: 'last_week', label: 'Last Week', start: toYmd(lastWeekMon), end: toYmd(lastWeekSun) },
+    { id: 'this_month', label: 'This Month', start: toYmd(thisMonthStart), end: toYmd(thisMonthEnd) },
+    { id: 'last_month', label: 'Last Month', start: toYmd(lastMonthStart), end: toYmd(lastMonthEnd) },
+    { id: 'this_year', label: 'This Year', start: toYmd(thisYearStart), end: toYmd(thisYearEnd) },
+    { id: 'all', label: 'All', start: '', end: '' },
+  ];
+};
+
+const DATE_FILTER_PRESET_OPTIONS: { id: DateFilterPresetKey; label: string; start: string; end: string }[] = getDynamicDatePresets();
 
 const toDisplayDate = (isoStr: string) => {
   if (!isoStr) return '';
@@ -490,7 +572,11 @@ const toIsoDate = (displayStr: string) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter(t => !t.id?.startsWith('st-c-') && !t.id?.startsWith('st-ax-'));
+          const clean = parsed.filter(t => t.id && !t.id.startsWith('st-c-') && !t.id.startsWith('st-ax-') && !/^st-[0-9]{1,3}$/.test(t.id));
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('booshnam_statement_transactions_v1', JSON.stringify(clean));
+          }
+          return clean;
         }
       }
     } catch {}
@@ -622,32 +708,13 @@ const toIsoDate = (displayStr: string) => {
     return statementTransactions.filter(t => {
       if (t.accountId !== statementActiveAccountId) return false;
       if (statementDateFilter === 'all') return true;
-      if (statementDateFilter === 'today') {
-        return t.rawDate === '2026-09-26';
-      }
-      if (statementDateFilter === 'this_week') {
-        return t.rawDate >= '2026-09-21' && t.rawDate <= '2026-09-27';
-      }
-      if (statementDateFilter === 'last_week') {
-        return t.rawDate >= '2026-09-14' && t.rawDate <= '2026-09-20';
-      }
-      if (statementDateFilter === 'this_month') {
-        return t.rawDate >= '2026-09-01' && t.rawDate <= '2026-09-30';
-      }
-      if (statementDateFilter === 'last_month') {
-        return t.rawDate >= '2026-08-01' && t.rawDate <= '2026-08-31';
-      }
-      if (statementDateFilter === 'this_year') {
-        return t.rawDate >= '2026-01-01' && t.rawDate <= '2026-12-31';
+      const opt = DATE_FILTER_PRESET_OPTIONS.find(p => p.id === statementDateFilter);
+      if (opt && opt.start && opt.end) {
+        return t.rawDate >= opt.start && t.rawDate <= opt.end;
       }
       if (statementDateFilter === 'current_fy') {
-        return t.rawDate >= '2026-04-01' && t.rawDate <= '2027-03-31';
-      }
-      if (statementDateFilter === 'fy_25_26') {
-        return t.rawDate >= '2025-04-01' && t.rawDate <= '2026-03-31';
-      }
-      if (statementDateFilter === 'fy_24_25') {
-        return t.rawDate >= '2024-04-01' && t.rawDate <= '2025-03-31';
+        const fyYear = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+        return t.rawDate >= `${fyYear}-04-01` && t.rawDate <= `${fyYear + 1}-03-31`;
       }
       if (statementDateFilter === 'custom') {
         if (customStartDate && t.rawDate < customStartDate) return false;
@@ -736,6 +803,11 @@ const toIsoDate = (displayStr: string) => {
   const [isAddPartyDrawerOpen, setIsAddPartyDrawerOpen] = useState(false);
   const [selectedPartyRecord, setSelectedPartyRecord] = useState<PartyRecord | null>(null);
   const [activePartyOverview, setActivePartyOverview] = useState<PartyRecord | null>(null);
+  const [partyOverviewFilter, setPartyOverviewFilter] = useState<'All' | 'TRANSACTION' | 'PAYMENT_REQUEST' | 'EXPENSE' | 'LEDGER'>('All');
+  const [partyOverviewSearch, setPartyOverviewSearch] = useState('');
+  const [isCustomPartyInput, setIsCustomPartyInput] = useState(false);
+  const [isCustomPRPartyInput, setIsCustomPRPartyInput] = useState(false);
+  const [isCustomExpPartyInput, setIsCustomExpPartyInput] = useState(false);
 
   // Transactions Ledger per Party
   const [partyTransactions, setPartyTransactions] = useState<Record<string, PartyLedgerTransaction[]>>(() => {
@@ -744,9 +816,9 @@ const toIsoDate = (displayStr: string) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          delete parsed['pty-1'];
-          delete parsed['pty-2'];
-          delete parsed['pty-3'];
+          Object.keys(parsed).forEach(k => {
+            if (/^pty-[0-9]{1,3}$/.test(k)) delete parsed[k];
+          });
           return parsed;
         }
       }
@@ -767,7 +839,9 @@ const toIsoDate = (displayStr: string) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
-          delete parsed['pty-1'];
+          Object.keys(parsed).forEach(k => {
+            if (/^pty-[0-9]{1,3}$/.test(k)) delete parsed[k];
+          });
           return parsed;
         }
       }
@@ -1134,11 +1208,13 @@ const toIsoDate = (displayStr: string) => {
 
   // New Payment Request Form
   const [newPartyName, setNewPartyName] = useState('');
-  const [newProjectName, setNewProjectName] = useState(projects[0]?.name || 'Chromepet Project');
+  const [newProjectName, setNewProjectName] = useState(projects[0]?.name || '');
   const [newSubProjectText, setNewSubProjectText] = useState('Against Other');
   const [newCategory, setNewCategory] = useState('Against Other');
   const [newAmount, setNewAmount] = useState('');
-  const [newDate, setNewDate] = useState('13 Jul 26');
+  const [newDate, setNewDate] = useState(() => {
+    return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+  });
   const [newNotes, setNewNotes] = useState('');
   const [newStatus, setNewStatus] = useState<'Pending' | 'Approved' | 'Paid'>('Pending');
 
@@ -1152,7 +1228,7 @@ const toIsoDate = (displayStr: string) => {
   // New Transaction Form
   const [newTxnType, setNewTxnType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [newTxnParty, setNewTxnParty] = useState('');
-  const [newTxnProject, setNewTxnProject] = useState(projects[0]?.name || 'Villa Grande');
+  const [newTxnProject, setNewTxnProject] = useState(projects[0]?.name || '');
   const [newTxnCategory, setNewTxnCategory] = useState('Material Purchase');
   const [newTxnAmount, setNewTxnAmount] = useState('');
   const [newTxnMode, setNewTxnMode] = useState<'NEFT/RTGS' | 'UPI' | 'CHEQUE' | 'CASH'>('NEFT/RTGS');
@@ -1196,7 +1272,7 @@ const toIsoDate = (displayStr: string) => {
     const newReq: PaymentRequestItem = {
       id: `pr-${Date.now()}`,
       requestCode: nextCode,
-      date: newDate || '13 Jul 26',
+      date: newDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       partyName: newPartyName.trim(),
       projectName: newProjectName,
       subProjectText: newSubProjectText || 'Against Other',
@@ -1258,16 +1334,23 @@ const toIsoDate = (displayStr: string) => {
   const handleSaveTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(newTxnAmount);
-    if (!amt || amt <= 0) return;
+    if (!amt || amt <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    const partyName = newTxnParty.trim() || 'Cash Settlement';
+    const txnCode = `TXN-2026-${String(transactions.length + 1).padStart(3, '0')}`;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
     const newTx: FinanceTransaction = {
       id: `tx-${Date.now()}`,
-      txnCode: `TXN-2026-${String(transactions.length + 82).padStart(3, '0')}`,
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      txnCode,
+      date: todayStr,
       type: newTxnType,
-      partyName: newTxnParty || 'Cash Settlement',
-      projectName: newTxnProject,
-      category: newTxnCategory,
+      partyName,
+      projectName: newTxnProject || (projects[0]?.name || 'General Project'),
+      category: newTxnCategory || (newTxnType === 'INCOME' ? 'Client Payment' : 'Vendor Payment'),
       amount: amt,
       mode: newTxnMode,
       referenceNo: newTxnRef || `REF-${Date.now().toString().slice(-6)}`,
@@ -1275,13 +1358,62 @@ const toIsoDate = (displayStr: string) => {
     };
 
     setTransactions(prev => [newTx, ...prev]);
+
+    // Also sync to matching party if found in parties list
+    const matchedParty = parties.find(p => p.name.trim().toLowerCase() === partyName.toLowerCase());
+    if (matchedParty) {
+      const isIncome = newTxnType === 'INCOME';
+      const dParts = parseDateParts(todayStr);
+
+      const partyLedgerEntry: PartyLedgerTransaction = {
+        id: `ptx-${Date.now()}`,
+        partyId: matchedParty.id,
+        partyName: matchedParty.name,
+        date: todayStr,
+        day: dParts.day,
+        month: dParts.month,
+        year: dParts.year,
+        title: `${newTx.category} (${newTx.mode})`,
+        projectName: newTx.projectName,
+        category: newTx.category,
+        notes: `Cashbook Txn: ${txnCode} • Ref: ${newTx.referenceNo}`,
+        amount: amt,
+        type: isIncome ? 'PAYMENT_IN' : 'PAYMENT_OUT'
+      };
+
+      setPartyTransactions(prev => ({
+        ...prev,
+        [matchedParty.id]: [partyLedgerEntry, ...(prev[matchedParty.id] || [])]
+      }));
+
+      // Update party state balance & totalPaid
+      setParties(prev => prev.map(p => {
+        if (p.id === matchedParty.id) {
+          const newPaid = (p.totalPaid || 0) + amt;
+          let newBal = p.balanceDue;
+          if (p.type === 'Client') {
+            newBal = Math.max(0, (p.totalBilled || p.balanceDue || 0) - (isIncome ? amt : 0));
+          } else {
+            newBal = Math.max(0, p.balanceDue - (!isIncome ? amt : 0));
+          }
+          return {
+            ...p,
+            totalPaid: newPaid,
+            balanceDue: newBal,
+            status: newBal === 0 ? 'Settled' : p.status
+          };
+        }
+        return p;
+      }));
+    }
+
     setIsRecordTxnModalOpen(false);
     setNewTxnParty('');
     setNewTxnAmount('');
     setNewTxnRef('');
 
     if (onShowToast) {
-      onShowToast(`Recorded ₹${amt.toLocaleString('en-IN')} ${newTxnType.toLowerCase()} transaction`);
+      onShowToast(`Recorded ₹${amt.toLocaleString('en-IN')} ${newTxnType === 'INCOME' ? 'Inflow' : 'Outflow'} for ${partyName}`);
     }
   };
 
@@ -1292,7 +1424,7 @@ const toIsoDate = (displayStr: string) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const clean = parsed.filter(exp => !['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6'].includes(exp.id));
+          const clean = parsed.filter((exp: ExpenseItem) => exp.id && !/^exp-([0-9]{1,3})$/.test(exp.id) && !['exp-1', 'exp-2', 'exp-3', 'exp-4', 'exp-5', 'exp-6'].includes(exp.id));
           if (clean.length !== parsed.length) {
             localStorage.setItem('booshnam_finance_expenses_v1', JSON.stringify(clean));
           }
@@ -1326,11 +1458,11 @@ const toIsoDate = (displayStr: string) => {
   const [newExpTitle, setNewExpTitle] = useState('');
   const [newExpCategory, setNewExpCategory] = useState<ExpenseItem['category']>('Materials');
   const [newExpAmount, setNewExpAmount] = useState('');
-  const [newExpProject, setNewExpProject] = useState(projects[0]?.name || 'Villa Grande');
+  const [newExpProject, setNewExpProject] = useState(projects[0]?.name || '');
   const [newExpLocation, setNewExpLocation] = useState('');
   const [newExpPayee, setNewExpPayee] = useState('');
   const [newExpAccount, setNewExpAccount] = useState(() => {
-    return bankAccounts[0]?.accountName || 'Booshnam Associates Operations A/c';
+    return bankAccounts[0]?.accountName || 'Primary Bank Account';
   });
   const [newExpMode, setNewExpMode] = useState<ExpenseItem['paymentMode']>('NEFT/RTGS');
   const [newExpDate, setNewExpDate] = useState(() => {
@@ -1507,7 +1639,7 @@ const toIsoDate = (displayStr: string) => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const clean = parsed.filter(tr => !['trf-1', 'trf-2', 'trf-3', 'trf-4', 'trf-5'].includes(tr.id));
+          const clean = parsed.filter((tr: AccountTransferRecord) => tr.id && !/^trf-([0-9]{1,3})$/.test(tr.id) && !['trf-1', 'trf-2', 'trf-3', 'trf-4', 'trf-5'].includes(tr.id));
           if (clean.length !== parsed.length) {
             localStorage.setItem('booshnam_finance_transfers_v1', JSON.stringify(clean));
           }
@@ -1545,7 +1677,7 @@ const toIsoDate = (displayStr: string) => {
   });
   const [newTrfRef, setNewTrfRef] = useState('');
   const [newTrfPurpose, setNewTrfPurpose] = useState('');
-  const [newTrfProject, setNewTrfProject] = useState(projects[0]?.name || 'RO66 - Chromepet Plot Development');
+  const [newTrfProject, setNewTrfProject] = useState(projects[0]?.name || '');
   const [newTrfInitiatedBy, setNewTrfInitiatedBy] = useState('Finance Incharge');
   const [newTrfNotes, setNewTrfNotes] = useState('');
 
@@ -1574,8 +1706,8 @@ const toIsoDate = (displayStr: string) => {
   // Account Transfer Metrics
   const transferMetrics = useMemo(() => {
     const totalTransferred = transfers.filter(t => t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
-    const pettyCashTransfers = transfers.filter(t => t.toAccountId === 'ba-3' && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
-    const interBankTransfers = transfers.filter(t => (Boolean(t.toAccountId)) && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    const pettyCashTransfers = transfers.filter(t => (t.toAccountId === 'cash' || t.toAccountName.toLowerCase().includes('cash')) && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
+    const interBankTransfers = transfers.filter(t => t.toAccountId !== 'cash' && !t.toAccountName.toLowerCase().includes('cash') && t.status === 'Completed').reduce((sum, t) => sum + t.amount, 0);
     return {
       totalTransferred,
       pettyCashTransfers,
@@ -1774,6 +1906,35 @@ const toIsoDate = (displayStr: string) => {
     }
   };
 
+  // Derived pending notifications
+  const pendingPaymentRequests = useMemo(() => {
+    return paymentRequests.filter(r => r.status === 'Pending' || r.status === 'Approved');
+  }, [paymentRequests]);
+
+  const pendingExpenses = useMemo(() => {
+    return expenses.filter(e => e.status === 'Pending Approval');
+  }, [expenses]);
+
+  const totalPendingNotifications = pendingPaymentRequests.length + pendingExpenses.length;
+
+  // Transaction metrics for project cashbook
+  const transactionMetrics = useMemo(() => {
+    const totalInflow = transactions
+      .filter(t => t.type === 'INCOME')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const totalOutflow = transactions
+      .filter(t => t.type === 'EXPENSE')
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const netOperatingCash = totalInflow - totalOutflow;
+    return {
+      totalInflow,
+      totalOutflow,
+      netOperatingCash,
+      inflowCount: transactions.filter(t => t.type === 'INCOME').length,
+      outflowCount: transactions.filter(t => t.type === 'EXPENSE').length,
+    };
+  }, [transactions]);
+
   // Handle Delete / Archive Account
   const handleDeleteAccount = (accId: string, accName: string) => {
     if (bankAccounts.length <= 1) {
@@ -1785,6 +1946,237 @@ const toIsoDate = (displayStr: string) => {
       if (onShowToast) onShowToast(`Account "${accName}" removed`);
     }
   };
+
+  // Helper to dynamically calculate real-time financials for any party across all sources
+  const getPartySummaryFinancials = (p: PartyRecord) => {
+    const pName = p.name.trim().toLowerCase();
+    const pId = p.id;
+
+    // Direct ledger transactions
+    const ledgers = partyTransactions[pId] || [];
+    const ledgerPaidIn = ledgers.filter(t => t.type === 'PAYMENT_IN').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const ledgerPaidOut = ledgers.filter(t => t.type === 'PAYMENT_OUT' || t.type === 'EXPENSE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const ledgerSales = ledgers.filter(t => t.type === 'SALES_INVOICE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    // Cashbook transactions
+    const matchedTxns = transactions.filter(t => t.partyName && t.partyName.trim().toLowerCase() === pName);
+    const txnIncome = matchedTxns.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const txnExpense = matchedTxns.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    // Payment requests
+    const matchedPRs = paymentRequests.filter(r => r.partyName && r.partyName.trim().toLowerCase() === pName);
+    const prPaid = matchedPRs.filter(r => r.status === 'Paid').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const prPending = matchedPRs.filter(r => r.status === 'Pending' || r.status === 'Approved').reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
+    // Expenses
+    const matchedExps = expenses.filter(e => {
+      const payee = (e.partyOrVendorName || '').trim().toLowerCase();
+      const title = (e.title || '').trim().toLowerCase();
+      return payee === pName || title.includes(pName);
+    });
+    const expPaid = matchedExps.filter(e => e.status === 'Paid').reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+    const expPending = matchedExps.filter(e => e.status === 'Pending Approval').reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    const baseOpening = p.totalBilled || p.balanceDue || 0;
+
+    let balanceDue = p.balanceDue;
+    let status: PartyRecord['status'] = p.status;
+    let totalPaid = p.totalPaid || 0;
+    let totalBilled = baseOpening + ledgerSales;
+
+    if (p.type === 'Client') {
+      totalPaid = txnIncome + ledgerPaidIn;
+      balanceDue = Math.max(0, totalBilled - totalPaid);
+      status = balanceDue > 0 ? 'To Receive' : (totalPaid > totalBilled ? 'Advance Received' : 'Settled');
+    } else {
+      // Vendor, Subcontractor, Supplier, Staff
+      totalPaid = txnExpense + prPaid + expPaid + ledgerPaidOut;
+      const additionalBilled = prPending + expPending;
+      totalBilled = Math.max(baseOpening + ledgerSales, totalPaid + additionalBilled);
+      balanceDue = Math.max(0, totalBilled - totalPaid);
+      status = balanceDue > 0 ? 'To Pay' : (totalPaid > totalBilled ? 'Advance Paid' : 'Settled');
+    }
+
+    return {
+      balanceDue,
+      status,
+      totalPaid,
+      totalBilled,
+      totalActivityCount: ledgers.length + matchedTxns.length + matchedPRs.length + matchedExps.length
+    };
+  };
+
+  // Currently viewed live party object
+  const liveActiveParty = useMemo(() => {
+    if (!activePartyOverview) return null;
+    return parties.find(p => p.id === activePartyOverview.id) || activePartyOverview;
+  }, [activePartyOverview, parties]);
+
+  // Aggregated Unified Activities for Live Active Party
+  const unifiedPartyActivities = useMemo<UnifiedPartyActivityItem[]>(() => {
+    if (!liveActiveParty) return [];
+    const pName = liveActiveParty.name.trim().toLowerCase();
+    const pId = liveActiveParty.id;
+    const items: UnifiedPartyActivityItem[] = [];
+
+    // 1. Direct party ledger transactions
+    const directTxns = partyTransactions[pId] || [];
+    directTxns.forEach(t => {
+      items.push({
+        id: t.id,
+        source: 'LEDGER',
+        sourceLabel: 'Party Ledger',
+        date: `${t.day} ${t.month} ${t.year}`,
+        day: t.day,
+        month: t.month,
+        year: t.year,
+        timestamp: parseDateParts(`${t.day} ${t.month} ${t.year}`).timestamp,
+        title: t.title,
+        code: t.id.startsWith('ptx-') ? `LEDGER-${t.id.slice(-5)}` : t.id,
+        projectName: t.projectName,
+        category: t.category,
+        notes: t.notes,
+        amount: t.amount,
+        type: t.type === 'SALES_INVOICE' ? 'SALES_INVOICE' : t.type === 'PAYMENT_IN' ? 'PAYMENT_IN' : 'EXPENSE',
+        status: 'Completed',
+        badgeText: t.type === 'SALES_INVOICE' ? 'Sales Invoice' : t.type === 'PAYMENT_IN' ? 'Payment In' : 'Payment Out',
+        badgeClass: t.type === 'SALES_INVOICE' ? 'bg-blue-50 text-blue-700 border-blue-200' : t.type === 'PAYMENT_IN' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+      });
+    });
+
+    // 2. Project Transactions from Tab 3 (Cashbook)
+    transactions.forEach(tx => {
+      if (tx.partyName && tx.partyName.trim().toLowerCase() === pName) {
+        const d = parseDateParts(tx.date);
+        const isIncome = tx.type === 'INCOME';
+        items.push({
+          id: tx.id,
+          source: 'TRANSACTION',
+          sourceLabel: 'Cashbook Txn',
+          date: tx.date,
+          day: d.day,
+          month: d.month,
+          year: d.year,
+          timestamp: d.timestamp,
+          title: `${tx.category} via ${tx.mode}`,
+          code: tx.txnCode,
+          projectName: tx.projectName,
+          category: tx.category,
+          mode: tx.mode,
+          referenceNo: tx.referenceNo,
+          notes: `Ref: ${tx.referenceNo} • Project: ${tx.projectName}`,
+          amount: tx.amount,
+          type: isIncome ? 'INCOME' : 'EXPENSE',
+          status: tx.status,
+          badgeText: isIncome ? 'Cashbook Inflow' : 'Cashbook Outflow',
+          badgeClass: isIncome ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+        });
+      }
+    });
+
+    // 3. Payment Requests
+    paymentRequests.forEach(pr => {
+      if (pr.partyName && pr.partyName.trim().toLowerCase() === pName) {
+        const d = parseDateParts(pr.date);
+        items.push({
+          id: pr.id,
+          source: 'PAYMENT_REQUEST',
+          sourceLabel: 'Payment Request',
+          date: pr.date,
+          day: d.day,
+          month: d.month,
+          year: d.year,
+          timestamp: d.timestamp,
+          title: `Payment Request: ${pr.subProjectText || pr.category}`,
+          code: pr.requestCode,
+          projectName: pr.projectName,
+          category: pr.category,
+          mode: pr.paymentMode,
+          referenceNo: pr.referenceNo,
+          notes: pr.notes ? `${pr.notes} (${pr.category})` : pr.category,
+          amount: pr.amount,
+          type: 'PAYMENT_OUT',
+          status: pr.status,
+          badgeText: `Payment Request (${pr.status})`,
+          badgeClass: pr.status === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : pr.status === 'Approved' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+        });
+      }
+    });
+
+    // 4. Expenses / Vouchers
+    expenses.forEach(exp => {
+      const payee = (exp.partyOrVendorName || '').trim().toLowerCase();
+      const title = (exp.title || '').trim().toLowerCase();
+      if (payee === pName || title.includes(pName)) {
+        const d = parseDateParts(exp.date);
+        items.push({
+          id: exp.id,
+          source: 'EXPENSE',
+          sourceLabel: 'Expense Voucher',
+          date: exp.date,
+          day: d.day,
+          month: d.month,
+          year: d.year,
+          timestamp: d.timestamp,
+          title: exp.title,
+          code: exp.expenseCode,
+          projectName: exp.projectName,
+          category: exp.category,
+          mode: exp.paymentMode,
+          referenceNo: exp.referenceNo,
+          notes: `Paid From: ${exp.paidFromAccount} • ${exp.category}`,
+          amount: exp.amount,
+          type: 'EXPENSE',
+          status: exp.status,
+          badgeText: `Expense (${exp.status})`,
+          badgeClass: exp.status === 'Paid' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+        });
+      }
+    });
+
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [liveActiveParty, partyTransactions, transactions, paymentRequests, expenses]);
+
+  // Filtered unified activities
+  const filteredPartyActivities = useMemo(() => {
+    return unifiedPartyActivities.filter(item => {
+      if (partyOverviewFilter !== 'All' && item.source !== partyOverviewFilter) return false;
+      if (partyOverviewSearch.trim()) {
+        const q = partyOverviewSearch.toLowerCase();
+        const mCode = item.code.toLowerCase().includes(q);
+        const mTitle = item.title.toLowerCase().includes(q);
+        const mProj = (item.projectName || '').toLowerCase().includes(q);
+        const mNotes = (item.notes || '').toLowerCase().includes(q);
+        const mCat = (item.category || '').toLowerCase().includes(q);
+        if (!mCode && !mTitle && !mProj && !mNotes && !mCat) return false;
+      }
+      return true;
+    });
+  }, [unifiedPartyActivities, partyOverviewFilter, partyOverviewSearch]);
+
+  // Live computed metrics for active party
+  const partyComputedMetrics = useMemo(() => {
+    if (!liveActiveParty) {
+      return {
+        opening: 0,
+        totalReceived: 0,
+        totalPaidOut: 0,
+        totalBilled: 0,
+        currentBalance: 0,
+        status: 'Settled'
+      };
+    }
+    const fin = getPartySummaryFinancials(liveActiveParty);
+    const opening = liveActiveParty.totalBilled || liveActiveParty.balanceDue || 0;
+    return {
+      opening,
+      totalReceived: fin.totalPaid,
+      totalPaidOut: fin.totalPaid,
+      totalBilled: fin.totalBilled,
+      currentBalance: fin.balanceDue,
+      status: fin.status
+    };
+  }, [liveActiveParty, transactions, paymentRequests, expenses, partyTransactions]);
 
   return (
     <div className="min-h-screen bg-white text-slate-800 flex flex-col font-sans">
@@ -1812,7 +2204,9 @@ const toIsoDate = (displayStr: string) => {
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+              {totalPendingNotifications > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
             </button>
 
             {/* Notification Dropdown */}
@@ -1820,17 +2214,31 @@ const toIsoDate = (displayStr: string) => {
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 text-xs">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                   <span className="font-bold text-slate-900">Finance Notifications</span>
-                  <span className="text-[10px] text-slate-400">Mark all read</span>
+                  <span className="text-[10px] text-slate-400">
+                    {totalPendingNotifications} pending
+                  </span>
                 </div>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  <div className="p-2 rounded-lg bg-emerald-50/60 border border-emerald-100">
-                    <p className="font-semibold text-emerald-900">₹5,000 Disbursed to Jd Ekambaram</p>
-                    <p className="text-[10px] text-emerald-700 mt-0.5">Payment Request # - 3 processed via UPI</p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-blue-50/60 border border-blue-100">
-                    <p className="font-semibold text-blue-900">Approval Required</p>
-                    <p className="text-[10px] text-blue-700 mt-0.5">Sri Murugan Steel: ₹82,500 pending final ledger posting</p>
-                  </div>
+                  {totalPendingNotifications === 0 ? (
+                    <div className="p-4 text-center text-slate-400">
+                      <p>No pending notifications</p>
+                    </div>
+                  ) : (
+                    <>
+                      {pendingPaymentRequests.map(req => (
+                        <div key={req.id} className="p-2 rounded-lg bg-amber-50/60 border border-amber-100">
+                          <p className="font-semibold text-amber-900">Payment Request: ₹{req.amount.toLocaleString('en-IN')}</p>
+                          <p className="text-[10px] text-amber-700 mt-0.5">{req.partyName} • {req.requestCode} ({req.status})</p>
+                        </div>
+                      ))}
+                      {pendingExpenses.map(exp => (
+                        <div key={exp.id} className="p-2 rounded-lg bg-blue-50/60 border border-blue-100">
+                          <p className="font-semibold text-blue-900">Expense Approval: ₹{exp.amount.toLocaleString('en-IN')}</p>
+                          <p className="text-[10px] text-blue-700 mt-0.5">{exp.title} • {exp.expenseCode} ({exp.status})</p>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -1977,7 +2385,7 @@ const toIsoDate = (displayStr: string) => {
                     placeholder="Search party, project, voucher..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-8.5 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    className="w-full h-9 pl-10 pr-8 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all shadow-2xs"
                   />
                   {searchQuery && (
                     <button 
@@ -2024,33 +2432,35 @@ const toIsoDate = (displayStr: string) => {
             {/* Filter Popover Modal */}
             {isFilterModalOpen && (
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-lg flex flex-wrap items-center gap-4 text-xs animate-in fade-in duration-150">
-                <div>
+                <div className="min-w-[160px]">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
-                  <select 
+                  <CustomSelect 
                     value={statusFilter}
-                    onChange={(e: any) => setStatusFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
+                    onChange={(val) => setStatusFilter(val as any)}
+                    options={[
+                      { label: 'All Statuses', value: 'All' },
+                      { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
+                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
+                      { label: 'Pending', value: 'Pending', dotColor: 'bg-amber-500' },
+                      { label: 'Rejected', value: 'Rejected', dotColor: 'bg-rose-500' },
+                    ]}
+                    size="sm"
+                    variant="brand"
+                  />
                 </div>
 
-                <div>
+                <div className="min-w-[200px]">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Project</label>
-                  <select 
+                  <CustomSelect 
                     value={selectedProjectFilter}
-                    onChange={(e: any) => setSelectedProjectFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600 max-w-[240px]"
-                  >
-                    <option value="All">All Projects</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedProjectFilter(val)}
+                    options={[
+                      { label: 'All Projects', value: 'All' },
+                      ...projects.map(p => ({ label: p.name, value: p.name })),
+                    ]}
+                    size="sm"
+                    variant="brand"
+                  />
                 </div>
 
                 <div className="flex items-end gap-2 ml-auto pt-4 sm:pt-0">
@@ -2262,52 +2672,55 @@ const toIsoDate = (displayStr: string) => {
                 </div>
 
                 {/* Payment Type dropdown */}
-                <div className="relative">
-                  <select
+                <div className="w-44">
+                  <CustomSelect
                     value={partyPaymentTypeFilter}
-                    onChange={e => setPartyPaymentTypeFilter(e.target.value)}
-                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value="All">Payment Type</option>
-                    <option value="To Receive">To Receive</option>
-                    <option value="To Pay">To Pay</option>
-                    <option value="Advance Paid">Advance Paid</option>
-                    <option value="Advance Received">Advance Received</option>
-                    <option value="Settled">Settled</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    onChange={val => setPartyPaymentTypeFilter(val)}
+                    options={[
+                      { label: 'Payment Type: All', value: 'All' },
+                      { label: 'To Receive', value: 'To Receive', dotColor: 'bg-emerald-500' },
+                      { label: 'To Pay', value: 'To Pay', dotColor: 'bg-rose-500' },
+                      { label: 'Advance Paid', value: 'Advance Paid', dotColor: 'bg-blue-500' },
+                      { label: 'Advance Received', value: 'Advance Received', dotColor: 'bg-indigo-500' },
+                      { label: 'Settled', value: 'Settled', dotColor: 'bg-slate-400' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 {/* Party Type dropdown */}
-                <div className="relative">
-                  <select
+                <div className="w-40">
+                  <CustomSelect
                     value={partyTypeFilter}
-                    onChange={e => setPartyTypeFilter(e.target.value)}
-                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value="All">Party Type</option>
-                    <option value="Client">Client</option>
-                    <option value="Staff">Staff</option>
-                    <option value="Vendor">Vendor</option>
-                    <option value="Subcontractor">Subcontractor</option>
-                    <option value="Supplier">Supplier</option>
-                    <option value="Consultant">Consultant</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    onChange={val => setPartyTypeFilter(val)}
+                    options={[
+                      { label: 'Party Type: All', value: 'All' },
+                      { label: 'Client', value: 'Client' },
+                      { label: 'Staff', value: 'Staff' },
+                      { label: 'Vendor', value: 'Vendor' },
+                      { label: 'Subcontractor', value: 'Subcontractor' },
+                      { label: 'Supplier', value: 'Supplier' },
+                      { label: 'Consultant', value: 'Consultant' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 {/* Active dropdown */}
-                <div className="relative">
-                  <select
+                <div className="w-32">
+                  <CustomSelect
                     value={partyActiveFilter}
-                    onChange={e => setPartyActiveFilter(e.target.value)}
-                    className="h-9 appearance-none bg-white border border-slate-200 rounded-lg pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 cursor-pointer shadow-2xs"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="All">All</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    onChange={val => setPartyActiveFilter(val)}
+                    options={[
+                      { label: 'Active', value: 'Active', dotColor: 'bg-emerald-500' },
+                      { label: 'Inactive', value: 'Inactive', dotColor: 'bg-slate-400' },
+                      { label: 'All Statuses', value: 'All' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 
@@ -2354,69 +2767,87 @@ const toIsoDate = (displayStr: string) => {
                     <p className="text-xs text-slate-400 mt-1">Try resetting the filter criteria or click "+ New Party" to create one.</p>
                   </div>
                 ) : (
-                  filteredParties.map(p => (
-                    <div 
-                      key={p.id}
-                      onClick={() => {
-                        setActivePartyOverview(p);
-                        setSelectedPartyRecord(p);
-                      }}
-                      className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-red-50/20 transition-colors cursor-pointer group"
-                    >
-                      {/* Party Details: Avatar Circle + Name */}
-                      <div className="col-span-6 flex items-center gap-3.5 min-w-0 pr-2">
-                        <div className={`w-8 h-8 rounded-full ${
-                          p.type === 'Staff' 
-                            ? 'bg-red-600' 
-                            : p.type === 'Client'
-                            ? 'bg-slate-900'
-                            : 'bg-red-700'
-                        } text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs select-none`}>
-                          {p.avatarText || p.name.slice(0, 2).toUpperCase()}
+                  filteredParties.map(p => {
+                    const fin = getPartySummaryFinancials(p);
+                    return (
+                      <div 
+                        key={p.id}
+                        onClick={() => {
+                          setActivePartyOverview(p);
+                        }}
+                        className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-red-50/20 transition-colors cursor-pointer group"
+                      >
+                        {/* Party Details: Avatar Circle + Name */}
+                        <div className="col-span-6 flex items-center gap-3.5 min-w-0 pr-2">
+                          <div className={`w-8 h-8 rounded-full ${
+                            p.type === 'Staff' 
+                              ? 'bg-red-600' 
+                              : p.type === 'Client'
+                              ? 'bg-slate-900'
+                              : 'bg-red-700'
+                          } text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs select-none`}>
+                            {p.avatarText || p.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1 truncate">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate block">
+                              {p.name}
+                            </span>
+                            {fin.totalActivityCount > 0 && (
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                {fin.totalActivityCount} {fin.totalActivityCount === 1 ? 'activity' : 'activities'} recorded
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1 truncate">
-                          <span className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate block">
-                            {p.name}
+
+                        {/* Type Badge */}
+                        <div className="col-span-2 text-center">
+                          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
+                            p.type === 'Staff' 
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : p.type === 'Vendor'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : p.type === 'Subcontractor'
+                              ? 'bg-slate-100 text-slate-800 border-slate-300'
+                              : 'bg-slate-50 text-slate-700 border-slate-200'
+                          }`}>
+                            {p.type}
                           </span>
                         </div>
-                      </div>
 
-                      {/* Type Badge */}
-                      <div className="col-span-2 text-center">
-                        <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${
-                          p.type === 'Staff' 
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : p.type === 'Vendor'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : p.type === 'Subcontractor'
-                            ? 'bg-slate-100 text-slate-800 border-slate-300'
-                            : 'bg-slate-50 text-slate-700 border-slate-200'
-                        }`}>
-                          {p.type}
-                        </span>
-                      </div>
+                        {/* Balance (₹) */}
+                        <div className="col-span-2 text-right font-mono font-bold text-xs sm:text-sm text-slate-900">
+                          ₹ {fin.balanceDue.toLocaleString('en-IN')}
+                        </div>
 
-                      {/* Balance (₹) */}
-                      <div className="col-span-2 text-right font-mono font-bold text-xs sm:text-sm text-slate-900">
-                        ₹ {p.balanceDue.toLocaleString('en-IN')}
+                        {/* Status Badge + KYC Action */}
+                        <div className="col-span-2 text-right pr-2 flex items-center justify-end gap-1.5">
+                          <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                            fin.status === 'To Receive'
+                              ? 'border-red-200 bg-red-50 text-red-600'
+                              : fin.status === 'To Pay'
+                              ? 'border-red-300 bg-red-100 text-red-800'
+                              : fin.status === 'Advance Paid' || fin.status === 'Advance Received'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : 'border-slate-200 bg-slate-100 text-slate-600'
+                          }`}>
+                            {fin.status}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPartyRecord(p);
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                            title="View Party Profile & KYC"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-
-                      {/* Status Badge */}
-                      <div className="col-span-2 text-right pr-2">
-                        <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
-                          p.status === 'To Receive'
-                            ? 'border-red-200 bg-red-50 text-red-600'
-                            : p.status === 'To Pay'
-                            ? 'border-red-300 bg-red-100 text-red-800'
-                            : p.status === 'Advance Paid' || p.status === 'Advance Received'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-slate-200 bg-slate-100 text-slate-600'
-                        }`}>
-                          {p.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -2429,17 +2860,13 @@ const toIsoDate = (displayStr: string) => {
         {activeTab === 'party' && activePartyOverview && (
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col min-h-[720px]">
             {(() => {
-              const summary = partySummaries[activePartyOverview.id] || {
-                opening: 0,
-                partyPaid: 0,
-                salesInvoice: activePartyOverview.balanceDue
-              };
-              const currentBalance = Math.max(0, summary.salesInvoice - summary.partyPaid);
-              const txns = partyTransactions[activePartyOverview.id] || [];
+              const currentParty = liveActiveParty || activePartyOverview;
+              const isClient = currentParty.type === 'Client';
+              const metrics = partyComputedMetrics;
 
               return (
                 <>
-                  {/* 1. Header Bar matching Image: ArrowLeft, Avatar, Party Name, Client Badge, Amount, To Receive, Download */}
+                  {/* 1. Header Bar matching Image: ArrowLeft, Avatar, Party Name, Type Badge, Amount, Status, Download */}
                   <div className="px-6 py-4.5 bg-white border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
                     {/* Left: Back button, Avatar, Name & Party Switcher, Type Badge */}
                     <div className="flex items-center gap-3.5">
@@ -2452,34 +2879,43 @@ const toIsoDate = (displayStr: string) => {
                         <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
                       </button>
 
-                      <div className={`w-11 h-11 rounded-full ${activePartyOverview.avatarColor || 'bg-[#1E40AF]'} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs select-none`}>
-                        {activePartyOverview.avatarText || activePartyOverview.name.slice(0, 2).toUpperCase()}
+                      <div className={`w-11 h-11 rounded-full ${currentParty.avatarColor || 'bg-[#1E40AF]'} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-2xs select-none`}>
+                        {currentParty.avatarText || currentParty.name.slice(0, 2).toUpperCase()}
                       </div>
 
                       <div className="flex items-center gap-2.5">
-                        <div className="relative group">
-                          <select
-                            value={activePartyOverview.id}
-                            onChange={e => {
-                              const found = parties.find(p => p.id === e.target.value);
+                        <div className="min-w-[180px]">
+                          <CustomSelect
+                            value={currentParty.id}
+                            onChange={(val) => {
+                              const found = parties.find(p => p.id === val);
                               if (found) {
                                 setActivePartyOverview(found);
-                                setSelectedPartyRecord(found);
                               }
                             }}
-                            className="text-base sm:text-lg font-bold text-slate-900 tracking-tight bg-transparent pr-5.5 cursor-pointer focus:outline-none appearance-none hover:text-red-600 transition-colors"
-                            title="Click to switch between parties"
-                          >
-                            {parties.map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-red-600" />
+                            options={parties.map(p => ({ label: p.name, value: p.id, badge: p.type }))}
+                            triggerClassName="border-0 bg-transparent shadow-none hover:bg-slate-100 text-sm sm:text-base font-bold text-slate-900 px-2.5 py-1 h-9"
+                            variant="brand"
+                          />
                         </div>
 
-                        <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded bg-[#EFF6FF] text-[#2563EB]">
-                          {activePartyOverview.type || 'Client'}
+                        <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                          isClient
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : currentParty.type === 'Staff'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : currentParty.type === 'Vendor'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                          {currentParty.type || 'Party'}
                         </span>
+
+                        {currentParty.phone && (
+                          <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
+                            • {currentParty.phone}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -2487,10 +2923,14 @@ const toIsoDate = (displayStr: string) => {
                     <div className="flex items-center gap-4">
                       <div className="text-right">
                         <div className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
-                          ₹ {currentBalance.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: currentBalance % 1 !== 0 ? 2 : 0 })}
+                          ₹ {metrics.currentBalance.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: metrics.currentBalance % 1 !== 0 ? 2 : 0 })}
                         </div>
-                        <div className="text-xs font-semibold text-[#E11D48] leading-none mt-0.5">
-                          {currentBalance > 0 ? (activePartyOverview.status || 'To Receive') : 'Settled'}
+                        <div className={`text-xs font-semibold leading-none mt-0.5 ${
+                          metrics.currentBalance > 0
+                            ? isClient ? 'text-blue-600' : 'text-rose-600'
+                            : 'text-emerald-600'
+                        }`}>
+                          {metrics.status}
                         </div>
                       </div>
 
@@ -2498,140 +2938,257 @@ const toIsoDate = (displayStr: string) => {
                         type="button"
                         onClick={handleExportPartyLedger}
                         className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                        title="Download Ledger CSV"
+                        title="Download Party Statement CSV"
                       >
                         <Download className="w-5 h-5 stroke-[2]" />
                       </button>
                     </div>
                   </div>
 
-                  {/* 2. Opening Balance Subtitle matching Image */}
-                  <div className="px-6 py-2.5 bg-white border-y border-slate-200/80 text-xs text-slate-700 select-none">
-                    Opening: <span className="font-semibold text-slate-800">₹ {summary.opening.toLocaleString('en-IN')}</span>
+                  {/* 2. Opening Balance Subtitle */}
+                  <div className="px-6 py-2.5 bg-slate-50/60 border-y border-slate-200/80 text-xs text-slate-600 select-none flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      Opening Balance: <span className="font-semibold text-slate-900">₹ {metrics.opening.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-slate-500">
+                      <span>Total Invoiced/Billed: <strong className="text-slate-800">₹ {metrics.totalBilled.toLocaleString('en-IN')}</strong></span>
+                      <span>•</span>
+                      <span>Total Settled/Paid: <strong className="text-emerald-700">₹ {(isClient ? metrics.totalReceived : metrics.totalPaidOut).toLocaleString('en-IN')}</strong></span>
+                    </div>
                   </div>
 
-                  {/* 3. Metric Row: User Icon, Party Paid, Sales Invoice matching Image */}
-                  <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center gap-12 select-none">
-                    <div className="text-red-600 flex items-center justify-center">
+                  {/* 3. Metric Row: User Icon, Party Paid, Invoiced / Claims */}
+                  <div className="px-6 py-3.5 bg-white border-b border-slate-200 flex items-center gap-8 sm:gap-12 select-none overflow-x-auto">
+                    <div className="text-red-600 flex items-center justify-center shrink-0">
                       <User className="w-6 h-6 stroke-[1.75]" />
                     </div>
 
-                    <div className="relative pb-1">
-                      <div className="text-xs font-semibold text-red-600">Party Paid</div>
-                      <div className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
-                        ₹ {summary.partyPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div className="relative pb-1 shrink-0">
+                      <div className="text-xs font-semibold text-emerald-700">
+                        {isClient ? 'Total Received From Party' : 'Total Paid Out to Party'}
                       </div>
-                      <div className="absolute -bottom-4 left-0 right-0 h-1 bg-red-600 rounded-t-sm" />
+                      <div className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
+                        ₹ {(isClient ? metrics.totalReceived : metrics.totalPaidOut).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="absolute -bottom-3.5 left-0 right-0 h-1 bg-emerald-600 rounded-t-sm" />
                     </div>
 
-                    <div>
-                      <div className="text-xs font-semibold text-slate-500">Sales Invoice</div>
+                    <div className="shrink-0">
+                      <div className="text-xs font-semibold text-slate-500">
+                        {isClient ? 'Sales Invoices & Billing' : 'Total Invoiced / Claims'}
+                      </div>
                       <div className="text-base sm:text-lg font-bold text-slate-900 tracking-tight mt-0.5">
-                        ₹ {summary.salesInvoice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹ {metrics.totalBilled.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      <div className="text-xs font-semibold text-slate-500">Total Activities Tracked</div>
+                      <div className="text-base sm:text-lg font-bold text-slate-800 tracking-tight mt-0.5">
+                        {unifiedPartyActivities.length} Records
                       </div>
                     </div>
                   </div>
 
-                  {/* 4. Chronological Transaction Entries matching Image */}
+                  {/* 4. Filter Toolbar: All, Cashbook, Payment Requests, Expenses, Ledger + Search */}
+                  <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                      {[
+                        { key: 'All', label: 'All Activities', count: unifiedPartyActivities.length },
+                        { key: 'TRANSACTION', label: 'Cashbook Txns', count: unifiedPartyActivities.filter(a => a.source === 'TRANSACTION').length },
+                        { key: 'PAYMENT_REQUEST', label: 'Payment Requests', count: unifiedPartyActivities.filter(a => a.source === 'PAYMENT_REQUEST').length },
+                        { key: 'EXPENSE', label: 'Expenses', count: unifiedPartyActivities.filter(a => a.source === 'EXPENSE').length },
+                        { key: 'LEDGER', label: 'Invoices & Ledger', count: unifiedPartyActivities.filter(a => a.source === 'LEDGER').length },
+                      ].map(tab => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setPartyOverviewFilter(tab.key as any)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                            partyOverviewFilter === tab.key
+                              ? 'bg-slate-900 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>{tab.label}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                            partyOverviewFilter === tab.key ? 'bg-white/20 text-white' : 'bg-white text-slate-600'
+                          }`}>
+                            {tab.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search voucher, project, notes..."
+                        value={partyOverviewSearch}
+                        onChange={e => setPartyOverviewSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5. Chronological Unified Activity Timeline */}
                   <div className="flex-1 overflow-y-auto divide-y divide-slate-100 min-h-[380px]">
-                    {txns.length === 0 ? (
+                    {filteredPartyActivities.length === 0 ? (
                       <div className="py-20 text-center text-slate-400">
                         <FileText className="w-10 h-10 mx-auto text-slate-300 mb-2 stroke-1" />
-                        <p className="text-sm font-semibold text-slate-700">No transactions recorded yet</p>
-                        <p className="text-xs text-slate-400 mt-1">Click "+ Payment In" or "+ Create Transaction" to add the first entry for {activePartyOverview.name}.</p>
+                        <p className="text-sm font-semibold text-slate-700">No activity records found</p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {partyOverviewFilter !== 'All' || partyOverviewSearch 
+                            ? 'No matches for current filter/search. Try resetting filters.'
+                            : `Click any action below to record a transaction, payment request, or invoice for ${currentParty.name}.`}
+                        </p>
                       </div>
                     ) : (
-                      txns.map(t => (
-                        <div
-                          key={t.id}
-                          className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/60 transition-colors"
-                        >
-                          {/* Date Block: Day, Month, Year vertically */}
-                          <div className="w-12 shrink-0 text-center select-none mr-4">
-                            <div className="text-base font-bold text-slate-800 leading-tight">{t.day}</div>
-                            <div className="text-xs font-medium text-slate-600 leading-tight">{t.month}</div>
-                            <div className="text-xs text-slate-500 leading-tight">{t.year}</div>
-                          </div>
-
-                          {/* Middle Content */}
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold text-slate-800 leading-snug">
-                              {t.title}
+                      filteredPartyActivities.map(item => {
+                        const isInflow = item.type === 'INCOME' || item.type === 'PAYMENT_IN';
+                        return (
+                          <div
+                            key={item.id}
+                            className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/70 transition-colors"
+                          >
+                            {/* Date Block: Day, Month, Year vertically */}
+                            <div className="w-12 shrink-0 text-center select-none mr-4">
+                              <div className="text-base font-bold text-slate-800 leading-tight">{item.day}</div>
+                              <div className="text-xs font-semibold text-slate-600 leading-tight uppercase">{item.month}</div>
+                              <div className="text-[11px] text-slate-400 leading-tight">{item.year}</div>
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 mt-1 flex-wrap">
-                              <span>{activePartyOverview.name}</span>
-                              <span className="text-slate-400 font-normal">&gt;</span>
-                              {t.projectName ? (
-                                <span className="text-slate-900 font-medium">{t.projectName}</span>
-                              ) : null}
-                              {t.type === 'PAYMENT_IN' && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 ml-1">
-                                  Payment In
+
+                            {/* Middle Content */}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-slate-900 leading-snug">
+                                  {item.title}
                                 </span>
+                                <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                  {item.code}
+                                </span>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${item.badgeClass}`}>
+                                  {item.badgeText}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 text-xs text-slate-600 mt-1 flex-wrap">
+                                <span className="font-semibold text-slate-800">{currentParty.name}</span>
+                                {item.projectName && (
+                                  <>
+                                    <span className="text-slate-400 font-normal">&gt;</span>
+                                    <span className="text-slate-700 font-medium">{item.projectName}</span>
+                                  </>
+                                )}
+                                {item.mode && (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-slate-500 text-[11px]">{item.mode}</span>
+                                  </>
+                                )}
+                                {item.referenceNo && (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-slate-500 text-[11px]">Ref: {item.referenceNo}</span>
+                                  </>
+                                )}
+                              </div>
+
+                              {item.notes && (
+                                <div className="text-[11px] text-slate-500 mt-0.5 italic">
+                                  {item.notes}
+                                </div>
                               )}
                             </div>
-                            {t.notes && (
-                              <div className="text-[11px] text-slate-500 mt-0.5">
-                                {t.notes}
-                              </div>
-                            )}
-                          </div>
 
-                          {/* Right Amount & Actions */}
-                          <div className="text-right shrink-0 ml-4 flex flex-col items-end">
-                            <div className={`text-sm sm:text-base font-bold ${t.type === 'PAYMENT_IN' ? 'text-[#0D824B]' : 'text-slate-900'}`}>
-                              {t.type === 'PAYMENT_IN' ? '+ ' : ''}₹ {t.amount.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: t.amount % 1 !== 0 ? 2 : 0 })}
+                            {/* Right Amount & Actions */}
+                            <div className="text-right shrink-0 ml-4 flex flex-col items-end">
+                              <div className={`text-sm sm:text-base font-bold ${
+                                isInflow ? 'text-[#0D824B]' : 'text-slate-900'
+                              }`}>
+                                {isInflow ? '+ ' : '- '}₹ {item.amount.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: item.amount % 1 !== 0 ? 2 : 0 })}
+                              </div>
+
+                              {item.type === 'SALES_INVOICE' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    exportInvoiceToPDF({
+                                      invoice_number: item.title.includes('#') ? item.title.split('#')[1].trim() : (item.code || 'INV-2026-001'),
+                                      invoice_date: `${item.year}-${item.month}-${item.day}`,
+                                      party_name: currentParty.name,
+                                      party_phone: currentParty.phone,
+                                      party_address: currentParty.address,
+                                      party_gst: currentParty.gstin || currentParty.panNumber,
+                                      project_name: item.projectName,
+                                      total_amount: item.amount,
+                                      notes: item.notes || 'Civil & Structural Construction Services / Milestone Execution',
+                                    });
+                                    if (onShowToast) onShowToast(`Generated Tax Invoice for ${currentParty.name}`);
+                                  }}
+                                  className="mt-1 px-2 py-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md transition-colors cursor-pointer"
+                                  title="Download Tax Invoice PDF with customized Terms & Conditions"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  <span>Invoice PDF</span>
+                                </button>
+                              )}
                             </div>
-                            {t.type === 'SALES_INVOICE' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  exportInvoiceToPDF({
-                                    invoice_number: t.title.includes('#') ? t.title.split('#')[1].trim() : (t.title || 'INV-2026-001'),
-                                    invoice_date: `${t.year}-${t.month}-${t.day}`,
-                                    party_name: activePartyOverview.name,
-                                    party_phone: activePartyOverview.phone,
-                                    party_address: activePartyOverview.address,
-                                    party_gst: activePartyOverview.gstin || activePartyOverview.panNumber,
-                                    project_name: t.projectName,
-                                    total_amount: t.amount,
-                                    notes: t.notes || 'Civil & Structural Construction Services / Milestone Execution',
-                                  });
-                                  if (onShowToast) onShowToast(`Generated Tax Invoice for ${activePartyOverview.name}`);
-                                }}
-                                className="mt-1 px-2 py-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md transition-colors cursor-pointer"
-                                title="Download Tax Invoice PDF with customized Terms & Conditions"
-                              >
-                                <Download className="w-3 h-3" />
-                                <span>Invoice PDF</span>
-                              </button>
-                            )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
 
-                  {/* 5. Sticky Bottom Action Bar matching Image */}
-                  <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-3.5 flex items-center justify-between shadow-xs">
-                    <button
-                      type="button"
-                      onClick={() => setIsPaymentInModalOpen(true)}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-[#0D824B] hover:bg-[#0A6C3E] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4 stroke-[3]" />
-                      <span>Payment In</span>
-                    </button>
+                  {/* 6. Sticky Bottom Action Bar with 4 Comprehensive Actions */}
+                  <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsPaymentInModalOpen(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-[#0D824B] hover:bg-[#0A6C3E] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Payment In (Receipt)</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatePartyTxnModalOpen(true)}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4 stroke-[3]" />
-                      <span>Create Transaction</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewTxnParty(currentParty.name);
+                          setIsRecordTxnModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>Record Cashbook Txn</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewPartyName(currentParty.name);
+                          setIsNewRequestModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Payment Request</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatePartyTxnModalOpen(true)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Create Invoice / Ledger</span>
+                      </button>
+                    </div>
                   </div>
                 </>
               );
@@ -2665,18 +3222,22 @@ const toIsoDate = (displayStr: string) => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total Inflow (Receipts)</span>
-                <div className="text-xl font-bold text-emerald-600 mt-1">₹ 17,50,000</div>
-                <span className="text-[10px] text-slate-400">Client milestone receipts</span>
+                <div className="text-xl font-bold text-emerald-600 mt-1">₹ {transactionMetrics.totalInflow.toLocaleString('en-IN')}</div>
+                <span className="text-[10px] text-slate-400">{transactionMetrics.inflowCount} recorded receipts</span>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Total Outflow (Expenses)</span>
-                <div className="text-xl font-bold text-red-600 mt-1">₹ 1,92,000</div>
-                <span className="text-[10px] text-slate-400">Material & vendor payments</span>
+                <div className="text-xl font-bold text-red-600 mt-1">₹ {transactionMetrics.totalOutflow.toLocaleString('en-IN')}</div>
+                <span className="text-[10px] text-slate-400">{transactionMetrics.outflowCount} recorded disbursements</span>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
                 <span className="text-xs font-semibold text-slate-500">Net Operating Cash Balance</span>
-                <div className="text-xl font-bold text-red-600 mt-1">₹ 15,58,000</div>
-                <span className="text-[10px] text-emerald-600 font-semibold">Positive Cashflow</span>
+                <div className={`text-xl font-bold mt-1 ${transactionMetrics.netOperatingCash >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
+                  ₹ {transactionMetrics.netOperatingCash.toLocaleString('en-IN')}
+                </div>
+                <span className={`text-[10px] font-semibold ${transactionMetrics.netOperatingCash >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {transactionMetrics.netOperatingCash >= 0 ? 'Positive Cashflow' : 'Operating Deficit'}
+                </span>
               </div>
             </div>
 
@@ -2695,27 +3256,39 @@ const toIsoDate = (displayStr: string) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions.map(t => (
-                    <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3 px-4 text-slate-600">{t.date}</td>
-                      <td className="py-3 px-4 font-medium text-slate-800">{t.txnCode}</td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
-                          t.type === 'INCOME' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {t.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{t.partyName}</td>
-                      <td className="py-3 px-4 text-slate-600">{t.category}</td>
-                      <td className="py-3 px-4 text-slate-500">{t.mode}</td>
-                      <td className={`py-3 px-4 text-right font-bold ${
-                        t.type === 'INCOME' ? 'text-emerald-700' : 'text-slate-900'
-                      }`}>
-                        {t.type === 'INCOME' ? '+' : '-'} ₹{t.amount.toLocaleString('en-IN')}
+                  {transactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+                          <Receipt className="w-5 h-5" />
+                        </div>
+                        <p className="font-semibold text-slate-700">No project transactions recorded</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Click "Record Transaction" to record incoming receipts or disbursements.</p>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    transactions.map(t => (
+                      <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 text-slate-600">{t.date}</td>
+                        <td className="py-3 px-4 font-medium text-slate-800">{t.txnCode}</td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
+                            t.type === 'INCOME' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                          }`}>
+                            {t.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-semibold text-slate-900">{t.partyName}</td>
+                        <td className="py-3 px-4 text-slate-600">{t.category}</td>
+                        <td className="py-3 px-4 text-slate-500">{t.mode}</td>
+                        <td className={`py-3 px-4 text-right font-bold ${
+                          t.type === 'INCOME' ? 'text-emerald-700' : 'text-slate-900'
+                        }`}>
+                          {t.type === 'INCOME' ? '+' : '-'} ₹{t.amount.toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2731,72 +3304,72 @@ const toIsoDate = (displayStr: string) => {
             {/* 1. Four Summary KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Card 1: Total Expenses */}
-              <div className="bg-[#FFF1F2] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FFE4E6] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#E11D48] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#E11D48] flex items-center justify-center shrink-0">
-                    <ArrowUp className="w-3 h-3 text-[#E11D48] stroke-[2.5]" />
+              <div className="bg-[#FFF1F2] rounded-xl p-5 min-h-[115px] flex flex-col justify-between border border-[#FFE4E6] shadow-2xs hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-white border border-[#E11D48]/30 flex items-center justify-center shrink-0 shadow-2xs">
+                    <ArrowUp className="w-3.5 h-3.5 text-[#E11D48] stroke-[2.5]" />
                   </div>
-                  <span className="tracking-tight">Total Operational Expenses</span>
+                  <span className="tracking-tight text-[#E11D48]">Total Operational Expenses</span>
                 </div>
-                <div className="mt-2.5">
-                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
                     ₹ {expenseMetrics.total.toLocaleString('en-IN')}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
                     {expenses.length} vouchers logged
                   </span>
                 </div>
               </div>
 
               {/* Card 2: Materials & Procurement */}
-              <div className="bg-[#EFF6FF] rounded-2xl p-4.5 flex flex-col justify-between border border-[#DBEAFE] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#2563EB] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#2563EB] flex items-center justify-center shrink-0">
-                    <Building2 className="w-3 h-3 text-[#2563EB]" />
+              <div className="bg-[#EFF6FF] rounded-xl p-5 min-h-[115px] flex flex-col justify-between border border-[#DBEAFE] shadow-2xs hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-white border border-[#2563EB]/30 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Building2 className="w-3.5 h-3.5 text-[#2563EB]" />
                   </div>
-                  <span className="tracking-tight">Direct Materials</span>
+                  <span className="tracking-tight text-[#2563EB]">Direct Materials</span>
                 </div>
-                <div className="mt-2.5">
-                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
                     ₹ {expenseMetrics.materials.toLocaleString('en-IN')}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
                     Cement, Steel, Aggregates
                   </span>
                 </div>
               </div>
 
               {/* Card 3: Labour & Machinery */}
-              <div className="bg-[#FFFBEB] rounded-2xl p-4.5 flex flex-col justify-between border border-[#FEF3C7] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#D97706] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#D97706] flex items-center justify-center shrink-0">
-                    <HardHat className="w-3 h-3 text-[#D97706]" />
+              <div className="bg-[#FFFBEB] rounded-xl p-5 min-h-[115px] flex flex-col justify-between border border-[#FEF3C7] shadow-2xs hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-white border border-[#D97706]/30 flex items-center justify-center shrink-0 shadow-2xs">
+                    <HardHat className="w-3.5 h-3.5 text-[#D97706]" />
                   </div>
-                  <span className="tracking-tight">Labour & Machinery</span>
+                  <span className="tracking-tight text-[#D97706]">Labour & Machinery</span>
                 </div>
-                <div className="mt-2.5">
-                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
                     ₹ {expenseMetrics.labourAndMachinery.toLocaleString('en-IN')}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
                     Daily wages, JCB & Crane hire
                   </span>
                 </div>
               </div>
 
               {/* Card 4: Site Petty Cash & Sundry */}
-              <div className="bg-[#ECFDF5] rounded-2xl p-4.5 flex flex-col justify-between border border-[#D1FAE5] shadow-2xs">
-                <div className="flex items-center gap-2 text-[#059669] font-semibold text-xs">
-                  <div className="w-5 h-5 rounded-full border border-[#059669] flex items-center justify-center shrink-0">
-                    <Wallet className="w-3 h-3 text-[#059669]" />
+              <div className="bg-[#ECFDF5] rounded-xl p-5 min-h-[115px] flex flex-col justify-between border border-[#D1FAE5] shadow-2xs hover:shadow-xs transition-all">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wide">
+                  <div className="w-6 h-6 rounded-full bg-white border border-[#059669]/30 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Wallet className="w-3.5 h-3.5 text-[#059669]" />
                   </div>
-                  <span className="tracking-tight">Site Petty Cash & Utilities</span>
+                  <span className="tracking-tight text-[#059669]">Site Petty Cash & Utilities</span>
                 </div>
-                <div className="mt-2.5">
-                  <div className="text-xl font-bold text-slate-900 tracking-tight">
+                <div className="mt-3">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
                     ₹ {expenseMetrics.sitePetty.toLocaleString('en-IN')}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
+                  <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
                     Fuel, water tankers, permits
                   </span>
                 </div>
@@ -2804,17 +3377,17 @@ const toIsoDate = (displayStr: string) => {
             </div>
 
             {/* 2. Action & Filter Toolbar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
               {/* Left filters: Search, Filter Popover, Quick Category Pills */}
-              <div className="flex items-center gap-2 flex-wrap flex-1">
+              <div className="flex items-center gap-2.5 flex-wrap flex-1">
                 {/* Filter button */}
                 <button
                   type="button"
                   onClick={() => setIsExpenseFilterOpen(!isExpenseFilterOpen)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`h-9 px-3.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
                     expenseStatusFilter !== 'All' || expenseCategoryFilter !== 'All' || expenseProjectFilter !== 'All'
                       ? 'border-red-600 text-red-600 bg-red-50/60'
-                      : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
+                      : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs'
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -2824,22 +3397,23 @@ const toIsoDate = (displayStr: string) => {
                   )}
                 </button>
 
-                {/* Search input */}
-                <div className="relative min-w-[200px] sm:min-w-[260px]">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                {/* Search input with proper padding and icon alignment */}
+                <div className="relative min-w-[240px] sm:min-w-[280px] lg:w-80">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   <input
                     type="text"
                     placeholder="Search voucher, vendor, project, title..."
                     value={expenseSearchQuery}
                     onChange={e => setExpenseSearchQuery(e.target.value)}
-                    className="w-full pl-8.5 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    className="w-full h-9 pl-10 pr-8 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all shadow-2xs"
                   />
                   {expenseSearchQuery && (
                     <button 
+                      type="button"
                       onClick={() => setExpenseSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -2851,7 +3425,7 @@ const toIsoDate = (displayStr: string) => {
                       key={cat}
                       type="button"
                       onClick={() => setExpenseCategoryFilter(cat)}
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      className={`h-9 text-xs font-semibold px-3 rounded-lg transition-all cursor-pointer flex items-center justify-center shrink-0 ${
                         expenseCategoryFilter === cat
                           ? 'bg-red-600 text-white shadow-2xs'
                           : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -2864,11 +3438,11 @@ const toIsoDate = (displayStr: string) => {
               </div>
 
               {/* Right: Export & Record Expense Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={handleExportExpenses}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+                  className="h-9 flex items-center gap-1.5 px-3.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
                   title="Export to CSV"
                 >
                   <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -2883,7 +3457,7 @@ const toIsoDate = (displayStr: string) => {
                     }
                     setIsRecordExpenseModalOpen(true);
                   }}
-                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  className="h-9 flex items-center justify-center gap-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   <span>Record Expense</span>
@@ -2894,52 +3468,56 @@ const toIsoDate = (displayStr: string) => {
             {/* Filter Popover Container */}
             {isExpenseFilterOpen && (
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-lg flex flex-wrap items-center gap-4 text-xs animate-in fade-in duration-150">
-                <div>
+                <div className="min-w-[150px]">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
-                  <select
+                  <CustomSelect
                     value={expenseStatusFilter}
-                    onChange={(e: any) => setExpenseStatusFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="Paid">Paid</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending Approval">Pending Approval</option>
-                    <option value="Rejected">Rejected</option>
-                  </select>
+                    onChange={(val) => setExpenseStatusFilter(val as any)}
+                    options={[
+                      { label: 'All Statuses', value: 'All' },
+                      { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
+                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
+                      { label: 'Pending Approval', value: 'Pending Approval', dotColor: 'bg-amber-500' },
+                      { label: 'Rejected', value: 'Rejected', dotColor: 'bg-rose-500' },
+                    ]}
+                    size="sm"
+                    variant="brand"
+                  />
                 </div>
 
-                <div>
+                <div className="min-w-[180px]">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category</label>
-                  <select
+                  <CustomSelect
                     value={expenseCategoryFilter}
-                    onChange={(e: any) => setExpenseCategoryFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600"
-                  >
-                    <option value="All">All Categories</option>
-                    <option value="Materials">Materials</option>
-                    <option value="Labour & Daily Wages">Labour & Daily Wages</option>
-                    <option value="Machinery & Equipment">Machinery & Equipment</option>
-                    <option value="Site Petty Cash">Site Petty Cash</option>
-                    <option value="Subcontractor">Subcontractor</option>
-                    <option value="Fuel & Logistics">Fuel & Logistics</option>
-                    <option value="Safety & Compliance">Safety & Compliance</option>
-                    <option value="Utilities & Admin">Utilities & Admin</option>
-                  </select>
+                    onChange={(val) => setExpenseCategoryFilter(val)}
+                    options={[
+                      { label: 'All Categories', value: 'All' },
+                      { label: 'Materials', value: 'Materials' },
+                      { label: 'Labour & Daily Wages', value: 'Labour & Daily Wages' },
+                      { label: 'Machinery & Equipment', value: 'Machinery & Equipment' },
+                      { label: 'Site Petty Cash', value: 'Site Petty Cash' },
+                      { label: 'Subcontractor', value: 'Subcontractor' },
+                      { label: 'Fuel & Logistics', value: 'Fuel & Logistics' },
+                      { label: 'Safety & Compliance', value: 'Safety & Compliance' },
+                      { label: 'Utilities & Admin', value: 'Utilities & Admin' },
+                    ]}
+                    size="sm"
+                    variant="brand"
+                  />
                 </div>
 
-                <div>
+                <div className="min-w-[200px]">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Project</label>
-                  <select
+                  <CustomSelect
                     value={expenseProjectFilter}
-                    onChange={(e: any) => setExpenseProjectFilter(e.target.value)}
-                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-red-600 max-w-[240px]"
-                  >
-                    <option value="All">All Projects</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setExpenseProjectFilter(val)}
+                    options={[
+                      { label: 'All Projects', value: 'All' },
+                      ...projects.map(p => ({ label: p.name, value: p.name })),
+                    ]}
+                    size="sm"
+                    variant="brand"
+                  />
                 </div>
 
                 <div className="flex items-end gap-2 ml-auto pt-4 sm:pt-0">
@@ -3148,7 +3726,7 @@ const toIsoDate = (displayStr: string) => {
                   ₹{transferMetrics.interBankTransfers.toLocaleString('en-IN')}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  HDFC Operations ⇋ SBI Escrow
+                  Inter-account contra transfers
                 </p>
               </div>
 
@@ -3275,30 +3853,32 @@ const toIsoDate = (displayStr: string) => {
 
                         <div>
                           <label className="text-[11px] font-semibold text-slate-600 block mb-1">Account Involved</label>
-                          <select
+                          <CustomSelect
                             value={transferAccountFilter}
-                            onChange={(e) => setTransferAccountFilter(e.target.value)}
-                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-red-600"
-                          >
-                            <option value="All">All Bank & Cash Accounts</option>
-                            {bankAccounts.map(b => (
-                              <option key={b.id} value={b.id}>{b.accountName}</option>
-                            ))}
-                          </select>
+                            onChange={(val) => setTransferAccountFilter(val)}
+                            options={[
+                              { label: 'All Bank & Cash Accounts', value: 'All' },
+                              ...bankAccounts.map(b => ({ label: b.accountName, value: b.id })),
+                            ]}
+                            size="sm"
+                            variant="brand"
+                          />
                         </div>
 
                         <div>
                           <label className="text-[11px] font-semibold text-slate-600 block mb-1">Status</label>
-                          <select
+                          <CustomSelect
                             value={transferStatusFilter}
-                            onChange={(e) => setTransferStatusFilter(e.target.value as any)}
-                            className="w-full text-xs border border-slate-200 rounded-md p-1.5 bg-white text-slate-800 focus:outline-none focus:border-red-600"
-                          >
-                            <option value="All">All Statuses</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Pending Verification">Pending Verification</option>
-                            <option value="Rejected">Rejected</option>
-                          </select>
+                            onChange={(val) => setTransferStatusFilter(val as any)}
+                            options={[
+                              { label: 'All Statuses', value: 'All' },
+                              { label: 'Completed', value: 'Completed', dotColor: 'bg-emerald-500' },
+                              { label: 'Pending Verification', value: 'Pending Verification', dotColor: 'bg-amber-500' },
+                              { label: 'Rejected', value: 'Rejected', dotColor: 'bg-rose-500' },
+                            ]}
+                            size="sm"
+                            variant="brand"
+                          />
                         </div>
 
                         <div className="pt-2 border-t border-slate-100 flex justify-end">
@@ -3396,7 +3976,7 @@ const toIsoDate = (displayStr: string) => {
                           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                             {transferSearchQuery || transferModeFilter !== 'All' || transferStatusFilter !== 'All'
                               ? 'Try adjusting your search query or clear the active filters.'
-                              : 'Record contra transfers between HDFC Bank, SBI Escrow, and Site Petty Cash Vaults.'}
+                              : 'Record contra transfers between connected bank accounts and site petty cash vaults.'}
                           </p>
                           <button
                             type="button"
@@ -3602,7 +4182,7 @@ const toIsoDate = (displayStr: string) => {
                               </div>
                               <span className="text-xs">Cash Account</span>
                             </div>
-                            <span className="text-[11px] font-mono font-semibold text-slate-500">₹ -1.82 Cr</span>
+                            <span className="text-[11px] font-mono font-semibold text-slate-500">₹ {cashClosingBalance.toLocaleString('en-IN')}</span>
                           </button>
 
                           {/* Bank Accounts List */}
@@ -4369,17 +4949,44 @@ const toIsoDate = (displayStr: string) => {
 
             <form onSubmit={handleSavePaymentRequest} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Party / Vendor Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Jd Ekambaram Chrompet"
-                  value={newPartyName}
-                  onChange={e => setNewPartyName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Party / Vendor Name *
+                  </label>
+                  {parties.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomPRPartyInput(!isCustomPRPartyInput)}
+                      className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                    >
+                      {isCustomPRPartyInput ? '← Select registered party' : '+ Enter custom name'}
+                    </button>
+                  )}
+                </div>
+                {!isCustomPRPartyInput && parties.length > 0 ? (
+                  <CustomSelect
+                    value={newPartyName}
+                    onChange={(val) => setNewPartyName(val)}
+                    options={parties.map(p => ({
+                      label: p.name,
+                      value: p.name,
+                      badge: p.type,
+                      description: p.phone ? `${p.phone}` : undefined
+                    }))}
+                    placeholder="Select registered party..."
+                    size="md"
+                    variant="brand"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Vendor / Contractor Name"
+                    value={newPartyName}
+                    onChange={e => setNewPartyName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -4406,7 +5013,7 @@ const toIsoDate = (displayStr: string) => {
                     type="text"
                     value={newDate}
                     onChange={e => setNewDate(e.target.value)}
-                    placeholder="13 Jul 26"
+                    placeholder="e.g. 15 Oct 26"
                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
@@ -4420,7 +5027,7 @@ const toIsoDate = (displayStr: string) => {
                   type="text"
                   value={newProjectName}
                   onChange={e => setNewProjectName(e.target.value)}
-                  placeholder="e.g. RO66 - 2153 - (2026 - 2027) - Jd Ekambaram - Chromepet"
+                  placeholder="e.g. Project Name / Code"
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                 />
               </div>
@@ -4430,32 +5037,37 @@ const toIsoDate = (displayStr: string) => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Category / Against
                   </label>
-                  <select
+                  <CustomSelect
                     value={newSubProjectText}
-                    onChange={e => setNewSubProjectText(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-                  >
-                    <option value="Against Other">Against Other</option>
-                    <option value="Against Material PO">Against Material PO</option>
-                    <option value="Against Machinery Hire">Against Machinery Hire</option>
-                    <option value="Against Labour Bill">Against Labour Bill</option>
-                    <option value="Against Subcontractor Bill">Against Subcontractor Bill</option>
-                  </select>
+                    onChange={val => setNewSubProjectText(val)}
+                    options={[
+                      'Against Other',
+                      'Against Material PO',
+                      'Against Machinery Hire',
+                      'Against Labour Bill',
+                      'Against Subcontractor Bill',
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Status
                   </label>
-                  <select
+                  <CustomSelect
                     value={newStatus}
-                    onChange={(e: any) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-                  >
-                    <option value="Paid">Paid</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending">Pending</option>
-                  </select>
+                    onChange={(val) => setNewStatus(val as any)}
+                    options={[
+                      { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
+                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
+                      { label: 'Pending', value: 'Pending', dotColor: 'bg-amber-500' },
+                    ]}
+                    align="right"
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 
@@ -4619,7 +5231,7 @@ const toIsoDate = (displayStr: string) => {
               </div>
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Preferred Demo Date</label>
-                <input type="date" defaultValue="2026-09-25" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
+                <input type="date" defaultValue={new Date().toISOString().split('T')[0]} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" />
               </div>
             </div>
             <div className="pt-2 flex justify-end gap-2">
@@ -4666,7 +5278,7 @@ const toIsoDate = (displayStr: string) => {
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-slate-800 block">Zoho Books API</span>
-                  <span className="text-[11px] text-slate-500">Organization ID: 819200192</span>
+                  <span className="text-[11px] text-slate-500">Organization ID: BOOSHNAM-BOOKS-IN</span>
                 </div>
                 <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                   Connected
@@ -4743,18 +5355,25 @@ const toIsoDate = (displayStr: string) => {
               </button>
             </div>
             <div className="space-y-2 text-xs">
-              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between">
-                <span className="font-bold text-amber-900">#1 Villa Grande Site Team</span>
-                <span className="font-semibold text-emerald-700">99.4% On-Budget</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-slate-800">#2 Commercial Hub Team</span>
-                <span className="font-semibold text-emerald-700">97.8% On-Budget</span>
-              </div>
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <span className="font-bold text-slate-800">#3 Chromepet Substation</span>
-                <span className="font-semibold text-emerald-700">95.2% On-Budget</span>
-              </div>
+              {projects.length === 0 ? (
+                <div className="p-4 text-center text-slate-400">
+                  <p>No active project data available</p>
+                </div>
+              ) : (
+                projects.slice(0, 5).map((proj, idx) => (
+                  <div
+                    key={proj.id || idx}
+                    className={`p-2.5 rounded-lg border flex items-center justify-between ${
+                      idx === 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <span className={`font-bold ${idx === 0 ? 'text-amber-900' : 'text-slate-800'}`}>
+                      #{idx + 1} {proj.name}
+                    </span>
+                    <span className="font-semibold text-emerald-700">Active</span>
+                  </div>
+                ))
+              )}
             </div>
             <div className="flex justify-end">
               <button onClick={() => setIsLeaderboardModalOpen(false)} className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg">
@@ -4857,7 +5476,7 @@ const toIsoDate = (displayStr: string) => {
                   <span className="text-slate-500 flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-slate-400" /> Date of Joining
                   </span>
-                  <span className="font-semibold text-slate-800">{selectedPartyRecord.dateOfJoining || '12/04/2025'}</span>
+                  <span className="font-semibold text-slate-800">{selectedPartyRecord.dateOfJoining || '—'}</span>
                 </div>
 
                 {selectedPartyRecord.address && (
@@ -4879,14 +5498,14 @@ const toIsoDate = (displayStr: string) => {
                 <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
                   <span className="text-slate-500">Aadhaar Number</span>
                   <span className="font-mono font-semibold text-slate-800">
-                    {selectedPartyRecord.aadhaarNumber ? `•••• •••• ${selectedPartyRecord.aadhaarNumber.slice(-4)}` : 'Verified on File'}
+                    {selectedPartyRecord.aadhaarNumber ? `•••• •••• ${selectedPartyRecord.aadhaarNumber.slice(-4)}` : '—'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between py-1.5">
                   <span className="text-slate-500">PAN Card</span>
                   <span className="font-mono font-semibold text-slate-800">
-                    {selectedPartyRecord.panNumber ? selectedPartyRecord.panNumber : 'ABCDE1234F'}
+                    {selectedPartyRecord.panNumber ? selectedPartyRecord.panNumber : '—'}
                   </span>
                 </div>
               </div>
@@ -4896,11 +5515,23 @@ const toIsoDate = (displayStr: string) => {
                 <button
                   type="button"
                   onClick={() => {
+                    setActivePartyOverview(selectedPartyRecord);
+                    setSelectedPartyRecord(null);
+                  }}
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm text-xs"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Open Full Party Ledger & Activities</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
                     setNewPartyName(selectedPartyRecord.name);
                     setSelectedPartyRecord(null);
                     setIsNewRequestModalOpen(true);
                   }}
-                  className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                  className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs text-xs"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Create Payment Request for {selectedPartyRecord.name}</span>
@@ -4910,10 +5541,17 @@ const toIsoDate = (displayStr: string) => {
                   type="button"
                   onClick={() => {
                     setNewTxnParty(selectedPartyRecord.name);
+                    if (selectedPartyRecord.type === 'Client') {
+                      setNewTxnType('INCOME');
+                      setNewTxnCategory('Client Payment');
+                    } else {
+                      setNewTxnType('EXPENSE');
+                      setNewTxnCategory(selectedPartyRecord.type === 'Staff' ? 'Labour & Daily Wages' : 'Material Purchase');
+                    }
                     setSelectedPartyRecord(null);
                     setIsRecordTxnModalOpen(true);
                   }}
-                  className="w-full py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer text-xs"
                 >
                   <Receipt className="w-3.5 h-3.5" />
                   <span>Record Cash/Bank Transaction</span>
@@ -4928,25 +5566,38 @@ const toIsoDate = (displayStr: string) => {
       {/* MODAL H: RECORD TRANSACTION */}
       {isRecordTxnModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900">Record Cashbook Transaction</h3>
-              <button onClick={() => setIsRecordTxnModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Record Cashbook Transaction</h3>
+                <p className="text-[11px] text-slate-500">Record incoming receipts or outgoing disbursements for any party</p>
+              </div>
+              <button onClick={() => setIsRecordTxnModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleSaveTransaction} className="space-y-3 text-xs">
+            <form onSubmit={handleSaveTransaction} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Type</label>
-                  <select
+                  <label className="block font-semibold text-slate-700 mb-1">Transaction Type *</label>
+                  <CustomSelect
                     value={newTxnType}
-                    onChange={(e: any) => setNewTxnType(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white font-bold"
-                  >
-                    <option value="EXPENSE">Expense (Outflow)</option>
-                    <option value="INCOME">Income (Inflow)</option>
-                  </select>
+                    onChange={(val) => {
+                      const t = val as 'INCOME' | 'EXPENSE';
+                      setNewTxnType(t);
+                      if (t === 'INCOME') {
+                        setNewTxnCategory('Client Payment');
+                      } else {
+                        setNewTxnCategory('Material Purchase');
+                      }
+                    }}
+                    options={[
+                      { label: 'Expense / Outflow (Disbursement)', value: 'EXPENSE', dotColor: 'bg-rose-500' },
+                      { label: 'Income / Inflow (Receipt)', value: 'INCOME', dotColor: 'bg-emerald-500' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Amount (₹) *</label>
@@ -4957,48 +5608,142 @@ const toIsoDate = (displayStr: string) => {
                     placeholder="e.g. 25000"
                     value={newTxnAmount}
                     onChange={e => setNewTxnAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-red-600 font-mono font-medium"
                   />
                 </div>
               </div>
+
+              {/* Party Selection Dropdown / Custom Switcher */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Party Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Jd Ekambaram or Client Name"
-                  value={newTxnParty}
-                  onChange={e => setNewTxnParty(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Party Name *</label>
+                  {parties.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomPartyInput(!isCustomPartyInput)}
+                      className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                    >
+                      {isCustomPartyInput ? '← Select from registered parties' : '+ Enter custom party name'}
+                    </button>
+                  )}
+                </div>
+                {!isCustomPartyInput && parties.length > 0 ? (
+                  <CustomSelect
+                    value={newTxnParty}
+                    onChange={(val) => {
+                      setNewTxnParty(val);
+                      const matched = parties.find(p => p.name === val);
+                      if (matched) {
+                        if (matched.type === 'Client') {
+                          setNewTxnType('INCOME');
+                          setNewTxnCategory('Client Payment');
+                        } else {
+                          setNewTxnType('EXPENSE');
+                          setNewTxnCategory(matched.type === 'Staff' ? 'Labour & Daily Wages' : 'Material Purchase');
+                        }
+                      }
+                    }}
+                    options={parties.map(p => ({
+                      label: p.name,
+                      value: p.name,
+                      badge: p.type,
+                      description: `${p.phone ? `${p.phone} • ` : ''}Balance: ₹${p.balanceDue.toLocaleString('en-IN')}`
+                    }))}
+                    placeholder="Select registered party..."
+                    size="md"
+                    variant="brand"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Client / Vendor Name"
+                    value={newTxnParty}
+                    onChange={e => setNewTxnParty(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-red-600"
+                  />
+                )}
               </div>
+
+              {/* Project & Category */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                  <CustomSelect
+                    value={newTxnCategory}
+                    onChange={(val) => setNewTxnCategory(val)}
+                    options={newTxnType === 'INCOME' ? [
+                      'Client Payment',
+                      'Advance Receipt',
+                      'Milestone Billing Receipt',
+                      'Mobilization Advance',
+                      'Retention Release Receipt',
+                      'Rental Income',
+                      'Other Cash Inflow'
+                    ] : [
+                      'Material Purchase',
+                      'Vendor Payment',
+                      'Subcontractor Payout',
+                      'Labour & Daily Wages',
+                      'Site Petty Cash',
+                      'Machinery & Fuel Hire',
+                      'Permit & Regulatory Fees',
+                      'Utilities & Admin',
+                      'Other Operational Outflow'
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Project</label>
+                  <CustomSelect
+                    value={newTxnProject}
+                    onChange={(val) => setNewTxnProject(val)}
+                    options={projects.length > 0 ? projects.map(p => ({ label: p.name, value: p.name })) : ['Booshnam Construction Project']}
+                    placeholder="Select Project..."
+                    size="md"
+                    variant="brand"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Mode & Reference */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Payment Mode</label>
-                  <select
+                  <CustomSelect
                     value={newTxnMode}
-                    onChange={(e: any) => setNewTxnMode(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white"
-                  >
-                    <option value="NEFT/RTGS">NEFT / RTGS</option>
-                    <option value="UPI">UPI</option>
-                    <option value="CHEQUE">Cheque</option>
-                    <option value="CASH">Cash</option>
-                  </select>
+                    onChange={(val) => setNewTxnMode(val as any)}
+                    options={[
+                      { label: 'NEFT / RTGS', value: 'NEFT/RTGS' },
+                      { label: 'UPI', value: 'UPI' },
+                      { label: 'Cheque', value: 'CHEQUE' },
+                      { label: 'Cash', value: 'CASH' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Reference No / UTR</label>
                   <input
                     type="text"
-                    placeholder="e.g. HDFC2026..."
+                    placeholder="e.g. UTR / Cheque No"
                     value={newTxnRef}
                     onChange={e => setNewTxnRef(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
-              <div className="pt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setIsRecordTxnModalOpen(false)} className="px-3 py-1.5 text-xs text-slate-500">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg">Save Record</button>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button type="button" onClick={() => setIsRecordTxnModalOpen(false)} className="px-3.5 py-2 text-xs text-slate-500 hover:text-slate-800 cursor-pointer">
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm cursor-pointer transition-all">
+                  Save Record
+                </button>
               </div>
             </form>
           </div>
@@ -5287,17 +6032,17 @@ const toIsoDate = (displayStr: string) => {
               {/* Project Selection as requested in audio */}
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Select Project *</label>
-                <select
+                <CustomSelect
                   value={paymentInProject}
-                  onChange={e => setPaymentInProject(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-[#00875A] focus:ring-1 focus:ring-[#00875A] cursor-pointer"
-                >
-                  <option value="Booshnam Associates Pvt Ltd">Booshnam Associates Pvt Ltd</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.name}>{p.name}</option>
-                  ))}
-                  <option value="General Project / Unallocated">General Project / Unallocated</option>
-                </select>
+                  onChange={val => setPaymentInProject(val)}
+                  options={[
+                    'Booshnam Associates Pvt Ltd',
+                    ...projects.map(p => p.name),
+                    'General Project / Unallocated',
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
               </div>
 
               <div>
@@ -5329,16 +6074,18 @@ const toIsoDate = (displayStr: string) => {
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Payment Mode</label>
-                  <select
+                  <CustomSelect
                     value={paymentInMode}
-                    onChange={(e: any) => setPaymentInMode(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-[#00875A] cursor-pointer"
-                  >
-                    <option value="UPI">UPI / GPay / PhonePe</option>
-                    <option value="NEFT/RTGS">NEFT / RTGS / Bank</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Cash">Cash</option>
-                  </select>
+                    onChange={(val) => setPaymentInMode(val as any)}
+                    options={[
+                      { label: 'UPI / GPay / PhonePe', value: 'UPI' },
+                      { label: 'NEFT / RTGS / Bank', value: 'NEFT/RTGS' },
+                      { label: 'Cheque', value: 'Cheque' },
+                      { label: 'Cash', value: 'Cash' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 
@@ -5412,38 +6159,39 @@ const toIsoDate = (displayStr: string) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Transaction Type *</label>
-                  <select
+                  <CustomSelect
                     value={partyTxnCategory}
-                    onChange={(e: any) => {
-                      const cat = e.target.value;
-                      setPartyTxnCategory(cat);
+                    onChange={(val) => {
+                      setPartyTxnCategory(val as any);
                       const code = Math.floor(1700 + Math.random() * 500);
-                      setPartyTxnTitle(`RA11-BAGJ-${code}(2026-2027)-${activePartyOverview.name}-${cat}`);
+                      setPartyTxnTitle(`RA11-BAGJ-${code}(2026-2027)-${activePartyOverview.name}-${val}`);
                     }}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
-                  >
-                    <option value="Sales Invoice">Sales Invoice</option>
-                    <option value="Material Sales">Material Sales</option>
-                    <option value="Labour & Service Invoice">Labour & Service Invoice</option>
-                    <option value="Machine / Equipment Rental">Machine / Equipment Rental</option>
-                    <option value="Debit Note">Debit Note</option>
-                    <option value="Credit Note">Credit Note</option>
-                  </select>
+                    options={[
+                      'Sales Invoice',
+                      'Material Sales',
+                      'Labour & Service Invoice',
+                      'Machine / Equipment Rental',
+                      'Debit Note',
+                      'Credit Note',
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Select Project *</label>
-                  <select
+                  <CustomSelect
                     value={partyTxnProject}
-                    onChange={e => setPartyTxnProject(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
-                  >
-                    <option value="Booshnam Associates Pvt Ltd">Booshnam Associates Pvt Ltd</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                    <option value="General Project / Unallocated">General Project / Unallocated</option>
-                  </select>
+                    onChange={val => setPartyTxnProject(val)}
+                    options={[
+                      'Booshnam Associates Pvt Ltd',
+                      ...projects.map(p => p.name),
+                      'General Project / Unallocated',
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 
@@ -5561,20 +6309,22 @@ const toIsoDate = (displayStr: string) => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Category *
                   </label>
-                  <select
+                  <CustomSelect
                     value={newExpCategory}
-                    onChange={(e: any) => setNewExpCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white font-medium"
-                  >
-                    <option value="Materials">Materials</option>
-                    <option value="Labour & Daily Wages">Labour & Daily Wages</option>
-                    <option value="Machinery & Equipment">Machinery & Equipment</option>
-                    <option value="Site Petty Cash">Site Petty Cash</option>
-                    <option value="Subcontractor">Subcontractor</option>
-                    <option value="Fuel & Logistics">Fuel & Logistics</option>
-                    <option value="Safety & Compliance">Safety & Compliance</option>
-                    <option value="Utilities & Admin">Utilities & Admin</option>
-                  </select>
+                    onChange={(val) => setNewExpCategory(val as any)}
+                    options={[
+                      'Materials',
+                      'Labour & Daily Wages',
+                      'Machinery & Equipment',
+                      'Site Petty Cash',
+                      'Subcontractor',
+                      'Fuel & Logistics',
+                      'Safety & Compliance',
+                      'Utilities & Admin',
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
@@ -5598,15 +6348,14 @@ const toIsoDate = (displayStr: string) => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Project *
                   </label>
-                  <select
+                  <CustomSelect
                     value={newExpProject}
-                    onChange={e => setNewExpProject(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-                  >
-                    {projects.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setNewExpProject(val)}
+                    options={projects.length > 0 ? projects.map(p => ({ label: p.name, value: p.name })) : ['Default Project']}
+                    placeholder="Select Project..."
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
@@ -5625,34 +6374,63 @@ const toIsoDate = (displayStr: string) => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Vendor / Payee Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. UltraTech Cement or Site Worker"
-                    value={newExpPayee}
-                    onChange={e => setNewExpPayee(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Vendor / Payee Name *
+                    </label>
+                    {parties.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomExpPartyInput(!isCustomExpPartyInput)}
+                        className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                      >
+                        {isCustomExpPartyInput ? '← Select registered party' : '+ Enter custom payee'}
+                      </button>
+                    )}
+                  </div>
+                  {!isCustomExpPartyInput && parties.length > 0 ? (
+                    <CustomSelect
+                      value={newExpPayee}
+                      onChange={(val) => setNewExpPayee(val)}
+                      options={parties.map(p => ({
+                        label: p.name,
+                        value: p.name,
+                        badge: p.type,
+                        description: p.phone ? `${p.phone}` : undefined
+                      }))}
+                      placeholder="Select registered payee..."
+                      size="md"
+                      variant="brand"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. UltraTech Cement or Site Worker"
+                      value={newExpPayee}
+                      onChange={e => setNewExpPayee(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
+                    />
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Paid From Account *
                   </label>
-                  <select
+                  <CustomSelect
                     value={newExpAccount}
-                    onChange={e => setNewExpAccount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white font-medium text-slate-800"
-                  >
-                    {bankAccounts.map(ba => (
-                      <option key={ba.id} value={ba.accountName}>
-                        {ba.accountName} (₹{ba.balance.toLocaleString('en-IN')})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setNewExpAccount(val)}
+                    options={bankAccounts.map(ba => ({
+                      label: ba.accountName,
+                      value: ba.accountName,
+                      description: `Available: ₹${ba.balance.toLocaleString('en-IN')}`,
+                      badge: `₹${ba.balance.toLocaleString('en-IN')}`,
+                    }))}
+                    placeholder="Select Bank Account..."
+                    size="md"
+                    variant="brand"
+                  />
                   {(() => {
                     const sel = bankAccounts.find(ba => ba.accountName === newExpAccount || ba.id === newExpAccount);
                     return sel ? (
@@ -5669,17 +6447,19 @@ const toIsoDate = (displayStr: string) => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Payment Mode
                   </label>
-                  <select
+                  <CustomSelect
                     value={newExpMode}
-                    onChange={(e: any) => setNewExpMode(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-                  >
-                    <option value="NEFT/RTGS">NEFT / RTGS</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Petty Cash">Petty Cash</option>
-                    <option value="Corporate Card">Corporate Card</option>
-                    <option value="Cheque">Cheque</option>
-                  </select>
+                    onChange={(val) => setNewExpMode(val as any)}
+                    options={[
+                      { label: 'NEFT / RTGS', value: 'NEFT/RTGS' },
+                      { label: 'UPI', value: 'UPI' },
+                      { label: 'Petty Cash', value: 'Petty Cash' },
+                      { label: 'Corporate Card', value: 'Corporate Card' },
+                      { label: 'Cheque', value: 'Cheque' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
@@ -5699,15 +6479,18 @@ const toIsoDate = (displayStr: string) => {
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Status
                   </label>
-                  <select
+                  <CustomSelect
                     value={newExpStatus}
-                    onChange={(e: any) => setNewExpStatus(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 bg-white"
-                  >
-                    <option value="Paid">Paid</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Pending Approval">Pending Approval</option>
-                  </select>
+                    onChange={(val) => setNewExpStatus(val as any)}
+                    options={[
+                      { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
+                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
+                      { label: 'Pending Approval', value: 'Pending Approval', dotColor: 'bg-amber-500' },
+                    ]}
+                    align="right"
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 
@@ -5977,17 +6760,19 @@ const toIsoDate = (displayStr: string) => {
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       From Account (Source / Debit) <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <CustomSelect
                       value={newTrfFromAccountId}
-                      onChange={(e) => setNewTrfFromAccountId(e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 shadow-2xs"
-                    >
-                      {bankAccounts.map(b => (
-                        <option key={b.id} value={b.id}>
-                          {b.accountName} (₹{b.balance.toLocaleString('en-IN')})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setNewTrfFromAccountId(val)}
+                      options={bankAccounts.map(b => ({
+                        label: b.accountName,
+                        value: b.id,
+                        description: `Available: ₹${b.balance.toLocaleString('en-IN')}`,
+                        badge: `₹${b.balance.toLocaleString('en-IN')}`,
+                      }))}
+                      placeholder="Select Source Account..."
+                      size="md"
+                      variant="brand"
+                    />
                     <div className="min-h-[18px] mt-1.5 flex items-center">
                       {(() => {
                         const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
@@ -6005,17 +6790,19 @@ const toIsoDate = (displayStr: string) => {
                     <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                       To Account (Destination / Credit) <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <CustomSelect
                       value={newTrfToAccountId}
-                      onChange={(e) => setNewTrfToAccountId(e.target.value)}
-                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 shadow-2xs"
-                    >
-                      {bankAccounts.map(b => (
-                        <option key={b.id} value={b.id}>
-                          {b.accountName} (₹{b.balance.toLocaleString('en-IN')})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setNewTrfToAccountId(val)}
+                      options={bankAccounts.map(b => ({
+                        label: b.accountName,
+                        value: b.id,
+                        description: `Current: ₹${b.balance.toLocaleString('en-IN')}`,
+                        badge: `₹${b.balance.toLocaleString('en-IN')}`,
+                      }))}
+                      placeholder="Select Destination Account..."
+                      size="md"
+                      variant="brand"
+                    />
                     <div className="min-h-[18px] mt-1.5 flex items-center">
                       {(() => {
                         const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
@@ -6126,18 +6913,20 @@ const toIsoDate = (displayStr: string) => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">Transfer Mode</label>
-                  <select
+                  <CustomSelect
                     value={newTrfMode}
-                    onChange={(e) => setNewTrfMode(e.target.value as any)}
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="Cash Withdrawal">Cash Withdrawal (Site Imprest)</option>
-                    <option value="IMPS / Bank Transfer">IMPS / Bank Transfer</option>
-                    <option value="NEFT / RTGS">NEFT / RTGS</option>
-                    <option value="Cash Deposit">Cash Deposit</option>
-                    <option value="Internal Ledger Contra">Internal Ledger Contra</option>
-                    <option value="Cheque">Cheque Transfer</option>
-                  </select>
+                    onChange={(val) => setNewTrfMode(val as any)}
+                    options={[
+                      { label: 'Cash Withdrawal (Site Imprest)', value: 'Cash Withdrawal' },
+                      { label: 'IMPS / Bank Transfer', value: 'IMPS / Bank Transfer' },
+                      { label: 'NEFT / RTGS', value: 'NEFT / RTGS' },
+                      { label: 'Cash Deposit', value: 'Cash Deposit' },
+                      { label: 'Internal Ledger Contra', value: 'Internal Ledger Contra' },
+                      { label: 'Cheque Transfer', value: 'Cheque' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
 
                 <div>
@@ -6167,16 +6956,16 @@ const toIsoDate = (displayStr: string) => {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">Related Project (Optional)</label>
-                  <select
+                  <CustomSelect
                     value={newTrfProject}
-                    onChange={(e) => setNewTrfProject(e.target.value)}
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="">General Company Accounts</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setNewTrfProject(val)}
+                    options={[
+                      { label: 'General Company Accounts', value: '' },
+                      ...projects.map(p => ({ label: p.name, value: p.name })),
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
                 </div>
               </div>
 

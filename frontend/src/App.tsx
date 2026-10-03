@@ -78,8 +78,28 @@ export function App() {
         localStorage.removeItem('booshnam_quotations_v2');
       }
       const banks = localStorage.getItem('booshnam_finance_bank_accounts_v4');
-      if (banks && (banks.includes('4850000') || banks.includes('12400000') || banks.includes('17583911'))) {
+      if (banks && (banks.includes('4850000') || banks.includes('12400000') || banks.includes('17583911') || banks.includes('ba-hdfc') || banks.includes('ba-sbi') || banks.includes('ba-default-1'))) {
         localStorage.removeItem('booshnam_finance_bank_accounts_v4');
+      }
+      const finParties = localStorage.getItem('booshnam_finance_parties');
+      if (finParties && (finParties.includes('pty-1') || finParties.includes('pty-2') || finParties.includes('pty-3'))) {
+        localStorage.removeItem('booshnam_finance_parties');
+      }
+      const payReqs = localStorage.getItem('booshnam_finance_payment_requests');
+      if (payReqs && (payReqs.includes('pr-1') || payReqs.includes('pr-2') || payReqs.includes('pr-3'))) {
+        localStorage.removeItem('booshnam_finance_payment_requests');
+      }
+      const finTxns = localStorage.getItem('booshnam_finance_transactions');
+      if (finTxns && (finTxns.includes('tx-1') || finTxns.includes('tx-2') || finTxns.includes('tx-3'))) {
+        localStorage.removeItem('booshnam_finance_transactions');
+      }
+      const finExps = localStorage.getItem('booshnam_finance_expenses_v1');
+      if (finExps && (finExps.includes('exp-1') || finExps.includes('exp-2') || finExps.includes('exp-3'))) {
+        localStorage.removeItem('booshnam_finance_expenses_v1');
+      }
+      const finTrfs = localStorage.getItem('booshnam_finance_transfers_v1');
+      if (finTrfs && (finTrfs.includes('trf-1') || finTrfs.includes('trf-2') || finTrfs.includes('trf-3'))) {
+        localStorage.removeItem('booshnam_finance_transfers_v1');
       }
 
       // Purge all seed projects starting with proj- or known titles
@@ -237,21 +257,12 @@ export function App() {
     }
   };
 
-  const showToast = (msg: any) => {
-    if (!msg) return;
-    const text = typeof msg === 'string' ? msg : (msg.message || msg.title || String(msg));
-    setNotificationMsg(text);
-    setTimeout(() => setNotificationMsg(null), 3500);
+  const showToast = (_msg: any) => {
+    // Corner toast notifications removed globally per user request
   };
 
   useEffect(() => {
-    const handleToastEvent = (e: any) => {
-      if (!e.detail) return;
-      const text = typeof e.detail === 'string' ? e.detail : (e.detail.message || e.detail.title || String(e.detail));
-      showToast(text);
-    };
-    window.addEventListener('siteops_toast', handleToastEvent);
-    return () => window.removeEventListener('siteops_toast', handleToastEvent);
+    // Corner toast notifications listener disabled per user request
   }, []);
 
   const handleConvertLeadSuccess = (projectTitle: string) => {
@@ -423,14 +434,6 @@ export function App() {
     <div className={`bg-white text-site-text flex flex-col ${
       currentView === 'quotation' ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'
     }`}>
-      {/* Toast Notification */}
-      {notificationMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2 animate-bounce">
-          <span className="w-2 h-2 rounded-full bg-brand"></span>
-          <span>{typeof notificationMsg === 'string' ? notificationMsg : (notificationMsg as any)?.message || (notificationMsg as any)?.title || ''}</span>
-        </div>
-      )}
-
       {/* Sidebar - completely hidden when Profile Settings Modal is open so that the screen is 100% full screen with no sidebar or hamburger */}
       {!isProfileModalOpen && (
         <Sidebar
@@ -526,9 +529,12 @@ export function App() {
           {(currentView === 'equipment' || currentView === 'asset') && (
             <EquipmentView
               project={selectedProject}
+              projects={projects}
               assets={assets}
+              onUpdateAssets={setAssets}
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+              onShowToast={showToast}
             />
           )}
 
@@ -664,9 +670,6 @@ export function App() {
 
       {/* Global In-App Custom Confirmation & Alert Dialog System */}
       <GlobalConfirmationModal />
-
-      {/* Global In-App Toast Notifications */}
-      <GlobalToastNotification />
     </div>
   );
 }

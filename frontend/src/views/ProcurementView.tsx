@@ -286,6 +286,12 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
   const [activeTab, setActiveTab] = useState<'requests' | 'stock' | 'orders' | 'grn'>(initialTab);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
 
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
   // Available Projects (read from prop or service)
   const availableProjects = React.useMemo(() => {
     if (propProjects && propProjects.length > 0) return propProjects;
@@ -357,14 +363,17 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
       localStorage.setItem('booshnam_stock_inventory_v3', JSON.stringify(stockList));
       notifyStockChanged();
     } catch (e) {}
-
-    // When the user opens the Procurement section and views the low-stock notification,
-    // acknowledge it so the notification dot on the menu disappears.
-    const unacknowledged = getUnacknowledgedLowStockItems(stockList);
-    if (unacknowledged.length > 0) {
-      markLowStockAsViewed(stockList);
-    }
   }, [stockList]);
+
+  // When the user views the Warehouse Stock page/tab, acknowledge low-stock items so the menu notification dot clears
+  useEffect(() => {
+    if (activeTab === 'stock') {
+      const unacknowledged = getUnacknowledgedLowStockItems(stockList);
+      if (unacknowledged.length > 0) {
+        markLowStockAsViewed(stockList);
+      }
+    }
+  }, [activeTab, stockList]);
 
   useEffect(() => {
     try {
@@ -875,14 +884,6 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
-      {/* Toast Notification */}
-      {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 animate-in fade-in duration-200">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       {/* ── TOP HEADER BAR ── */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-20">
         <div>
@@ -988,61 +989,6 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
       {/* ── MAIN CONTENT AREA ── */}
       <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
 
-        {/* ── LOW STOCK NOTIFICATION ALERT BANNER ── */}
-        {lowStockItems.length > 0 && !isBannerDismissed && (
-          <div className="bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50/30 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-2xs animate-in fade-in duration-200">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs border border-amber-200">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-slate-900 text-sm">
-                    Low Stock Notification: {lowStockItems.length} {lowStockItems.length === 1 ? 'item has' : 'items have'} reached minimum threshold
-                  </h3>
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                    Attention Required
-                  </span>
-                </div>
-                <p className="text-slate-600 text-xs">
-                  Notification dot on the Procurement menu is cleared upon viewing this page. The items below require restocking:
-                </p>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {lowStockItems.map(item => (
-                    <span key={item.id} className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-amber-200 text-slate-800 font-medium shadow-2xs">
-                      <span>{item.item_name}:</span>
-                      <span className="font-mono font-bold text-red-600">{item.current_quantity} {item.unit}</span>
-                      <span className="text-[10px] text-slate-400 font-normal">(Min: {item.minimum_threshold} {item.unit})</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('stock');
-                  setShowAddStockModal(true);
-                }}
-                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Restock Now</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsBannerDismissed(true)}
-                className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-amber-100/60 transition cursor-pointer"
-                title="Dismiss Banner"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ══════════════════════════════════════════════════════════════════════
             TAB 1: MATERIAL REQUESTS (SITE MATERIAL REQUESTS WITH AUTO-DEDUCTION)
@@ -1274,6 +1220,61 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
         ══════════════════════════════════════════════════════════════════════ */}
         {activeTab === 'stock' && (
           <div className="space-y-5 animate-in fade-in duration-150">
+            {/* ── LOW STOCK NOTIFICATION ALERT BANNER (Shown exclusively on Warehouse Stock) ── */}
+            {lowStockItems.length > 0 && !isBannerDismissed && (
+              <div className="bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50/30 border border-amber-200 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs shadow-2xs animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs border border-amber-200">
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-bold text-slate-900 text-sm">
+                        Low Stock Notification: {lowStockItems.length} {lowStockItems.length === 1 ? 'item has' : 'items have'} reached minimum threshold
+                      </h3>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        Attention Required
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-xs">
+                      The items below have reached or fallen below minimum safety threshold and require restocking:
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {lowStockItems.map(item => (
+                        <span key={item.id} className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-amber-200 text-slate-800 font-medium shadow-2xs">
+                          <span>{item.item_name}:</span>
+                          <span className="font-mono font-bold text-red-600">{item.current_quantity} {item.unit}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">(Min: {item.minimum_threshold} {item.unit})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddStockModal(true);
+                    }}
+                    className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Restock Now</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsBannerDismissed(true)}
+                    className="p-2 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-amber-100/60 transition cursor-pointer"
+                    title="Dismiss Banner"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Header & KPI Summary */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs">
               <div>

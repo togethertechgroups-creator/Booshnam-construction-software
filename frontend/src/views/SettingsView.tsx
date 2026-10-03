@@ -815,14 +815,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen pb-16">
-      {/* Toast Notification */}
-      {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in duration-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       {/* Top Header Bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">

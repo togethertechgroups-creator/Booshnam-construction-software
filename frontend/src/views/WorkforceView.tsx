@@ -32,6 +32,7 @@ import {
   StaffAttendanceRecord,
   getTodayDateString
 } from '../lib/staffAttendanceService';
+import { HolidaysManager } from '../components/HolidaysManager';
 
 
 interface WorkforceViewProps {
@@ -379,7 +380,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              {selectedStaffForOverview ? (
+              {selectedStaffForOverview && (
                 <button
                   type="button"
                   onClick={() => setSelectedStaffForOverview(null)}
@@ -388,18 +389,11 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
-              ) : (
-                <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-black rounded uppercase tracking-wider">
-                  SITE WORKFORCE
-                </span>
               )}
               <h1 className="text-xl font-bold text-slate-900">
                 {selectedStaffForOverview ? `Staff Profile: ${selectedStaffForOverview.name}` : "Staff & Payroll Management"}
               </h1>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Manage office and site staff profiles, biometric GPS geofence clock-ins, and salary batches.
-            </p>
           </div>
         </div>
 
@@ -978,10 +972,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
           {/* ── SECTION 2.4: HOLIDAYS ── */}
           {mainTab === 'payroll' && payrollTab === 'holidays' && (
-            <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
-              <Sparkles className="w-12 h-12 mb-4 opacity-20" />
-              <p>Holidays view is under construction</p>
-            </div>
+            <HolidaysManager onShowToast={triggerToast} />
           )}
         </>
       )}

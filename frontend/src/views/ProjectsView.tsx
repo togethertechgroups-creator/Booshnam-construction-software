@@ -9,8 +9,7 @@ import {
   DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2, Building2, ChevronLeft, ArrowRight, Maximize2, Minimize2, Compass,
   Trash2, AlertTriangle
 } from 'lucide-react';
-import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department } from '../types';
-import { ProjectTopNav, WorkspaceTabId } from '../components/project-workspace/ProjectTopNav';
+import { ProjectTopNav, WorkspaceTabId, isSoilDepartmentProject, SOIL_EXCLUDED_TABS } from '../components/project-workspace/ProjectTopNav';
 import { ProjectSettingsModal } from '../components/project-workspace/ProjectSettingsModal';
 import { ProjectTeamModal } from '../components/project-workspace/ProjectTeamModal';
 import { FeedbackModal } from '../components/project-workspace/FeedbackModal';
@@ -27,6 +26,7 @@ import { SubconTab } from '../components/project-workspace/tabs/SubconTab';
 import { EquipmentTab } from '../components/project-workspace/tabs/EquipmentTab';
 import { FilesTab } from '../components/project-workspace/tabs/FilesTab';
 import { MOMTab } from '../components/project-workspace/tabs/MOMTab';
+import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department } from '../types';
 import { SelectOrTypeInput, SelectOption } from '../components/SelectOrTypeInput';
 import { CustomSelect } from '../components/CustomSelect';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -39,7 +39,8 @@ import {
   getActiveDepartmentId, 
   setActiveDepartmentId, 
   normalizeDepartmentId, 
-  getIndividualDepartments 
+  getIndividualDepartments,
+  getOrInitializeProjects
 } from '../lib/departmentService';
 import { getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { DepartmentLogo } from '../components/DepartmentLogo';
@@ -88,6 +89,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
+  // Auto-redirect to dashboard if current workspace tab is excluded for Soil Investigation projects
+  useEffect(() => {
+    if (activeProject && isSoilDepartmentProject(activeProject) && SOIL_EXCLUDED_TABS.includes(workspaceTab)) {
+      setWorkspaceTab('dashboard');
+    }
+  }, [activeProject, workspaceTab]);
+
   // Filter & Search states for Projects list
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -129,6 +137,34 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [selectedEngineer, setSelectedEngineer] = useState('');
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState('');
+
+  // Auto-open Create Project Wizard when triggered from Quick Access
+  useEffect(() => {
+    const handleOpenCreateProject = () => {
+      const curDept = getActiveDepartmentId();
+      setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
+      setNewProjectName('');
+      setNewClientName('');
+      setNewAddress('');
+      setNewCity('');
+      setNewEstimatedBudget('');
+      setSelectedPM('');
+      setSelectedEngineer('');
+      setSelectedSupervisor('');
+      setSelectedAccounts('');
+      setWizardError('');
+      setWizardStep(1);
+      setViewMode('create');
+    };
+
+    if (sessionStorage.getItem('booshnam_auto_open_create_project')) {
+      sessionStorage.removeItem('booshnam_auto_open_create_project');
+      handleOpenCreateProject();
+    }
+
+    window.addEventListener('booshnam_open_create_project', handleOpenCreateProject);
+    return () => window.removeEventListener('booshnam_open_create_project', handleOpenCreateProject);
+  }, []);
   const [wizardTasks, setWizardTasks] = useState<PredefinedTaskTemplate[]>(() => [...PREDEFINED_TASKS_TEMPLATE]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>(() =>
     PREDEFINED_TASKS_TEMPLATE.map(t => t.id)
@@ -232,27 +268,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   // Local projects fallback with persistent localStorage support
   const [localProjects, setLocalProjects] = useState<Project[]>(() => {
-    const raw = (propProjects && propProjects.length > 0) ? propProjects : (() => {
-      try {
-        const saved = localStorage.getItem('booshnam_projects_v2');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-      return [];
-    })();
-
-    return raw.filter((p: any) => 
-      !p.id?.startsWith('proj-') &&
-      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-    );
+    if (propProjects && propProjects.length > 0) return propProjects;
+    return getOrInitializeProjects();
   });
 
   const allProjects = useMemo(() => {
     const list = (propProjects && propProjects.length > 0) ? propProjects : localProjects;
     return list.filter((p: any) => 
-      !p.id?.startsWith('proj-') &&
       !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
     );
   }, [propProjects, localProjects]);
@@ -262,7 +284,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     const handleProjectsUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
         const clean = e.detail.filter((p: any) => 
-          !p.id?.startsWith('proj-') &&
           !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
         );
         setLocalProjects(clean);
@@ -523,7 +544,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     return allProjects.filter(p => {
       // 1. Staff Access Filter: If non-admin, must be in assigned_team or assigned to tasks in that project
       if (!isSuperOrAdmin && currentStaffName) {
-        const isAssigned = p.assigned_team?.some(m => 
+        const isAssigned = p.assigned_team?.some((m: any) => 
           m.name.toLowerCase().trim().includes(currentStaffName) || 
           currentStaffName.includes(m.name.toLowerCase().trim())
         );
@@ -594,6 +615,25 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       return 0;
     });
   }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId, isRestrictedDeptUser, userDept]);
+
+  const filteredProjectIds = useMemo(() => new Set(filteredProjects.map(p => p.id)), [filteredProjects]);
+  const deptPendingApprovals = useMemo(() => {
+    return approvals.filter(a => 
+      a.status === 'PENDING' && 
+      (activeDeptId === 'booshnam_associates' || filteredProjectIds.has(a.project || a.project_id || ''))
+    ).length;
+  }, [approvals, activeDeptId, filteredProjectIds]);
+
+  const deptPendingMaterials = useMemo(() => {
+    return filteredProjects.reduce((sum, p) => sum + (p.material_pending_count || 0), 0);
+  }, [filteredProjects]);
+
+  const deptPendingTodos = useMemo(() => {
+    return filteredProjects.reduce((sum, p) => {
+      const stats = getProjectLiveStats(p);
+      return sum + (stats.todo || 0);
+    }, 0);
+  }, [filteredProjects, tasks]);
 
 
   // Handle open project details
@@ -718,8 +758,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
     clearFormDirty();
 
+    const targetDeptId = (isRestrictedDeptUser && userDept)
+      ? normalizeDepartmentId(userDept)
+      : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
+
+    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === targetDeptId) || ORGANIZATION_DEPARTMENTS.find(d => !d.isMainOverview) || ORGANIZATION_DEPARTMENTS[0];
+    const prefix = deptObj.codePrefix || 'PRJ';
     const nextNum = 2484 + Math.floor(Math.random() * 50);
-    const code = `RG33-BAGJ-${nextNum}`;
+    const code = `${prefix}-${nextNum}`;
     const initials = newProjectName.slice(0, 2).toUpperCase() || 'PR';
 
     const assignedTeam: ProjectTeamMember[] = [];
@@ -824,14 +870,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     const lowerType = (newProjectType || '').toLowerCase();
     const resolvedCategory = lowerType.includes('gov') ? 'Government Projects' : 'Private Construction';
 
-    const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment) || ORGANIZATION_DEPARTMENTS.find(d => !d.isMainOverview) || ORGANIZATION_DEPARTMENTS[0];
-
     const newProj: Project = {
       id: newProjId,
       code: code,
       name: displayName,
       client_name: cleanClientName || cleanProjName,
-      department: newDepartment,
+      department: targetDeptId,
       department_name: deptObj.name,
       project_type: newProjectType,
       location: `${newAddress ? newAddress + ', ' : ''}${newCity || 'Chennai'}`,
@@ -913,7 +957,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // ==========================================
   if (viewMode === 'create') {
     const activeTasksCount = wizardTasks.filter(t => selectedTaskIds.includes(t.id)).length;
-    const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === newDepartment || d.name === newDepartment) || ORGANIZATION_DEPARTMENTS[0];
+    const effectiveDeptId = (isRestrictedDeptUser && userDept)
+      ? normalizeDepartmentId(userDept)
+      : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
+    const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === effectiveDeptId || d.name === effectiveDeptId) || ORGANIZATION_DEPARTMENTS[1];
     const displayedWizardTasks = taskDeptFilter === 'ALL'
       ? wizardTasks
       : wizardTasks.filter(t => t.department === taskDeptFilter);
@@ -1084,55 +1131,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Client Name</label>
-                        <input
-                          type="text"
-                          value={newClientName}
-                          onChange={(e) => setNewClientName(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Project Type</label>
-                        <CustomSelect
-                          value={newProjectType}
-                          onChange={(val) => setNewProjectType(val)}
-                          options={[
-                            'Private Construction',
-                            'Government Projects'
-                          ]}
-                          size="md"
-                          variant="brand"
-                        />
-                      </div>
-                    </div>
-
                     <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold text-slate-700">
-                          Department / Service <span className="text-red-500">*</span>
-                        </label>
-                        {isRestrictedDeptUser && (
-                          <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                            Assigned Department
-                          </span>
-                        )}
-                      </div>
-                      <CustomSelect
-                        value={newDepartment}
-                        onChange={(val) => setNewDepartment(val)}
-                        disabled={isRestrictedDeptUser}
-                        options={isRestrictedDeptUser && userDept ? [
-                          { label: ORGANIZATION_DEPARTMENTS.find(d => d.id === normalizeDepartmentId(userDept))?.name || userDept, value: normalizeDepartmentId(userDept) }
-                        ] : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
-                          label: d.name,
-                          value: d.id,
-                        }))}
-                        size="md"
-                        variant="brand"
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Client Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Apex Living Developers"
+                        value={newClientName}
+                        onChange={(e) => setNewClientName(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
                       />
                     </div>
                   </div>
@@ -1980,6 +1986,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             onSelectProject?.(p);
           }}
           onCreateNewProject={() => {
+            const curDept = getActiveDepartmentId();
+            setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
             setNewProjectName('');
             setNewAddress('');
             setNewCity('');
@@ -2015,7 +2023,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           )}
 
-          {workspaceTab === 'design' && (
+          {workspaceTab === 'design' && !isSoilDepartmentProject(activeProject) && (
             <DesignTab
               project={activeProject}
               onShowToast={onShowToast}
@@ -2059,14 +2067,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           )}
 
-          {workspaceTab === 'attendance' && (
+          {workspaceTab === 'attendance' && !isSoilDepartmentProject(activeProject) && (
             <AttendanceTab
               project={activeProject}
               onShowToast={onShowToast}
             />
           )}
 
-          {workspaceTab === 'material' && (
+          {workspaceTab === 'material' && !isSoilDepartmentProject(activeProject) && (
             <MaterialTab
               project={activeProject}
               materialRequests={materialRequests}
@@ -2081,7 +2089,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           )}
 
-          {workspaceTab === 'equipment' && (
+          {workspaceTab === 'equipment' && !isSoilDepartmentProject(activeProject) && (
             <EquipmentTab
               project={activeProject}
               onShowToast={onShowToast}
@@ -2374,7 +2382,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <span className="text-slate-400 cursor-pointer" title="Approvals requiring owner/director action">ⓘ</span>
             </div>
             <div className="text-2xl font-bold text-slate-900">
-              {approvals.filter(a => a.status === 'PENDING').length || 0}
+              {deptPendingApprovals}
             </div>
           </div>
           <div className="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
@@ -2389,7 +2397,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <span>Material (Pending)</span>
               <span className="text-slate-400 cursor-pointer" title="Pending material indent and purchase orders">ⓘ</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">10</div>
+            <div className="text-2xl font-bold text-slate-900">{deptPendingMaterials}</div>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
             <ShoppingCart className="w-5 h-5" />
@@ -2403,7 +2411,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <span>To Do (Pending)</span>
               <span className="text-slate-400 cursor-pointer" title="Pending tasks and action items">ⓘ</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">7</div>
+            <div className="text-2xl font-bold text-slate-900">{deptPendingTodos}</div>
           </div>
           <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
             <ListTodo className="w-5 h-5" />
@@ -2519,6 +2527,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           {/* + New Project Button */}
           <button
             onClick={() => {
+              const curDept = getActiveDepartmentId();
+              setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
               setNewProjectName('');
               setNewClientName('');
               setNewAddress('');

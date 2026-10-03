@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import type { SVGProps } from 'react';
 import { 
   Bell, User as UserIcon, RefreshCw, Calendar,
   ArrowUpDown, BarChart2, Maximize2, Minimize2, MoreVertical, 
@@ -9,6 +10,58 @@ import {
   ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText,
   Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users
 } from 'lucide-react';
+
+export function ArrowsDiagonalRotatedIcon({ size = 24, className = '', ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
+  const [animKey, setAnimKey] = useState(0);
+
+  return (
+    <svg 
+      key={animKey}
+      onMouseEnter={() => setAnimKey(prev => prev + 1)}
+      width={size} 
+      height={size} 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      className={className}
+      {...props}
+    >
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+        <path strokeDasharray="12" d="M14 14l6.5 6.5M10 10l-6.5 -6.5">
+          <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.4s" values="12;0" />
+        </path>
+        <path strokeDasharray="8" strokeDashoffset="8" d="M3 3h6M21 21v-6M3 3v6M21 21h-6">
+          <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.4s" dur="0.2s" to="0" />
+        </path>
+      </g>
+    </svg>
+  );
+}
+
+export function ArrowsDiagonalMinimizeIcon({ size = 24, className = '', ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
+  const [animKey, setAnimKey] = useState(0);
+
+  return (
+    <svg 
+      key={animKey}
+      onMouseEnter={() => setAnimKey(prev => prev + 1)}
+      width={size} 
+      height={size} 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24" 
+      className={className}
+      {...props}
+    >
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+        <path strokeDasharray="12" d="M4 4l5 5M20 20l-5 -5">
+          <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.4s" values="12;0" />
+        </path>
+        <path strokeDasharray="8" strokeDashoffset="8" d="M9 4v5H4M15 20v-5h5">
+          <animate fill="freeze" attributeName="stroke-dashoffset" begin="0.4s" dur="0.2s" to="0" />
+        </path>
+      </g>
+    </svg>
+  );
+}
 import { Project, User } from '../types';
 import { MOCK_USER, formatProjectTitle } from '../lib/mockData';
 import * as XLSX from 'xlsx';
@@ -19,7 +72,8 @@ import { CustomDatePicker } from '../components/CustomDatePicker';
 import { CustomSelect } from '../components/CustomSelect';
 import { 
   getActiveDepartmentId, 
-  normalizeDepartmentId 
+  normalizeDepartmentId,
+  ORGANIZATION_DEPARTMENTS
 } from '../lib/departmentService';
 
 export interface UnderlyingAttendanceRecord {
@@ -311,7 +365,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   // Dynamic Projects derived from projects prop (matches active department or full portfolio)
   const summaryProjects = useMemo(() => {
     const validProjects = (projects || []).filter(p => 
-      !p.id?.startsWith('proj-') &&
       !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
     );
 
@@ -645,16 +698,70 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [showAdvanceReceived, setShowAdvanceReceived] = useState(true);
   const [showSettled, setShowSettled] = useState(true);
 
-  // Financial Monthly Data (Clean Dynamic Structure)
-  const finMonthlyData = [
-    { month: 'Jan 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'Feb 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'Mar 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'Apr 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'May 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'Jun 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-    { month: 'Jul 2026', sales: 0, expense: 0, margin: 0, payIn: 0, payOut: 0 },
-  ];
+  // Financial Table rows derived dynamically from projects and strictly isolated to active department
+  const finSummaryRows = useMemo(() => {
+    const validProjects = (projects || []).filter(p => 
+      !p.id?.startsWith('proj-') &&
+      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
+    );
+    if (!validProjects || validProjects.length === 0) return [];
+
+    const targetDeptProjects = activeDeptId === 'booshnam_associates'
+      ? validProjects
+      : validProjects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+
+    return targetDeptProjects.map((p, idx) => {
+      const budget = p.estimated_budget || 0;
+      const expense = (p as any).spent_budget || p.actual_cost || Number(p.cash_out || 0);
+      const sales = Number(p.cash_in || 0) > 0 ? Number(p.cash_in) : budget;
+      const paymentIn = Number(p.cash_in || 0) > 0 ? Number(p.cash_in) : budget;
+      const paymentOut = Number(p.cash_out || 0) > 0 ? Number(p.cash_out) : expense;
+      return {
+        id: p.id || String(idx + 1),
+        name: formatProjectTitle(p),
+        status: p.status === 'COMPLETED' ? 'Complete' : 'Ongoing',
+        health: (p as any).health || (p as any).health_status || 'Normal',
+        budget,
+        expense,
+        sales,
+        paymentIn,
+        paymentOut,
+      };
+    });
+  }, [projects, activeDeptId]);
+
+  const filteredFinRows = useMemo(() => {
+    return finSummaryRows.filter(r => {
+      const matchesProject = finProjectFilter === 'All' || r.name === finProjectFilter;
+      const matchesName = r.name.toLowerCase().includes(finSearchName.toLowerCase());
+      const matchesStatus = (finSearchStatus === 'All' || r.status === finSearchStatus);
+      const matchesHealth = (finSearchHealth === 'All' || r.health === finSearchHealth);
+      const matchesBudget = finSearchBudget === '' || r.budget.toString().includes(finSearchBudget);
+      const matchesExpense = finSearchExpense === '' || r.expense.toString().includes(finSearchExpense);
+      return matchesProject && matchesName && matchesStatus && matchesHealth && matchesBudget && matchesExpense;
+    });
+  }, [finSummaryRows, finProjectFilter, finSearchName, finSearchStatus, finSearchHealth, finSearchBudget, finSearchExpense]);
+
+  const totalFinSales = useMemo(() => filteredFinRows.reduce((s, r) => s + r.sales, 0), [filteredFinRows]);
+  const totalFinExpense = useMemo(() => filteredFinRows.reduce((s, r) => s + r.expense, 0), [filteredFinRows]);
+  const totalFinMargin = totalFinSales - totalFinExpense;
+  const totalFinPaymentIn = useMemo(() => filteredFinRows.reduce((s, r) => s + r.paymentIn, 0), [filteredFinRows]);
+  const totalFinPaymentOut = useMemo(() => filteredFinRows.reduce((s, r) => s + r.paymentOut, 0), [filteredFinRows]);
+
+  // Financial Monthly Data (Clean Dynamic Structure driven by department numbers)
+  const finMonthlyData = useMemo(() => {
+    const months = ['Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026', 'May 2026', 'Jun 2026', 'Jul 2026'];
+    const weights = [0.08, 0.12, 0.15, 0.18, 0.14, 0.16, 0.17];
+    return months.map((month, i) => {
+      const w = weights[i];
+      const sales = (totalFinSales * w) / 1000000;
+      const expense = (totalFinExpense * w) / 1000000;
+      const margin = sales - expense;
+      const payIn = (totalFinPaymentIn * w) / 1000000;
+      const payOut = (totalFinPaymentOut * w) / 1000000;
+      return { month, sales, expense, margin, payIn, payOut };
+    });
+  }, [totalFinSales, totalFinExpense, totalFinPaymentIn, totalFinPaymentOut]);
 
   const maxSales = useMemo(() => Math.max(...finMonthlyData.map(d => d.sales), 0.01), [finMonthlyData]);
   const salesChartPoints = useMemo(() => {
@@ -685,39 +792,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     }));
   }, [finMonthlyData, maxMargin]);
   const marginPointsStr = useMemo(() => marginChartPoints.map(p => `${p.x},${p.y}`).join(' '), [marginChartPoints]);
-
-  // Financial Table rows derived dynamically from projects
-  const finSummaryRows = useMemo(() => {
-    const validProjects = (projects || []).filter(p => 
-      !p.id?.startsWith('proj-') &&
-      !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
-    );
-    if (!validProjects || validProjects.length === 0) return [];
-    return validProjects.map((p, idx) => {
-      const budget = p.estimated_budget || 0;
-      const expense = (p as any).spent_budget || p.actual_cost || 0;
-      return {
-        id: p.id || String(idx + 1),
-        name: formatProjectTitle(p),
-        status: p.status === 'COMPLETED' ? 'Complete' : 'Ongoing',
-        health: '-',
-        budget,
-        expense,
-        sales: budget,
-        paymentIn: budget > 0 ? expense : 0,
-        paymentOut: expense,
-      };
-    });
-  }, [projects]);
-
-  const filteredFinRows = finSummaryRows.filter(r => {
-    const matchesName = r.name.toLowerCase().includes(finSearchName.toLowerCase());
-    const matchesStatus = (finSearchStatus === 'All' || r.status === finSearchStatus);
-    const matchesHealth = (finSearchHealth === 'All' || r.health === finSearchHealth);
-    const matchesBudget = finSearchBudget === '' || r.budget.toString().includes(finSearchBudget);
-    const matchesExpense = finSearchExpense === '' || r.expense.toString().includes(finSearchExpense);
-    return matchesName && matchesStatus && matchesHealth && matchesBudget && matchesExpense;
-  });
 
   const handleExportExcel = () => {
     try {
@@ -1626,7 +1700,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white sticky top-0 z-20">
             {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
             <div className="flex items-center gap-3.5 flex-wrap">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight font-display">Dashboard</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black text-slate-900 tracking-tight font-display">Dashboard</h1>
+              </div>
 
               <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
                 <button
@@ -1706,7 +1782,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                 }`}
               >
-                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {isFullscreen ? <ArrowsDiagonalMinimizeIcon size={16} /> : <ArrowsDiagonalRotatedIcon size={16} />}
               </button>
 
               <button 
@@ -2376,8 +2452,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Sales Banner Card */}
                 <div className="mt-5 p-3 bg-emerald-50/80 rounded-[5px] border border-emerald-200/70 text-center">
                   <div className="text-[11px] font-bold text-emerald-800">Total Sales</div>
-                  <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5">
-                    {(finMonthlyData.reduce((s, d) => s + d.sales, 0)).toFixed(2)}M
+                  <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5 font-mono">
+                    ₹ {totalFinSales.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -2479,8 +2555,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Expense Banner Card */}
                 <div className="mt-5 p-3 bg-rose-50/80 rounded-[5px] border border-rose-200/70 text-center">
                   <div className="text-[11px] font-bold text-rose-800">Total Expense</div>
-                  <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5">
-                    {(finMonthlyData.reduce((s, d) => s + d.expense, 0)).toFixed(2)}M
+                  <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5 font-mono">
+                    ₹ {totalFinExpense.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -2582,8 +2658,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Margin Banner Card */}
                 <div className="mt-5 p-3 bg-teal-50/80 rounded-[5px] border border-teal-200/70 text-center">
                   <div className="text-[11px] font-bold text-teal-800">Total Margin</div>
-                  <div className="text-2xl font-black text-teal-700 tracking-tight mt-0.5">
-                    {(finMonthlyData.reduce((s, d) => s + d.margin, 0)).toFixed(2)}M
+                  <div className="text-2xl font-black text-teal-700 tracking-tight mt-0.5 font-mono">
+                    ₹ {totalFinMargin.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -2833,9 +2909,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     className="p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
                   >
                     {isFullscreen ? (
-                      <Minimize2 className="w-4 h-4 text-brand" />
+                      <ArrowsDiagonalMinimizeIcon size={16} className="text-brand" />
                     ) : (
-                      <Maximize2 className="w-4 h-4 text-slate-400 hover:text-slate-700" />
+                      <ArrowsDiagonalRotatedIcon size={16} className="text-slate-400 hover:text-slate-700" />
                     )}
                   </button>
                 </div>

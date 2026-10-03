@@ -1,4 +1,5 @@
 import { StaffMember, getStaffMembers } from './staffService';
+import { BOOSHNAM_OFFICE_GEOFENCE, isStaffOfficeBased } from './officeGeofenceService';
 
 export interface StaffAttendanceRecord {
   id: string;
@@ -113,6 +114,11 @@ export function saveStaffAttendancePunch(
     };
     current[existingIndex] = updatedRecord;
   } else {
+    const isOffice = isStaffOfficeBased({ role_name: params.roleName, department: params.department });
+    const defaultLoc = isOffice ? 'Booshnam Head Office (Pammal, Chennai)' : 'Government Project Site (Geofence Verified)';
+    const defaultLat = isOffice ? BOOSHNAM_OFFICE_GEOFENCE.latitude : 12.9716;
+    const defaultLon = isOffice ? BOOSHNAM_OFFICE_GEOFENCE.longitude : 80.2437;
+
     // New check-in for today
     updatedRecord = {
       id: `att-punch-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -126,12 +132,12 @@ export function saveStaffAttendancePunch(
       clock_out_time: params.punchType === 'OUT' ? currentTime : undefined,
       status: params.status || 'Present',
       verification_photo: params.photo || SAMPLE_PHOTO_AVATAR,
-      location_name: params.locationName || 'Government Project Site (Geofence Verified)',
-      latitude: params.latitude || 12.9716,
-      longitude: params.longitude || 80.2437,
+      location_name: params.locationName || defaultLoc,
+      latitude: params.latitude || defaultLat,
+      longitude: params.longitude || defaultLon,
       distance_from_site_meters: params.distanceMeters ?? Math.floor(Math.random() * 20 + 5),
       is_inside_geofence: true,
-      notes: params.notes || 'Verified live mobile punch',
+      notes: params.notes || (isOffice ? 'Verified live office GPS check-in' : 'Verified live mobile punch'),
       punch_mode: params.punchMode || 'CAMERA_SELFIE',
       created_at: new Date().toISOString(),
     };
@@ -165,6 +171,7 @@ export function updateStaffAttendanceStatus(
     const allStaff = getStaffMembers();
     const staff = allStaff.find((s) => s.id === staffId);
     if (staff) {
+      const isOffice = isStaffOfficeBased({ role_name: staff.role_name || staff.designation, department: staff.department });
       current.unshift({
         id: `att-punch-${Date.now()}`,
         staff_id: staff.id,
@@ -176,7 +183,7 @@ export function updateStaffAttendanceStatus(
         clock_in_time: formatTime12h(),
         status: newStatus,
         verification_photo: SAMPLE_PHOTO_AVATAR,
-        location_name: 'Site Office',
+        location_name: isOffice ? 'Booshnam Head Office (Pammal, Chennai)' : 'Site Office',
         distance_from_site_meters: 10,
         is_inside_geofence: true,
         punch_mode: 'ADMIN_OVERRIDE',

@@ -2538,7 +2538,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <option value="Structural">Structural</option>
                         <option value="Architectural">Architectural</option>
                         <option value="Sculpture">Sculpture</option>
-                        <option value="Construction (All)">Construction (All)</option>
+                        <option value="Private Construction">Private Construction</option>
+                        <option value="Government Projects">Government Projects</option>
                         <option value="Coimbatore – Soil Investigation">Coimbatore – Soil Investigation</option>
                         <option value="Coimbatore – Material Testing">Coimbatore – Material Testing</option>
                       </select>

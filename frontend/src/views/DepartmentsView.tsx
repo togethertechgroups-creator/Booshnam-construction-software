@@ -271,16 +271,24 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       desc: 'Architectural sculptures, monumental statues, murals & heritage artisan crafts',
     },
     { 
-      id: 'CONSTRUCTION' as Department, 
-      label: '7. Construction (All)', 
-      shortLabel: 'Construction (All)',
+      id: 'PRIVATE_CONSTRUCTION' as Department, 
+      label: '7. Private Construction', 
+      shortLabel: 'Private Construction',
       icon: HardHat, 
       count: `${dprs.length} DPRs`,
-      desc: 'Civil construction execution, DPRs, site operations, residential & commercial works',
+      desc: 'Residential, villa & commercial building execution, daily progress reports & site logs',
+    },
+    { 
+      id: 'GOVERNMENT_PROJECT' as Department, 
+      label: '8. Government Projects', 
+      shortLabel: 'Government Projects',
+      icon: Building2, 
+      count: `PWD/Govt`,
+      desc: 'Infrastructure, public works, highway projects, government tenders & department contracts',
     },
     { 
       id: 'COIMBATORE_SOIL' as Department, 
-      label: '8. Coimbatore – Soil Investigation', 
+      label: '9. Coimbatore – Soil Investigation', 
       shortLabel: 'Coimbatore – Soil',
       icon: Compass, 
       count: `Regional`,
@@ -288,7 +296,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     },
     { 
       id: 'COIMBATORE_MATERIAL_TESTING' as Department, 
-      label: '9. Coimbatore – Material Testing', 
+      label: '10. Coimbatore – Material Testing', 
       shortLabel: 'Coimbatore – Material Testing',
       icon: Award, 
       count: `Regional`,
@@ -303,8 +311,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const currentDeptObj = effectiveDepartmentOptions.find(d => 
     d.id === activeDept || 
     (activeDept === 'ARCHITECTURE' && d.id === 'ARCHITECTURAL') || 
-    (activeDept === 'PRIVATE_CONSTRUCTION' && d.id === 'CONSTRUCTION') || 
-    (activeDept === 'GOVERNMENT_PROJECT' && d.id === 'CONSTRUCTION') || 
+    (activeDept === 'CONSTRUCTION' && d.id === 'PRIVATE_CONSTRUCTION') || 
     (activeDept === 'CBE_SOIL_INVESTIGATION' && d.id === 'COIMBATORE_SOIL') || 
     (activeDept === 'SURVEY' && d.id === 'SURVEYING') || 
     (activeDept === 'ART_SCULPTURE' && d.id === 'SCULPTURE')

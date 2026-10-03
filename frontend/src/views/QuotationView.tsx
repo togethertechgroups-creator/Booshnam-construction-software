@@ -443,6 +443,42 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   const [quoteItems, setQuoteItems] = useState<QuotationItem[]>([]);
 
+  // Function to open and initialize new quotation proposal
+  const handleOpenNewQuotationModal = () => {
+    setActiveTab('quotations');
+    setQuoteClientName('');
+    setQuoteClientPhone('');
+    setQuoteClientEmail('');
+    setQuoteClientAddress('');
+    setQuoteProjectTitle('Soil Investigation');
+    setQuoteDiscount(0);
+    setQuoteItems([
+      {
+        id: `item-${Date.now()}`,
+        description: 'Soil Testing Investigation & Report',
+        unit: 'Package',
+        quantity: 1,
+        unit_rate: 15000,
+        amount: 15000,
+        category: 'Soil Testing'
+      }
+    ]);
+    setIsNewQuoteModalOpen(true);
+  };
+
+  // Listen for global quick action trigger from Sidebar
+  useEffect(() => {
+    const handleOpenNewQuote = () => {
+      handleOpenNewQuotationModal();
+    };
+    window.addEventListener('booshnam_open_create_quotation', handleOpenNewQuote);
+    if (sessionStorage.getItem('booshnam_auto_open_create_quotation')) {
+      sessionStorage.removeItem('booshnam_auto_open_create_quotation');
+      handleOpenNewQuote();
+    }
+    return () => window.removeEventListener('booshnam_open_create_quotation', handleOpenNewQuote);
+  }, []);
+
   // Close floating menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1393,7 +1429,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               <div className="shrink-0 flex items-center">
                 <button
                   type="button"
-                  onClick={() => setIsNewQuoteModalOpen(true)}
+                  onClick={handleOpenNewQuotationModal}
                   className="h-9 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 cursor-pointer transition-all whitespace-nowrap border border-transparent"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />

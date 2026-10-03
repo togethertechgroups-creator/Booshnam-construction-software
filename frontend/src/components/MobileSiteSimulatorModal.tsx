@@ -10,6 +10,10 @@ import {
   formatTime12h, 
   getStaffLatestRecordToday 
 } from '../lib/staffAttendanceService';
+import { 
+  BOOSHNAM_OFFICE_GEOFENCE, 
+  isStaffOfficeBased 
+} from '../lib/officeGeofenceService';
 
 interface MobileSiteSimulatorModalProps {
   isOpen: boolean;
@@ -108,6 +112,8 @@ export const MobileSiteSimulatorModal: React.FC<MobileSiteSimulatorModalProps> =
     if (!selectedStaff) return;
     const photoToSave = capturedPhoto || `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" fill="%23dcfce7"/><circle cx="60" cy="46" r="22" fill="%2316a34a"/><path d="M24 102c0-19.882 16.118-36 36-36s36 16.118 36 36" fill="%2315803d"/></svg>`;
 
+    const isOffice = isStaffOfficeBased(selectedStaff);
+
     saveStaffAttendancePunch({
       staffId: selectedStaff.id,
       staffName: selectedStaff.name,
@@ -117,7 +123,9 @@ export const MobileSiteSimulatorModal: React.FC<MobileSiteSimulatorModalProps> =
       photo: photoToSave,
       punchType,
       punchMode: 'MOBILE_APP',
-      locationName: project?.name ? `${project.name} Site` : 'Site Office',
+      locationName: isOffice 
+        ? `${BOOSHNAM_OFFICE_GEOFENCE.name} (Pammal, Chennai)`
+        : (project?.name ? `${project.name} Site` : 'Site Office'),
       distanceMeters: 14,
     });
 
@@ -184,11 +192,13 @@ export const MobileSiteSimulatorModal: React.FC<MobileSiteSimulatorModalProps> =
                 {/* Geofence & Punch Type Toggle */}
                 <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs space-y-2">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="flex items-center gap-1 font-semibold text-slate-700">
-                      <MapPin className="w-3.5 h-3.5 text-red-500" />
-                      <span>{project?.name || 'Site'} Center</span>
+                    <span className="flex items-center gap-1 font-semibold text-slate-700 min-w-0 pr-1">
+                      <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                      <span className="truncate">
+                        {isStaffOfficeBased(selectedStaff) ? 'Office: LIC Colony, Pammal' : (project?.name || 'Site') + ' Center'}
+                      </span>
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
                       12.4m Inside
                     </span>
                   </div>

@@ -7,7 +7,7 @@ import {
   Image as ImageIcon, Upload, ChevronRight, Check, X, Trash2, Eye
 } from 'lucide-react';
 import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember } from '../../../types';
-import { WorkspaceTabId } from '../ProjectTopNav';
+import { WorkspaceTabId, isSoilDepartmentProject } from '../ProjectTopNav';
 import { ProjectPhoto, getProjectPhotos, addProjectPhoto, removeProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { confirmAction } from '../../../lib/dialogService';
 import { CustomSelect } from '../../CustomSelect';
@@ -31,6 +31,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 }) => {
   // Top Sub-Tabs: 'operational' | 'financial' (matching user screenshot)
   const [subTab, setSubTab] = useState<'operational' | 'financial'>('operational');
+
+  // Check if current project is in Soil Investigation department
+  const isSoilProject = isSoilDepartmentProject(project);
 
   // Centralized project photos state (aggregated from Dashboard, Design, Material, Files, etc.)
   const projectIdKey = project.id || project.code;
@@ -488,59 +491,61 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           {/* ROW 3: Attendance Overview | Project Photos */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             
-            {/* Card 6: Attendance Overview (8 cols) */}
-            <div className="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Attendance Overview</h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Grey bars = required workers to meet weekly schedule target
-                </p>
-              </div>
-
-              {/* 7-Day Bar Chart */}
-              {attendanceDays.length === 0 ? (
-                <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs border-b border-slate-100">
-                  <Users className="w-8 h-8 mb-2 text-slate-300" />
-                  <p>No attendance records logged for this period.</p>
+            {/* Card 6: Attendance Overview (8 cols) - Hidden for Soil Department projects */}
+            {!isSoilProject && (
+              <div className="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Attendance Overview</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Grey bars = required workers to meet weekly schedule target
+                  </p>
                 </div>
-              ) : (
-                <div className="h-44 flex items-end justify-between gap-3 pt-4 px-4 pb-2 border-b border-slate-100">
-                  {attendanceDays.map((d, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                      <div className="w-full flex items-end justify-center gap-1 h-32">
-                        {/* Grey Target Bar */}
-                        <div 
-                          className="w-3 bg-slate-300 rounded-t-xs transition-all"
-                          style={{ height: `${(d.target / 25) * 100}%` }}
-                          title={`Target: ${d.target} workers`}
-                        />
-                        {/* Actual Bar (Red) */}
-                        <div 
-                          className="w-3 bg-red-600 rounded-t-xs transition-all"
-                          style={{ height: `${(d.actual / 25) * 100}%` }}
-                          title={`Actual: ${d.actual} workers`}
-                        />
+
+                {/* 7-Day Bar Chart */}
+                {attendanceDays.length === 0 ? (
+                  <div className="h-44 flex flex-col items-center justify-center text-slate-400 text-xs border-b border-slate-100">
+                    <Users className="w-8 h-8 mb-2 text-slate-300" />
+                    <p>No attendance records logged for this period.</p>
+                  </div>
+                ) : (
+                  <div className="h-44 flex items-end justify-between gap-3 pt-4 px-4 pb-2 border-b border-slate-100">
+                    {attendanceDays.map((d, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                        <div className="w-full flex items-end justify-center gap-1 h-32">
+                          {/* Grey Target Bar */}
+                          <div 
+                            className="w-3 bg-slate-300 rounded-t-xs transition-all"
+                            style={{ height: `${(d.target / 25) * 100}%` }}
+                            title={`Target: ${d.target} workers`}
+                          />
+                          {/* Actual Bar (Red) */}
+                          <div 
+                            className="w-3 bg-red-600 rounded-t-xs transition-all"
+                            style={{ height: `${(d.actual / 25) * 100}%` }}
+                            title={`Actual: ${d.actual} workers`}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{d.date}</span>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{d.date}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between text-xs text-slate-500 px-2">
+                  <span>Average Daily Headcount: <strong>{attendanceDays.length > 0 ? `${Math.round(attendanceDays.reduce((a, b) => a + b.actual, 0) / attendanceDays.length)} Workers` : '0 Workers'}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('attendance')}
+                    className="text-red-600 font-bold hover:underline cursor-pointer"
+                  >
+                    View Attendance Roster →
+                  </button>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between text-xs text-slate-500 px-2">
-                <span>Average Daily Headcount: <strong>{attendanceDays.length > 0 ? `${Math.round(attendanceDays.reduce((a, b) => a + b.actual, 0) / attendanceDays.length)} Workers` : '0 Workers'}</strong></span>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('attendance')}
-                  className="text-red-600 font-bold hover:underline cursor-pointer"
-                >
-                  View Attendance Roster →
-                </button>
               </div>
-            </div>
+            )}
 
-            {/* Card 7: Project Photos (4 cols) */}
-            <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+            {/* Card 7: Project Photos (12 cols if Soil Investigation, otherwise 4 cols) */}
+            <div className={`${isSoilProject ? 'lg:col-span-12' : 'lg:col-span-4'} bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between`}>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -591,7 +596,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 )}
 
                 {/* Photos Grid / Thumbnails */}
-                <div className="grid grid-cols-2 gap-3 my-2">
+                <div className={`grid ${isSoilProject ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-2'} gap-3 my-2`}>
                   {(activeSourceFilter === 'ALL' ? photos : photos.filter(p => (p.source || 'Site Photo') === activeSourceFilter)).map((ph) => (
                     <div 
                       key={ph.id} 

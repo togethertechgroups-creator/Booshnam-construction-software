@@ -96,7 +96,9 @@ export default function HomeScreen({
     (user.role && (user.role.toLowerCase().includes('site') || user.role.toLowerCase().includes('supervisor')));
 
   // Site name assigned
-  const assignedSiteName = isSiteStaff ? 'Cumbum Runway Site (Theni)' : 'Booshnam Head Office';
+  const assignedSiteName = isSiteStaff 
+    ? 'Cumbum Runway Site (Theni)' 
+    : 'Booshnam Head Office (Plot No. 8, LIC Colony, 6th St, Pammal, Chennai - 600075)';
 
   // Unique key for the currently logged-in user
   const userKey = String(user.id || user.username || '1');
@@ -1023,15 +1025,15 @@ export default function HomeScreen({
                   </View>
                   <Text style={styles.telemetryValue}>{assignedSiteName}</Text>
                 </View>
-                {isSiteStaff && (
-                  <View style={styles.telemetryRow}>
-                    <View style={styles.metaInline}>
-                      <CheckCircle2 size={13} color="#16a34a" strokeWidth={2.5} style={{ marginRight: 6 }} />
-                      <Text style={styles.telemetryLabel}>GPS Verification:</Text>
-                    </View>
-                    <Text style={styles.telemetryValueGreen}>12.4m (Site Verified & Geofenced)</Text>
+                <View style={styles.telemetryRow}>
+                  <View style={styles.metaInline}>
+                    <CheckCircle2 size={13} color="#16a34a" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                    <Text style={styles.telemetryLabel}>GPS Geofence:</Text>
                   </View>
-                )}
+                  <Text style={styles.telemetryValueGreen}>
+                    {isSiteStaff ? '12.4m (Site Verified & Geofenced)' : '11.8m • Inside Office Geofence (Pammal)'}
+                  </Text>
+                </View>
                 <View style={styles.telemetryRow}>
                   <View style={styles.metaInline}>
                     <ShieldCheck size={13} color="#dc2626" strokeWidth={2.2} style={{ marginRight: 6 }} />

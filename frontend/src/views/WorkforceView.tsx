@@ -65,6 +65,18 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       setMainTab(initialTab);
     }
   }, [initialTab]);
+
+  useEffect(() => {
+    const handleOpenPayroll = () => {
+      setMainTab('payroll');
+    };
+    if (sessionStorage.getItem('booshnam_auto_open_payroll')) {
+      sessionStorage.removeItem('booshnam_auto_open_payroll');
+      setMainTab('payroll');
+    }
+    window.addEventListener('booshnam_open_payroll', handleOpenPayroll);
+    return () => window.removeEventListener('booshnam_open_payroll', handleOpenPayroll);
+  }, []);
   const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [searchStaffQuery, setSearchStaffQuery] = useState('');
@@ -862,10 +874,18 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                 <div className="space-y-0.5">
                                   <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
                                     <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                    <span>{staffRecord.distance_from_site_meters}m from site</span>
+                                    <span>
+                                      {staffRecord.distance_from_site_meters}m from {
+                                        (staffRecord.location_name && (staffRecord.location_name.toLowerCase().includes('office') || staffRecord.location_name.toLowerCase().includes('pammal')))
+                                          ? 'Head Office'
+                                          : 'Site'
+                                      }
+                                    </span>
                                   </div>
-                                  <div className="text-[10px] text-emerald-600 font-medium">
-                                    Inside Geofence Verified
+                                  <div className="text-[10px] text-emerald-600 font-medium truncate max-w-[210px]" title={staffRecord.location_name || 'Geofence Verified'}>
+                                    {(staffRecord.location_name && (staffRecord.location_name.toLowerCase().includes('pammal') || staffRecord.location_name.toLowerCase().includes('office')))
+                                      ? 'Office Geofence (Pammal, Chennai)'
+                                      : 'Inside Geofence Verified'}
                                   </div>
                                 </div>
                               ) : (
@@ -1073,7 +1093,8 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                           { label: 'Structural', value: 'Structural' },
                           { label: 'Architectural', value: 'Architectural' },
                           { label: 'Sculpture', value: 'Sculpture' },
-                          { label: 'Construction (All)', value: 'Construction (All)' },
+                          { label: 'Private Construction', value: 'Private Construction' },
+                          { label: 'Government Projects', value: 'Government Projects' },
                           { label: 'Coimbatore – Soil Investigation', value: 'Coimbatore – Soil Investigation' },
                           { label: 'Coimbatore – Material Testing', value: 'Coimbatore – Material Testing' },
                         ]}

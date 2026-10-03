@@ -102,27 +102,13 @@ export function App() {
         localStorage.removeItem('booshnam_finance_transfers_v1');
       }
 
-      // Purge all seed projects starting with proj- or known titles
-      const savedProjs = localStorage.getItem('booshnam_projects_v2');
-      if (savedProjs) {
-        const parsed = JSON.parse(savedProjs);
-        if (Array.isArray(parsed)) {
-          const cleanProjs = parsed.filter((p: any) => 
-            !p.id?.startsWith('proj-') &&
-            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-          );
-          if (cleanProjs.length !== parsed.length) {
-            localStorage.setItem('booshnam_projects_v2', JSON.stringify(cleanProjs));
-            setProjects(cleanProjs);
-            if (cleanProjs.length > 0) {
-              setSelectedProject(cleanProjs[0]);
-            } else {
-              setSelectedProject(null);
-            }
-            window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: cleanProjs }));
-          }
-        }
+      // Ensure all 10 departments have at least one project
+      const allDeptsProjs = getOrInitializeProjects();
+      setProjects(allDeptsProjs);
+      if (allDeptsProjs.length > 0) {
+        setSelectedProject(prev => prev || allDeptsProjs[0]);
       }
+      window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: allDeptsProjs }));
     } catch (e) {}
   }, []);
   const [activeRole, setActiveRole] = useState<Role>(() => {
@@ -556,7 +542,7 @@ export function App() {
             />
           )}
 
-          {currentView === 'setting' && (
+          {(currentView === 'setting' || currentView === 'settings') && (
             <SettingsView
               activeRole={activeRole}
               isSidebarOpen={isSidebarOpen}

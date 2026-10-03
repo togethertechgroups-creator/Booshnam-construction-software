@@ -50,16 +50,52 @@ export const WORKSPACE_TABS: TabDefinition[] = [
 ];
 
 /**
+ * Helper to check if a project belongs to the Soil Investigation department
+ */
+export function isSoilDepartmentProject(project?: Project | null): boolean {
+  if (!project) return false;
+  const dept = String(project.department || '').toUpperCase().trim();
+  const deptName = String(project.department_name || '').toLowerCase().trim();
+  const projType = String(project.project_type || '').toLowerCase().trim();
+  const projCode = String(project.code || '').toUpperCase().trim();
+  const projName = String(project.name || '').toLowerCase().trim();
+
+  return (
+    dept === 'SOIL_INVESTIGATION' ||
+    dept === 'COIMBATORE_SOIL' ||
+    dept === 'CBE_SOIL_INVESTIGATION' ||
+    dept.includes('SOIL') ||
+    deptName.includes('soil') ||
+    projType.includes('soil') ||
+    projCode.startsWith('SOIL') ||
+    projCode.startsWith('CBE-S') ||
+    projName.includes('borehole') ||
+    projName.includes('stratum') ||
+    projName.includes('soil')
+  );
+}
+
+/**
+ * Tabs specifically excluded for Soil Investigation projects per requirement:
+ * - Design, Material, Attendance, Equipment are removed.
+ * - Dashboard, Task, BOQ, Party, Transaction, To Do, Subcon, Files, MOM remain.
+ */
+export const SOIL_EXCLUDED_TABS: WorkspaceTabId[] = ['design', 'material', 'attendance', 'equipment'];
+
+/**
  * Role-wise Tab Access Rules (Requirement 7):
  * - Super Admin / Admin: All 13 tabs
  * - Project Manager: Dashboard, BOQ, Party, Transaction, To Do, Task, Attendance, Material, Subcon, Equipment, Files, MOM
  * - Site Engineer: Dashboard, Design, BOQ, To Do, Task, Attendance, Material, Equipment, Files, MOM (financial/party/subcon hidden)
  * - PM / Site Engineer: Combined (Dashboard, Design, BOQ, Party, Transaction, To Do, Task, Attendance, Material, Subcon, Equipment, Files, MOM)
  * - Site Supervisor: Daily site work only: Dashboard, To Do, Task, Attendance, Material, Equipment, Files, MOM (financial/sensitive modules hidden)
+ * Note: If project belongs to Soil Investigation department, Design, Material, Attendance, Equipment are excluded.
  */
-export function getAllowedTabsForRole(roleCode?: string, roleName?: string): WorkspaceTabId[] {
+export function getAllowedTabsForRole(roleCode?: string, roleName?: string, project?: Project | null): WorkspaceTabId[] {
   const code = (roleCode || '').toUpperCase().trim();
   const name = (roleName || '').toLowerCase().trim();
+
+  let tabs: WorkspaceTabId[];
 
   // Super Admin / Admin / Director
   if (
@@ -70,36 +106,35 @@ export function getAllowedTabsForRole(roleCode?: string, roleName?: string): Wor
     name.includes('director') || 
     name.includes('admin')
   ) {
-    return ['dashboard', 'design', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
-  }
-
-  // PM + Site Engineer Combined
-  if (
+    tabs = ['dashboard', 'design', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
+  } else if (
     code === 'PM_SITE_ENGINEER' || 
     (name.includes('pm') && name.includes('engineer')) || 
     name.includes('project manager / site engineer') ||
     (code.includes('PM') && code.includes('ENGINEER'))
   ) {
-    return ['dashboard', 'design', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
+    // PM + Site Engineer Combined
+    tabs = ['dashboard', 'design', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
+  } else if (code === 'PROJECT_MANAGER' || code === 'PM' || name.includes('project manager')) {
+    // Project Manager
+    tabs = ['dashboard', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
+  } else if (code === 'SITE_ENGINEER' || name.includes('site engineer') || name.includes('engineer')) {
+    // Site Engineer
+    tabs = ['dashboard', 'design', 'boq', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
+  } else if (code === 'SUPERVISOR' || code === 'SITE_SUPERVISOR' || name.includes('supervisor')) {
+    // Site Supervisor
+    tabs = ['dashboard', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
+  } else {
+    // Default Employee / Staff fallback
+    tabs = ['dashboard', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
   }
 
-  // Project Manager
-  if (code === 'PROJECT_MANAGER' || code === 'PM' || name.includes('project manager')) {
-    return ['dashboard', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
+  // Filter out excluded tabs if this project is in the Soil Department
+  if (isSoilDepartmentProject(project)) {
+    tabs = tabs.filter(tab => !SOIL_EXCLUDED_TABS.includes(tab));
   }
 
-  // Site Engineer
-  if (code === 'SITE_ENGINEER' || name.includes('site engineer') || name.includes('engineer')) {
-    return ['dashboard', 'design', 'boq', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
-  }
-
-  // Site Supervisor
-  if (code === 'SUPERVISOR' || code === 'SITE_SUPERVISOR' || name.includes('supervisor')) {
-    return ['dashboard', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
-  }
-
-  // Default Employee / Staff fallback
-  return ['dashboard', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
+  return tabs;
 }
 
 interface ProjectTopNavProps {
@@ -170,8 +205,8 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
   const effectiveRoleCode = userRole || activeUser?.role_code || 'SUPER_ADMIN';
   const effectiveRoleName = userRoleName || activeUser?.role_name || 'Staff';
 
-  // Allowed tabs based on employee role (Requirement 7)
-  const allowedTabIds = getAllowedTabsForRole(effectiveRoleCode, effectiveRoleName);
+  // Allowed tabs based on employee role and project department
+  const allowedTabIds = getAllowedTabsForRole(effectiveRoleCode, effectiveRoleName, project);
   const allowedTabs = WORKSPACE_TABS.filter(t => allowedTabIds.includes(t.id));
 
   // Auto redirect if current tab is not allowed for this employee role
@@ -499,8 +534,8 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
           </button>
         )}
 
-        {/* Tab 3: Attendance (if allowed) */}
-        {allowedTabIds.includes('attendance') && (
+        {/* Tab 3: Attendance (if allowed) or BOQ fallback */}
+        {allowedTabIds.includes('attendance') ? (
           <button
             type="button"
             onClick={() => onSelectTab('attendance')}
@@ -511,10 +546,21 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
             <UserCheck className="w-5 h-5" />
             <span className="text-[10px] mt-0.5">Attendance</span>
           </button>
-        )}
+        ) : allowedTabIds.includes('boq') ? (
+          <button
+            type="button"
+            onClick={() => onSelectTab('boq')}
+            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer ${
+              activeTab === 'boq' ? 'text-red-600 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5">BOQ</span>
+          </button>
+        ) : null}
 
-        {/* Tab 4: Material (if allowed) */}
-        {allowedTabIds.includes('material') && (
+        {/* Tab 4: Material (if allowed) or Files fallback */}
+        {allowedTabIds.includes('material') ? (
           <button
             type="button"
             onClick={() => onSelectTab('material')}
@@ -525,14 +571,25 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
             <Package className="w-5 h-5" />
             <span className="text-[10px] mt-0.5">Material</span>
           </button>
-        )}
+        ) : allowedTabIds.includes('files') ? (
+          <button
+            type="button"
+            onClick={() => onSelectTab('files')}
+            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer ${
+              activeTab === 'files' ? 'text-red-600 font-bold scale-105' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-[10px] mt-0.5">Files</span>
+          </button>
+        ) : null}
 
         {/* Tab 5: More Drawer */}
         <button
           type="button"
           onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer ${
-            isMobileDrawerOpen || !['dashboard', 'task', 'attendance', 'material'].includes(activeTab) 
+            isMobileDrawerOpen || !['dashboard', 'task', allowedTabIds.includes('attendance') ? 'attendance' : 'boq', allowedTabIds.includes('material') ? 'material' : 'files'].includes(activeTab) 
               ? 'text-red-600 font-bold' 
               : 'text-slate-500 hover:text-slate-800'
           }`}

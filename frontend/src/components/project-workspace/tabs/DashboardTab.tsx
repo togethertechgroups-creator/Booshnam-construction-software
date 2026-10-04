@@ -136,9 +136,19 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const attendanceDays: Array<{ date: string; target: number; actual: number }> = [];
 
   // Financial stats
-  const cashIn = project.cash_in || 1250000;
-  const cashOut = project.cash_out || 865000;
+  const cashIn = project.cash_in || 0;
+  const cashOut = project.cash_out || 0;
   const netWorkingCap = cashIn - cashOut;
+  const boqValue = project.boq_value || 0;
+  const estimatedMargin = project.estimated_margin || 0;
+  const salesInvoice = project.sales_invoice || 0;
+  const workDone = project.work_done || 0;
+  const payables = project.payables || 0;
+  const receivables = project.receivables || 0;
+  const siteStaffExpense = project.site_staff_expense || 0;
+  const labourContractorExpense = project.labour_contractor_expense || 0;
+  const officeStaffExpense = project.office_staff_expense || 0;
+
 
   // Handle image file selection
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -693,7 +703,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Estimated Budget</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {projectValue.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-[#2272c7] font-semibold mt-1 cursor-pointer hover:underline">
                   View Breakup &gt;
@@ -708,10 +718,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Total BOQ Value</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {boqValue.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  Estimated Margin: ₹ 0
+                  Estimated Margin: ₹ {estimatedMargin.toLocaleString()}
                 </div>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[#e8a365] flex items-center justify-center text-white shrink-0">
@@ -723,10 +733,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Total Sales Invoice</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {salesInvoice.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  0% of BOQ value
+                  {boqValue > 0 ? Math.round((salesInvoice / boqValue) * 100) : 0}% of BOQ value
                 </div>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[#42a898] flex items-center justify-center text-white shrink-0">
@@ -741,10 +751,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Total Expense (Till Date)</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {cashOut.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  0% of Budget used
+                  {projectValue > 0 ? Math.round((cashOut / projectValue) * 100) : 0}% of Budget used
                 </div>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[#966baf] flex items-center justify-center text-white shrink-0">
@@ -756,10 +766,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Work done value</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {workDone.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-slate-500 mt-1">
-                  0% of BOQ value
+                  {boqValue > 0 ? Math.round((workDone / boqValue) * 100) : 0}% of BOQ value
                 </div>
               </div>
               <div className="w-10 h-10 rounded-lg bg-[#61b865] flex items-center justify-center text-white shrink-0">
@@ -771,7 +781,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <div>
                 <div className="text-xs text-slate-500 font-medium">Net Cash Position</div>
                 <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
-                  ₹ 0
+                  ₹ {netWorkingCap.toLocaleString()}
                 </div>
                 <div className="text-[11px] text-[#2272c7] font-semibold mt-1 cursor-pointer hover:underline">
                   View Breakup &gt;
@@ -834,14 +844,14 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="w-2 h-2 rounded-full bg-red-500" />
                     <span className="text-slate-600">Payable</span>
                   </div>
-                  <span className="font-bold text-slate-900">₹ 0</span>
+                  <span className="font-bold text-slate-900">₹ {payables.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#3baf57]" />
                     <span className="text-slate-600">Receivable</span>
                   </div>
-                  <span className="font-bold text-slate-900">₹ 27,500</span>
+                  <span className="font-bold text-slate-900">₹ {receivables.toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -859,7 +869,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="text-slate-600">Site Staff</span>
                   </div>
                   <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="font-bold text-slate-900">₹ {siteStaffExpense.toLocaleString()}</span>
                     <span className="text-slate-400 w-6 text-right">0%</span>
                   </div>
                 </div>
@@ -870,7 +880,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="text-slate-600">Labour Contractor</span>
                   </div>
                   <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="font-bold text-slate-900">₹ {labourContractorExpense.toLocaleString()}</span>
                     <span className="text-slate-400 w-6 text-right">0%</span>
                   </div>
                 </div>
@@ -881,7 +891,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     <span className="text-slate-600">Office Staff</span>
                   </div>
                   <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="font-bold text-slate-900">₹ {officeStaffExpense.toLocaleString()}</span>
                     <span className="text-slate-400 w-6 text-right">0%</span>
                   </div>
                 </div>

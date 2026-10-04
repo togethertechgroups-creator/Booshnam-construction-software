@@ -203,7 +203,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
                 <Users className="w-3.5 h-3.5" />
                 Select from Registered Staff Members
               </span>
-              <span className="text-[10px] text-indigo-500 font-mono">Auto-fills details</span>
+              <span className="text-[10px] text-indigo-500 tracking-tight">Auto-fills details</span>
             </div>
             <select
               value=""
@@ -261,7 +261,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
                 PHONE (10 DIGITS)
               </label>
               {phone && (
-                <span className={`text-[9px] font-mono font-bold ${phone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                <span className={`text-[9px] tracking-tight font-bold ${phone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
                   {phone.length}/10
                 </span>
               )}
@@ -394,7 +394,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
               <Building2 className="w-4 h-4 text-slate-400" />
               <div>
                 <div className="text-xs sm:text-sm font-medium text-slate-700">Bank Account</div>
-                <div className="text-[11px] text-slate-400 font-mono">
+                <div className="text-[11px] text-slate-400 tracking-tight">
                   {bankAccount ? `${bankName || 'Bank'} •••• ${bankAccount.slice(-4)}` : '--NA--'}
                 </div>
               </div>
@@ -421,7 +421,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
                   value={bankAccount}
                   onChange={(e) => setBankAccount(e.target.value)}
                   placeholder="Enter Account Number"
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 font-mono"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 tracking-tight"
                 />
               </div>
               <div>
@@ -431,7 +431,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
                   value={bankIfsc}
                   onChange={(e) => setBankIfsc(e.target.value.toUpperCase())}
                   placeholder="HDFC0001234"
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 uppercase font-mono"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 uppercase tracking-tight"
                 />
               </div>
             </div>
@@ -476,7 +476,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
             value={partyId}
             readOnly={!isEditingPartyId}
             onChange={(e) => setPartyId(e.target.value)}
-            className={`w-full bg-transparent text-sm text-slate-800 font-mono focus:outline-none ${
+            className={`w-full bg-transparent text-sm text-slate-800 tracking-tight focus:outline-none ${
               !isEditingPartyId ? 'cursor-default' : ''
             }`}
           />
@@ -523,7 +523,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
               value={aadhaarNumber}
               onChange={(e) => setAadhaarNumber(e.target.value)}
               placeholder="Aadhaar number"
-              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal font-mono"
+              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal tracking-tight"
             />
           </div>
 
@@ -566,7 +566,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
               value={panNumber}
               onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
               placeholder="PAN number"
-              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal uppercase font-mono"
+              className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal uppercase tracking-tight"
             />
           </div>
 
@@ -607,7 +607,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
             value={uanNumber}
             onChange={(e) => setUanNumber(e.target.value)}
             placeholder="UAN Number"
-            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal font-mono"
+            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal tracking-tight"
           />
         </div>
 
@@ -621,7 +621,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
             value={pfNumber}
             onChange={(e) => setPfNumber(e.target.value)}
             placeholder="PF Number"
-            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal font-mono"
+            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal tracking-tight"
           />
         </div>
 
@@ -635,7 +635,7 @@ export const AddPartyView: React.FC<AddPartyViewProps> = ({
             value={esiNumber}
             onChange={(e) => setEsiNumber(e.target.value)}
             placeholder="ESI Number"
-            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal font-mono"
+            className="w-full bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none font-normal tracking-tight"
           />
         </div>
 

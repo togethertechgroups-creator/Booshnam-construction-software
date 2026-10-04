@@ -869,7 +869,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs font-semibold text-slate-600 block">Project Balance</span>
-            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+            <div className="text-2xl font-black text-slate-900 tracking-tight tracking-tight">
               ₹ {projectBalance.toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 pt-0.5">
@@ -893,7 +893,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
               <span className="text-xs font-semibold text-slate-600">Margin</span>
               <Info className="w-3.5 h-3.5 text-slate-400" />
             </div>
-            <div className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+            <div className="text-2xl font-black text-slate-900 tracking-tight tracking-tight">
               ₹ {margin.toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5 pt-0.5">
@@ -995,14 +995,14 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
 
                     {/* Center Column: Details */}
                     <div className="col-span-3 text-center">
-                      <span className="text-xs text-slate-400 font-mono">
+                      <span className="text-xs text-slate-400 tracking-tight">
                         {tx.notes && tx.notes !== '-' ? tx.notes : '-'}
                       </span>
                     </div>
 
                     {/* Right Column: Amount & Payment Method Pill */}
                     <div className="col-span-3 text-right">
-                      <div className="font-mono font-bold text-xs text-slate-900">
+                      <div className="tracking-tight font-bold text-xs text-slate-900">
                         ₹ {Number(tx.amount).toLocaleString('en-IN')}
                       </div>
                       <div className="mt-1 flex items-center justify-end gap-1.5 flex-wrap">
@@ -1084,14 +1084,14 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
 
                     {/* Center Column: Details / Due Date */}
                     <div className="col-span-3 text-center">
-                      <span className="text-xs text-slate-500 font-mono">
+                      <span className="text-xs text-slate-500 tracking-tight">
                         {pr.due_date ? `Due: ${pr.due_date}` : (pr.notes || '-')}
                       </span>
                     </div>
 
                     {/* Right Column: Amount & Status Badge */}
                     <div className="col-span-3 text-right">
-                      <div className="font-mono font-bold text-xs text-slate-900">
+                      <div className="tracking-tight font-bold text-xs text-slate-900">
                         ₹ {Number(pr.amount).toLocaleString('en-IN')}
                       </div>
                       <div className="mt-1 flex items-center justify-end gap-1.5">
@@ -1233,7 +1233,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                   placeholder="0"
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
+                  className="w-full text-xs tracking-tight font-bold text-slate-900 bg-transparent focus:outline-none"
                 />
               </div>
 
@@ -1311,7 +1311,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             )}
                           </div>
                           {currentSelectedBank && (
-                            <p className="text-[11px] text-slate-500 font-mono truncate mt-0.5">
+                            <p className="text-[11px] text-slate-500 tracking-tight truncate mt-0.5">
                               A/c: •••• {currentSelectedBank.account_number.slice(-4)} <span className="text-slate-300">•</span> {currentSelectedBank.branch}
                             </p>
                           )}
@@ -1374,7 +1374,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                                           {b.account_type}
                                         </span>
                                       </div>
-                                      <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
+                                      <div className="text-[11px] text-slate-500 tracking-tight flex items-center gap-1.5 mt-0.5">
                                         <span className={isSelected ? 'text-red-600 font-semibold' : ''}>
                                           A/c: •••• {b.account_number.slice(-4)}
                                         </span>
@@ -1425,7 +1425,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                           {currentSelectedBank.account_type}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-slate-500 font-mono text-[10px] pt-0.5">
+                      <div className="flex items-center justify-between text-slate-500 tracking-tight text-[10px] pt-0.5">
                         <span>A/c: <strong className="text-slate-700">{currentSelectedBank.account_number}</strong></span>
                         <span>IFSC: <strong className="text-slate-700">{currentSelectedBank.ifsc_code}</strong></span>
                       </div>
@@ -1470,7 +1470,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             placeholder="e.g. 91802004819201"
                             value={newAccountNumber}
                             onChange={(e) => setNewAccountNumber(e.target.value)}
-                            className="w-full text-xs p-2 border border-slate-200 rounded-lg font-mono focus:outline-none focus:border-red-600"
+                            className="w-full text-xs p-2 border border-slate-200 rounded-lg tracking-tight focus:outline-none focus:border-red-600"
                           />
                         </div>
                       </div>
@@ -1483,7 +1483,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             placeholder="e.g. UTIB0000123"
                             value={newIfscCode}
                             onChange={(e) => setNewIfscCode(e.target.value)}
-                            className="w-full text-xs p-2 border border-slate-200 rounded-lg font-mono uppercase focus:outline-none focus:border-red-600"
+                            className="w-full text-xs p-2 border border-slate-200 rounded-lg tracking-tight uppercase focus:outline-none focus:border-red-600"
                           />
                         </div>
                         <div>
@@ -1736,7 +1736,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                   <span className="font-semibold text-slate-400 tracking-wider uppercase text-[11px]">
                     {selectedTxForOverview.transaction_sub_type ? selectedTxForOverview.transaction_sub_type.toUpperCase() : 'PAYMENT IN'}
                   </span>
-                  <span className="font-mono font-bold text-slate-700 text-xs">
+                  <span className="tracking-tight font-bold text-slate-700 text-xs">
                     No. {selectedTxForOverview.transaction_number.replace('#', '')}
                   </span>
                 </div>
@@ -1746,7 +1746,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                   <span className="text-[11px] font-bold text-slate-400 tracking-wider uppercase block">
                     AMOUNT PAID
                   </span>
-                  <div className="text-3xl font-black text-slate-900 font-mono tracking-tight">
+                  <div className="text-3xl font-black text-slate-900 tracking-tight tracking-tight">
                     ₹ {Number(selectedTxForOverview.amount).toLocaleString('en-IN')}
                   </div>
                   <div className="text-xs text-slate-500 font-medium pt-0.5">
@@ -2026,7 +2026,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                       placeholder="0"
                       value={prAmount}
                       onChange={(e) => setPrAmount(e.target.value ? Number(e.target.value) : '')}
-                      className="w-full text-xs font-mono font-bold text-slate-900 bg-transparent focus:outline-none"
+                      className="w-full text-xs tracking-tight font-bold text-slate-900 bg-transparent focus:outline-none"
                     />
                     <span className="px-2 py-0.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold shrink-0 ml-1 select-none">
                       ₹ ▾
@@ -2149,7 +2149,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
             <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">REQUESTED AMOUNT</span>
-                <div className="text-2xl font-black text-slate-900 font-mono">
+                <div className="text-2xl font-black text-slate-900 tracking-tight">
                   ₹ {Number(selectedPRForOverview.amount).toLocaleString('en-IN')}
                 </div>
                 <div className="text-[11px] font-medium text-slate-500">

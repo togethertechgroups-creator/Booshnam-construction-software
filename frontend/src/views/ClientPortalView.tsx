@@ -113,7 +113,7 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
       <div className="flex-1 flex flex-col min-w-0 bg-white">
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white sticky top-0 z-10">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Client Portal</h1>
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Client Portal</h1>
             <p className="text-xs text-slate-500 mt-0.5">Personalized transparent dashboard for project owners</p>
           </div>
           <UserProfileDropdown showBell={true} onShowToast={onShowToast} />
@@ -140,7 +140,7 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
                 Client Portal
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -213,7 +213,7 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
 
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-500 font-semibold mb-1">Overall Construction Progress</div>
-                <div className="text-2xl font-bold text-slate-900 font-mono">{progressPercent}%</div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">{progressPercent}%</div>
                 <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
                   <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${progressPercent}%` }} />
                 </div>
@@ -221,13 +221,13 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
 
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-500 font-semibold mb-1">Contract Value</div>
-                <div className="text-2xl font-bold text-slate-900 font-mono">₹ {(totalBudget / 100000).toFixed(1)} L</div>
+                <div className="text-2xl font-bold text-slate-900 tracking-tight">₹ {(totalBudget / 100000).toFixed(1)} L</div>
                 <div className="text-[11px] text-slate-400 mt-0.5">Fixed Lum-Sum Agreement</div>
               </div>
 
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="text-xs text-slate-500 font-semibold mb-1">Total Paid to Date</div>
-                <div className="text-2xl font-bold text-emerald-700 font-mono">₹ {(paidAmount / 100000).toFixed(1)} L</div>
+                <div className="text-2xl font-bold text-emerald-700 tracking-tight">₹ {(paidAmount / 100000).toFixed(1)} L</div>
                 <div className="text-[11px] text-slate-500 mt-0.5">{((paidAmount / totalBudget) * 100).toFixed(0)}% of total paid</div>
               </div>
             </div>
@@ -279,7 +279,7 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
                     {nextMilestone ? (
                       <div>
                         <div className="text-xs text-slate-500 font-medium">{nextMilestone.milestone_name} ({nextMilestone.percentage}%)</div>
-                        <div className="text-xl font-bold text-slate-900 font-mono mt-0.5">₹ {nextMilestone.amount.toLocaleString('en-IN')}</div>
+                        <div className="text-xl font-bold text-slate-900 tracking-tight mt-0.5">₹ {nextMilestone.amount.toLocaleString('en-IN')}</div>
                       </div>
                     ) : (
                       <div>
@@ -329,7 +329,7 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
                   <div key={d.id} className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs p-5 space-y-4 flex flex-col justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold text-red-900 bg-red-50 px-2 py-0.5 rounded">
+                        <span className="tracking-tight text-xs font-bold text-red-900 bg-red-50 px-2 py-0.5 rounded">
                           {d.drawing_no} • {d.current_version}
                         </span>
                         <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
@@ -502,8 +502,8 @@ export const ClientPortalView: React.FC<ClientPortalViewProps> = ({
                       milestones.map(m => (
                       <tr key={m.id} className="hover:bg-slate-50/80 transition">
                         <td className="py-3.5 px-4 font-semibold text-slate-900">{m.milestone_name}</td>
-                        <td className="py-3.5 px-4 font-mono text-slate-600">{m.percentage}%</td>
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        <td className="py-3.5 px-4 tracking-tight text-slate-600">{m.percentage}%</td>
+                        <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
                           ₹ {m.amount.toLocaleString()}
                         </td>
                         <td className="py-3.5 px-4 text-slate-600">{m.due_date}</td>

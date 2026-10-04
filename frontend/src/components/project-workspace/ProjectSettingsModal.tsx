@@ -567,7 +567,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 {member.role}
                               </span>
                               {member.party_id && (
-                                <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                <span className="text-[10px] tracking-tight text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                                   ID: {member.party_id}
                                 </span>
                               )}
@@ -613,17 +613,17 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                           </span>
                         )}
                         {member.aadhaar_number && (
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[10px] text-slate-400 tracking-tight">
                             Aadhaar: •••• {member.aadhaar_number.slice(-4)}
                           </span>
                         )}
                         {member.pan_number && (
-                          <span className="text-[10px] text-slate-400 font-mono">
+                          <span className="text-[10px] text-slate-400 tracking-tight">
                             PAN: {member.pan_number}
                           </span>
                         )}
                         {member.bank_account && (
-                          <span className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                          <span className="flex items-center gap-1 text-[10px] text-slate-400 tracking-tight">
                             <Landmark className="w-3 h-3 text-slate-400 shrink-0" />
                             •••• {member.bank_account.slice(-4)}
                           </span>

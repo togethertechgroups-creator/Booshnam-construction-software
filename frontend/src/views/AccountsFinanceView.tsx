@@ -2187,7 +2187,7 @@ const toIsoDate = (displayStr: string) => {
       <header className="border-b border-slate-200 bg-white px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
         {/* Title */}
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Finance</h1>
+          <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Finance</h1>
           <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 hidden sm:inline-block">
             Accounts & Finance
           </span>
@@ -2601,7 +2601,7 @@ const toIsoDate = (displayStr: string) => {
                   </div>
                   <span className="tracking-tight text-slate-600">Advance Paid</span>
                 </div>
-                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight font-mono leading-none mt-3">
+                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight tracking-tight leading-none mt-3">
                   ₹ {partyKpiMetrics.advancePaid.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -2614,7 +2614,7 @@ const toIsoDate = (displayStr: string) => {
                   </div>
                   <span className="tracking-tight text-red-600">To Pay</span>
                 </div>
-                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight font-mono leading-none mt-3">
+                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight tracking-tight leading-none mt-3">
                   ₹ {partyKpiMetrics.toPay.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -2627,7 +2627,7 @@ const toIsoDate = (displayStr: string) => {
                   </div>
                   <span className="tracking-tight text-red-600">To Receive</span>
                 </div>
-                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight font-mono leading-none mt-3">
+                <div className="text-2xl sm:text-[28px] font-black text-red-600 tracking-tight tracking-tight leading-none mt-3">
                   ₹ {partyKpiMetrics.toReceive.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -2640,7 +2640,7 @@ const toIsoDate = (displayStr: string) => {
                   </div>
                   <span className="tracking-tight text-slate-600">Advance Received</span>
                 </div>
-                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight font-mono leading-none mt-3">
+                <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight tracking-tight leading-none mt-3">
                   ₹ {partyKpiMetrics.advanceReceived.toLocaleString('en-IN')}
                 </div>
               </div>
@@ -2816,7 +2816,7 @@ const toIsoDate = (displayStr: string) => {
                         </div>
 
                         {/* Balance (₹) */}
-                        <div className="col-span-2 text-right font-mono font-bold text-xs sm:text-sm text-slate-900">
+                        <div className="col-span-2 text-right tracking-tight font-bold text-xs sm:text-sm text-slate-900">
                           ₹ {fin.balanceDue.toLocaleString('en-IN')}
                         </div>
 
@@ -3065,7 +3065,7 @@ const toIsoDate = (displayStr: string) => {
                                 <span className="text-xs font-bold text-slate-900 leading-snug">
                                   {item.title}
                                 </span>
-                                <span className="text-[10px] font-mono font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                                <span className="text-[10px] tracking-tight font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                                   {item.code}
                                 </span>
                                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${item.badgeClass}`}>
@@ -3312,7 +3312,7 @@ const toIsoDate = (displayStr: string) => {
                   <span className="tracking-tight text-[#E11D48]">Total Operational Expenses</span>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight tracking-tight leading-none">
                     ₹ {expenseMetrics.total.toLocaleString('en-IN')}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
@@ -3330,7 +3330,7 @@ const toIsoDate = (displayStr: string) => {
                   <span className="tracking-tight text-[#2563EB]">Direct Materials</span>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight tracking-tight leading-none">
                     ₹ {expenseMetrics.materials.toLocaleString('en-IN')}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
@@ -3348,7 +3348,7 @@ const toIsoDate = (displayStr: string) => {
                   <span className="tracking-tight text-[#D97706]">Labour & Machinery</span>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight tracking-tight leading-none">
                     ₹ {expenseMetrics.labourAndMachinery.toLocaleString('en-IN')}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
@@ -3366,7 +3366,7 @@ const toIsoDate = (displayStr: string) => {
                   <span className="tracking-tight text-[#059669]">Site Petty Cash & Utilities</span>
                 </div>
                 <div className="mt-3">
-                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight font-mono leading-none">
+                  <div className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight tracking-tight leading-none">
                     ₹ {expenseMetrics.sitePetty.toLocaleString('en-IN')}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1.5">
@@ -3992,7 +3992,7 @@ const toIsoDate = (displayStr: string) => {
                         <tr key={trf.id} className="hover:bg-slate-50/70 transition-colors group">
                           
                           {/* Voucher Code & Date */}
-                          <td className="py-3.5 px-4 font-mono">
+                          <td className="py-3.5 px-4 tracking-tight">
                             <span className="font-bold text-slate-900 block">{trf.transferCode}</span>
                             <span className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                               <Calendar className="w-3 h-3 text-slate-400" />
@@ -4042,7 +4042,7 @@ const toIsoDate = (displayStr: string) => {
                             <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                               {trf.transferMode}
                             </span>
-                            <span className="text-[11px] font-mono text-slate-500 block mt-1 truncate max-w-[130px]" title={trf.referenceNo}>
+                            <span className="text-[11px] tracking-tight text-slate-500 block mt-1 truncate max-w-[130px]" title={trf.referenceNo}>
                               {trf.referenceNo}
                             </span>
                           </td>
@@ -4062,7 +4062,7 @@ const toIsoDate = (displayStr: string) => {
 
                           {/* Amount */}
                           <td className="py-3.5 px-4 text-right">
-                            <span className="text-sm font-bold text-slate-900 block font-mono">
+                            <span className="text-sm font-bold text-slate-900 block tracking-tight">
                               ₹{trf.amount.toLocaleString('en-IN')}
                             </span>
                             <span className="text-[10px] font-medium text-slate-400">Contra Entry</span>
@@ -4107,8 +4107,8 @@ const toIsoDate = (displayStr: string) => {
               <div className="px-6 py-3 bg-[#f8fafc] border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500">
                 <span>Showing {filteredTransfers.length} of {transfers.length} contra transfer entries</span>
                 <div className="flex items-center gap-5">
-                  <span>Filtered Sum: <strong className="text-slate-900 font-mono">₹{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-IN')}</strong></span>
-                  <span>Total Completed: <strong className="text-red-600 font-mono">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
+                  <span>Filtered Sum: <strong className="text-slate-900 tracking-tight">₹{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-IN')}</strong></span>
+                  <span>Total Completed: <strong className="text-red-600 tracking-tight">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
                 </div>
               </div>
             </div>
@@ -4182,7 +4182,7 @@ const toIsoDate = (displayStr: string) => {
                               </div>
                               <span className="text-xs">Cash Account</span>
                             </div>
-                            <span className="text-[11px] font-mono font-semibold text-slate-500">₹ {cashClosingBalance.toLocaleString('en-IN')}</span>
+                            <span className="text-[11px] tracking-tight font-semibold text-slate-500">₹ {cashClosingBalance.toLocaleString('en-IN')}</span>
                           </button>
 
                           {/* Bank Accounts List */}
@@ -4209,7 +4209,7 @@ const toIsoDate = (displayStr: string) => {
                                   )}
                                 </div>
                               </div>
-                              <span className="text-[11px] font-mono font-semibold text-slate-500">
+                              <span className="text-[11px] tracking-tight font-semibold text-slate-500">
                                 ₹ {ba.balance.toLocaleString('en-IN')}
                               </span>
                             </button>
@@ -4268,7 +4268,7 @@ const toIsoDate = (displayStr: string) => {
                     <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
                       OPENING BALANCE
                     </span>
-                    <div className="text-xl sm:text-2xl font-bold text-slate-900 font-mono tracking-tight mt-1.5">
+                    <div className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight tracking-tight mt-1.5">
                       ₹ {activeStatementAccount?.openingBalance.toLocaleString('en-IN')}
                     </div>
                   </div>
@@ -4278,7 +4278,7 @@ const toIsoDate = (displayStr: string) => {
                     <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
                       TOTAL CREDIT
                     </span>
-                    <div className="text-xl sm:text-2xl font-black text-emerald-600 font-mono tracking-tight mt-1.5">
+                    <div className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight tracking-tight mt-1.5">
                       ₹ {statementPeriodCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
@@ -4288,7 +4288,7 @@ const toIsoDate = (displayStr: string) => {
                     <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
                       TOTAL DEBIT
                     </span>
-                    <div className="text-xl sm:text-2xl font-black text-red-600 font-mono tracking-tight mt-1.5">
+                    <div className="text-xl sm:text-2xl font-black text-red-600 tracking-tight tracking-tight mt-1.5">
                       ₹ {statementPeriodDebit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
@@ -4298,7 +4298,7 @@ const toIsoDate = (displayStr: string) => {
                     <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider block">
                       CLOSING BALANCE
                     </span>
-                    <div className="text-xl sm:text-2xl font-black text-[#5932ea] font-mono tracking-tight mt-1.5">
+                    <div className="text-xl sm:text-2xl font-black text-[#5932ea] tracking-tight tracking-tight mt-1.5">
                       {(() => {
                         const val = statementPeriodClosing;
                         const isNeg = val < 0;
@@ -4408,7 +4408,7 @@ const toIsoDate = (displayStr: string) => {
 
                               {/* 5. Amount Column */}
                               <td className="px-5 py-4 align-top text-right whitespace-nowrap">
-                                <div className="font-bold text-xs sm:text-sm text-slate-900 font-mono">
+                                <div className="font-bold text-xs sm:text-sm text-slate-900 tracking-tight">
                                   ₹ {txn.amount.toLocaleString('en-IN')}
                                 </div>
                                 <div className="text-[10px] text-slate-400 font-medium mt-0.5">
@@ -4464,7 +4464,7 @@ const toIsoDate = (displayStr: string) => {
 
                     {/* Right: Closing Balance, View Statement & Edit Opening Balance */}
                     <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
-                      <span className="font-bold text-base sm:text-lg text-slate-900 font-mono tracking-tight mr-1">
+                      <span className="font-bold text-base sm:text-lg text-slate-900 tracking-tight tracking-tight mr-1">
                         {(() => {
                           const isNeg = cashClosingBalance < 0;
                           const formatted = Math.abs(cashClosingBalance).toLocaleString('en-IN', {
@@ -4683,7 +4683,7 @@ const toIsoDate = (displayStr: string) => {
                                     UPI ID / NUMBER
                                   </span>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-xs font-semibold text-slate-800 font-mono truncate">
+                                    <span className="text-xs font-semibold text-slate-800 tracking-tight truncate">
                                       {ba.upiNumber || '--'}
                                     </span>
                                     {ba.upiNumber && (
@@ -4707,7 +4707,7 @@ const toIsoDate = (displayStr: string) => {
                                     ACCOUNT NUMBER
                                   </span>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-xs font-bold text-slate-900 font-mono tracking-wider">
+                                    <span className="text-xs font-bold text-slate-900 tracking-tight tracking-wider">
                                       {ba.accountNumber}
                                     </span>
                                     <button
@@ -4726,7 +4726,7 @@ const toIsoDate = (displayStr: string) => {
                                     IFSC CODE
                                   </span>
                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-xs font-semibold text-slate-800 font-mono uppercase">
+                                    <span className="text-xs font-semibold text-slate-800 tracking-tight uppercase">
                                       {ba.ifscCode || '--'}
                                     </span>
                                     {ba.ifscCode && (
@@ -4748,7 +4748,7 @@ const toIsoDate = (displayStr: string) => {
                                       IBAN NUMBER
                                     </span>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="text-[11px] font-mono text-slate-700 block truncate" title={ba.ibanNumber}>
+                                      <span className="text-[11px] tracking-tight text-slate-700 block truncate" title={ba.ibanNumber}>
                                         {ba.ibanNumber}
                                       </span>
                                       <button
@@ -4770,17 +4770,17 @@ const toIsoDate = (displayStr: string) => {
                                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                     AVAILABLE BALANCE
                                   </span>
-                                  <div className="text-lg sm:text-xl font-bold text-slate-900 font-mono tracking-tight mt-0.5">
+                                  <div className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight tracking-tight mt-0.5">
                                     ₹ {ba.balance.toLocaleString('en-IN')}
                                   </div>
 
                                   <div className="flex items-center gap-2.5 text-[11px] text-slate-500 mt-1 flex-wrap">
                                     <span>
-                                      OD: <strong className="text-slate-700 font-mono">{ba.overdraftLimit ? `₹ ${ba.overdraftLimit.toLocaleString('en-IN')}` : 'Nil'}</strong>
+                                      OD: <strong className="text-slate-700 tracking-tight">{ba.overdraftLimit ? `₹ ${ba.overdraftLimit.toLocaleString('en-IN')}` : 'Nil'}</strong>
                                     </span>
                                     <span>•</span>
                                     <span>
-                                      Opening: <strong className="text-slate-700 font-mono">₹ {(ba.openingBalance || 0).toLocaleString('en-IN')}</strong>
+                                      Opening: <strong className="text-slate-700 tracking-tight">₹ {(ba.openingBalance || 0).toLocaleString('en-IN')}</strong>
                                     </span>
                                   </div>
                                 </div>
@@ -5320,7 +5320,7 @@ const toIsoDate = (displayStr: string) => {
               Invite fellow builders, developers, or subcontractors to Booshnam Software and earn ₹5,000 credit on every active project registration.
             </p>
             <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-xs flex items-center justify-between">
-              <span className="font-mono text-red-900 font-bold">BOOSHNAM-FIN-2026</span>
+              <span className="tracking-tight text-red-900 font-bold">BOOSHNAM-FIN-2026</span>
               <button 
                 onClick={() => {
                   navigator.clipboard?.writeText('https://booshnam.com/join?ref=BOOSHNAM-FIN-2026');
@@ -5497,14 +5497,14 @@ const toIsoDate = (displayStr: string) => {
                 
                 <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
                   <span className="text-slate-500">Aadhaar Number</span>
-                  <span className="font-mono font-semibold text-slate-800">
+                  <span className="tracking-tight font-semibold text-slate-800">
                     {selectedPartyRecord.aadhaarNumber ? `•••• •••• ${selectedPartyRecord.aadhaarNumber.slice(-4)}` : '—'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between py-1.5">
                   <span className="text-slate-500">PAN Card</span>
-                  <span className="font-mono font-semibold text-slate-800">
+                  <span className="tracking-tight font-semibold text-slate-800">
                     {selectedPartyRecord.panNumber ? selectedPartyRecord.panNumber : '—'}
                   </span>
                 </div>
@@ -5608,7 +5608,7 @@ const toIsoDate = (displayStr: string) => {
                     placeholder="e.g. 25000"
                     value={newTxnAmount}
                     onChange={e => setNewTxnAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-red-600 font-mono font-medium"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:border-red-600 tracking-tight font-medium"
                   />
                 </div>
               </div>
@@ -6435,7 +6435,7 @@ const toIsoDate = (displayStr: string) => {
                     const sel = bankAccounts.find(ba => ba.accountName === newExpAccount || ba.id === newExpAccount);
                     return sel ? (
                       <span className="text-[10px] text-slate-500 mt-1 block">
-                        Available Balance: <strong className="text-slate-800 font-mono">₹{sel.balance.toLocaleString('en-IN')}</strong>
+                        Available Balance: <strong className="text-slate-800 tracking-tight">₹{sel.balance.toLocaleString('en-IN')}</strong>
                       </span>
                     ) : null;
                   })()}
@@ -6666,7 +6666,7 @@ const toIsoDate = (displayStr: string) => {
                 {selectedExpenseDetails.billNumber && (
                   <div className="pt-1 border-t border-slate-100">
                     <span className="font-semibold text-slate-700 block">Invoice / Bill Reference:</span>
-                    <p className="text-slate-600 font-mono">{selectedExpenseDetails.billNumber}</p>
+                    <p className="text-slate-600 tracking-tight">{selectedExpenseDetails.billNumber}</p>
                   </div>
                 )}
                 {selectedExpenseDetails.approvedBy && (
@@ -6778,7 +6778,7 @@ const toIsoDate = (displayStr: string) => {
                         const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
                         return src ? (
                           <p className="text-[10px] text-slate-500">
-                            Available Balance: <strong className="text-slate-800 font-mono">₹{src.balance.toLocaleString('en-IN')}</strong>
+                            Available Balance: <strong className="text-slate-800 tracking-tight">₹{src.balance.toLocaleString('en-IN')}</strong>
                           </p>
                         ) : null;
                       })()}
@@ -6808,7 +6808,7 @@ const toIsoDate = (displayStr: string) => {
                         const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
                         return dst ? (
                           <p className="text-[10px] text-slate-500">
-                            Current Balance: <strong className="text-slate-800 font-mono">₹{dst.balance.toLocaleString('en-IN')}</strong>
+                            Current Balance: <strong className="text-slate-800 tracking-tight">₹{dst.balance.toLocaleString('en-IN')}</strong>
                           </p>
                         ) : null;
                       })()}
@@ -6851,7 +6851,7 @@ const toIsoDate = (displayStr: string) => {
                       key={val}
                       type="button"
                       onClick={() => setNewTrfAmount(String(val))}
-                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] font-semibold cursor-pointer transition-colors"
+                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 tracking-tight text-[11px] font-semibold cursor-pointer transition-colors"
                     >
                       +₹{val.toLocaleString('en-IN')}
                     </button>
@@ -6890,14 +6890,14 @@ const toIsoDate = (displayStr: string) => {
                         <>
                           <div className="p-2 bg-white rounded border border-indigo-100">
                             <span className="text-slate-500 block truncate">{src?.accountName}</span>
-                            <span className="font-bold text-red-600 font-mono">
+                            <span className="font-bold text-red-600 tracking-tight">
                               ₹{((src?.balance || 0) - amt).toLocaleString('en-IN')}
                             </span>
                             <span className="text-[9px] text-slate-400 block">(-₹{amt.toLocaleString('en-IN')})</span>
                           </div>
                           <div className="p-2 bg-white rounded border border-indigo-100">
                             <span className="text-slate-500 block truncate">{dst?.accountName}</span>
-                            <span className="font-bold text-emerald-600 font-mono">
+                            <span className="font-bold text-emerald-600 tracking-tight">
                               ₹{((dst?.balance || 0) + amt).toLocaleString('en-IN')}
                             </span>
                             <span className="text-[9px] text-slate-400 block">(+₹{amt.toLocaleString('en-IN')})</span>
@@ -7063,7 +7063,7 @@ const toIsoDate = (displayStr: string) => {
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">Voucher Number</span>
-                  <div className="text-base font-mono font-black text-slate-900">{selectedTransferDetails.transferCode}</div>
+                  <div className="text-base tracking-tight font-black text-slate-900">{selectedTransferDetails.transferCode}</div>
                   <span className="text-[11px] text-slate-500">{selectedTransferDetails.date}</span>
                 </div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -7075,7 +7075,7 @@ const toIsoDate = (displayStr: string) => {
               {/* Amount & Route Graphic */}
               <div className="p-4 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50/40 via-red-50/30 to-indigo-50/40 text-center">
                 <span className="text-[10px] uppercase font-bold text-slate-400">Total Transferred</span>
-                <div className="text-2xl font-black text-slate-900 font-mono my-1">
+                <div className="text-2xl font-black text-slate-900 tracking-tight my-1">
                   ₹{selectedTransferDetails.amount.toLocaleString('en-IN')}
                 </div>
                 
@@ -7102,7 +7102,7 @@ const toIsoDate = (displayStr: string) => {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-medium">Reference / UTR</span>
-                  <span className="font-mono font-semibold text-slate-800">{selectedTransferDetails.referenceNo}</span>
+                  <span className="tracking-tight font-semibold text-slate-800">{selectedTransferDetails.referenceNo}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-medium">Initiated By</span>

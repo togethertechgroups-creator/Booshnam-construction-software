@@ -562,7 +562,7 @@ export const LivePhotoAttendanceModal: React.FC<LivePhotoAttendanceModalProps> =
 
           {/* Action Buttons */}
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <span className="text-[11px] font-mono text-slate-500">
+            <span className="text-[11px] tracking-tight text-slate-500">
               Clock: <strong>{currentTimeStr}</strong>
             </span>
 

@@ -477,7 +477,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             <div className="border border-slate-200/90 rounded-xl px-3 py-1.5 bg-white flex items-center justify-between gap-4 min-w-[120px] shadow-2xs">
               <div>
                 <div className="text-[11px] font-medium text-slate-400 leading-tight">BOQ No.</div>
-                <div className="text-xs sm:text-[13px] font-bold text-slate-800 font-mono leading-tight mt-0.5">
+                <div className="text-xs sm:text-[13px] font-bold text-slate-800 tracking-tight leading-tight mt-0.5">
                   {selectedBOQ.boq_number}
                 </div>
               </div>
@@ -515,7 +515,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* KPI 1: BOQ Value */}
             <div className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200/90 shadow-2xs min-w-[105px]">
               <div className="text-[10px] font-medium text-slate-500">BOQ Value</div>
-              <div className="text-sm sm:text-[15px] font-bold text-slate-900 font-mono mt-0.5">
+              <div className="text-sm sm:text-[15px] font-bold text-slate-900 tracking-tight mt-0.5">
                 ₹ {selectedBOQ.boq_value.toLocaleString()}
               </div>
             </div>
@@ -523,7 +523,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* KPI 2: Progress */}
             <div className="px-3.5 py-1.5 rounded-xl bg-[#eaf7f2] border border-emerald-100 shadow-2xs min-w-[95px]">
               <div className="text-[10px] font-medium text-emerald-800">Progress</div>
-              <div className="text-sm sm:text-[15px] font-bold text-emerald-900 font-mono mt-0.5">
+              <div className="text-sm sm:text-[15px] font-bold text-emerald-900 tracking-tight mt-0.5">
                 {selectedBOQ.physical_progress}%
               </div>
             </div>
@@ -531,7 +531,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* KPI 3: Billed */}
             <div className="px-3.5 py-1.5 rounded-xl bg-[#fff5f5] border border-red-100 shadow-2xs min-w-[105px]">
               <div className="text-[10px] font-medium text-red-600">Billed</div>
-              <div className="text-sm sm:text-[15px] font-bold text-red-950 font-mono mt-0.5">
+              <div className="text-sm sm:text-[15px] font-bold text-red-950 tracking-tight mt-0.5">
                 ₹ {selectedBOQ.billed_value.toLocaleString()}
               </div>
             </div>
@@ -763,17 +763,17 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                         </td>
 
                         {/* N x L x W x H */}
-                        <td className="py-3.5 px-4 text-center font-mono text-slate-500 align-top">
+                        <td className="py-3.5 px-4 text-center tracking-tight text-slate-500 align-top">
                           {item.type === 'item' ? item.dimensions || '-' : '-'}
                         </td>
 
                         {/* Unit rate */}
-                        <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-800 align-top">
+                        <td className="py-3.5 px-4 text-right tracking-tight font-medium text-slate-800 align-top">
                           {item.type === 'item' ? (item.unit_rate ? item.unit_rate.toLocaleString() : '0') : '-'}
                         </td>
 
                         {/* QTY */}
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-800 align-top">
+                        <td className="py-3.5 px-4 text-right tracking-tight text-slate-800 align-top">
                           {item.type === 'item' ? (
                             <>{item.quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span></>
                           ) : '-'}
@@ -800,14 +800,14 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                         </td>
 
                         {/* Billed Qty */}
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-800 align-top">
+                        <td className="py-3.5 px-4 text-right tracking-tight text-slate-800 align-top">
                           {item.type === 'item' ? (
                             <>{item.billed_quantity} <span className="text-slate-600 text-[11px]">{item.unit}</span></>
                           ) : '-'}
                         </td>
 
                         {/* Sales Price */}
-                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 align-top">
+                        <td className="py-3.5 px-4 text-right tracking-tight font-semibold text-slate-900 align-top">
                           {item.type === 'item' ? (item.sales_price ? item.sales_price.toLocaleString() : '0') : '-'}
                         </td>
                       </tr>
@@ -820,7 +820,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* Table Footer Totals */}
             <div className="bg-[#f8f9fc] border-t border-slate-200/80 px-4 py-3 flex items-center justify-between text-xs font-medium text-slate-600">
               <div>Total {displayItems.filter(i => i.type === 'item').length} line items</div>
-              <div className="flex items-center gap-6 font-mono font-bold text-slate-800">
+              <div className="flex items-center gap-6 tracking-tight font-bold text-slate-800">
                 <div>
                   Total BOQ: <span className="text-slate-900">₹ {selectedBOQ.boq_value.toLocaleString()}</span>
                 </div>
@@ -842,17 +842,17 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                 <div className="text-[11px] font-semibold text-slate-500 uppercase">Allocated Budget</div>
-                <div className="text-lg font-bold font-mono text-slate-900 mt-1">₹ {selectedBOQ.boq_value.toLocaleString()}</div>
+                <div className="text-lg font-bold tracking-tight text-slate-900 mt-1">₹ {selectedBOQ.boq_value.toLocaleString()}</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">From BOQ Line Items</div>
               </div>
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                 <div className="text-[11px] font-semibold text-slate-500 uppercase">Billed to Client</div>
-                <div className="text-lg font-bold font-mono text-red-600 mt-1">₹ {selectedBOQ.billed_value.toLocaleString()}</div>
+                <div className="text-lg font-bold tracking-tight text-red-600 mt-1">₹ {selectedBOQ.billed_value.toLocaleString()}</div>
                 <div className="text-[10px] text-slate-400 mt-0.5">RA Bills raised</div>
               </div>
               <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50">
                 <div className="text-[11px] font-semibold text-slate-500 uppercase">Budget Utilization</div>
-                <div className="text-lg font-bold font-mono text-emerald-700 mt-1">
+                <div className="text-lg font-bold tracking-tight text-emerald-700 mt-1">
                   {selectedBOQ.boq_value > 0 ? ((selectedBOQ.billed_value / selectedBOQ.boq_value) * 100).toFixed(1) : 0}%
                 </div>
                 <div className="text-[10px] text-slate-400 mt-0.5">Current execution ratio</div>
@@ -908,11 +908,11 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   <tr>
-                    <td className="py-3 px-4 font-mono font-bold text-slate-800">RA-BILL-01</td>
+                    <td className="py-3 px-4 tracking-tight font-bold text-slate-800">RA-BILL-01</td>
                     <td className="py-3 px-4 text-slate-600">16 Sep, 2026</td>
-                    <td className="py-3 px-4 text-right font-mono">₹ 14,745</td>
-                    <td className="py-3 px-4 text-right font-mono">₹ 2,655</td>
-                    <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">₹ 17,400</td>
+                    <td className="py-3 px-4 text-right tracking-tight">₹ 14,745</td>
+                    <td className="py-3 px-4 text-right tracking-tight">₹ 2,655</td>
+                    <td className="py-3 px-4 text-right tracking-tight font-bold text-slate-900">₹ 17,400</td>
                     <td className="py-3 px-4 text-center">
                       <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded-full">Paid</span>
                     </td>
@@ -1034,7 +1034,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                         autoFocus={activeEditFocus === 'number'}
                         value={editBOQNumber}
                         onChange={(e) => setEditBOQNumber(e.target.value)}
-                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent font-mono"
+                        className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent tracking-tight"
                       />
                       <SquarePen className="w-4 h-4 text-slate-400 shrink-0 pointer-events-none" />
                     </div>
@@ -1218,7 +1218,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                   >
                     {/* S.No. (e.g. #BOQ1870) */}
-                    <td className="py-4 px-5 font-mono font-bold text-slate-900 group-hover:text-red-600 transition-colors">
+                    <td className="py-4 px-5 tracking-tight font-bold text-slate-900 group-hover:text-red-600 transition-colors">
                       {boq.boq_number}
                     </td>
 
@@ -1233,7 +1233,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                     </td>
 
                     {/* Milestone (e.g. 0 / 0) */}
-                    <td className="py-4 px-5 font-semibold text-slate-800 text-center font-mono">
+                    <td className="py-4 px-5 font-semibold text-slate-800 text-center tracking-tight">
                       {boq.milestone_completed || 0} / {boq.milestone_total || 0}
                     </td>
 
@@ -1253,12 +1253,12 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                     </td>
 
                     {/* BOQ Value */}
-                    <td className="py-4 px-5 text-right font-mono font-bold text-slate-900">
+                    <td className="py-4 px-5 text-right tracking-tight font-bold text-slate-900">
                       ₹ {boq.boq_value.toLocaleString()}
                     </td>
 
                     {/* Billed Value */}
-                    <td className="py-4 px-5 text-right font-mono font-bold text-slate-900">
+                    <td className="py-4 px-5 text-right tracking-tight font-bold text-slate-900">
                       ₹ {boq.billed_value.toLocaleString()}
                     </td>
 
@@ -1358,7 +1358,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                       required
                       value={newBOQNumber}
                       onChange={(e) => setNewBOQNumber(e.target.value)}
-                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent font-mono"
+                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent tracking-tight"
                     />
                     <SquarePen className="w-4 h-4 text-slate-400 shrink-0 pointer-events-none" />
                   </div>
@@ -1547,7 +1547,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
                       autoFocus={activeEditFocus === 'number'}
                       value={editBOQNumber}
                       onChange={(e) => setEditBOQNumber(e.target.value)}
-                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent font-mono"
+                      className="w-full text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none bg-transparent tracking-tight"
                     />
                     <SquarePen className="w-4 h-4 text-slate-400 shrink-0 pointer-events-none" />
                   </div>

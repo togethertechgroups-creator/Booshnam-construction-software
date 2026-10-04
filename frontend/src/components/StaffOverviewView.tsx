@@ -327,7 +327,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-black text-slate-900">{staff.name}</h2>
-              <span className="px-2.5 py-0.5 bg-slate-900 text-white font-mono text-xs font-bold rounded-md">
+              <span className="px-2.5 py-0.5 bg-slate-900 text-white tracking-tight text-xs font-bold rounded-md">
                 {staff.employee_code}
               </span>
               <span className="px-2.5 py-0.5 bg-red-50 text-red-700 border border-red-200 text-xs font-bold rounded-md">
@@ -421,7 +421,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                   <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 z-[100] py-2 text-xs text-slate-800 animate-in fade-in zoom-in-95">
                     <div className="px-3.5 py-1.5 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                       <span>Select Format:</span>
-                      <span className="font-mono text-indigo-600 font-bold">
+                      <span className="tracking-tight text-indigo-600 font-bold">
                         {payslipMonth || '2026-01'}
                       </span>
                     </div>
@@ -604,7 +604,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                     required
                     value={detailsForm.employee_code}
                     onChange={(e) => setDetailsForm(prev => ({ ...prev, employee_code: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-mono font-bold text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs tracking-tight font-bold text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
 
@@ -684,13 +684,13 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                     Phone (10 digits) *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono">+91</span>
+                    <span className="absolute left-3 top-2.5 text-xs text-slate-400 tracking-tight">+91</span>
                     <input
                       type="tel"
                       maxLength={10}
                       value={detailsForm.phone}
                       onChange={(e) => setDetailsForm(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '') }))}
-                      className="w-full pl-11 pr-3 py-2 rounded-lg border border-slate-200 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      className="w-full pl-11 pr-3 py-2 rounded-lg border border-slate-200 text-xs tracking-tight text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                     />
                   </div>
                 </div>
@@ -1118,7 +1118,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Minimum 4 characters"
-                      className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-xs tracking-tight text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                     />
                     <button
                       type="button"
@@ -1145,7 +1145,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Re-enter password"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-xs font-mono text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-xs tracking-tight text-slate-900 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                     />
                   </div>
                 </div>

@@ -243,7 +243,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 font-mono">
+        <div className="hidden sm:flex items-center gap-3 text-xs text-slate-400 tracking-tight">
           <span>Site: {project.location || 'Chennai'}</span>
           <span>•</span>
           <span>Code: {project.code}</span>
@@ -302,7 +302,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 {/* Project Value */}
                 <div className="space-y-0.5">
                   <div className="text-xs text-slate-500 font-semibold">Project Value</div>
-                  <div className="text-base font-bold text-slate-900 font-mono">
+                  <div className="text-base font-bold text-slate-900 tracking-tight">
                     ₹ {projectValue.toLocaleString()}
                   </div>
                 </div>
@@ -330,7 +330,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 {/* Planned Dates */}
                 <div className="mt-4 space-y-1.5">
                   <div className="text-xs font-bold text-slate-800">Planned Dates</div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono py-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 tracking-tight py-1">
                     <div>
                       <span className="text-slate-500">Start:</span> {formatDashDate(project.start_date)}
                     </div>
@@ -343,7 +343,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 {/* Actual Dates */}
                 <div className="mt-5 space-y-1.5 pt-4 border-t border-slate-100">
                   <div className="text-xs font-bold text-slate-800">Actual Dates</div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 font-mono py-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 tracking-tight py-1">
                     <div>
                       <span className="text-slate-500">Start:</span> {formatDashDate(project.start_date)}
                     </div>
@@ -390,7 +390,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     {projectMoms.slice(0, 3).map((m: any, idx: number) => (
                       <div key={m.id || idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-800 truncate">{m.title || `Meeting #${idx + 1}`}</span>
-                        <span className="text-[11px] text-slate-400 font-mono shrink-0 ml-2">{m.date || '--'}</span>
+                        <span className="text-[11px] text-slate-400 tracking-tight shrink-0 ml-2">{m.date || '--'}</span>
                       </div>
                     ))}
                   </div>
@@ -455,7 +455,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     { label: '0.00%', val: 0 },
                   ].map((tick, i) => (
                     <div key={i} className="flex items-center gap-2">
-                      <span className="w-14 text-[10px] text-slate-400 font-mono text-right">{tick.label}</span>
+                      <span className="w-14 text-[10px] text-slate-400 tracking-tight text-right">{tick.label}</span>
                       <div className="flex-1 h-px bg-slate-100" />
                     </div>
                   ))}
@@ -525,7 +525,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                             title={`Actual: ${d.actual} workers`}
                           />
                         </div>
-                        <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap">{d.date}</span>
+                        <span className="text-[10px] text-slate-500 tracking-tight whitespace-nowrap">{d.date}</span>
                       </div>
                     ))}
                   </div>
@@ -691,7 +691,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Estimated Budget</div>
-              <div className="text-2xl font-bold font-mono text-slate-900 mt-1">
+              <div className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
                 ₹ {projectValue.toLocaleString()}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">Approved contract value</div>
@@ -699,7 +699,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Cash In (Client Receipts)</div>
-              <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">
+              <div className="text-2xl font-bold tracking-tight text-emerald-700 mt-1">
                 ₹ {cashIn.toLocaleString()}
               </div>
               <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Cleared into project account</div>
@@ -707,7 +707,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Cash Out (Site Expenses)</div>
-              <div className="text-2xl font-bold font-mono text-rose-600 mt-1">
+              <div className="text-2xl font-bold tracking-tight text-rose-600 mt-1">
                 ₹ {cashOut.toLocaleString()}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">Material, labor & subcon payouts</div>
@@ -715,7 +715,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
               <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Net Working Capital</div>
-              <div className={`text-2xl font-bold font-mono mt-1 ${netWorkingCap >= 0 ? 'text-indigo-900' : 'text-rose-600'}`}>
+              <div className={`text-2xl font-bold tracking-tight mt-1 ${netWorkingCap >= 0 ? 'text-indigo-900' : 'text-rose-600'}`}>
                 ₹ {netWorkingCap.toLocaleString()}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">Available liquidity balance</div>
@@ -739,7 +739,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     style={{ width: `${projectValue > 0 ? Math.min(100, (cashOut / projectValue) * 100) : 0}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 font-mono">
+                <div className="flex items-center justify-between text-xs text-slate-500 tracking-tight">
                   <span>Spent: ₹ {cashOut.toLocaleString()}</span>
                   <span>Budget: ₹ {projectValue.toLocaleString()}</span>
                 </div>
@@ -747,7 +747,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-500">Uncommitted Scope:</span>
-                <span className="font-bold font-mono text-slate-900">₹ {Math.max(0, projectValue - cashOut).toLocaleString()}</span>
+                <span className="font-bold tracking-tight text-slate-900">₹ {Math.max(0, projectValue - cashOut).toLocaleString()}</span>
               </div>
             </div>
 

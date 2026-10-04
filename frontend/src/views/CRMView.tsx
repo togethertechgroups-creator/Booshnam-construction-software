@@ -41,7 +41,7 @@ export const CRMView: React.FC<CRMViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 BUSINESS PIPELINE
               </span>
-              <h1 className="text-xl font-bold text-slate-900">CRM & Construction Leads Pipeline</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">CRM & Construction Leads Pipeline</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Track prospective tenders and inquiries from prospect discovery to contract award and project spin-up.
@@ -79,14 +79,14 @@ export const CRMView: React.FC<CRMViewProps> = ({
                 {stageLeads.map((lead) => (
                   <div key={lead.id} className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm space-y-2 hover:border-slate-300 transition-all">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-bold text-slate-500">{lead.lead_number}</span>
+                      <span className="tracking-tight text-[10px] font-bold text-slate-500">{lead.lead_number}</span>
                       <span className="text-[10px] font-bold text-brand">{lead.probability}% Prob</span>
                     </div>
 
                     <h4 className="font-bold text-xs text-slate-900 leading-snug">{lead.project_title}</h4>
                     <div className="text-[11px] text-slate-500">{lead.client_name}</div>
 
-                    <div className="font-mono font-bold text-xs text-slate-900 pt-1 border-t border-slate-100">
+                    <div className="tracking-tight font-bold text-xs text-slate-900 pt-1 border-t border-slate-100">
                       ₹{(lead.estimated_value / 10000000).toFixed(2)} Cr
                     </div>
 

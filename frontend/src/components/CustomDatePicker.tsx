@@ -270,7 +270,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           )}
           <CalendarIcon className={`w-4 h-4 shrink-0 transition-colors ${isOpen ? 'text-red-600' : 'text-slate-500'}`} />
           <div className="w-full flex items-center justify-between min-w-0 pr-1">
-            <span className={`text-xs truncate ${value ? 'font-semibold text-slate-800 font-mono' : 'text-slate-400 font-normal'}`}>
+            <span className={`text-xs truncate ${value ? 'font-semibold text-slate-800 tracking-tight' : 'text-slate-400 font-normal'}`}>
               {value ? displayFormatted(value) : placeholder}
             </span>
             {value && !disabled && (
@@ -301,7 +301,7 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             isOpen ? 'ring-2 ring-red-500/20 border-red-500 shadow-sm' : 'hover:border-slate-300'
           } ${disabled ? 'opacity-60 cursor-not-allowed bg-slate-50' : ''} ${inputClassName}`}
         >
-          <span className={`font-mono text-[11px] truncate ${value ? 'font-semibold text-slate-800' : 'text-slate-400 font-normal'}`}>
+          <span className={`tracking-tight text-[11px] truncate ${value ? 'font-semibold text-slate-800' : 'text-slate-400 font-normal'}`}>
             {value ? displayFormatted(value) : placeholder}
           </span>
 

@@ -133,7 +133,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
                 Task Management Hub
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
@@ -309,7 +309,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                       className="hover:bg-slate-50/80 transition cursor-pointer"
                       onClick={() => setSelectedTask(t)}
                     >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-500">{t.wbs_code}</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-slate-500">{t.wbs_code}</td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-slate-900 hover:text-red-600 transition">
@@ -349,7 +349,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
                       </td>
                       <td className="py-3 px-4 text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <span className="font-mono text-[11px] font-bold text-slate-700">{t.progress_percentage || 0}%</span>
+                          <span className="tracking-tight text-[11px] font-bold text-slate-700">{t.progress_percentage || 0}%</span>
                           <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
                             <div 
                               className="bg-emerald-500 h-full rounded-full transition-all duration-300"
@@ -406,7 +406,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
             {/* Drawer Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
-                <span className="font-mono text-xs text-slate-400 font-bold">{selectedTask.wbs_code}</span>
+                <span className="tracking-tight text-xs text-slate-400 font-bold">{selectedTask.wbs_code}</span>
                 <h3 className="text-base font-bold text-slate-900 mt-0.5">{selectedTask.name || selectedTask.title}</h3>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">

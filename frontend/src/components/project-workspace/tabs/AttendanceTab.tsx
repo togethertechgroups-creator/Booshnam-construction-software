@@ -151,7 +151,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Estimated Wage (Today)</div>
-          <div className="text-2xl font-bold font-mono text-slate-900 mt-1">₹ {totalWages.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-slate-900 mt-1">₹ {totalWages.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-0.5">Daily payroll liability</div>
         </div>
       </div>
@@ -214,7 +214,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({
               ) : (
                 filteredRecords.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                  <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
                     {r.worker_code}
                   </td>
                   <td className="py-3.5 px-4">
@@ -226,7 +226,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({
                       {r.worker_skill}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-slate-600">
+                  <td className="py-3.5 px-4 tracking-tight text-slate-600">
                     {r.clock_in_time}
                   </td>
                   <td className="py-3.5 px-4">

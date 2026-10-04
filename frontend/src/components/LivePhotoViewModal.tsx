@@ -52,7 +52,7 @@ export const LivePhotoViewModal: React.FC<LivePhotoViewModalProps> = ({
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>Live Selfie Verified</span>
             </div>
-            <div className="absolute bottom-3 left-3 bg-slate-900/80 text-white px-3 py-1 rounded-lg text-[11px] font-mono shadow-md backdrop-blur-xs">
+            <div className="absolute bottom-3 left-3 bg-slate-900/80 text-white px-3 py-1 rounded-lg text-[11px] tracking-tight shadow-md backdrop-blur-xs">
               {record.date} • {record.clock_in_time}
             </div>
           </div>
@@ -62,7 +62,7 @@ export const LivePhotoViewModal: React.FC<LivePhotoViewModalProps> = ({
             <div>
               <span className="text-[11px] text-slate-400 block font-medium">Employee Name</span>
               <span className="font-bold text-slate-900 text-sm">{record.staff_name}</span>
-              <span className="text-[10px] text-slate-500 block font-mono">({record.staff_code})</span>
+              <span className="text-[10px] text-slate-500 block tracking-tight">({record.staff_code})</span>
             </div>
             <div>
               <span className="text-[11px] text-slate-400 block font-medium">Role & Department</span>
@@ -75,7 +75,7 @@ export const LivePhotoViewModal: React.FC<LivePhotoViewModalProps> = ({
                 <Clock className="w-3 h-3 text-emerald-600" />
                 <span>Clock In Time</span>
               </span>
-              <strong className="text-slate-900 font-mono text-xs">{record.clock_in_time}</strong>
+              <strong className="text-slate-900 tracking-tight text-xs">{record.clock_in_time}</strong>
             </div>
 
             <div className="pt-2 border-t border-slate-200">
@@ -83,7 +83,7 @@ export const LivePhotoViewModal: React.FC<LivePhotoViewModalProps> = ({
                 <Clock className="w-3 h-3 text-red-600" />
                 <span>Clock Out Time</span>
               </span>
-              <strong className="text-slate-900 font-mono text-xs">
+              <strong className="text-slate-900 tracking-tight text-xs">
                 {record.clock_out_time || 'Currently Working (Active)'}
               </strong>
             </div>

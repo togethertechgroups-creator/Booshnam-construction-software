@@ -358,7 +358,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                                 </span>
                               )}
                               {n.requestCode && (
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] font-mono font-semibold">
+                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] tracking-tight font-semibold">
                                   {n.requestCode}
                                 </span>
                               )}
@@ -634,7 +634,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                         PHONE NUMBER (10 DIGITS)
                       </label>
                       {editPhone && (
-                        <span className={`text-[9px] font-mono font-bold ${editPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                        <span className={`text-[9px] tracking-tight font-bold ${editPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
                           {editPhone.length}/10
                         </span>
                       )}

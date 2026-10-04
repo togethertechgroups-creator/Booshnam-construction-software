@@ -34,7 +34,7 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 DOCUMENT REPOSITORY
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Project Drawings & Contracts</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Project Drawings & Contracts</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Centralized version-controlled storage for legal contracts, municipal permits, and technical reports.

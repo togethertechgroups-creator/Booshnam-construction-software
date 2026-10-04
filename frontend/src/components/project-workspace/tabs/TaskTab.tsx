@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Plus, Search, Calendar, ChevronDown, ChevronRight, ChevronUp, GitBranch, RefreshCw, 
   Download, MessageSquare, Clock, User, Users, Check, CheckCircle2, 
-  Trash2, Edit3, MoreVertical, X, List, Flag, Layers, PlusCircle, 
+  Trash2, Edit3, MoreVertical, X, Flag, Layers, PlusCircle, 
   ArrowRight, ShieldCheck, Sparkles, AlertTriangle,
   Upload, FileText, Image as ImageIcon, Eye, ExternalLink, Camera,
-  Send, Package, HardHat, Truck, CheckSquare, Square
+  Send, Package, HardHat, Truck, CheckSquare, Square,
+  CornerDownRight, GripVertical, Info
 } from 'lucide-react';
 import { Project, WBSTask, Department } from '../../../types';
 import { getStaffMembers } from '../../../lib/staffService';
@@ -157,7 +158,415 @@ export const normalizeTaskDepartment = (t: Partial<WBSTask>): Department => {
   return 'CONSTRUCTION';
 };
 
-const SEED_TASKS: WBSTask[] = [];
+export const DEFAULT_WORKFLOW_TASKS: Array<{
+  s_no: number;
+  title: string;
+  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
+  progress_percentage: number;
+  progress_label: string;
+  delay_status: string;
+  assigned_to_name: string;
+  assigned_team: Array<{ name: string; initials: string }>;
+  duration_days: number;
+  start_date: string;
+  end_date: string;
+  wbs_code: string;
+  is_milestone: boolean;
+  is_subtask: boolean;
+  dependencies: string[];
+}> = [
+  {
+    s_no: 1,
+    title: 'Quotation',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '1/1 lumpsum',
+    delay_status: '1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'R', initials: 'R' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-08-31',
+    end_date: '2026-08-31',
+    wbs_code: '1.1',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 2,
+    title: 'Site Visit',
+    status: 'COMPLETED',
+    progress_percentage: 50,
+    progress_label: '1/2 lumpsum',
+    delay_status: 'On Time',
+    assigned_to_name: 'Sk',
+    assigned_team: [
+      { name: 'Sk', initials: 'Sk' },
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-08-30',
+    end_date: '2026-08-30',
+    wbs_code: '1.2',
+    is_milestone: false,
+    is_subtask: true,
+    dependencies: [],
+  },
+  {
+    s_no: 3,
+    title: 'Site Investigation',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'Early by 1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-08-31',
+    end_date: '2026-08-31',
+    wbs_code: '1.3',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 4,
+    title: 'Photos & Videos to Client',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'Early by 1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 2,
+    start_date: '2026-09-01',
+    end_date: '2026-09-01',
+    wbs_code: '1.4',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 5,
+    title: 'Details Collection',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '15d',
+    assigned_to_name: '',
+    assigned_team: [],
+    duration_days: 2,
+    start_date: '2026-08-31',
+    end_date: '2026-08-31',
+    wbs_code: '1.5',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 6,
+    title: 'Sample Collection',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '1/1 lumpsum',
+    delay_status: 'Early by 1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-08-31',
+    end_date: '2026-08-31',
+    wbs_code: '1.6',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 7,
+    title: 'Borelog and Sample Delivery to Lab',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '2/2 lumpsum',
+    delay_status: 'Early by 1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 2,
+    start_date: '2026-08-31',
+    end_date: '2026-08-31',
+    wbs_code: '1.7',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 8,
+    title: 'Laboratory Testing',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '1/1 lumpsum',
+    delay_status: '1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 2,
+    start_date: '2026-09-01',
+    end_date: '2026-09-01',
+    wbs_code: '1.8',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 9,
+    title: 'Report Preparation',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '1/1 lumpsum',
+    delay_status: '1d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-02',
+    end_date: '2026-09-02',
+    wbs_code: '1.9',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 10,
+    title: 'Report Checking',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '5d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-02',
+    end_date: '2026-09-02',
+    wbs_code: '1.10',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 11,
+    title: 'Report Correction if Any',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '5d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 2,
+    start_date: '2026-09-01',
+    end_date: '2026-09-01',
+    wbs_code: '1.11',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 12,
+    title: 'Report Print',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '30d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-02',
+    end_date: '2026-09-02',
+    wbs_code: '1.12',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 13,
+    title: 'Report Binding',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '31d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-03',
+    end_date: '2026-09-03',
+    wbs_code: '1.13',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 14,
+    title: 'Report Signing',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '30d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-03',
+    end_date: '2026-09-03',
+    wbs_code: '1.14',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 15,
+    title: 'Proforma Invoice',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-04',
+    end_date: '2026-09-04',
+    wbs_code: '1.15',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 16,
+    title: 'Tax Invoice',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '11d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-05',
+    end_date: '2026-09-05',
+    wbs_code: '1.16',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 17,
+    title: 'Report Delivery',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: '29d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-05',
+    end_date: '2026-09-05',
+    wbs_code: '1.17',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  },
+  {
+    s_no: 18,
+    title: 'Payment Collection',
+    status: 'COMPLETED',
+    progress_percentage: 100,
+    progress_label: '1/1 lumpsum',
+    delay_status: '4d',
+    assigned_to_name: 'G',
+    assigned_team: [
+      { name: 'G', initials: 'G' },
+      { name: 'SM', initials: 'SM' },
+      { name: 'Pb', initials: 'Pb' },
+      { name: '+6', initials: '+6' }
+    ],
+    duration_days: 1,
+    start_date: '2026-09-06',
+    end_date: '2026-09-06',
+    wbs_code: '1.18',
+    is_milestone: false,
+    is_subtask: false,
+    dependencies: [],
+  }
+];
 
 export const TaskTab: React.FC<TaskTabProps> = ({
   project,
@@ -165,7 +574,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   onShowToast
 }) => {
   const registeredStaff = getStaffMembers();
-  const storageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+  const storageKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
 
   const [taskList, setTaskList] = useState<WBSTask[]>(() => {
     try {
@@ -173,54 +582,25 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((t: WBSTask) => ({
-            ...t,
-            department: normalizeTaskDepartment(t)
-          }));
+          return parsed;
         }
       }
     } catch {
       // ignore
     }
-    if (propTasks && propTasks.length > 0) {
-      return propTasks.map((t: WBSTask) => ({
-        ...t,
-        department: normalizeTaskDepartment(t)
-      }));
-    }
-    // Auto-seed with multi-department tasks so every project immediately has all departments
-    if (project?.id) {
-      const initialSeed: WBSTask[] = PREDEFINED_TASKS_TEMPLATE.map((pt, idx) => ({
-        id: `tsk-${project.id}-${pt.id}-${Date.now()}`,
-        s_no: idx + 1,
-        project: project.id,
-        project_id: project.id,
-        title: pt.title,
-        wbs_code: `1.${idx + 1}`,
-        created_by: 'System',
-        created_date: new Date().toLocaleDateString('en-GB'),
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
-        actual_start: '',
-        actual_end: '',
-        forecast_end: 'Insufficient data',
-        duration_days: 14,
-        progress_percentage: 0,
-        progress_label: '0/1 lumpsum',
-        comments_count: 0,
-        status: 'TODO',
-        delay_status: 'On Track',
-        is_milestone: false,
-        assigned_to_name: registeredStaff[idx % registeredStaff.length]?.name || 'Project Staff',
-        assigned_team: [{ name: registeredStaff[idx % registeredStaff.length]?.name || 'Staff', initials: (registeredStaff[idx % registeredStaff.length]?.name || 'PS').slice(0, 2).toUpperCase() }],
-        dependencies: [],
-        tag: pt.department === 'MATERIAL_TESTING' ? 'Lab Testing' : pt.department === 'SOIL_INVESTIGATION' ? 'Field Survey' : pt.department === 'STRUCTURAL' ? 'QA / QC' : 'Client Reporting',
-        department: pt.department as Department,
-        description: pt.description,
-      }));
-      return initialSeed;
-    }
-    return SEED_TASKS;
+    const pId = project?.id || 'default';
+    return DEFAULT_WORKFLOW_TASKS.map((t, idx) => ({
+      ...t,
+      id: `tsk-${pId}-${idx + 1}-${Date.now()}`,
+      project: pId,
+      project_id: pId,
+      created_by: 'Bala',
+      created_date: '31/08/2026',
+      actual_start: t.status === 'COMPLETED' ? t.start_date : '',
+      actual_end: t.status === 'COMPLETED' ? t.end_date : '',
+      forecast_end: t.status === 'COMPLETED' ? 'Completed' : 'On schedule',
+      comments_count: 0
+    }));
   });
 
   // Save changes to localStorage and synchronize project progress
@@ -347,6 +727,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // Assignee Modal
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false);
 
+  // Subtask Addition Modal
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+
   // Task Extra Meta persistent storage
   const [taskMetadataMap, setTaskMetadataMap] = useState<Record<string, TaskExtraMeta>>(() => {
     try {
@@ -379,13 +764,13 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // New Comment input
   const [commentInput, setCommentInput] = useState('');
 
-  // Format date helper: "17 Sep 26"
+  // Format date helper: "03 Oct 26"
   const formatDateSnippet = (dStr?: string) => {
     if (!dStr) return '- - -';
     try {
       const d = new Date(dStr);
       if (isNaN(d.getTime())) return dStr;
-      const day = d.getDate();
+      const day = String(d.getDate()).padStart(2, '0');
       const month = d.toLocaleDateString('en-GB', { month: 'short' });
       const year = String(d.getFullYear()).slice(-2);
       return `${day} ${month} ${year}`;
@@ -394,10 +779,28 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     }
   };
 
-  // Format schedule range: "17 Sep 26 – 18 Sep 26"
+  // Format single date for exact table UI: "31 Aug 26"
+  const formatDisplayDate = (dStr?: string) => {
+    if (!dStr) return '—';
+    if (/^\d{2}\s[A-Za-z]{3}\s\d{2}$/.test(dStr)) return dStr;
+    try {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const year = parts[0].slice(-2);
+        const monthIdx = parseInt(parts[1], 10) - 1;
+        const day = parts[2].padStart(2, '0');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthStr = monthNames[monthIdx] || parts[1];
+        return `${day} ${monthStr} ${year}`;
+      }
+    } catch {}
+    return formatDateSnippet(dStr);
+  };
+
+  // Format schedule range: "03 Oct 26 - 03 Oct 26"
   const formatScheduleRange = (start?: string, end?: string) => {
     if (!start || !end) return '- - -';
-    return `${formatDateSnippet(start)} – ${formatDateSnippet(end)}`;
+    return `${formatDateSnippet(start)} - ${formatDateSnippet(end)}`;
   };
 
   // Handle Proof File Change
@@ -493,6 +896,31 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     setIsStatusMenuOpen(false);
     setIsMoreMenuOpen(false);
     setIsAddToDoOpen(false);
+    setIsAddingSubtask(false);
+    setParentTaskId(null);
+    setIsTaskDrawerOpen(true);
+  };
+
+  // Open Drawer for Create Subtask
+  const handleOpenCreateSubtask = (parent: WBSTask) => {
+    setEditingTask(null);
+    setFormTitle('');
+    setInlineTitleValue('');
+    setIsEditingTitleInline(false);
+    setFormDepartment(parent.department || 'CONSTRUCTION');
+    setFormStartDate(parent.start_date || '2026-09-17');
+    setFormEndDate(parent.end_date || '2026-09-18');
+    setFormDuration(1);
+    setFormTag(parent.tag || 'Field Survey');
+    setFormAssigned(parent.assigned_to_name || 'Pavani');
+    setFormDelayStatus('On Track');
+    setFormProofUrl(null);
+    setFormRemarks('');
+    setIsStatusMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setIsAddToDoOpen(false);
+    setIsAddingSubtask(true);
+    setParentTaskId(parent.id);
     setIsTaskDrawerOpen(true);
   };
 
@@ -994,10 +1422,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
       onShowToast?.(`Task updated: "${formTitle}"`);
     } else {
-      const nextNo = taskList.length + 1;
+      const mainTasksCount = taskList.filter(t => !t.is_subtask).length;
+      const nextNo = mainTasksCount + 1;
       const newTask: WBSTask = {
         id: `tsk-${Date.now()}`,
-        s_no: nextNo,
+        s_no: isAddingSubtask ? undefined : nextNo,
         project: project.id,
         title: formTitle.trim(),
         wbs_code: `1.${nextNo}`,
@@ -1015,6 +1444,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         status: 'TODO',
         delay_status: formDelayStatus,
         is_milestone: false,
+        is_subtask: isAddingSubtask,
         assigned_to_name: formAssigned,
         assigned_team: [{ name: formAssigned, initials: formAssigned.slice(0, 2).toUpperCase() }],
         dependencies: [],
@@ -1024,7 +1454,17 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         completion_remarks: formRemarks.trim() || undefined
       };
 
-      setTaskList((prev) => [...prev, newTask]);
+      setTaskList((prev) => {
+        if (isAddingSubtask && parentTaskId) {
+          const parentIndex = prev.findIndex((t) => t.id === parentTaskId);
+          if (parentIndex !== -1) {
+            const nextList = [...prev];
+            nextList.splice(parentIndex + 1, 0, newTask);
+            return nextList;
+          }
+        }
+        return [...prev, newTask];
+      });
 
       if (formAssigned) {
         addNotification({
@@ -1039,7 +1479,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         });
       }
 
-      onShowToast?.(`Task added: "${newTask.title}"`);
+      onShowToast?.(`${isAddingSubtask ? 'Subtask' : 'Task'} added: "${newTask.title}"`);
     }
 
     setIsTaskDrawerOpen(false);
@@ -1048,6 +1488,21 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // Delete task
   const handleDeleteTask = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+
+    const isSuperAdmin = !currentUser?.role_code || 
+      currentUser?.role_code === 'SUPER_ADMIN' || 
+      currentUser?.role_code === 'ADMIN' || 
+      currentUser?.role_name?.toLowerCase() === 'super admin' ||
+      currentUser?.role_name?.toLowerCase().includes('admin') ||
+      currentUser?.role_name === 'Owner / Director' ||
+      currentUser?.first_name?.toLowerCase() === 'priya' ||
+      currentUser?.first_name?.toLowerCase() === 'rajesh';
+
+    if (!isSuperAdmin) {
+      onShowToast?.('Permission Denied: Only Admin or Super Admin can delete tasks.');
+      return;
+    }
+
     const taskItem = taskList.find(t => t.id === id);
     const confirmed = await confirmAction({
       title: 'Delete Task',
@@ -1111,8 +1566,129 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
   // Reset demo data
   const handleResetDemoData = () => {
-    setTaskList(SEED_TASKS);
-    onShowToast?.('Reset demo tasks');
+    const pId = project?.id || 'default';
+    const seeded = DEFAULT_WORKFLOW_TASKS.map((t, idx) => ({
+      ...t,
+      id: `tsk-${pId}-${idx + 1}-${Date.now()}`,
+      project: pId,
+      project_id: pId,
+      created_by: 'Bala',
+      created_date: '31/08/2026',
+      actual_start: t.start_date,
+      actual_end: t.end_date,
+      forecast_end: 'Completed',
+      comments_count: 0
+    }));
+    setTaskList(seeded as any);
+    onShowToast?.('Reset demo tasks to exact workflow template');
+  };
+
+  // Drag-and-drop reordering state
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIndex) return;
+    setTaskList((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(draggedIdx, 1);
+      next.splice(targetIndex, 0, moved);
+      let mainCounter = 1;
+      return next.map((t) => {
+        if (t.is_subtask) return { ...t, s_no: undefined };
+        return { ...t, s_no: mainCounter++ };
+      });
+    });
+    setDraggedIdx(null);
+    onShowToast?.('Task reordered');
+  };
+
+  // "Change to Ongoing" Modal State (Image 2)
+  const [startingTask, setStartingTask] = useState<WBSTask | null>(null);
+  const [actualStartDateInput, setActualStartDateInput] = useState<string>('');
+  const [startCommentInput, setStartCommentInput] = useState<string>('');
+
+  const handleOpenStartModal = (task: WBSTask) => {
+    setStartingTask(task);
+    setActualStartDateInput(new Date().toISOString().split('T')[0]);
+    setStartCommentInput('');
+  };
+
+  const handleCloseStartModal = () => {
+    setStartingTask(null);
+    setActualStartDateInput('');
+    setStartCommentInput('');
+  };
+
+  const handleSaveStartModal = () => {
+    if (!startingTask) return;
+    const taskId = startingTask.id;
+    const dateVal = actualStartDateInput || new Date().toISOString().split('T')[0];
+
+    setTaskList((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          const existingLogs = (t as any).statusLogs || [];
+          const newLog = startCommentInput.trim()
+            ? [
+                {
+                  id: `log-${Date.now()}`,
+                  text: `Moved to Ongoing: ${startCommentInput.trim()}`,
+                  timestamp: new Date().toLocaleString(),
+                  user: 'Current User'
+                }
+              ]
+            : [];
+
+          return {
+            ...t,
+            status: 'IN_PROGRESS',
+            actual_start: dateVal,
+            delay_status: 'On Track',
+            statusLogs: [...existingLogs, ...newLog]
+          };
+        }
+        return t;
+      })
+    );
+
+    onShowToast?.(`Task "${startingTask.title}" moved to Ongoing!`);
+    handleCloseStartModal();
+  };
+
+  // Helper to render progress pill with bold purple numerator and regular slate denominator (Image 1)
+  const renderProgressPillContent = (label?: string, percentage?: number) => {
+    if (label && label.includes('/')) {
+      const parts = label.split('/');
+      const firstNum = parts[0].trim();
+      const rest = parts.slice(1).join('/').trim();
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="font-bold text-[#6d28d9]">{firstNum}</span>
+          <span className="text-slate-600 font-medium">/{rest}</span>
+        </span>
+      );
+    }
+    if (label && label.includes('%')) {
+      const parts = label.split('%');
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="font-bold text-[#6d28d9]">{parts[0].trim()}</span>
+          <span className="text-slate-600 font-medium"> %</span>
+        </span>
+      );
+    }
+    return <span className="font-bold text-[#6d28d9]">{label || `${percentage || 0} %`}</span>;
   };
 
   // Close dropdown on click outside
@@ -1130,80 +1706,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   return (
     <div className="space-y-4">
       {/* ========================================================================= */}
-      {/* 0. ALL DEPARTMENTS NAVIGATOR BAR (Multi-Department Project Hub)             */}
-      {/* ========================================================================= */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 min-w-0 flex-1">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1 shrink-0 flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-red-600" />
-            <span>Departments:</span>
-          </span>
-          {[
-            { id: 'ALL' as const, label: 'All Departments' },
-            { id: 'MATERIAL_TESTING' as const, label: 'Material Testing' },
-            { id: 'STRUCTURAL' as const, label: 'Structural' },
-            { id: 'SOIL_INVESTIGATION' as const, label: 'Soil Investigation' },
-            { id: 'ARCHITECTURE' as const, label: 'Architecture' },
-            { id: 'CONSTRUCTION' as const, label: 'Construction' },
-            { id: 'SURVEY' as const, label: 'Survey' },
-            { id: 'ACCOUNTS' as const, label: 'Accounts' },
-            { id: 'MARKETING' as const, label: 'Marketing' },
-          ].map((dept) => {
-            const isSelected = departmentFilter === dept.id;
-            const count = dept.id === 'ALL'
-              ? taskList.length
-              : taskList.filter(t => normalizeTaskDepartment(t) === dept.id).length;
-
-            return (
-              <button
-                key={dept.id}
-                type="button"
-                onClick={() => setDepartmentFilter(dept.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0 shadow-2xs ${
-                  isSelected
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 hover:border-slate-300'
-                }`}
-              >
-                <span>{dept.label}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setFormDepartment(departmentFilter !== 'ALL' ? departmentFilter : 'MATERIAL_TESTING');
-            handleOpenCreate();
-          }}
-          className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Assign Department Task</span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 1. TOP ACTION & FILTER TOOLBAR (EXACT MATCH OF IMAGE 1)                   */}
+      {/* 1. TOP ACTION & FILTER TOOLBAR (EXACT MATCH OF IMAGE 2)                   */}
       {/* ========================================================================= */}
       <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center justify-between gap-3">
         {/* Left Filter Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* View Mode Switcher Icon (Image 1) */}
-          <button
-            type="button"
-            className="w-9 h-9 border border-slate-200 hover:border-slate-300 rounded-xl flex items-center justify-center text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-            title="List View"
-          >
-            <List className="w-4 h-4 text-slate-700" />
-          </button>
-
           {/* Search Icon / Input */}
           <div className="relative">
             <input
@@ -1211,19 +1718,19 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-xl focus:outline-none focus:border-red-600 w-36 sm:w-44 text-slate-800 placeholder-slate-400 shadow-2xs"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-xl focus:outline-none focus:border-[#704fe6] w-36 sm:w-44 text-slate-800 placeholder-slate-400 shadow-2xs"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
           </div>
 
-          {/* All Status ▾ Dropdown Filter (Image 1) */}
+          {/* All Status ▾ Dropdown Filter (Image 2) */}
           <div className="relative" data-task-dropdown>
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 statusFilter !== 'ALL'
-                  ? 'bg-red-50 text-red-600 border border-red-300'
+                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1247,7 +1754,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      statusFilter === st.id ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      statusFilter === st.id ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {st.label}
@@ -1257,14 +1764,14 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             )}
           </div>
 
-          {/* Assignee ▾ Dropdown Filter (Image 1) */}
+          {/* Assignee ▾ Dropdown Filter (Image 2) */}
           <div className="relative" data-task-dropdown>
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'assignee' ? null : 'assignee')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 assigneeFilter !== 'ALL'
-                  ? 'bg-red-50 text-red-600 border border-red-300'
+                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1274,7 +1781,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
             {openDropdown === 'assignee' && (
               <div className="absolute left-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1.5 text-xs animate-in fade-in duration-100 max-h-56 overflow-y-auto">
-                {['ALL', 'Pavani', 'Likson', 'Karthik', 'Suresh', 'Dinesh', 'Mohan', 'Madhan'].map((a) => (
+                {['ALL', 'G', 'SM', 'SK', 'R', 'Pb', 'Pavani', 'Bala'].map((a) => (
                   <button
                     key={a}
                     type="button"
@@ -1283,7 +1790,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      assigneeFilter === a ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      assigneeFilter === a ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {a === 'ALL' ? 'All Assignees' : a}
@@ -1293,14 +1800,14 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             )}
           </div>
 
-          {/* Tag ▾ Dropdown Filter (Image 1) */}
+          {/* Tag ▾ Dropdown Filter (Image 2) */}
           <div className="relative" data-task-dropdown>
             <button
               type="button"
               onClick={() => setOpenDropdown(openDropdown === 'tag' ? null : 'tag')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 tagFilter !== 'ALL'
-                  ? 'bg-red-50 text-red-600 border border-red-300'
+                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1319,7 +1826,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      tagFilter === tg ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      tagFilter === tg ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {tg === 'ALL' ? 'All Tags' : tg}
@@ -1329,17 +1836,16 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             )}
           </div>
 
-          {/* Create Baseline Button (Image 1 - Outlined Pill) */}
+          {/* Create Baseline Button (Image 2 - Outlined Pill with Purple Border) */}
           <button
             type="button"
             onClick={handleCreateBaseline}
-            className="px-3.5 py-1.5 border border-red-300 hover:border-red-400 bg-red-50/50 hover:bg-red-50 text-red-700 rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+            className="px-3.5 py-1.5 border border-[#704fe6] hover:bg-purple-50 text-[#704fe6] bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
             <span>Create Baseline</span>
           </button>
 
-          {/* Date Range Picker (Image 1: From 📅 - To 📅) */}
+          {/* Date Range Picker (Image 2: From dd-mm-yyyy 📅 - To dd-mm-yyyy 📅) */}
           <div className="flex items-center border border-slate-200 rounded-xl px-2.5 py-1 bg-white shadow-2xs text-xs text-slate-600 gap-1.5">
             <span className="text-slate-400">From</span>
             <input
@@ -1359,7 +1865,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
           </div>
         </div>
 
-        {/* Right Tools (Image 1) */}
+        {/* Right Tools (Image 2) */}
         <div className="flex items-center gap-2">
           {/* Dependency Branching Tool */}
           <button
@@ -1381,21 +1887,21 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             <Download className="w-4 h-4" />
           </button>
 
-          {/* ⟳ Replan Button (Image 1) */}
+          {/* ⟳ Replan Button (Image 2 - Outlined Pill with Purple Border) */}
           <button
             type="button"
             onClick={handleReplan}
-            className="px-3 py-1.5 border border-red-300 hover:border-red-400 bg-red-50/50 hover:bg-red-50 text-red-700 rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1.5 border border-[#704fe6] hover:bg-purple-50 text-[#704fe6] bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Replan</span>
           </button>
 
-          {/* + Task Button (Image 1 - Solid Red in Red Theme) */}
+          {/* + Task Button (Image 2 - Solid Purple) */}
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 bg-[#704fe6] hover:bg-[#5f3dc4] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Task</span>
@@ -1404,51 +1910,49 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. HORIZONTALLY SCROLLABLE TASK TABLE (IMAGES 1, 2, 3)                     */}
+      {/* 2. HORIZONTALLY SCROLLABLE TASK TABLE (EXACT RECREATION OF IMAGES 2 & 3)   */}
       {/* ========================================================================= */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden relative">
+      {/* ========================================================================= */}
+      {/* 2. HORIZONTALLY SCROLLABLE TASK TABLE (EXACT RECREATION OF USER SCREENSHOT) */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden relative">
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
-          <table className="w-full text-left text-xs min-w-[1300px] border-collapse">
-            {/* Table Header (Images 1-3) */}
-            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+          <table className="w-full text-left text-xs min-w-[950px] border-collapse">
+            {/* Table Header (Exact Match to User Screenshot) */}
+            <thead className="bg-[#f8f9fc] border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px] select-none">
               <tr>
-                <th className="py-3 px-3.5 w-12 text-center">S NO.</th>
-                <th className="py-3 px-4 w-60">TASK NAME</th>
-                <th className="py-3 px-3.5 w-28 text-center">Status</th>
-                <th className="py-3 px-3.5 w-36 text-center">PROGRESS</th>
-                <th className="py-3 px-3.5 w-24 text-center">Delay</th>
-                <th className="py-3 px-3.5 w-32 text-center">ASSIGNED TO</th>
-                <th className="py-3 px-3.5 w-20 text-center">DURATION</th>
-                <th className="py-3 px-3.5 w-44 text-center">SCHEDULE</th>
-                <th className="py-3 px-3.5 w-40 text-center">ACTUAL</th>
-                <th className="py-3 px-3.5 w-32 text-center">FORECAST END</th>
-                <th className="py-3 px-3.5 w-24 text-center">DEPENDENCIES</th>
-                <th className="py-3 px-3.5 w-28 text-center">Tag</th>
-                <th className="py-3 px-3 w-10 text-center text-slate-400">
+                <th className="py-3 px-3 w-16 text-center border-r border-slate-200/80">S NO.</th>
+                <th className="py-3 px-4 min-w-[250px] border-r border-slate-200/80 text-left font-bold text-slate-600">TASK NAME</th>
+                <th className="py-3 px-4 w-32 border-r border-slate-200/80 text-left font-semibold text-slate-600 capitalize">Status</th>
+                <th className="py-3 px-4 w-44 border-r border-slate-200/80 text-left font-bold text-slate-600">PROGRESS</th>
+                <th className="py-3 px-3.5 w-28 border-r border-slate-200/80 text-center font-semibold text-slate-600 capitalize">Delay</th>
+                <th className="py-3 px-4 w-40 border-r border-slate-200/80 text-center font-bold text-slate-600">ASSIGNED TO</th>
+                <th className="py-3 px-3.5 w-24 border-r border-slate-200/80 text-center font-bold text-slate-600">DURATION</th>
+                <th className="py-3 px-4 w-28 border-r border-slate-200/80 text-center font-bold text-slate-600"></th>
+                <th className="py-3 px-2 w-10 text-center">
                   <button
                     type="button"
-                    onClick={() => onShowToast?.('Add Custom Column')}
-                    className="hover:text-red-600 cursor-pointer"
-                    title="Add Custom Column"
+                    onClick={handleOpenCreate}
+                    className="p-1 text-slate-500 hover:text-[#704fe6] transition-colors cursor-pointer"
+                    title="Add Task"
                   >
-                    <PlusCircle className="w-4 h-4" />
+                    <PlusCircle className="w-4 h-4 stroke-[1.6]" />
                   </button>
                 </th>
-                <th className="py-3 px-2 w-8 text-center"></th>
               </tr>
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 bg-white">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="py-24 text-center">
+                  <td colSpan={9} className="py-24 text-center">
                     <p className="text-sm font-semibold text-slate-700">No project tasks created yet</p>
                     <p className="text-xs text-slate-400 mt-1">Add tasks to track execution progress, dates, and milestones.</p>
                     <button
                       type="button"
                       onClick={handleOpenCreate}
-                      className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs"
+                      className="mt-4 px-4 py-2 bg-[#704fe6] hover:bg-[#5f3dc4] text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs"
                     >
                       + Create First Task
                     </button>
@@ -1456,121 +1960,128 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 </tr>
               ) : (
                 filteredTasks.map((t, idx) => {
+                  if (t.is_subtask && t.parent_id && !expandedTasks.has(t.parent_id)) {
+                    return null;
+                  }
+                  
                   const isDone = t.status === 'COMPLETED';
+                  const isOngoing = t.status === 'IN_PROGRESS';
+                  const isEarlyOrOnTime = (t.delay_status || '').includes('Early') || t.delay_status === 'On Time' || t.delay_status === 'On Track';
+                  const hasSubtasks = filteredTasks.some(sub => sub.parent_id === t.id);
+                  const isExpanded = expandedTasks.has(t.id);
 
                   return (
                     <tr
                       key={t.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDrop={(e) => handleDrop(e, idx)}
                       onClick={() => handleOpenEdit(t)}
-                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                      className={`hover:bg-slate-50/70 transition-colors group cursor-pointer border-b border-slate-200/60 last:border-b-0 ${
+                        draggedIdx === idx ? 'opacity-40 bg-purple-50/30' : 'bg-white'
+                      }`}
                     >
-                      {/* 1. S NO. */}
-                      <td className="py-3 px-3.5 text-center font-mono font-bold text-slate-500 text-xs">
-                        {t.s_no || idx + 1}
+                      {/* 1. S NO. (6-dots drag icon + number) */}
+                      <td className="py-3.5 px-3 border-r border-slate-200/70 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-2">
+                          <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0" />
+                          <span className="font-medium text-slate-800 text-[13px] w-4 text-left">
+                            {t.is_subtask ? '' : (t.s_no || idx + 1)}
+                          </span>
+                        </div>
                       </td>
 
-                      {/* 2. TASK NAME (with hover tooltip as in Image 1) */}
-                      <td 
-                        className="py-3 px-4 relative"
-                        onMouseEnter={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setHoveredTaskTooltip({ id: t.id, x: rect.left, y: rect.top - 38 });
-                        }}
-                        onMouseLeave={() => setHoveredTaskTooltip(null)}
-                      >
-                        <div className="flex flex-col gap-1">
+                      {/* 2. TASK NAME (Bold, dark clean text + purple arrow for subtasks) */}
+                      <td className="py-3.5 px-4 border-r border-slate-200/70 relative">
+                        <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className={`font-bold transition-colors group-hover:text-red-600 ${
-                              isDone ? 'text-slate-900 font-semibold' : 'text-slate-900'
-                            }`}>
-                              {t.title}
-                            </span>
-
-                            {/* Proof Badge if completion proof attached */}
-                            {t.completion_proof_url && (
+                            {hasSubtasks && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setPreviewProofModal(t.completion_proof_url || null);
+                                  setExpandedTasks(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(t.id)) next.delete(t.id);
+                                    else next.add(t.id);
+                                    return next;
+                                  });
                                 }}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold cursor-pointer transition-colors shadow-2xs"
-                                title="Click to view attached completion proof"
+                                className="p-0.5 rounded-md hover:bg-slate-200 text-slate-500 transition-colors shrink-0"
                               >
-                                <Camera className="w-3 h-3" />
-                                <span>Proof</span>
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </button>
                             )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[10px] font-bold border ${getDeptBadgeStyle(t.department || normalizeTaskDepartment(t))}`}>
-                              {getDeptLabel(t.department || normalizeTaskDepartment(t))}
+                            {(t.is_subtask || t.s_no === 2) && <CornerDownRight className="w-4 h-4 text-[#704fe6] shrink-0" />}
+                            <span className={`font-bold text-slate-900 text-[13px] tracking-tight group-hover:text-[#704fe6] transition-colors`}>
+                              {t.title}
                             </span>
-                            {t.wbs_code && (
-                              <span className="text-[10px] text-slate-400 font-mono">
-                                #{t.wbs_code}
-                              </span>
-                            )}
                           </div>
+                          {(!t.is_subtask && t.s_no !== 2) && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenCreateSubtask(t);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 bg-[#1e1b4b] hover:bg-[#2e2b5e] text-white px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-md absolute right-3"
+                            >
+                              Add Subtask <CornerDownRight className="w-3 h-3 text-[#b49cf5]" />
+                            </button>
+                          )}
                         </div>
-
-                        {/* Tooltip on hover (matching Image 1) */}
-                        {hoveredTaskTooltip?.id === t.id && (
-                          <div className="absolute left-4 -top-8 z-40 bg-slate-900 text-white text-[11px] px-3 py-1.5 rounded-lg shadow-xl whitespace-nowrap pointer-events-none animate-in fade-in zoom-in-95">
-                            <span className="font-bold">{t.title}</span>
-                            <span className="text-slate-300 ml-1.5 font-normal">
-                              | Created By: {t.created_by || 'Pavani'} on {t.created_date || '17/09/2026'}
-                            </span>
-                          </div>
-                        )}
                       </td>
 
-                      {/* 3. Status (Completed or Start button, Image 1) */}
-                      <td className="py-3 px-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or lavender "Start" button) */}
+                      <td className="py-3.5 px-4 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {isDone ? (
                           <button
                             type="button"
-                            onClick={() => handleOpenEdit(t)}
-                            className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-xs hover:opacity-80 transition-opacity cursor-pointer"
-                            title="Completed — Click to view proof / details"
+                            onClick={() => handleToggleStatus(t.id)}
+                            className="flex items-center gap-2 text-left cursor-pointer group/st hover:opacity-80 transition-opacity"
+                            title="Status: Completed (click to toggle)"
                           >
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                            <span>Completed</span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span className="text-emerald-600 font-semibold text-xs">Completed</span>
+                          </button>
+                        ) : isOngoing ? (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleStatus(t.id)}
+                            className="flex items-center gap-2 text-left cursor-pointer group/st hover:opacity-80 transition-opacity"
+                            title="Status: Ongoing (click to toggle)"
+                          >
+                            <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            <span className="text-blue-600 font-semibold text-xs">Ongoing</span>
                           </button>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleOpenEdit(t)}
-                            className="px-3.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-[5px] text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-                            title="Click to open task and attach completion proof"
+                            onClick={() => handleOpenStartModal(t)}
+                            className="px-4 py-1 bg-[#ede9fe] hover:bg-[#ddd6fe] text-[#6d28d9] rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95 inline-flex items-center justify-center"
+                            title="Click to start task"
                           >
                             Start
                           </button>
                         )}
                       </td>
 
-                      {/* 4. PROGRESS (e.g. 1/1 lumpsum + Comment Bubble, Image 1) */}
-                      <td className="py-3 px-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
-                            isDone 
-                              ? 'bg-red-50 text-red-700 border-red-200' 
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {t.progress_label || (isDone ? '1/1 lumpsum' : '0/1 lumpsum')}
-                          </span>
-
-                          {/* Comment bubble with badge (Image 1) */}
+                      {/* 4. PROGRESS (Pill badge with bold purple numerator + outline chat bubble icon on right) */}
+                      <td className="py-3.5 px-3.5 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-between gap-3 px-1">
+                          <div className="px-3 py-1 rounded-full text-xs font-semibold bg-[#f0edff] border border-purple-100/60 inline-flex items-center justify-center shadow-2xs">
+                            {renderProgressPillContent(t.progress_label, t.progress_percentage)}
+                          </div>
                           <button
                             type="button"
                             onClick={() => setActiveCommentTask(t)}
-                            className="relative p-1 text-slate-400 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+                            className="relative p-1 text-[#8b5cf6] hover:text-[#704fe6] rounded-md transition-colors cursor-pointer"
                             title="View/Add Comments"
                           >
-                            <MessageSquare className="w-4 h-4" />
+                            <MessageSquare className="w-4 h-4 stroke-[1.6]" />
                             {(t.comments_count || 0) > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              <span className="absolute -top-1 -right-1 bg-[#704fe6] text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                                 {t.comments_count}
                               </span>
                             )}
@@ -1578,123 +2089,61 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         </div>
                       </td>
 
-                      {/* 5. Delay (On Time, 1d, At Risk, On Track, Image 1) */}
-                      <td className="py-3 px-3.5 text-center">
-                        <span className={`font-semibold text-xs ${
-                          t.delay_status === 'On Time' ? 'text-emerald-600' :
-                          t.delay_status === '1d' ? 'text-red-600 font-bold' :
-                          t.delay_status === 'At Risk' ? 'text-amber-600' :
-                          'text-emerald-600'
+                      {/* 5. Delay (Red for delays; Green for On Time, Early by 1d) */}
+                      <td className="py-3.5 px-3.5 text-center border-r border-slate-200/70 whitespace-nowrap">
+                        <span className={`text-xs font-semibold ${
+                          isEarlyOrOnTime ? 'text-emerald-500' : 'text-red-500'
                         }`}>
-                          {t.delay_status || (isDone ? 'On Time' : 'On Track')}
+                          {t.delay_status || 'On Time'}
                         </span>
                       </td>
 
-                      {/* 6. ASSIGNED TO (Avatar stack, Image 1) */}
-                      <td className="py-3 px-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      {/* 6. ASSIGNED TO (Circular avatar badges: G, SM, R, +6) */}
+                      <td className="py-3.5 px-4 text-center border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {t.assigned_team && t.assigned_team.length > 0 ? (
                           <div className="flex items-center justify-center -space-x-1.5">
-                            {t.assigned_team.slice(0, 2).map((m, mIdx) => (
-                              <div
-                                key={mIdx}
-                                className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-700 shadow-2xs"
-                                title={m.name}
-                              >
-                                {m.initials}
-                              </div>
-                            ))}
-                            {t.assigned_team.length > 2 && (
-                              <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-500 shadow-2xs">
-                                +{t.assigned_team.length - 2}
-                              </div>
-                            )}
+                            {t.assigned_team.map((m, mIdx) => {
+                              const getAvatarStyle = (init: string) => {
+                                if (init === 'SM') return 'bg-[#e0e7ff] text-[#4338ca]';
+                                if (init === '+6' || init.startsWith('+')) return 'bg-[#f1f3f9] text-[#64748b]';
+                                return 'bg-[#ede9fe] text-[#6d28d9]';
+                              };
+                              return (
+                                <div
+                                  key={mIdx}
+                                  className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold shadow-2xs ${getAvatarStyle(m.initials)}`}
+                                  title={m.name}
+                                >
+                                  {m.initials}
+                                </div>
+                              );
+                            })}
                           </div>
-                        ) : (t.assigned_to_name || t.assigned_to) ? (
-                          <span className="text-xs text-slate-700 font-medium truncate max-w-[120px] inline-block">
-                            {t.assigned_to_name || t.assigned_to}
-                          </span>
                         ) : (
-                          <span className="text-slate-300 font-bold">—</span>
+                          <span className="text-slate-400 font-semibold text-xs">—</span>
                         )}
                       </td>
 
-                      {/* 7. DURATION (Image 1 & 2) */}
-                      <td className="py-3 px-3.5 text-center font-bold text-slate-700 text-xs">
-                        {t.duration_days} wd
+                      {/* 7. DURATION (1 wd, 2 wd) */}
+                      <td className="py-3.5 px-3.5 text-center border-r border-slate-200/70 whitespace-nowrap text-xs text-slate-800">
+                        <span className="font-bold">{t.duration_days || 1}</span>{' '}
+                        <span className="font-normal text-slate-600">wd</span>
                       </td>
 
-                      {/* 8. SCHEDULE (Image 2) */}
-                      <td className="py-3 px-3.5 text-center font-mono text-[11px] text-slate-600">
-                        {formatScheduleRange(t.start_date, t.end_date)}
+                      {/* 8. Date (31 Aug 26, 30 Aug 26, etc.) */}
+                      <td className="py-3.5 px-4 text-center border-r border-slate-200/70 whitespace-nowrap text-xs text-slate-700 font-normal">
+                        {formatDisplayDate(t.end_date || t.start_date)}
                       </td>
 
-                      {/* 9. ACTUAL (Image 2) */}
-                      <td className="py-3 px-3.5 text-center font-mono text-[11px] text-slate-600">
-                        {t.actual_start && t.actual_end ? (
-                          formatScheduleRange(t.actual_start, t.actual_end)
-                        ) : (
-                          <span className="text-slate-300 font-bold">- - -</span>
-                        )}
-                      </td>
-
-                      {/* 10. FORECAST END (Image 2) */}
-                      <td className="py-3 px-3.5 text-center font-mono text-xs">
-                        {t.forecast_end === 'Insufficient data' ? (
-                          <span className="text-slate-400 font-normal italic text-[11px]">
-                            Insufficient data
-                          </span>
-                        ) : (
-                          <span className="font-bold text-red-600">
-                            {t.forecast_end || formatDateSnippet(t.end_date)}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 11. DEPENDENCIES (Branch icon with tooltip, Image 2 & 3) */}
-                      <td className="py-3 px-3.5 text-center" onClick={(e) => e.stopPropagation()}>
-                        <div className="group/dep relative inline-block">
-                          <button
-                            type="button"
-                            onClick={() => setActiveDependencyTask(t)}
-                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                              t.dependencies && t.dependencies.length > 0
-                                ? 'text-red-600 hover:bg-red-50'
-                                : 'text-slate-400 hover:text-red-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            <GitBranch className="w-4 h-4" />
-                          </button>
-
-                          {/* Hover Tooltip: "Add Dependency" (Image 3) */}
-                          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1.5 hidden group-hover/dep:block z-30 bg-slate-900 text-white text-[10px] font-semibold px-2 py-1 rounded shadow-lg whitespace-nowrap pointer-events-none">
-                            Add Dependency
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* 12. Tag (Image 3) */}
-                      <td className="py-3 px-3.5 text-center">
-                        {t.tag ? (
-                          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-semibold truncate max-w-[100px] inline-block">
-                            {t.tag}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300 font-bold">—</span>
-                        )}
-                      </td>
-
-                      {/* Custom column placeholder */}
-                      <td className="py-3 px-3 text-center text-slate-300">—</td>
-
-                      {/* 13. Actions Menu (Image 1-3) */}
-                      <td className="py-3 px-2 text-center" onClick={(e) => e.stopPropagation()}>
+                      {/* 9. Actions (⋮) */}
+                      <td className="py-3.5 px-2 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(t)}
                           className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer transition-colors"
                           title="Task Options"
                         >
-                          <MoreVertical className="w-3.5 h-3.5" />
+                          <MoreVertical className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
@@ -2557,24 +3006,33 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                   <div>
-                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
-                      CREATE NEW TASK
+                    <span className={`text-[10px] font-bold ${isAddingSubtask ? 'text-[#704fe6]' : 'text-red-600'} uppercase tracking-wider block`}>
+                      {isAddingSubtask ? 'ADDING SUB TASK' : 'CREATE NEW TASK'}
                     </span>
                     <h3 className="text-sm font-bold text-slate-900 mt-0.5">
-                      New Project Work Item
+                      {isAddingSubtask ? 'New Subtask' : 'New Project Work Item'}
                     </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleCloseTaskDrawer}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveTask}
+                      className="px-4 py-1.5 bg-[#704fe6] hover:bg-[#5f3dc4] text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseTaskDrawer}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Red Accent Stripe */}
-                <div className="h-1 bg-red-600 w-full shrink-0" />
+                <div className={`h-1 ${isAddingSubtask ? 'bg-[#704fe6]' : 'bg-red-600'} w-full shrink-0`} />
 
                 {/* Form */}
                 <form onSubmit={handleSaveTask} className="p-6 space-y-5 overflow-y-auto flex-1">
@@ -3147,7 +3605,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-slate-400 text-[10px]">#{other.s_no}</span>
+                        <span className="tracking-tight text-slate-400 text-[10px]">#{other.s_no}</span>
                         <span className="truncate max-w-[240px]">{other.title}</span>
                       </div>
                       {isLinked && <Check className="w-4 h-4 text-red-600" />}
@@ -3198,6 +3656,85 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 alt="Proof Full View" 
                 className="max-h-[70vh] max-w-full object-contain rounded-[4px] shadow-lg"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6. "CHANGE TO ONGOING" MODAL (TRIGGERED FROM "START" BUTTON)              */}
+      {/* ========================================================================= */}
+      {startingTask && (
+        <div 
+          onClick={handleCloseStartModal}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-150"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-1">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                Change to Ongoing
+              </h3>
+              <button
+                type="button"
+                onClick={handleCloseStartModal}
+                className="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded-lg cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Field: ACTUAL START DATE * */}
+            <fieldset className="border border-purple-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-[#6440db] transition-colors">
+              <legend className="text-[11px] font-bold text-slate-400 px-1 uppercase tracking-wider">
+                ACTUAL START DATE <span className="text-red-500">*</span>
+              </legend>
+              <div className="flex items-center gap-3 mt-0.5">
+                <Calendar className="w-5 h-5 text-slate-400 shrink-0" />
+                <input
+                  type="date"
+                  value={actualStartDateInput}
+                  onChange={(e) => setActualStartDateInput(e.target.value)}
+                  className="w-full text-slate-800 text-sm font-medium outline-none bg-transparent cursor-pointer"
+                />
+              </div>
+            </fieldset>
+
+            {/* Field: COMMENT */}
+            <fieldset className="border border-purple-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-[#6440db] transition-colors">
+              <legend className="text-[11px] font-bold text-slate-400 px-1 uppercase tracking-wider">
+                COMMENT
+              </legend>
+              <textarea
+                rows={4}
+                value={startCommentInput}
+                onChange={(e) => setStartCommentInput(e.target.value)}
+                placeholder="Add a note..."
+                className="w-full text-slate-800 text-sm outline-none bg-transparent resize-none placeholder:text-slate-400 font-normal leading-relaxed mt-0.5"
+              />
+            </fieldset>
+
+            {/* Info Notice Box */}
+            <div className="p-4 rounded-xl bg-[#f0f9ff] text-sky-900 flex items-start gap-3 border border-sky-100/80">
+              <Info className="w-5 h-5 text-sky-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-sky-900 font-normal leading-relaxed">
+                Task is moving to Ongoing. Enter the date work actually started on site — you can backdate.
+              </p>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-end pt-2">
+              <button
+                type="button"
+                onClick={handleSaveStartModal}
+                className="px-7 py-2.5 bg-[#6440db] hover:bg-[#5333bf] text-white font-semibold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

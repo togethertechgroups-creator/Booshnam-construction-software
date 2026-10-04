@@ -667,7 +667,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-white/20 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-white transition-all bg-white font-mono shadow-lg shadow-black/10"
+                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-white/20 text-xs font-medium text-slate-900 placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-white transition-all bg-white tracking-tight shadow-lg shadow-black/10"
                     />
                     <button
                       type="button"

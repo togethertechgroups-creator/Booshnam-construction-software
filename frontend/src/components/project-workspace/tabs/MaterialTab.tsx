@@ -312,13 +312,13 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                           {item.category}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                      <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                         {item.current_quantity.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-500">
+                      <td className="py-3.5 px-4 text-right tracking-tight text-slate-500">
                         {item.minimum_threshold.toLocaleString()}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-600">
+                      <td className="py-3.5 px-4 tracking-tight text-slate-600">
                         {item.unit}
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -367,7 +367,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                 ) : (
                   indents.map((mr) => (
                     <tr key={mr.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{mr.request_number}</td>
+                      <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">{mr.request_number}</td>
                       <td className="py-3.5 px-4">
                         {mr.items?.map((item, idx) => (
                           <div key={idx} className="font-semibold text-slate-900">
@@ -376,7 +376,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                         ))}
                         <div className="text-[10px] text-slate-400 mt-0.5">{mr.site_notes}</div>
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-slate-600">{mr.needed_by_date}</td>
+                      <td className="py-3.5 px-4 tracking-tight text-slate-600">{mr.needed_by_date}</td>
                       <td className="py-3.5 px-4">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           mr.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
@@ -384,7 +384,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                           {mr.priority}
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                      <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                         ₹ {mr.total_estimated_cost.toLocaleString()}
                       </td>
                       <td className="py-3.5 px-4 text-right">
@@ -427,11 +427,11 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                 ) : (
                   receipts.map((grn) => (
                     <tr key={grn.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{grn.grn_number}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">{grn.receipt_date}</td>
+                      <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">{grn.grn_number}</td>
+                      <td className="py-3.5 px-4 tracking-tight text-slate-500 text-[11px]">{grn.receipt_date}</td>
                       <td className="py-3.5 px-4 font-semibold text-slate-900">{grn.vendor_name}</td>
-                      <td className="py-3.5 px-4 font-mono text-indigo-700 font-bold">{grn.challan_number}</td>
-                      <td className="py-3.5 px-4 font-mono text-slate-600">{grn.vehicle_number}</td>
+                      <td className="py-3.5 px-4 tracking-tight text-indigo-700 font-bold">{grn.challan_number}</td>
+                      <td className="py-3.5 px-4 tracking-tight text-slate-600">{grn.vehicle_number}</td>
                       <td className="py-3.5 px-4 text-slate-500 text-[11px]">{grn.notes}</td>
                       <td className="py-3.5 px-4 text-right">
                         <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold rounded">

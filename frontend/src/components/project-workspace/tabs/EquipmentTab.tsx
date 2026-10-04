@@ -213,7 +213,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
               ) : (
                 filteredAssets.map((asset) => (
                 <tr key={asset.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                  <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
                     {asset.asset_code}
                   </td>
                   <td className="py-3.5 px-4">
@@ -234,10 +234,10 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
                       {asset.ownership}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-slate-800">
+                  <td className="py-3.5 px-4 text-right tracking-tight text-slate-800">
                     ₹ {asset.hourly_cost_rate}/hr
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                  <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                     {asset.meter_hours.toLocaleString()} hrs
                   </td>
                   <td className="py-3.5 px-4">
@@ -273,7 +273,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">Log Run Hours & Fuel</h3>
-                <p className="text-xs text-slate-500 font-mono">{selectedAsset.name} ({selectedAsset.asset_code})</p>
+                <p className="text-xs text-slate-500 tracking-tight">{selectedAsset.name} ({selectedAsset.asset_code})</p>
               </div>
               <button 
                 type="button"
@@ -288,11 +288,11 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
                 <div className="flex justify-between text-slate-500">
                   <span>Current Meter Reading:</span>
-                  <span className="font-bold font-mono text-slate-900">{selectedAsset.meter_hours} hrs</span>
+                  <span className="font-bold tracking-tight text-slate-900">{selectedAsset.meter_hours} hrs</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>Standard Rate:</span>
-                  <span className="font-bold font-mono text-slate-900">₹ {selectedAsset.hourly_cost_rate} / hr</span>
+                  <span className="font-bold tracking-tight text-slate-900">₹ {selectedAsset.hourly_cost_rate} / hr</span>
                 </div>
               </div>
 
@@ -304,7 +304,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
                     required
                     value={hoursToAdd}
                     onChange={(e) => setHoursToAdd(Number(e.target.value))}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 font-mono font-bold"
+                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 tracking-tight font-bold"
                   />
                 </div>
                 <div>
@@ -313,7 +313,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
                     type="number"
                     value={fuelLiters}
                     onChange={(e) => setFuelLiters(Number(e.target.value))}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 font-mono font-bold"
+                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 tracking-tight font-bold"
                   />
                 </div>
               </div>
@@ -426,7 +426,7 @@ export const EquipmentTab: React.FC<EquipmentTabProps> = ({ project, assets = DE
                     type="number"
                     value={rate}
                     onChange={(e) => setRate(Number(e.target.value))}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 font-mono font-bold"
+                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 tracking-tight font-bold"
                   />
                 </div>
               </div>

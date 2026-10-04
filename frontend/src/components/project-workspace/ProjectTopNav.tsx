@@ -311,11 +311,6 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                   </span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform shrink-0" />
                 </button>
-
-                {/* Project Code */}
-                <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200/80 font-semibold shrink-0">
-                  Project Code: {project.code}
-                </span>
               </div>
 
               {/* Subtitle: Site Location & Status */}
@@ -338,12 +333,6 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                 <span className="inline-flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />
                   <span className="font-semibold text-slate-800">{statusConfig.label}</span>
-                </span>
-
-                {/* Role Pill Indicator */}
-                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 text-red-700 font-bold text-[10px] border border-red-200">
-                  <Shield className="w-3 h-3 text-red-600" />
-                  <span>Role: {effectiveRoleName}</span>
                 </span>
               </div>
 
@@ -385,7 +374,7 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                             </div>
                             <div className="truncate">
                               <div className="truncate text-slate-800">{formatProjectTitle(p)}</div>
-                              <div className="text-[10px] text-slate-400 font-mono">{p.code}</div>
+                              <div className="text-[10px] text-slate-400 tracking-tight">{p.code}</div>
                             </div>
                           </div>
                           {isSelected && <Check className="w-3.5 h-3.5 text-red-600 shrink-0 ml-2" />}
@@ -495,8 +484,10 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                 onClick={() => onSelectTab(tab.id)}
                 className={`relative pb-1 text-xs sm:text-[13px] font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   isActive 
-                    ? 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
-                    : 'text-slate-600 hover:text-slate-900 hover:text-red-600'
+                    ? tab.id === 'task'
+                      ? 'text-[#704fe6] font-bold border-b-2 border-[#704fe6] -mb-px'
+                      : 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <span>{tab.label}</span>

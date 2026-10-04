@@ -819,7 +819,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Company Settings
             </h1>
           </div>
@@ -922,7 +922,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             Phone Number (10 Digits)
                           </label>
                           {companyDetails.phone && (
-                            <span className={`text-[9px] font-mono font-bold ${companyDetails.phone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                            <span className={`text-[9px] tracking-tight font-bold ${companyDetails.phone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
                               {companyDetails.phone.length}/10
                             </span>
                           )}
@@ -1244,7 +1244,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             </span>
                           )}
 
-                          <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-mono font-medium rounded-lg">
+                          <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-xs tracking-tight font-medium rounded-lg">
                             GST: {branch.gstNumber}
                           </span>
 
@@ -1677,7 +1677,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         type="text"
                         value={invPrefix}
                         onChange={(e) => setInvPrefix(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                       />
                       <span className="text-[11px] text-slate-400 mt-1 block">Preview: {invPrefix}001</span>
                     </div>
@@ -1688,7 +1688,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         type="text"
                         value={quoPrefix}
                         onChange={(e) => setQuoPrefix(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                       />
                       <span className="text-[11px] text-slate-400 mt-1 block">Preview: {quoPrefix}3078</span>
                     </div>
@@ -1699,7 +1699,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         type="text"
                         value={poPrefix}
                         onChange={(e) => setPoPrefix(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                       />
                       <span className="text-[11px] text-slate-400 mt-1 block">Preview: {poPrefix}042</span>
                     </div>
@@ -2087,7 +2087,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h3 className="font-bold text-sm text-slate-900">{role.roleName}</h3>
-                                  <span className="font-mono text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                  <span className="tracking-tight text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
                                     {role.roleCode}
                                   </span>
                                   {role.isSystemRole && (
@@ -2207,7 +2207,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   placeholder=""
                   value={newBranchForm.gst}
                   onChange={(e) => setNewBranchForm({ ...newBranchForm, gst: e.target.value })}
-                  className="w-full h-12 px-4 py-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 font-mono focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                  className="w-full h-12 px-4 py-3 rounded-lg border border-slate-200 text-sm font-medium text-slate-800 tracking-tight focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
                 />
               </div>
 
@@ -2565,7 +2565,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               </div>
                               <div>
                                 <span className="font-bold text-slate-900">{targetStaff.name}</span>
-                                <span className="text-slate-400 font-mono text-[11px] ml-1.5">({targetStaff.employee_code})</span>
+                                <span className="text-slate-400 tracking-tight text-[11px] ml-1.5">({targetStaff.employee_code})</span>
                                 <div className="text-[11px] text-slate-500">{targetStaff.designation} • {targetStaff.department}</div>
                               </div>
                             </div>
@@ -2727,7 +2727,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div>
                           <div className="text-sm font-bold text-slate-900">
-                            {targetStaff?.name} <span className="font-mono text-xs text-red-700">({targetStaff?.employee_code})</span>
+                            {targetStaff?.name} <span className="tracking-tight text-xs text-red-700">({targetStaff?.employee_code})</span>
                           </div>
                           <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
                             <span>Assigned Role: <strong className="text-red-900">{rolePermissions[modalRoleCode]?.roleName || modalRoleCode}</strong></span>
@@ -2790,7 +2790,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           value={staffPassword}
                           onChange={(e) => setStaffPassword(e.target.value)}
                           placeholder="Enter password"
-                          className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 font-mono focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 tracking-tight focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                         />
                         <button
                           type="button"
@@ -2816,7 +2816,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           value={staffConfirmPassword}
                           onChange={(e) => setStaffConfirmPassword(e.target.value)}
                           placeholder="Re-enter password"
-                          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 font-mono focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 tracking-tight focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                         />
                       </div>
                     </div>

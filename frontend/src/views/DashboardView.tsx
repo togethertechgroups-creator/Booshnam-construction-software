@@ -39,7 +39,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white px-6 py-4 border-b border-slate-200 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Executive Site Overview
               <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 font-semibold rounded-full border border-emerald-200">
                 ● All Systems Live

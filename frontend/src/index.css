@@ -34,7 +34,7 @@
 
   /* Headings & Titles: Modern aesthetic typography */
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Outfit', 'Nexa', 'Nexa Heavy', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Lato', system-ui, -apple-system, sans-serif;
   }
 }
 
@@ -48,7 +48,7 @@
   .page-title,
   .card-title,
   .modal-title {
-    font-family: 'Outfit', 'Nexa', 'Nexa Heavy', 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family: 'Lato', system-ui, -apple-system, sans-serif !important;
   }
 
   .rounded-lg,

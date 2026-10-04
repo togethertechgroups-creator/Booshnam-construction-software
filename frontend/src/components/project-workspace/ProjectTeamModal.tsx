@@ -129,7 +129,7 @@ export const ProjectTeamModal: React.FC<ProjectTeamModalProps> = ({
                         {m.role}
                       </span>
                       {m.party_id && (
-                        <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] tracking-tight text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                           ID: {m.party_id}
                         </span>
                       )}
@@ -172,17 +172,17 @@ export const ProjectTeamModal: React.FC<ProjectTeamModalProps> = ({
                   </span>
                 )}
                 {m.aadhaar_number && (
-                  <span className="text-slate-400 font-mono">
+                  <span className="text-slate-400 tracking-tight">
                     Aadhaar: •••• {m.aadhaar_number.slice(-4)}
                   </span>
                 )}
                 {m.pan_number && (
-                  <span className="text-slate-400 font-mono">
+                  <span className="text-slate-400 tracking-tight">
                     PAN: {m.pan_number}
                   </span>
                 )}
                 {m.bank_account && (
-                  <span className="flex items-center gap-1 text-slate-400 font-mono">
+                  <span className="flex items-center gap-1 text-slate-400 tracking-tight">
                     <Landmark className="w-3 h-3 text-slate-400" />
                     •••• {m.bank_account.slice(-4)}
                   </span>

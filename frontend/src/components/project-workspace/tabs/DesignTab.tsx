@@ -879,7 +879,7 @@ export const DesignTab: React.FC<DesignTabProps> = ({ project, onShowToast }) =>
                   <button
                     type="button"
                     onClick={() => setZoomLevel(1)}
-                    className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-white hover:bg-slate-700 rounded-[3px] transition-colors cursor-pointer"
+                    className="px-2 py-1 text-[11px] tracking-tight text-slate-300 hover:text-white hover:bg-slate-700 rounded-[3px] transition-colors cursor-pointer"
                     title="Reset to 100%"
                   >
                     {Math.round(zoomLevel * 100)}%

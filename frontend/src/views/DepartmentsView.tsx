@@ -325,7 +325,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       <div className="px-6 py-3.5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-20 shadow-2xs">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               <span>Department Hub</span>
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -505,7 +505,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <span>Safe Bearing Capacity (SBC)</span>
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 </div>
-                <div className="text-2xl font-bold text-emerald-700 font-mono">
+                <div className="text-2xl font-bold text-emerald-700 tracking-tight">
                   {reports.length > 0 ? `${reports[0].safe_bearing_capacity_kn_m2 || 0} kN/m²` : '-'}
                 </div>
                 <div className="text-[11px] text-emerald-800 mt-0.5">
@@ -559,9 +559,9 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {samples.map(s => (
                       <tr key={s.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3 px-4 font-mono font-bold text-amber-900">{s.sample_code}</td>
+                        <td className="py-3 px-4 tracking-tight font-bold text-amber-900">{s.sample_code}</td>
                         <td className="py-3 px-4 font-semibold text-slate-800">{s.borehole_no}</td>
-                        <td className="py-3 px-4 font-mono text-slate-700">{s.depth_meters} m</td>
+                        <td className="py-3 px-4 tracking-tight text-slate-700">{s.depth_meters} m</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                             s.sample_type === 'Undisturbed' ? 'bg-red-50 text-red-700 border border-red-200' :
@@ -601,7 +601,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                     <h3 className="text-xs font-bold text-slate-900">Certified Laboratory Tests</h3>
                     <p className="text-[11px] text-slate-500">SPT, CBR, Sieve Analysis, Atterberg</p>
                   </div>
-                  <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[10px] tracking-tight bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
                     IS 2720 Certified
                   </span>
                 </div>
@@ -619,7 +619,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-600">{t.results_summary}</p>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 font-mono">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 tracking-tight">
                         <span>SBC: {t.bearing_capacity_kn_m2} kN/m²</span>
                         <span>{t.tested_by} • {t.test_date}</span>
                       </div>
@@ -636,7 +636,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                       <h3 className="text-xs font-bold text-slate-900">Official Geotechnical Report Dossier</h3>
                       <p className="text-[11px] text-slate-500">Binding status & Licensed Engineer signature</p>
                     </div>
-                    <span className="text-[10px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                    <span className="text-[10px] tracking-tight bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
                       Report #GEO-2483
                     </span>
                   </div>
@@ -792,7 +792,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {drawings.map(d => (
                       <tr key={d.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3 px-4 font-mono font-bold text-red-900">{d.drawing_no}</td>
+                        <td className="py-3 px-4 tracking-tight font-bold text-red-900">{d.drawing_no}</td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-slate-900">{d.title}</div>
                           {d.client_feedback && (
@@ -810,7 +810,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setSelectedDrawingForHistory(d)}
-                            className="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-red-100 text-red-800 hover:bg-red-200 transition cursor-pointer"
+                            className="px-2.5 py-0.5 rounded-full text-xs font-bold tracking-tight bg-red-100 text-red-800 hover:bg-red-200 transition cursor-pointer"
                             title="View all revision versions"
                           >
                             {d.current_version} ({d.versions.length})
@@ -860,7 +860,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
             <div className="p-5 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 rounded-2xl text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-md">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/30 text-red-300 text-xs font-mono font-semibold border border-red-400/30">
+                  <span className="px-2.5 py-0.5 rounded-full bg-red-500/30 text-red-300 text-xs tracking-tight font-semibold border border-red-400/30">
                     BIM 3D Model Explorer
                   </span>
                   <span className="text-xs text-slate-400">WebGL / GLTF Viewport</span>
@@ -954,7 +954,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                           <div className="text-[11px] text-slate-400">{l.email}</div>
                         </td>
                         <td className="py-3 px-4 font-medium text-slate-800">{l.project_title}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-700">
+                        <td className="py-3 px-4 tracking-tight font-bold text-emerald-700">
                           ₹ {(l.estimated_value / 100000).toFixed(1)} L
                         </td>
                         <td className="py-3 px-4 text-slate-600">{l.source || 'Direct Inquiry'}</td>
@@ -1125,7 +1125,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {paymentRequests.map(req => (
                       <tr key={req.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-3 px-4 font-mono font-bold text-indigo-900">{req.request_code}</td>
+                        <td className="py-3 px-4 tracking-tight font-bold text-indigo-900">{req.request_code}</td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-slate-900">{req.requested_by}</div>
                           <div className="text-[10px] text-slate-400">{req.request_date}</div>
@@ -1134,7 +1134,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                           <div className="font-medium text-slate-800">{req.vendor_name}</div>
                           <div className="text-[11px] text-slate-500">{req.purpose_description}</div>
                         </td>
-                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                        <td className="py-3 px-4 tracking-tight font-bold text-slate-900">
                           ₹ {req.amount.toLocaleString()}
                         </td>
                         <td className="py-3 px-4 text-center">
@@ -1166,7 +1166,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                             </button>
                           )}
                           {req.status === 'PAID' && (
-                            <span className="text-[11px] text-emerald-600 font-semibold font-mono">
+                            <span className="text-[11px] text-emerald-600 font-semibold tracking-tight">
                               Paid: {req.payment_reference}
                             </span>
                           )}
@@ -1209,7 +1209,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   <tbody className="divide-y divide-slate-100">
                     {transactions.map(t => (
                       <tr key={t.id} className="hover:bg-slate-50/80 transition">
-                        <td className="py-2.5 px-4 font-mono font-bold text-slate-700">{t.transaction_code}</td>
+                        <td className="py-2.5 px-4 tracking-tight font-bold text-slate-700">{t.transaction_code}</td>
                         <td className="py-2.5 px-4 text-slate-500">{t.transaction_date}</td>
                         <td className="py-2.5 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1220,7 +1220,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                         </td>
                         <td className="py-2.5 px-4 text-slate-700 font-medium">{t.category}</td>
                         <td className="py-2.5 px-4 text-slate-600">{t.party_name}</td>
-                        <td className={`py-2.5 px-4 text-right font-mono font-bold ${
+                        <td className={`py-2.5 px-4 text-right tracking-tight font-bold ${
                           t.transaction_type === 'INCOME' ? 'text-emerald-700' : 'text-rose-700'
                         }`}>
                           {t.transaction_type === 'INCOME' ? '+' : '-'} ₹ {t.amount.toLocaleString()}
@@ -1310,11 +1310,11 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-CUB-042</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">MTD-CUB-042</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">Concrete Cube (M30) - Column Pour #3</td>
                       <td className="py-3 px-4 text-slate-500">IS 516:2021</td>
-                      <td className="py-3 px-4 font-mono">30.0 N/mm² (28D)</td>
-                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">34.8 N/mm²</td>
+                      <td className="py-3 px-4 tracking-tight">30.0 N/mm² (28D)</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-emerald-700">34.8 N/mm²</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
                       </td>
@@ -1323,11 +1323,11 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                       </td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-STL-019</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">MTD-STL-019</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">16mm Fe550D TMT Rebar - Tensile Test</td>
                       <td className="py-3 px-4 text-slate-500">IS 1786:2008</td>
-                      <td className="py-3 px-4 font-mono">550 N/mm² Yield</td>
-                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">585 N/mm²</td>
+                      <td className="py-3 px-4 tracking-tight">550 N/mm² Yield</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-emerald-700">585 N/mm²</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
                       </td>
@@ -1336,11 +1336,11 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                       </td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">MTD-AGG-008</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">MTD-AGG-008</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">20mm Coarse Aggregate - Impact Value</td>
                       <td className="py-3 px-4 text-slate-500">IS 2386 Pt IV</td>
-                      <td className="py-3 px-4 font-mono">&lt; 30% Impact</td>
-                      <td className="py-3 px-4 font-mono font-bold text-emerald-700">18.4% Impact</td>
+                      <td className="py-3 px-4 tracking-tight">&lt; 30% Impact</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-emerald-700">18.4% Impact</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">PASSED</span>
                       </td>
@@ -1428,7 +1428,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">STR-CALC-001</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">STR-CALC-001</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">Isolated & Combined Footing Design (SBC: 220 kN/m²)</td>
                       <td className="py-3 px-4 text-slate-500">IS 456:2000 & IS 1904</td>
                       <td className="py-3 px-4 font-medium text-slate-700">SAFE v20</td>
@@ -1440,7 +1440,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                       </td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">STR-CALC-002</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">STR-CALC-002</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">G+4 Column Axial & Biaxial Bending Moment Verification</td>
                       <td className="py-3 px-4 text-slate-500">IS 13920:2016</td>
                       <td className="py-3 px-4 font-medium text-slate-700">ETABS v21</td>
@@ -1531,21 +1531,21 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">SRV-BM-01</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">SRV-BM-01</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">North-East Boundary Corner Stone</td>
-                      <td className="py-3 px-4 font-mono text-slate-600">1447231.428 N</td>
-                      <td className="py-3 px-4 font-mono text-slate-600">823190.114 E</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">+104.350 m</td>
+                      <td className="py-3 px-4 tracking-tight text-slate-600">1447231.428 N</td>
+                      <td className="py-3 px-4 tracking-tight text-slate-600">823190.114 E</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-slate-900">+104.350 m</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">FIXED & MONUMENTED</span>
                       </td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">SRV-BM-02</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">SRV-BM-02</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">South-West Main Road Entrance Center</td>
-                      <td className="py-3 px-4 font-mono text-slate-600">1447190.052 N</td>
-                      <td className="py-3 px-4 font-mono text-slate-600">823145.890 E</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">+103.820 m</td>
+                      <td className="py-3 px-4 tracking-tight text-slate-600">1447190.052 N</td>
+                      <td className="py-3 px-4 tracking-tight text-slate-600">823145.890 E</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-slate-900">+103.820 m</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">FIXED & MONUMENTED</span>
                       </td>
@@ -1630,20 +1630,20 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">SCP-001</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">SCP-001</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">Monumental Entrance Arch Relief Mural</td>
                       <td className="py-3 px-4 text-slate-600">Granite Bas-Relief Carving</td>
-                      <td className="py-3 px-4 font-mono">18ft × 6ft</td>
+                      <td className="py-3 px-4 tracking-tight">18ft × 6ft</td>
                       <td className="py-3 px-4 text-slate-700 font-medium">Sthapathi K. Arumugam</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">IN PROGRESS (75%)</span>
                       </td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-red-900">SCP-002</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-red-900">SCP-002</td>
                       <td className="py-3 px-4 font-semibold text-slate-800">Courtyard Bronze Heritage Fountain Sculpture</td>
                       <td className="py-3 px-4 text-slate-600">Cast Bronze & Patina</td>
-                      <td className="py-3 px-4 font-mono">8ft Height</td>
+                      <td className="py-3 px-4 tracking-tight">8ft Height</td>
                       <td className="py-3 px-4 text-slate-700 font-medium">Artisan V. Balan</td>
                       <td className="py-3 px-4 text-center">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">COMPLETED & READY</span>
@@ -1840,7 +1840,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
               {selectedDrawingForHistory.versions.map((ver) => (
                 <div key={ver.version} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-red-900 font-mono text-sm">{ver.version}</span>
+                    <span className="font-bold text-red-900 tracking-tight text-sm">{ver.version}</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       ver.status === 'CLIENT_APPROVED' ? 'bg-emerald-100 text-emerald-800' :
                       ver.status === 'REVISION_REQUESTED' ? 'bg-amber-100 text-amber-800' :

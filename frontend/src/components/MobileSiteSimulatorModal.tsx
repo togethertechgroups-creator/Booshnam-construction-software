@@ -359,7 +359,7 @@ export const MobileSiteSimulatorModal: React.FC<MobileSiteSimulatorModalProps> =
                       <div className="font-bold text-slate-900 text-sm">
                         {selectedStaff?.name}
                       </div>
-                      <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                      <div className="text-[11px] text-slate-500 tracking-tight mt-0.5">
                         Timestamp: {clockedInTime} • Geofence Verified
                       </div>
                     </div>

@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'projects', label: 'Projects', icon: Home },
           { 
             id: 'quotation', 
-            label: 'Quotation', 
+            label: 'CRM', 
             icon: Calculator, 
             badge: followUpsCount > 0 ? `${followUpsCount}` : null,
             hasBell: followUpsCount > 0
@@ -437,19 +437,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
                       }
                     }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-50/90 hover:bg-slate-100 border border-slate-200/70 transition-all text-left group ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 mt-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-300 ease-in-out text-left group ${
                       canSwitchDepartment ? 'cursor-pointer' : 'cursor-default'
                     }`}
                     title={canSwitchDepartment ? "Switch Department" : activeDeptEntity.name}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#C61D45] shrink-0" />
-                      <span className="text-[12px] font-bold text-slate-700 truncate group-hover:text-slate-900 transition-colors">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <div className="absolute w-2.5 h-2.5 rounded-full bg-[#ED1C24] opacity-40 animate-ping" />
+                        <div className="relative w-2 h-2 rounded-full bg-gradient-to-br from-[#ED1C24] to-[#B71C1C] shadow-xs" />
+                      </div>
+                      <span className="text-[13px] font-black font-heading text-slate-800 tracking-tight truncate group-hover:text-[#ED1C24] transition-colors duration-200">
                         {activeDeptEntity.name}
                       </span>
                     </div>
                     {canSwitchDepartment && (
-                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'}`} />
+                      <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ${isHeaderDropdownOpen ? 'rotate-180 text-[#ED1C24]' : 'group-hover:text-slate-700'}`} />
                     )}
                   </button>
                 </div>
@@ -638,7 +641,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 </button>
 
-                {/* 2. New Quotation Box Card */}
+                {/* 2. New Lead Box Card */}
                 <button
                   type="button"
                   onClick={() => {
@@ -646,12 +649,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onSelectView('quotation');
                     window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
                   }}
-                  title="Create New Quotation"
+                  title="Create New Lead"
                   className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] text-white border border-[#b0173a] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
                 >
                   <Calculator className="w-5 h-5 text-white mb-1.5 transition-transform group-hover:scale-110" />
                   <span className="text-[11px] font-bold text-white text-center leading-tight truncate w-full tracking-tight">
-                    New Quotation
+                    New Lead
                   </span>
                 </button>
               </div>
@@ -680,7 +683,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('quotation');
                   window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
                 }}
-                title="Create New Quotation"
+                title="Create New Lead"
                 className="w-10 h-10 rounded-xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] border border-[#b0173a] text-white flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
               >
                 <Calculator className="w-5 h-5 text-white" />

@@ -895,7 +895,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         <div className="flex items-center justify-between">
           {/* Left Title: Leads & Quotation */}
           <div>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight font-heading">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Leads & Quotation
             </h1>
           </div>
@@ -1188,7 +1188,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           {lead.last_updated || '25 September 2026'}
                         </td>
 
-                        <td className="py-3.5 px-4 font-mono text-slate-700 whitespace-nowrap">
+                        <td className="py-3.5 px-4 tracking-tight text-slate-700 whitespace-nowrap">
                           <a 
                             href={`tel:${lead.phone}`}
                             onClick={(e) => e.stopPropagation()}
@@ -1460,7 +1460,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         className="hover:bg-slate-50/70 transition-colors group text-slate-800"
                       >
                         {/* Quotation Code */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-800 font-mono">
+                        <td className="py-3.5 px-4 font-semibold text-slate-800 tracking-tight">
                           {quote.quotation_number}
                         </td>
 
@@ -1480,7 +1480,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         </td>
 
                         {/* Est. Amount */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-900 font-mono whitespace-nowrap">
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 tracking-tight whitespace-nowrap">
                           ₹ {quote.total_amount.toLocaleString('en-IN')}
                         </td>
 
@@ -1865,7 +1865,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       setDrawerBudget(e.target.value);
                       setDrawerValue(e.target.value);
                     }}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none font-mono"
+                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none tracking-tight"
                   />
                 </div>
               </div>
@@ -2042,7 +2042,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                               min={1}
                               value={item.quantity}
                               onChange={(e) => handleUpdateQuoteItem(item.id, 'quantity', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-right font-mono text-slate-900 focus:outline-none focus:border-red-600"
+                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-right tracking-tight text-slate-900 focus:outline-none focus:border-red-600"
                             />
                           </td>
                           <td className="py-2 px-3 text-right">
@@ -2051,10 +2051,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                               min={0}
                               value={item.unit_rate}
                               onChange={(e) => handleUpdateQuoteItem(item.id, 'unit_rate', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-right font-mono text-slate-900 focus:outline-none focus:border-red-600"
+                              className="w-full px-2 py-1 border border-slate-200 rounded text-xs text-right tracking-tight text-slate-900 focus:outline-none focus:border-red-600"
                             />
                           </td>
-                          <td className="py-2 px-3 text-right font-mono font-semibold text-slate-900">
+                          <td className="py-2 px-3 text-right tracking-tight font-semibold text-slate-900">
                             ₹ {(item.amount || 0).toLocaleString('en-IN')}
                           </td>
                           <td className="py-2 px-3 text-center">
@@ -2102,7 +2102,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 <div className="w-full sm:w-72 bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200">
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>Subtotal:</span>
-                    <span className="font-mono font-medium">₹ {quoteSubtotal.toLocaleString('en-IN')}</span>
+                    <span className="tracking-tight font-medium">₹ {quoteSubtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs text-slate-600">
                     <span>Discount (₹):</span>
@@ -2111,16 +2111,16 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       min={0}
                       value={quoteDiscount}
                       onChange={(e) => setQuoteDiscount(Number(e.target.value))}
-                      className="w-24 px-2 py-0.5 border border-slate-200 rounded text-right font-mono text-xs focus:outline-none"
+                      className="w-24 px-2 py-0.5 border border-slate-200 rounded text-right tracking-tight text-xs focus:outline-none"
                     />
                   </div>
                   <div className="flex justify-between text-xs text-slate-600">
                     <span>GST (18%):</span>
-                    <span className="font-mono font-medium">₹ {quoteGstAmount.toLocaleString('en-IN')}</span>
+                    <span className="tracking-tight font-medium">₹ {quoteGstAmount.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="border-t border-slate-200 pt-2 flex justify-between text-sm font-bold text-slate-900">
                     <span>Estimated Total:</span>
-                    <span className="font-mono text-red-600 font-bold">₹ {quoteGrandTotal.toLocaleString('en-IN')}</span>
+                    <span className="tracking-tight text-red-600 font-bold">₹ {quoteGrandTotal.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
@@ -2238,7 +2238,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100 text-slate-600">
                         <div className="flex items-center gap-1.5">
                           <Phone className="w-3 h-3 text-slate-400" />
-                          <span className="font-mono text-[11px]">{lead.phone || 'No phone'}</span>
+                          <span className="tracking-tight text-[11px]">{lead.phone || 'No phone'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {!isRead && (
@@ -2334,7 +2334,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-sm">Download Quotation</h3>
-                  <p className="text-[11px] text-slate-400 font-mono">{downloadQuoteTarget.quotation_number}</p>
+                  <p className="text-[11px] text-slate-400 tracking-tight">{downloadQuoteTarget.quotation_number}</p>
                 </div>
               </div>
               <button
@@ -2511,7 +2511,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                   <FileText className="w-4 h-4 text-red-500" />
                   <div>
                     <span className="font-bold text-sm">Official Quotation Preview</span>
-                    <span className="text-slate-400 text-xs ml-2 font-mono">({previewQuotation.quotation_number})</span>
+                    <span className="text-slate-400 text-xs ml-2 tracking-tight">({previewQuotation.quotation_number})</span>
                     <span className="ml-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white shadow-2xs">
                       {isPreviewSinglePage ? '1 Page (Single Page Fit)' : '2 Pages (Multi-item Proposal)'}
                     </span>
@@ -2615,8 +2615,8 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                                 <td className="border-r border-black p-1.5 leading-snug">{it.description}</td>
                                 <td className="border-r border-black p-1.5 text-center">{it.unit || ''}</td>
                                 <td className="border-r border-black p-1.5 text-center">{qtyStr}</td>
-                                <td className="border-r border-black p-1.5 text-right font-mono pr-2">{rateStr}</td>
-                                <td className="p-1.5 text-right font-mono font-medium pr-2">{amountStr}</td>
+                                <td className="border-r border-black p-1.5 text-right tracking-tight pr-2">{rateStr}</td>
+                                <td className="p-1.5 text-right tracking-tight font-medium pr-2">{amountStr}</td>
                               </tr>
                             );
                           })}
@@ -2624,7 +2624,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         <tfoot>
                           <tr className="border-t border-black font-bold">
                             <td colSpan={5} className="border-r border-black p-1.5 text-right pr-3">Total</td>
-                            <td className="p-1.5 text-right font-mono pr-2">
+                            <td className="p-1.5 text-right tracking-tight pr-2">
                               {previewQuotation.total_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>

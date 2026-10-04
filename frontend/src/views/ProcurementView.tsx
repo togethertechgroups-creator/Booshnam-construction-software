@@ -891,7 +891,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             <span className="px-2.5 py-0.5 bg-red-600 text-white text-[10px] font-black rounded tracking-wider uppercase">
               SUPPLY CHAIN
             </span>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight font-heading">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Procurement & Material Operations
             </h1>
           </div>
@@ -1078,7 +1078,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                           <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
                             {/* Request Info */}
                             <td className="py-3.5 px-4">
-                              <div className="font-mono font-bold text-slate-900">{req.request_number}</div>
+                              <div className="tracking-tight font-bold text-slate-900">{req.request_number}</div>
                               <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
                                 <Calendar className="w-3 h-3 text-slate-400" />
                                 <span>{req.request_date}</span>
@@ -1098,7 +1098,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                             {/* Material & Quantity */}
                             <td className="py-3.5 px-4">
                               <div className="font-bold text-slate-900">{req.material_name}</div>
-                              <div className="text-sm font-mono font-bold text-red-600 mt-0.5">
+                              <div className="text-sm tracking-tight font-bold text-red-600 mt-0.5">
                                 {req.quantity} <span className="text-xs font-semibold text-slate-600">{req.unit}</span>
                               </div>
                               {req.attachment_url && (
@@ -1244,7 +1244,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                       {lowStockItems.map(item => (
                         <span key={item.id} className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-amber-200 text-slate-800 font-medium shadow-2xs">
                           <span>{item.item_name}:</span>
-                          <span className="font-mono font-bold text-red-600">{item.current_quantity} {item.unit}</span>
+                          <span className="tracking-tight font-bold text-red-600">{item.current_quantity} {item.unit}</span>
                           <span className="text-[10px] text-slate-400 font-normal">(Min: {item.minimum_threshold} {item.unit})</span>
                         </span>
                       ))}
@@ -1306,7 +1306,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
 
               <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs">
                 <div className="text-xs text-slate-500 font-semibold">Estimated Inventory Value</div>
-                <div className="text-2xl font-black text-slate-900 font-mono mt-1">
+                <div className="text-2xl font-black text-slate-900 tracking-tight mt-1">
                   ₹{totalStockValuation.toLocaleString('en-IN')}
                 </div>
                 <div className="text-[11px] text-slate-400 mt-1">Across all yard & warehouse bays</div>
@@ -1371,13 +1371,13 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                             </td>
 
                             {/* Unit Price */}
-                            <td className="py-3.5 px-4 text-right font-mono font-medium text-slate-800">
+                            <td className="py-3.5 px-4 text-right tracking-tight font-medium text-slate-800">
                               ₹{item.unit_price.toLocaleString('en-IN')} <span className="text-[10px] text-slate-400">/{item.unit}</span>
                             </td>
 
                             {/* Current Available Stock */}
                             <td className="py-3.5 px-4 text-center">
-                              <span className={`text-sm font-mono font-black px-3 py-1 rounded-lg ${
+                              <span className={`text-sm tracking-tight font-black px-3 py-1 rounded-lg ${
                                 isOut 
                                   ? 'bg-red-50 text-red-700 border border-red-200' 
                                   : isLow 
@@ -1389,7 +1389,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                             </td>
 
                             {/* Minimum Threshold */}
-                            <td className="py-3.5 px-4 text-center font-mono text-slate-500">
+                            <td className="py-3.5 px-4 text-center tracking-tight text-slate-500">
                               {item.minimum_threshold} {item.unit}
                             </td>
 
@@ -1495,7 +1495,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     {poList.map((po) => (
                       <tr key={po.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-4">
-                          <div className="font-mono font-bold text-slate-900">{po.po_number}</div>
+                          <div className="tracking-tight font-bold text-slate-900">{po.po_number}</div>
                           <div className="text-[11px] text-slate-400 mt-0.5">{po.order_date}</div>
                         </td>
 
@@ -1506,19 +1506,19 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
 
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-slate-800">{po.vendor_name}</div>
-                          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">
+                          <div className="text-[11px] text-slate-500 mt-0.5 tracking-tight">
                             ₹{po.quotation_rate.toLocaleString('en-IN')} /{po.unit}
                           </div>
                         </td>
 
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900">{po.material_name}</div>
-                          <div className="font-mono text-xs font-bold text-slate-700 mt-0.5">
+                          <div className="tracking-tight text-xs font-bold text-slate-700 mt-0.5">
                             {po.ordered_quantity} {po.unit}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                        <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                           ₹{po.total_amount.toLocaleString('en-IN')}
                         </td>
 
@@ -1590,8 +1590,8 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     {grnList.map((grn) => (
                       <tr key={grn.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="py-3.5 px-4">
-                          <div className="font-mono font-bold text-slate-900">{grn.grn_number}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5 font-mono">Linked {grn.po_number}</div>
+                          <div className="tracking-tight font-bold text-slate-900">{grn.grn_number}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 tracking-tight">Linked {grn.po_number}</div>
                           <div className="text-[10px] text-slate-400 mt-0.5">{grn.receipt_date}</div>
                         </td>
 
@@ -1606,7 +1606,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                           <div className="text-[10px] text-slate-400">Vehicle: {grn.vehicle_number}</div>
                         </td>
 
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
                           {grn.received_quantity} {grn.unit}
                           {grn.received_quantity === grn.ordered_quantity ? (
                             <span className="text-[10px] text-emerald-600 font-normal ml-1">(100% Full)</span>
@@ -1637,7 +1637,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                                 <span>{grn.bill_number}</span>
                               </div>
                               {grn.bill_amount && (
-                                <div className="text-[11px] font-mono text-slate-700">
+                                <div className="text-[11px] tracking-tight text-slate-700">
                                   ₹{grn.bill_amount.toLocaleString('en-IN')}
                                 </div>
                               )}
@@ -1770,7 +1770,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     placeholder="e.g. 7"
                     value={newReqQuantity}
                     onChange={(e) => setNewReqQuantity(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight font-bold text-slate-900 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -1960,7 +1960,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
               <div className="p-6 space-y-4 text-xs">
                 {/* Request Details Card */}
                 <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between font-mono text-[11px] text-slate-500">
+                  <div className="flex items-center justify-between tracking-tight text-[11px] text-slate-500">
                     <span>{approvingRequest.request_number}</span>
                     <span>{approvingRequest.request_date}</span>
                   </div>
@@ -1978,7 +1978,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     <span>Automatic Stock Deduction Calculation:</span>
                   </div>
 
-                  <div className="space-y-1.5 font-mono text-xs">
+                  <div className="space-y-1.5 tracking-tight text-xs">
                     <div className="flex items-center justify-between text-slate-700">
                       <span>Current Warehouse Stock:</span>
                       <strong className="text-slate-900">{currentStockQty} {approvingRequest.unit}</strong>
@@ -2112,7 +2112,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     placeholder="e.g. 10"
                     value={newStockQuantity}
                     onChange={(e) => setNewStockQuantity(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight font-bold text-slate-900 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2124,7 +2124,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     placeholder="e.g. 380"
                     value={newStockUnitPrice}
                     onChange={(e) => setNewStockUnitPrice(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -2135,7 +2135,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     placeholder="e.g. 5"
                     value={newStockThreshold}
                     onChange={(e) => setNewStockThreshold(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -2245,7 +2245,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     step="any"
                     value={poQuantity}
                     onChange={(e) => setPoQuantity(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight font-bold text-slate-900 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2286,7 +2286,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     type="number"
                     value={poRate}
                     onChange={(e) => setPoRate(e.target.value)}
-                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2351,7 +2351,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             <form onSubmit={handleConfirmSiteVerification} className="p-6 space-y-4 text-xs">
               {/* Order Info */}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                <div className="flex justify-between font-mono font-bold text-slate-900">
+                <div className="flex justify-between tracking-tight font-bold text-slate-900">
                   <span>{selectedPoForInspect.po_number}</span>
                   <span>{selectedPoForInspect.ordered_quantity} {selectedPoForInspect.unit}</span>
                 </div>
@@ -2368,7 +2368,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     step="any"
                     value={grnReceivedQty}
                     onChange={(e) => setGrnReceivedQty(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg tracking-tight font-bold text-slate-900 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2378,7 +2378,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     type="text"
                     value={grnChallanNo}
                     onChange={(e) => setGrnChallanNo(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2388,7 +2388,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     type="text"
                     value={grnVehicleNo}
                     onChange={(e) => setGrnVehicleNo(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -2448,7 +2448,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     type="text"
                     value={grnBillNo}
                     onChange={(e) => setGrnBillNo(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono text-slate-800 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg tracking-tight text-slate-800 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2459,7 +2459,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                     type="number"
                     value={grnBillAmount}
                     onChange={(e) => setGrnBillAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg tracking-tight font-bold text-slate-900 focus:outline-none focus:border-red-600"
                     required
                   />
                 </div>
@@ -2633,7 +2633,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-slate-500 font-medium">Current Stock Balance</div>
-                  <div className="text-lg font-mono font-bold text-slate-900">
+                  <div className="text-lg tracking-tight font-bold text-slate-900">
                     {viewingStockItem.current_quantity} {viewingStockItem.unit}
                   </div>
                 </div>
@@ -2676,7 +2676,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                           </div>
                         </div>
 
-                        <div className={`font-mono font-bold text-sm ${
+                        <div className={`tracking-tight font-bold text-sm ${
                           h.type === 'INWARD' ? 'text-emerald-700' : 'text-red-600'
                         }`}>
                           {h.type === 'INWARD' ? `+${h.quantity}` : `-${h.quantity}`} {viewingStockItem.unit}
@@ -2720,7 +2720,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                 <div>
                   <h4 className="text-sm font-bold text-slate-900">{previewImage.title}</h4>
                   {previewImage.fileName && (
-                    <p className="text-[11px] text-slate-500 font-mono truncate max-w-xs">{previewImage.fileName}</p>
+                    <p className="text-[11px] text-slate-500 tracking-tight truncate max-w-xs">{previewImage.fileName}</p>
                   )}
                 </div>
               </div>

@@ -45,7 +45,7 @@ export const SnagsView: React.FC<SnagsViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 eSNAGGING & QUALITY
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Site Snag Lists & Observations</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Site Snag Lists & Observations</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Photo-based defect life cycle: Issue Raised → Assigned → Rectified with photo proof → Verified & Closed.
@@ -98,7 +98,7 @@ export const SnagsView: React.FC<SnagsViewProps> = ({
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs bg-slate-100 text-slate-900 px-2 py-0.5 rounded">
+                      <span className="tracking-tight font-bold text-xs bg-slate-100 text-slate-900 px-2 py-0.5 rounded">
                         {snag.snag_number}
                       </span>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${

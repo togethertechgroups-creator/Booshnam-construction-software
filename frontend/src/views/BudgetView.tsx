@@ -59,7 +59,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 {project?.code || 'PRJ'}
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Estimation & Budget Control</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Estimation & Budget Control</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Bill of Quantities (BOQ), real-time actual expense tracking, and change orders audit trail.
@@ -156,23 +156,23 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 ) : (
                   boqItems.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">{item.item_code}</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-slate-900">{item.item_code}</td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
                           {item.category_name}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-medium text-slate-800">{item.description}</td>
-                      <td className="py-3 px-4 text-right font-mono">{item.planned_quantity} {item.unit}</td>
-                      <td className="py-3 px-4 text-right font-mono">₹{item.planned_rate.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
+                      <td className="py-3 px-4 text-right tracking-tight">{item.planned_quantity} {item.unit}</td>
+                      <td className="py-3 px-4 text-right tracking-tight">₹{item.planned_rate.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right tracking-tight font-bold text-slate-900">
                         ₹{item.planned_amount.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono">{item.actual_quantity} {item.unit}</td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-slate-800">
+                      <td className="py-3 px-4 text-right tracking-tight">{item.actual_quantity} {item.unit}</td>
+                      <td className="py-3 px-4 text-right tracking-tight font-bold text-slate-800">
                         ₹{item.actual_amount.toLocaleString()}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-emerald-700">
+                      <td className="py-3 px-4 text-right tracking-tight font-bold text-emerald-700">
                         ₹{item.variance_amount.toLocaleString()}
                       </td>
                     </tr>
@@ -207,7 +207,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 <div key={co.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
+                      <span className="tracking-tight font-bold text-xs bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
                         {co.order_number}
                       </span>
                       <h4 className="font-bold text-sm text-slate-900">{co.title}</h4>
@@ -225,7 +225,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
                     <div>
                       <span className="text-slate-400 text-[10px] uppercase block">Cost Impact</span>
-                      <span className="font-bold text-slate-900 font-mono">+₹{co.cost_impact.toLocaleString()}</span>
+                      <span className="font-bold text-slate-900 tracking-tight">+₹{co.cost_impact.toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-slate-400 text-[10px] uppercase block">Schedule Impact</span>

@@ -192,7 +192,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
                   if (errors.accountNumber) setErrors(prev => ({ ...prev, accountNumber: '' }));
                 }}
                 placeholder=""
-                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 font-mono"
+                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 tracking-tight"
               />
             </div>
             {errors.accountNumber && (
@@ -210,7 +210,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
               value={ifscCode}
               onChange={e => setIfscCode(e.target.value)}
               placeholder=""
-              className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 uppercase font-mono"
+              className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 uppercase tracking-tight"
             />
           </div>
 
@@ -252,7 +252,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
               value={ibanNumber}
               onChange={e => setIbanNumber(e.target.value)}
               placeholder=""
-              className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 font-mono"
+              className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 tracking-tight"
             />
           </div>
 
@@ -286,7 +286,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
                 value={openingBalance}
                 onChange={e => setOpeningBalance(e.target.value)}
                 placeholder=""
-                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 tracking-tight [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
           </div>
@@ -307,7 +307,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
                 value={overdraftLimit}
                 onChange={e => setOverdraftLimit(e.target.value)}
                 placeholder=""
-                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full text-slate-900 text-xs sm:text-sm font-semibold focus:outline-none bg-transparent pl-1 tracking-tight [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
           </div>

@@ -171,7 +171,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
           >
             <div className="flex items-center justify-between">
               <Folder className={`w-5 h-5 ${selectedFolder === f.id ? 'text-red-600 fill-red-100' : 'text-amber-500 fill-amber-100'}`} />
-              <span className="text-[10px] font-bold text-slate-400 font-mono">{f.count}</span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-tight">{f.count}</span>
             </div>
             <div className={`text-xs font-bold mt-2 truncate ${selectedFolder === f.id ? 'text-red-600' : 'text-slate-800'}`}>
               {f.name}
@@ -235,13 +235,13 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
                       {doc.category}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                  <td className="py-3.5 px-4 tracking-tight font-bold text-slate-800">
                     {doc.version}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-slate-500">
+                  <td className="py-3.5 px-4 tracking-tight text-slate-500">
                     {doc.size}
                   </td>
-                  <td className="py-3.5 px-4 font-mono text-slate-500 text-[11px]">
+                  <td className="py-3.5 px-4 tracking-tight text-slate-500 text-[11px]">
                     {doc.updated}
                   </td>
                   <td className="py-3.5 px-4 text-slate-600">

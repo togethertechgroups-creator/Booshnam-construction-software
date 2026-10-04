@@ -548,7 +548,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
       
       {/* ── TOP HEADER (Matching Reference Image Exactly) ── */}
       <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4 bg-white sticky top-0 z-20">
-        <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+        <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
           Asset Management
         </h1>
 
@@ -662,7 +662,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                                 {asset.description}
                               </span>
                             )}
-                            <span className="text-[11px] text-slate-400 font-mono mt-0.5">
+                            <span className="text-[11px] text-slate-400 tracking-tight mt-0.5">
                               ₹ {asset.price !== undefined ? asset.price.toLocaleString('en-IN') : 0}
                             </span>
                           </div>
@@ -680,7 +680,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
 
                         {/* 5. Available Qty */}
                         <td className="py-3.5 px-4 text-center font-semibold text-slate-800">
-                          <span className={`inline-block font-mono ${isAvailable ? 'text-slate-800 font-bold' : 'text-slate-400'}`}>
+                          <span className={`inline-block tracking-tight ${isAvailable ? 'text-slate-800 font-bold' : 'text-slate-400'}`}>
                             {asset.available_qty ?? 0}
                           </span>
                         </td>
@@ -807,7 +807,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     value={newSerialNo}
                     onChange={(e) => setNewSerialNo(e.target.value)}
                     placeholder="e.g. BA026-26"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight font-medium focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                   />
                 </div>
 
@@ -851,7 +851,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
                     placeholder="0"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                   />
                 </div>
 
@@ -868,7 +868,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                       setNewTotalQty(e.target.value);
                       setNewAvailableQty(e.target.value);
                     }}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight font-medium focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -883,7 +883,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     max={newTotalQty}
                     value={newAvailableQty}
                     onChange={(e) => setNewAvailableQty(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight font-medium focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>
@@ -942,7 +942,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     Asset Allocation & Handover Details
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    {selectedAssetForAction.name} • <span className="font-mono">{selectedAssetForAction.serial_no || selectedAssetForAction.asset_code}</span> • {selectedAssetForAction.asset_type || selectedAssetForAction.category}
+                    {selectedAssetForAction.name} • <span className="tracking-tight">{selectedAssetForAction.serial_no || selectedAssetForAction.asset_code}</span> • {selectedAssetForAction.asset_type || selectedAssetForAction.category}
                   </p>
                 </div>
               </div>
@@ -1029,7 +1029,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                             </p>
                           )}
                           {alloc.serial_numbers && alloc.serial_numbers.length > 0 && (
-                            <span className="text-[9px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded mt-0.5 inline-block">
+                            <span className="text-[9px] tracking-tight bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded mt-0.5 inline-block">
                               S/N: {alloc.serial_numbers.join(', ')}
                             </span>
                           )}
@@ -1045,7 +1045,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                           )}
                         </div>
 
-                        <div className="col-span-1 text-center font-bold font-mono text-slate-800 text-[11px]">
+                        <div className="col-span-1 text-center font-bold tracking-tight text-slate-800 text-[11px]">
                           {alloc.quantity} {alloc.quantity === 1 ? 'unit' : 'units'}
                         </div>
 
@@ -1159,7 +1159,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                           max={selectedAssetForAction.available_qty || 1}
                           value={assignQty}
                           onChange={(e) => setAssignQty(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:border-emerald-600"
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight font-medium focus:outline-none focus:border-emerald-600"
                         />
                       </div>
 
@@ -1264,7 +1264,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     required
                     value={newSerialNo}
                     onChange={(e) => setNewSerialNo(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-medium focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight font-medium focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -1299,7 +1299,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     min="0"
                     value={newPrice}
                     onChange={(e) => setNewPrice(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -1311,7 +1311,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     min="1"
                     value={newTotalQty}
                     onChange={(e) => setNewTotalQty(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight focus:outline-none focus:border-red-600"
                   />
                 </div>
 
@@ -1324,7 +1324,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
                     max={newTotalQty}
                     value={newAvailableQty}
                     onChange={(e) => setNewAvailableQty(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:border-red-600"
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs tracking-tight focus:outline-none focus:border-red-600"
                   />
                 </div>
               </div>

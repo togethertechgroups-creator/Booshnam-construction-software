@@ -32,7 +32,7 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 SITE OPERATIONS
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Daily Progress Reports (DPR)</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Daily Progress Reports (DPR)</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Standardized digital site log: work progress, manpower tally, material usage, and delays.
@@ -56,7 +56,7 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-5">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-sm bg-slate-100 text-slate-900 px-2 py-0.5 rounded">
+                <span className="tracking-tight font-bold text-sm bg-slate-100 text-slate-900 px-2 py-0.5 rounded">
                   {selectedDPR.report_number}
                 </span>
                 <span className="text-sm font-semibold text-slate-700">Date: {selectedDPR.date}</span>
@@ -88,7 +88,7 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               1. Work Activities Executed
             </h3>
-            <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-800 whitespace-pre-line leading-relaxed font-mono border border-slate-100">
+            <div className="bg-slate-50 p-4 rounded-xl text-xs text-slate-800 whitespace-pre-line leading-relaxed tracking-tight border border-slate-100">
               {selectedDPR.work_summary}
             </div>
           </div>
@@ -134,7 +134,7 @@ export const SiteOpsView: React.FC<SiteOpsViewProps> = ({
                     <div className="font-bold text-slate-800">{mat.material_name}</div>
                     <div className="text-[11px] text-slate-400">Activity: {mat.activity}</div>
                   </div>
-                  <div className="font-mono font-bold text-slate-900">
+                  <div className="tracking-tight font-bold text-slate-900">
                     {mat.quantity} {mat.unit}
                   </div>
                 </div>

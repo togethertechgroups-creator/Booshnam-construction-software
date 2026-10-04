@@ -140,6 +140,8 @@ export interface WBSTask {
   priority?: 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
   status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED' | 'NOT_STARTED';
   is_milestone?: boolean;
+  is_subtask?: boolean;
+  parent_id?: string;
   assigned_to?: string;
   assigned_to_name?: string;
   est_quantity?: number;

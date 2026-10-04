@@ -1169,7 +1169,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
               Verified GPS Geofenced Attendance Log
             </span>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Attendance Roster — {attendanceData.find(d => d.date === selectedModalDate)?.fullDate || `${selectedModalDate}-2026`}
             </h1>
             <p className="text-xs text-slate-500">
@@ -1193,27 +1193,27 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <span className="text-xs text-slate-500 font-medium">Total Roster</span>
-                  <div className="text-2xl font-bold font-mono text-slate-900 mt-1">{rawRecords.length}</div>
+                  <div className="text-2xl font-bold tracking-tight text-slate-900 mt-1">{rawRecords.length}</div>
                   <span className="text-[11px] text-slate-400">Enrolled workforce</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <span className="text-xs text-emerald-600 font-medium">Workers Present</span>
-                  <div className="text-2xl font-bold font-mono text-emerald-600 mt-1">{presentCount}</div>
+                  <div className="text-2xl font-bold tracking-tight text-emerald-600 mt-1">{presentCount}</div>
                   <span className="text-[11px] text-emerald-500 font-semibold">{rawRecords.length > 0 ? ((presentCount / rawRecords.length) * 100).toFixed(0) : 0}% Turnout</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <span className="text-xs text-rose-600 font-medium">Workers Absent</span>
-                  <div className="text-2xl font-bold font-mono text-rose-600 mt-1">{absentCount}</div>
+                  <div className="text-2xl font-bold tracking-tight text-rose-600 mt-1">{absentCount}</div>
                   <span className="text-[11px] text-rose-400">Leave / Unannounced</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <span className="text-xs text-red-600 font-medium">Overtime Hours</span>
-                  <div className="text-2xl font-bold font-mono text-red-600 mt-1">{totalOT.toFixed(1)} hrs</div>
+                  <div className="text-2xl font-bold tracking-tight text-red-600 mt-1">{totalOT.toFixed(1)} hrs</div>
                   <span className="text-[11px] text-red-400">Site night shift</span>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
                   <span className="text-xs text-blue-600 font-medium">Day Wage Cost</span>
-                  <div className="text-2xl font-bold font-mono text-blue-700 mt-1">
+                  <div className="text-2xl font-bold tracking-tight text-blue-700 mt-1">
                     ₹{estTotalWages.toLocaleString('en-IN')}
                   </div>
                   <span className="text-[11px] text-blue-500">Est. payroll cost</span>
@@ -1371,13 +1371,13 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                                 isAbsent ? 'bg-rose-50/20' : ''
                               }`}
                             >
-                              <td className="py-3 px-4 text-center text-slate-400 font-mono text-[11px]">
+                              <td className="py-3 px-4 text-center text-slate-400 tracking-tight text-[11px]">
                                 {i + 1}
                               </td>
-                              <td className="py-3 px-4 font-mono text-slate-600">
+                              <td className="py-3 px-4 tracking-tight text-slate-600">
                                 {r.fullDate}
                               </td>
-                              <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                              <td className="py-3 px-4 tracking-tight font-bold text-slate-900">
                                 <span className="px-2 py-0.5 bg-slate-100 rounded border border-slate-200">
                                   {r.employee_code}
                                 </span>
@@ -1424,14 +1424,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                                   {r.payroll_type}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-right font-mono font-bold text-slate-800">
+                              <td className="py-3 px-4 text-right tracking-tight font-bold text-slate-800">
                                 {r.salary_type === 'Month' ? (
                                   <span>₹{r.salary.toLocaleString('en-IN')} <span className="text-[10px] text-slate-400 font-normal">/ mo</span></span>
                                 ) : (
                                   <span>₹{r.salary.toLocaleString('en-IN')} <span className="text-[10px] text-slate-400 font-normal">/ day</span></span>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-right font-mono">
+                              <td className="py-3 px-4 text-right tracking-tight">
                                 {r.overtime_hours > 0 ? (
                                   <span className="font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
                                     {r.overtime_hours.toFixed(1)} hrs
@@ -1451,18 +1451,18 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                           <td colSpan={5} className="py-3.5 px-4 text-slate-900">
                             Showing {filteredRecords.length} of {rawRecords.length} Employees
                           </td>
-                          <td className="py-3.5 px-4 text-center font-mono">
+                          <td className="py-3.5 px-4 text-center tracking-tight">
                             {filteredRecords.filter(r => r.status !== 'Absent').length} P / {filteredRecords.filter(r => r.status === 'Absent').length} A
                           </td>
                           <td className="py-3.5 px-4"></td>
-                          <td className="py-3.5 px-4 text-right font-mono text-emerald-700">
+                          <td className="py-3.5 px-4 text-right tracking-tight text-emerald-700">
                             ₹{filteredRecords.filter(r => r.status !== 'Absent').reduce((sum, r) => {
                               const base = r.salary_type === 'Month' ? Math.round(r.salary / 26) : r.salary;
                               const ot = r.overtime_hours * 180;
                               return sum + base + ot;
                             }, 0).toLocaleString('en-IN')}
                           </td>
-                          <td className="py-3.5 px-4 text-right font-mono text-red-700">
+                          <td className="py-3.5 px-4 text-right tracking-tight text-red-700">
                             {filteredRecords.reduce((s, r) => s + r.overtime_hours, 0).toFixed(1)} hrs
                           </td>
                         </tr>
@@ -1533,7 +1533,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {kpiCounts.total > 0 ? ((kpiCounts.healthyCount / kpiCounts.total) * 100).toFixed(1) : '0.0'}% Healthy Rate ({kpiCounts.healthyCount} / {kpiCounts.total} Projects)
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Project Health Sheet — All Monitored Sites ({kpiCounts.total})
             </h1>
             <p className="text-xs text-slate-500">
@@ -1623,8 +1623,8 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {healthFilteredProjects.map((p, idx) => (
                     <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-blue-600">{p.code}</td>
+                      <td className="py-3 px-4 text-slate-400 tracking-tight text-[11px]">{idx + 1}</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-blue-600">{p.code}</td>
                       <td className="py-3 px-4 font-bold text-slate-900">{p.name}</td>
                       <td className="py-3 px-4 text-slate-600">{p.category}</td>
                       <td className="py-3 px-4 font-medium text-slate-800">{p.personnel}</td>
@@ -1649,7 +1649,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                               style={{ width: `${p.progress}%` }} 
                             />
                           </div>
-                          <span className="font-mono font-bold text-[11px]">{p.progress}%</span>
+                          <span className="tracking-tight font-bold text-[11px]">{p.progress}%</span>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -1661,7 +1661,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                           {p.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">{p.date}</td>
+                      <td className="py-3 px-4 tracking-tight text-slate-500 text-[11px]">{p.date}</td>
                       <td className="py-3 px-4 text-slate-600 text-[11px] max-w-xs">{p.notes}</td>
                     </tr>
                   ))}
@@ -1701,7 +1701,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
             {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
             <div className="flex items-center gap-3.5 flex-wrap">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-slate-900 tracking-tight font-display">Dashboard</h1>
+                <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Dashboard</h1>
               </div>
 
               <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -1861,20 +1861,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       </div>
 
                       {/* Bottom Row: Metadata (STAGE and CURRENT STATE / STATUS) */}
-                      <div className="flex items-end justify-between mt-2.5 pt-1.5 border-t border-white/20 text-white">
+                      <div className="flex items-end justify-between mt-2.5 text-white">
                         <div>
-                          <span className="text-[7.5px] sm:text-[8px] font-bold text-white/60 uppercase tracking-widest block font-sans">
-                            STAGE
-                          </span>
                           <span className="text-[10px] sm:text-[10.5px] font-bold text-white tracking-wide block mt-0.5">
                             {card.stage}
                           </span>
                         </div>
 
                         <div className="text-right">
-                          <span className="text-[7.5px] sm:text-[8px] font-bold text-white/60 uppercase tracking-widest block font-sans">
-                            STATUS
-                          </span>
                           <div className="text-[9.5px] sm:text-[10px] font-semibold text-white/95 flex items-center justify-end gap-1 mt-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block shadow-2xs shrink-0" />
                             <span className="truncate">{card.subtext}</span>
@@ -1892,9 +1886,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
-                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                      All Projects ({healthStats.total})
-                    </span>
+
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium mt-0.5">
                     {healthStats.total === 0
@@ -2070,15 +2062,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 <div className="flex flex-col gap-2 w-full max-w-sm mx-auto md:mx-0 md:ml-auto text-xs">
                   <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
                     <span>Distribution Breakdown</span>
-                    <span className={`text-[9.5px] px-2 py-0.5 rounded-full border font-mono font-bold ${
-                      healthStats.isAtRisk 
-                        ? 'text-rose-600 bg-rose-50 border-rose-200/60' 
-                        : healthStats.total === 0
-                        ? 'text-slate-600 bg-slate-100 border-slate-200/60'
-                        : 'text-emerald-600 bg-emerald-50 border-emerald-200/60'
-                    }`}>
-                      {healthStats.total === 1 ? '1 Site Monitored' : `${healthStats.total} Sites Monitored`}
-                    </span>
+
                   </div>
 
                   <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-blue-200/80 shadow-2xs group hover:border-blue-300 transition-all">
@@ -2196,7 +2180,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700 bg-white">
                     {filteredSummary.map((p, idx) => (
                       <tr key={p.id} className="hover:bg-red-50/25 transition-colors">
-                        <td className="py-3 px-4 text-center font-mono text-slate-500 font-bold">{idx + 1}</td>
+                        <td className="py-3 px-4 text-center tracking-tight text-slate-500 font-bold">{idx + 1}</td>
                         <td className="py-3 px-4 font-bold text-slate-900">{p.name}</td>
                         <td className="py-3 px-4 text-slate-600">{p.category}</td>
                         <td className="py-3 px-4 text-slate-600">{p.personnel}</td>
@@ -2217,7 +2201,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             {p.health}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono text-slate-600 font-semibold">{p.date}</td>
+                        <td className="py-3 px-4 text-right tracking-tight text-slate-600 font-semibold">{p.date}</td>
                       </tr>
                     ))}
                     {filteredSummary.length === 0 && (
@@ -2452,7 +2436,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Sales Banner Card */}
                 <div className="mt-5 p-3 bg-emerald-50/80 rounded-[5px] border border-emerald-200/70 text-center">
                   <div className="text-[11px] font-bold text-emerald-800">Total Sales</div>
-                  <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5 font-mono">
+                  <div className="text-2xl font-black text-emerald-600 tracking-tight mt-0.5 tracking-tight">
                     ₹ {totalFinSales.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -2555,7 +2539,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Expense Banner Card */}
                 <div className="mt-5 p-3 bg-rose-50/80 rounded-[5px] border border-rose-200/70 text-center">
                   <div className="text-[11px] font-bold text-rose-800">Total Expense</div>
-                  <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5 font-mono">
+                  <div className="text-2xl font-black text-rose-600 tracking-tight mt-0.5 tracking-tight">
                     ₹ {totalFinExpense.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -2658,7 +2642,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 {/* Total Margin Banner Card */}
                 <div className="mt-5 p-3 bg-teal-50/80 rounded-[5px] border border-teal-200/70 text-center">
                   <div className="text-[11px] font-bold text-teal-800">Total Margin</div>
-                  <div className="text-2xl font-black text-teal-700 tracking-tight mt-0.5 font-mono">
+                  <div className="text-2xl font-black text-teal-700 tracking-tight mt-0.5 tracking-tight">
                     ₹ {totalFinMargin.toLocaleString('en-IN')}
                   </div>
                 </div>
@@ -2768,7 +2752,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-blue-500"></span>
                         <span className="font-semibold text-slate-700">Subcon Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">0.00</span>
+                      <span className="tracking-tight font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -2777,7 +2761,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-teal-500"></span>
                         <span className="font-semibold text-slate-700">Other Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">0.00</span>
+                      <span className="tracking-tight font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -2786,7 +2770,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>
                         <span className="font-semibold text-slate-700">Salary Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">0.00</span>
+                      <span className="tracking-tight font-bold text-slate-900">0.00</span>
                     </label>
 
                     <label className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -2795,7 +2779,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-sm bg-amber-500"></span>
                         <span className="font-semibold text-slate-700">Site Expense</span>
                       </div>
-                      <span className="font-mono font-bold text-slate-900">0.00</span>
+                      <span className="tracking-tight font-bold text-slate-900">0.00</span>
                     </label>
                   </div>
                 </div>
@@ -2823,7 +2807,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                       <span className="font-semibold text-slate-700">To Pay</span>
                     </div>
-                    <span className="font-mono font-bold text-blue-600">0.00</span>
+                    <span className="tracking-tight font-bold text-blue-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -2831,7 +2815,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-teal-400"></span>
                       <span className="font-semibold text-slate-700">To Receive</span>
                     </div>
-                    <span className="font-mono font-bold text-teal-600">0.00</span>
+                    <span className="tracking-tight font-bold text-teal-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -2839,7 +2823,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
                       <span className="font-semibold text-slate-700">Advance Paid</span>
                     </div>
-                    <span className="font-mono font-bold text-rose-600">0.00</span>
+                    <span className="tracking-tight font-bold text-rose-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -2847,7 +2831,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
                       <span className="font-semibold text-slate-700">Advance Received</span>
                     </div>
-                    <span className="font-mono font-bold text-amber-600">0.00</span>
+                    <span className="tracking-tight font-bold text-amber-600">0.00</span>
                   </div>
 
                   <div className="p-3 rounded-xl border border-slate-150 bg-slate-50/60 flex items-center justify-between">
@@ -2855,7 +2839,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
                       <span className="font-semibold text-slate-700">Settled</span>
                     </div>
-                    <span className="font-mono font-bold text-slate-500">0.00</span>
+                    <span className="tracking-tight font-bold text-slate-500">0.00</span>
                   </div>
                 </div>
               </div>
@@ -2984,22 +2968,22 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                           className="w-full px-2 py-1 rounded bg-white text-slate-800 text-[11px] text-right focus:outline-none placeholder-slate-400 shadow-xs"
                         />
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Remaining
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Sales
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Margin
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Inflow
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Outflow
                       </th>
-                      <th className="py-1 px-2 text-right text-red-200 font-mono text-[10px]">
+                      <th className="py-1 px-2 text-right text-red-200 tracking-tight text-[10px]">
                         Balance
                       </th>
                     </tr>
@@ -3014,7 +2998,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       return (
                         <tr key={r.id} className="hover:bg-red-50/25 transition-colors">
                           {/* 1. Serial Number */}
-                          <td className="py-2.5 px-3 text-center font-mono text-slate-400">{idx + 1}</td>
+                          <td className="py-2.5 px-3 text-center tracking-tight text-slate-400">{idx + 1}</td>
                           
                           {/* 2. Project Name */}
                           <td className="py-2.5 px-3 font-semibold text-slate-900 truncate max-w-[260px]" title={r.name}>
@@ -3044,42 +3028,42 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                           </td>
                           
                           {/* 5. Project Budget */}
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                          <td className="py-2.5 px-3 text-right tracking-tight text-slate-800">
                             {r.budget.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 6. Total Expense */}
-                          <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-semibold">
+                          <td className="py-2.5 px-3 text-right tracking-tight text-rose-600 font-semibold">
                             {r.expense.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 7. Budget Remaining */}
-                          <td className={`py-2.5 px-3 text-right font-mono font-semibold ${budgetRem < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          <td className={`py-2.5 px-3 text-right tracking-tight font-semibold ${budgetRem < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {budgetRem.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 8. Total Sales */}
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-900 font-semibold">
+                          <td className="py-2.5 px-3 text-right tracking-tight text-slate-900 font-semibold">
                             {r.sales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 9. Project Margin */}
-                          <td className={`py-2.5 px-3 text-right font-mono font-bold ${margin < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          <td className={`py-2.5 px-3 text-right tracking-tight font-bold ${margin < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                             {margin.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 10. Payment In */}
-                          <td className="py-2.5 px-3 text-right font-mono text-emerald-600 font-semibold">
+                          <td className="py-2.5 px-3 text-right tracking-tight text-emerald-600 font-semibold">
                             {r.paymentIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 11. Payment Out */}
-                          <td className="py-2.5 px-3 text-right font-mono text-rose-600 font-semibold">
+                          <td className="py-2.5 px-3 text-right tracking-tight text-rose-600 font-semibold">
                             {r.paymentOut.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           
                           {/* 12. Cash Balance */}
-                          <td className={`py-2.5 px-3 text-right font-mono font-black ${cashBal < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                          <td className={`py-2.5 px-3 text-right tracking-tight font-black ${cashBal < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
                             {cashBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
@@ -3093,28 +3077,28 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       <td colSpan={4} className="py-3 px-3 text-slate-900 font-bold">
                         Total Summary ({filteredFinRows.length} Projects)
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-900">
+                      <td className="py-3 px-3 text-right tracking-tight text-slate-900">
                         {filteredFinRows.reduce((a, b) => a + b.budget, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-rose-600">
+                      <td className="py-3 px-3 text-right tracking-tight text-rose-600">
                         {filteredFinRows.reduce((a, b) => a + b.expense, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-emerald-600">
+                      <td className="py-3 px-3 text-right tracking-tight text-emerald-600">
                         {filteredFinRows.reduce((a, b) => a + (b.budget > 0 ? b.budget - b.expense : 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-900">
+                      <td className="py-3 px-3 text-right tracking-tight text-slate-900">
                         {filteredFinRows.reduce((a, b) => a + b.sales, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-emerald-600">
+                      <td className="py-3 px-3 text-right tracking-tight text-emerald-600">
                         {filteredFinRows.reduce((a, b) => a + (b.sales - b.expense), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-emerald-600">
+                      <td className="py-3 px-3 text-right tracking-tight text-emerald-600">
                         {filteredFinRows.reduce((a, b) => a + b.paymentIn, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-rose-600">
+                      <td className="py-3 px-3 text-right tracking-tight text-rose-600">
                         {filteredFinRows.reduce((a, b) => a + b.paymentOut, 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-emerald-700">
+                      <td className="py-3 px-3 text-right tracking-tight text-emerald-700">
                         {filteredFinRows.reduce((a, b) => a + (b.paymentIn - b.paymentOut), 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -3176,9 +3160,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             <tr key={r.id}>
                               <td className="py-2 px-3 font-semibold text-slate-900 truncate max-w-[200px]">{r.name}</td>
                               <td className="py-2 px-3">{r.status}</td>
-                              <td className="py-2 px-3 text-right font-mono">{r.budget.toLocaleString()}</td>
-                              <td className="py-2 px-3 text-right font-mono">{r.expense.toLocaleString()}</td>
-                              <td className="py-2 px-3 text-right font-mono text-emerald-600 font-bold">{r.sales.toLocaleString()}</td>
+                              <td className="py-2 px-3 text-right tracking-tight">{r.budget.toLocaleString()}</td>
+                              <td className="py-2 px-3 text-right tracking-tight">{r.expense.toLocaleString()}</td>
+                              <td className="py-2 px-3 text-right tracking-tight text-emerald-600 font-bold">{r.sales.toLocaleString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -3240,7 +3224,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               </div>
               <div className="flex items-baseline justify-between pt-0.5">
                 <span className="text-[11px] text-slate-400 font-medium">Workers Present:</span>
-                <span className="text-sm font-bold font-mono text-emerald-400">
+                <span className="text-sm font-bold tracking-tight text-emerald-400">
                   {hoveredAttendanceBar.present}
                 </span>
               </div>

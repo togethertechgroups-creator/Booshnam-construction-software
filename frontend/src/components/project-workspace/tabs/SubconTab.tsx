@@ -102,25 +102,25 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Subcon Orders</div>
-          <div className="text-2xl font-bold font-mono text-slate-900 mt-1">₹ {totalContract.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-slate-900 mt-1">₹ {totalContract.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-0.5">{workOrders.length} contracted packages</div>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Billed to Date</div>
-          <div className="text-2xl font-bold font-mono text-indigo-700 mt-1">₹ {totalBilled.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-indigo-700 mt-1">₹ {totalBilled.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-0.5">Approved RA bills</div>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Paid to Subcons</div>
-          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">₹ {totalPaid.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-emerald-700 mt-1">₹ {totalPaid.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-0.5">Disbursed disbursements</div>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Pending Clearance</div>
-          <div className="text-2xl font-bold font-mono text-rose-600 mt-1">₹ {totalBalance.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-rose-600 mt-1">₹ {totalBalance.toLocaleString()}</div>
           <div className="text-[10px] text-slate-400 mt-0.5">Due on next payment cycle</div>
         </div>
       </div>
@@ -182,14 +182,14 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
               ) : (
                 filteredOrders.map((wo) => (
                   <tr key={wo.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                    <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
                       {wo.wo_number}
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="font-bold text-slate-900">{wo.subcon_name}</div>
                       <div className="text-[11px] text-slate-500">{wo.trade_scope}</div>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                    <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                       ₹ {wo.contract_amount.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4">
@@ -203,13 +203,13 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono text-slate-800">
+                    <td className="py-3.5 px-4 text-right tracking-tight text-slate-800">
                       ₹ {wo.billed_amount.toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono text-emerald-700 font-bold">
+                    <td className="py-3.5 px-4 text-right tracking-tight text-emerald-700 font-bold">
                       ₹ {wo.paid_amount.toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-mono text-rose-600 font-bold">
+                    <td className="py-3.5 px-4 text-right tracking-tight text-rose-600 font-bold">
                       ₹ {wo.balance_payable.toLocaleString()}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -287,7 +287,7 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
                     placeholder="Total contract value"
                     value={contractAmt}
                     onChange={(e) => setContractAmt(Number(e.target.value))}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl font-mono font-bold focus:outline-none focus:border-red-600"
+                    className="w-full text-xs p-2.5 border border-slate-200 rounded-xl tracking-tight font-bold focus:outline-none focus:border-red-600"
                   />
                 </div>
                 <div>

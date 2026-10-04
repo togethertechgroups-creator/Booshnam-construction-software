@@ -126,13 +126,13 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Receivable (Client)</div>
-          <div className="text-2xl font-bold font-mono text-emerald-700 mt-1">₹ {totalReceivables.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-emerald-700 mt-1">₹ {totalReceivables.toLocaleString()}</div>
           <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Outstanding to collect</div>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
           <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Payable (Vendors/Subcons)</div>
-          <div className="text-2xl font-bold font-mono text-rose-600 mt-1">₹ {totalPayables.toLocaleString()}</div>
+          <div className="text-2xl font-bold tracking-tight text-rose-600 mt-1">₹ {totalPayables.toLocaleString()}</div>
           <div className="text-[10px] text-rose-500 font-semibold mt-0.5">Due to suppliers & labor</div>
         </div>
       </div>
@@ -218,11 +218,11 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
                         </div>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-600 text-[11px]">
+                    <td className="py-3.5 px-4 tracking-tight text-slate-600 text-[11px]">
                       {p.gstin || 'Unregistered'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className={`font-mono font-bold text-xs ${
+                      <div className={`tracking-tight font-bold text-xs ${
                         p.balance_type === 'RECEIVABLE' ? 'text-emerald-700' : 'text-rose-600'
                       }`}>
                         ₹ {p.current_balance.toLocaleString()}
@@ -275,7 +275,7 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
               <div>
                 <span className="text-xs text-slate-500">Current Balance:</span>
-                <div className={`text-base font-mono font-black ${
+                <div className={`text-base tracking-tight font-black ${
                   selectedParty.balance_type === 'RECEIVABLE' ? 'text-emerald-700' : 'text-rose-600'
                 }`}>
                   ₹ {selectedParty.current_balance.toLocaleString()} ({selectedParty.balance_type})
@@ -299,14 +299,14 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
                     <div className="font-semibold text-slate-800">Payment Issued (Voucher #VN-104)</div>
                     <div className="text-[10px] text-slate-400">2026-05-10 • Mode: NEFT</div>
                   </div>
-                  <div className="font-mono font-bold text-slate-800">₹ 85,000</div>
+                  <div className="tracking-tight font-bold text-slate-800">₹ 85,000</div>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
                   <div>
                     <div className="font-semibold text-slate-800">Invoice Received (Challan #CH-882)</div>
                     <div className="text-[10px] text-slate-400">2026-05-02 • 150 Bags Cement</div>
                   </div>
-                  <div className="font-mono font-bold text-rose-600">- ₹ 67,500</div>
+                  <div className="tracking-tight font-bold text-rose-600">- ₹ 67,500</div>
                 </div>
               </div>
             </div>
@@ -393,7 +393,7 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-semibold text-slate-700">Phone Number</label>
                     {newPhone && (
-                      <span className={`text-[10px] font-mono font-bold ${newPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                      <span className={`text-[10px] tracking-tight font-bold ${newPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
                         {newPhone.length}/10
                       </span>
                     )}

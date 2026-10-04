@@ -225,7 +225,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
         <div className="flex items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
                 Payments & Accounts Hub
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -268,7 +268,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             <span>Total Inflow (Receipts)</span>
             <ArrowDownRight className="w-4 h-4" />
           </div>
-          <div className="text-xl font-bold text-slate-900 font-mono mt-0.5">
+          <div className="text-xl font-bold text-slate-900 tracking-tight mt-0.5">
             ₹ {totalIncome.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5">Client stage billing receipts</div>
@@ -279,7 +279,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             <span>Total Outflow (Expenses)</span>
             <ArrowUpRight className="w-4 h-4" />
           </div>
-          <div className="text-xl font-bold text-slate-900 font-mono mt-0.5">
+          <div className="text-xl font-bold text-slate-900 tracking-tight mt-0.5">
             ₹ {totalExpense.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5">Materials, labor, subcon</div>
@@ -290,7 +290,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             <span>Net Operating Balance</span>
             <Wallet className="w-4 h-4" />
           </div>
-          <div className={`text-xl font-bold font-mono mt-0.5 ${netCashBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+          <div className={`text-xl font-bold tracking-tight mt-0.5 ${netCashBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
             ₹ {netCashBalance.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5">Liquid cash flow status</div>
@@ -301,7 +301,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
             <span>Pending Site Requests</span>
             <Clock className="w-4 h-4" />
           </div>
-          <div className="text-xl font-bold text-amber-700 font-mono mt-0.5">
+          <div className="text-xl font-bold text-amber-700 tracking-tight mt-0.5">
             ₹ {pendingRequestsAmount.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 mt-0.5">{paymentRequests.filter(r => r.status !== 'PAID').length} awaiting approvals</div>
@@ -396,7 +396,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                 ) : (
                   filteredRequests.map(r => (
                     <tr key={r.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-900">{r.request_code}</td>
+                      <td className="py-3.5 px-4 tracking-tight font-bold text-indigo-900">{r.request_code}</td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-900">{r.requested_by || r.requested_by_name || 'Site Engineer'}</div>
                         <div className="text-[10px] text-slate-400">{r.request_date || r.date}</div>
@@ -408,7 +408,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-slate-600 max-w-xs">{r.purpose_description || r.description}</td>
-                      <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-900">
+                      <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
                         ₹ {r.amount.toLocaleString()}
                       </td>
                       <td className="py-3.5 px-4 text-center">
@@ -444,10 +444,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                         )}
                         {r.status === 'PAID' && (
                           <div className="text-right">
-                            <span className="text-[11px] text-emerald-600 font-bold font-mono">
+                            <span className="text-[11px] text-emerald-600 font-bold tracking-tight">
                               Paid
                             </span>
-                            <div className="text-[10px] text-slate-400 font-mono">{r.payment_reference || r.transaction_ref}</div>
+                            <div className="text-[10px] text-slate-400 tracking-tight">{r.payment_reference || r.transaction_ref}</div>
                           </div>
                         )}
                       </td>
@@ -484,7 +484,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
                   return (
                     <tr key={t.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-700">{txnCode}</td>
+                      <td className="py-3 px-4 tracking-tight font-bold text-slate-700">{txnCode}</td>
                       <td className="py-3 px-4 text-slate-500">{txnDate}</td>
                       <td className="py-3 px-4">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -495,10 +495,10 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
                       </td>
                       <td className="py-3 px-4 text-slate-800 font-medium">{t.category}</td>
                       <td className="py-3 px-4 text-slate-700">{party}</td>
-                      <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">
+                      <td className="py-3 px-4 text-slate-500 tracking-tight text-[11px]">
                         {t.payment_mode} • {ref}
                       </td>
-                      <td className={`py-3 px-4 text-right font-mono font-bold text-sm ${
+                      <td className={`py-3 px-4 text-right tracking-tight font-bold text-sm ${
                         type === 'INCOME' ? 'text-emerald-700' : 'text-rose-700'
                       }`}>
                         {type === 'INCOME' ? '+' : '-'} ₹ {t.amount.toLocaleString()}

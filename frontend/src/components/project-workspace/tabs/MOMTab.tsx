@@ -288,7 +288,7 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
               <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">
                 MINUTES OF MEETING
               </span>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
                 {selectedMeeting.meeting_name || selectedMeeting.title}
               </h1>
             </div>
@@ -305,7 +305,7 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
 
               <div>
                 <span className="text-slate-400 font-medium block">Meeting Number</span>
-                <p className="font-mono font-bold text-slate-900 text-sm mt-0.5">
+                <p className="tracking-tight font-bold text-slate-900 text-sm mt-0.5">
                   {selectedMeeting.mom_number || 'MOM-2026-001'}
                 </p>
               </div>
@@ -592,7 +592,7 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
                       {item.date}
                     </span>
                     {item.mom_number && (
-                      <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[10px] font-mono">
+                      <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded text-[10px] tracking-tight">
                         {item.mom_number}
                       </span>
                     )}

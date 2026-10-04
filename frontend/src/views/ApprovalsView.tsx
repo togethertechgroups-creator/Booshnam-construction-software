@@ -39,7 +39,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
               <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
                 GOVERNANCE
               </span>
-              <h1 className="text-xl font-bold text-slate-900">Approvals Central & Threshold Routing</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Approvals Central & Threshold Routing</h1>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Value-based multi-tiered approval engine across Procurement, Budgets, and Change Orders.
@@ -123,7 +123,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
                 <div className="flex items-center gap-4 shrink-0">
                   <div className="text-right">
                     <div className="text-xs text-slate-400">Order Amount</div>
-                    <div className="text-base font-bold font-mono text-slate-900">
+                    <div className="text-base font-bold tracking-tight text-slate-900">
                       ₹{req.amount.toLocaleString()}
                     </div>
                   </div>

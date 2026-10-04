@@ -402,7 +402,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     }
 
     if (!isSuperAdmin) {
-      onShowToast?.('Permission Denied: Only Super Admin can delete projects.');
+      onShowToast?.('Permission Denied: Only Admin or Super Admin can delete projects.');
       return;
     }
 
@@ -980,7 +980,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Creating Project</h1>
+              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Creating Project</h1>
             </div>
           </div>
 
@@ -2259,7 +2259,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             {formatProjectTitle(p)}
                           </h3>
                           {p.code && (
-                            <p className="text-[10px] text-slate-400 font-mono mt-0.5 tracking-wide">{p.code}</p>
+                            <p className="text-[10px] text-slate-400 tracking-tight mt-0.5 tracking-wide">{p.code}</p>
                           )}
                         </div>
                       </div>
@@ -2297,7 +2297,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-[10px]">
                           <span className="text-slate-400 font-semibold uppercase tracking-wide">Progress</span>
-                          <span className="font-bold text-slate-700 font-mono">{stats.progress}%</span>
+                          <span className="font-bold text-slate-700 tracking-tight">{stats.progress}%</span>
                         </div>
                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
                           <div className={`h-full rounded-full transition-all ${stats.progress === 100 ? 'bg-blue-500' : 'bg-red-500'}`} style={{ width: `${stats.progress}%` }} />
@@ -2342,7 +2342,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       {/* Top Header Bar Inside Full-Bleed View */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Projects</h1>
+          <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Projects</h1>
           <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction & soil investigation initiatives</p>
         </div>
 
@@ -2556,7 +2556,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider select-none">
               <tr>
-                <th className="py-3.5 px-6">Name</th>
+                <th className="py-3.5 px-6 w-[35%]">Name</th>
                 <th className="py-3.5 px-4 w-36 text-center">Status</th>
                 <th className="py-3.5 px-5 w-44 text-center">Progress</th>
                 <th className="py-3.5 px-5 w-48 text-center">In / Out</th>
@@ -2610,19 +2610,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         isPinned ? 'bg-red-50/20' : ''
                       }`}
                     >
-                      {/* Name Column with Avatar Initials & Clean Subtitle */}
+                      {/* Name Column with Clean Subtitle */}
                       <td className="py-4 px-6 align-middle">
                         <div className="flex items-center gap-3.5">
-                          {/* Avatar Initials Badge - Guaranteed solid background color */}
-                          <div className={`w-10 h-10 rounded-xl ${avatar.colorClass} text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs`}>
-                            {avatar.initials}
-                          </div>
-
                           {/* Name Text - Clickable to open Project Details */}
                           <div className="min-w-0 flex-1 max-w-2xl">
                             <button
                               onClick={() => handleOpenProjectDetails(p)}
-                              className="text-left font-bold text-slate-900 hover:text-red-600 transition-colors line-clamp-1 cursor-pointer leading-snug group-hover:text-red-600 text-sm"
+                              className="text-left font-bold text-slate-900 hover:text-red-600 transition-colors cursor-pointer leading-snug group-hover:text-red-600 text-[15px]"
                               title="Click to view overall project details, pending work, and finances"
                             >
                               {formatProjectTitle(p)}
@@ -2646,17 +2641,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Status Column - Dedicated Column with Clean Pill Badge */}
+                      {/* Status Column */}
                       <td className="py-4 px-4 text-center align-middle whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold shadow-2xs border ${
-                          stats.status === 'COMPLETED' 
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : stats.status === 'PLANNING'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : stats.status === 'ON_HOLD'
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
+                        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-700">
                           <span className={`w-1.5 h-1.5 rounded-full ${
                             stats.status === 'COMPLETED' ? 'bg-blue-500' :
                             stats.status === 'PLANNING' ? 'bg-amber-500' :
@@ -2672,12 +2659,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </td>
 
                       {/* Progress Column */}
-                      <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
-                        <div className="flex flex-col items-center justify-center space-y-1.5">
-                          <span className="text-xs font-bold text-slate-800 font-mono">
-                            {progressVal}%
-                          </span>
-                          <div className="w-24 bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
+                      <td className="py-4 px-5 align-middle whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2.5">
+                          <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
                             <div 
                               className={`h-full rounded-full transition-all duration-300 ${
                                 progressVal === 100 ? 'bg-blue-600' : progressVal > 0 ? 'bg-emerald-500' : 'bg-slate-200'
@@ -2685,17 +2669,20 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                               style={{ width: `${progressVal}%` }}
                             />
                           </div>
+                          <span className="text-xs font-bold text-slate-800 tracking-tight w-9 text-right">
+                            {progressVal}%
+                          </span>
                         </div>
                       </td>
 
                       {/* In / Out Column - Clean stacked display with aligned numbers */}
                       <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
-                        <div className="inline-flex flex-col items-start font-mono text-xs leading-tight gap-1">
+                        <div className="inline-flex flex-col items-start tracking-tight text-[13px] leading-tight gap-1.5">
                           <div className="flex items-center gap-1.5 text-emerald-700 font-bold whitespace-nowrap">
                             <span className="text-[10px] text-slate-400 font-sans font-semibold tracking-wider w-8 text-left">IN:</span>
                             <span>₹ {(p.cash_in !== undefined ? p.cash_in : 0).toLocaleString('en-IN')}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-slate-600 font-medium whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 text-slate-700 font-semibold whitespace-nowrap">
                             <span className="text-[10px] text-slate-400 font-sans font-semibold tracking-wider w-8 text-left">OUT:</span>
                             <span>₹ {(p.cash_out !== undefined ? p.cash_out : 0).toLocaleString('en-IN')}</span>
                           </div>

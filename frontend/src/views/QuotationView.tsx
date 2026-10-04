@@ -1843,7 +1843,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 />
               </div>
 
-              {/* Row: EXPECTED CLOSURE DATE & BUDGET (Perfect 2-col alignment with uniform h-11) */}
+              {/* Row: EXPECTED CLOSURE DATE */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CustomDatePicker
                   value={drawerExpectedClosureDate}
@@ -1852,22 +1852,6 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                   variant="floating"
                   placeholder="DD-MM-YYYY"
                 />
-
-                <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                  <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                    BUDGET
-                  </label>
-                  <input
-                    type="number"
-                    placeholder=""
-                    value={drawerBudget}
-                    onChange={(e) => {
-                      setDrawerBudget(e.target.value);
-                      setDrawerValue(e.target.value);
-                    }}
-                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none tracking-tight"
-                  />
-                </div>
               </div>
 
               {/* DESCRIPTION */}

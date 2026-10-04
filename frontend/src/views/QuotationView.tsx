@@ -1275,73 +1275,73 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                         <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                           {lead.source || 'Just dial'}
-                        </td>
-
-                        <td className="py-3.5 px-4 text-center relative dropdown-trigger-container" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveRowMenuId(activeRowMenuId === lead.id ? null : lead.id);
-                            }}
-                            className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-
-                          {/* Options Dropdown */}
-                          {activeRowMenuId === lead.id && (
-                            <div className="absolute right-4 top-10 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
-                              {!isReminderViewed(lead.id, lead.followup_date) && (
+                               <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="relative inline-block dropdown-trigger-container">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveRowMenuId(activeRowMenuId === lead.id ? null : lead.id);
+                              }}
+                              className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+  
+                            {/* Options Dropdown */}
+                            {activeRowMenuId === lead.id && (
+                              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
+                                {!isReminderViewed(lead.id, lead.followup_date) && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markRemindersAsViewed([lead.id]);
+                                      setActiveRowMenuId(null);
+                                      onShowToast?.(`Reminder for ${lead.client_name} marked as read`);
+                                    }}
+                                    className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Mark as Read</span>
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    markRemindersAsViewed([lead.id]);
-                                    setActiveRowMenuId(null);
-                                    onShowToast?.(`Reminder for ${lead.client_name} marked as read`);
-                                  }}
-                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                                  onClick={() => handleConvertLeadToQuote(lead)}
+                                  className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+                                >
+                                  <Calculator className="w-3.5 h-3.5 text-red-600" />
+                                  <span>Create Quotation</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleConvertLeadToProject(lead)}
+                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 cursor-pointer font-medium"
                                 >
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Mark as Read</span>
+                                  <span>Convert to Project</span>
                                 </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => handleConvertLeadToQuote(lead)}
-                                className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Calculator className="w-3.5 h-3.5 text-red-600" />
-                                <span>Create Quotation</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleConvertLeadToProject(lead)}
-                                className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Convert to Project</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleEditLead(lead)}
-                                className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                                <span>Edit Lead</span>
-                              </button>
-                              <div className="border-t border-slate-100 my-1" />
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLead(lead.id, lead.client_name)}
-                                className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete Lead</span>
-                              </button>
-                            </div>
-                          )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditLead(lead)}
+                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Edit Lead</span>
+                                </button>
+                                <div className="border-t border-slate-100 my-1" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLead(lead.id, lead.client_name)}
+                                  className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete Lead</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

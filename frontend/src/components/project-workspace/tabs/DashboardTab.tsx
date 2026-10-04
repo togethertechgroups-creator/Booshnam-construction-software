@@ -687,117 +687,204 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       {subTab === 'financial' && (
         <div className="space-y-5">
           
-          {/* Top Financial KPI Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total Estimated Budget</div>
-              <div className="text-2xl font-bold tracking-tight text-slate-900 mt-1">
-                ₹ {projectValue.toLocaleString()}
+          {/* Top Financial KPI Row 1 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Estimated Budget</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
+                </div>
+                <div className="text-[11px] text-[#2272c7] font-semibold mt-1 cursor-pointer hover:underline">
+                  View Breakup &gt;
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Approved contract value</div>
+              <div className="w-10 h-10 rounded-lg bg-[#62a0d7] flex items-center justify-center text-white shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
             </div>
 
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Cash In (Client Receipts)</div>
-              <div className="text-2xl font-bold tracking-tight text-emerald-700 mt-1">
-                ₹ {cashIn.toLocaleString()}
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Total BOQ Value</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Estimated Margin: ₹ 0
+                </div>
               </div>
-              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Cleared into project account</div>
+              <div className="w-10 h-10 rounded-lg bg-[#e8a365] flex items-center justify-center text-white shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
             </div>
 
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Cash Out (Site Expenses)</div>
-              <div className="text-2xl font-bold tracking-tight text-rose-600 mt-1">
-                ₹ {cashOut.toLocaleString()}
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Total Sales Invoice</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  0% of BOQ value
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Material, labor & subcon payouts</div>
-            </div>
-
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/90 shadow-xs">
-              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Net Working Capital</div>
-              <div className={`text-2xl font-bold tracking-tight mt-1 ${netWorkingCap >= 0 ? 'text-indigo-900' : 'text-rose-600'}`}>
-                ₹ {netWorkingCap.toLocaleString()}
+              <div className="w-10 h-10 rounded-lg bg-[#42a898] flex items-center justify-center text-white shrink-0">
+                <FileText className="w-5 h-5" />
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Available liquidity balance</div>
             </div>
           </div>
 
-          {/* Budget vs Actual Cashflow Summary */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Budget Consumption & Burn Rate</h3>
-                <span className="text-xs font-bold text-red-600">
-                  {projectValue > 0 ? ((cashOut / projectValue) * 100).toFixed(1) : 0}% Spent
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-red-600 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${projectValue > 0 ? Math.min(100, (cashOut / projectValue) * 100) : 0}%` }}
-                  />
+          {/* Top Financial KPI Row 2 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Total Expense (Till Date)</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
                 </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 tracking-tight">
-                  <span>Spent: ₹ {cashOut.toLocaleString()}</span>
-                  <span>Budget: ₹ {projectValue.toLocaleString()}</span>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  0% of Budget used
                 </div>
               </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Uncommitted Scope:</span>
-                <span className="font-bold tracking-tight text-slate-900">₹ {Math.max(0, projectValue - cashOut).toLocaleString()}</span>
+              <div className="w-10 h-10 rounded-lg bg-[#966baf] flex items-center justify-center text-white shrink-0">
+                <TrendingUp className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Quick Financial Shortcuts</h3>
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Work done value</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  0% of BOQ value
+                </div>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#61b865] flex items-center justify-center text-white shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="p-5 bg-white rounded-xl border border-slate-200/80 shadow-xs flex justify-between">
+              <div>
+                <div className="text-xs text-slate-500 font-medium">Net Cash Position</div>
+                <div className="text-[22px] font-bold text-slate-900 mt-4 tracking-tight">
+                  ₹ 0
+                </div>
+                <div className="text-[11px] text-[#2272c7] font-semibold mt-1 cursor-pointer hover:underline">
+                  View Breakup &gt;
+                </div>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-[#dd6b66] flex items-center justify-center text-white shrink-0">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+
+          {/* Budget vs Expense by Cost Code */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[13px] font-bold text-slate-900">Budget Vs Expense by Cost Code</h3>
+              <button type="button" className="text-[11px] text-slate-500 hover:text-slate-800">
+                View Breakup
+              </button>
+            </div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="px-3 py-1 bg-slate-900 text-white text-[11px] rounded-full font-medium">
+                Over Budget (0)
+              </div>
+              <div className="px-3 py-1 border border-slate-200 text-slate-400 text-[11px] rounded-full font-medium bg-white">
+                Under Budget (0)
+              </div>
+            </div>
+            <div className="text-[11px] text-slate-500 mb-10">
+              Cost codes where expense exceeds budget. % shown as variance.
+            </div>
+            <div className="text-center text-[12px] text-slate-500 py-4 mb-4">
+              No cost codes over budget.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Payables vs Receivables */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+              <h3 className="text-[13px] font-bold text-slate-900 mb-6">Payables vs Receivables</h3>
+              
+              <div className="flex items-center justify-center my-8">
+                <div className="relative w-36 h-36 rounded-full border-[12px] border-slate-100 flex items-center justify-center">
+                   {/* Simplified Donut Chart matching screenshot (full green ring since Payable is 0) */}
+                   <svg className="absolute inset-0 w-full h-full -rotate-90 -m-[12px]" viewBox="0 0 36 36">
+                    <path
+                      className="text-[#3baf57] transition-all duration-500"
+                      strokeDasharray="100, 100"
+                      strokeWidth="3.5"
+                      stroke="currentColor"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                  </svg>
+                </div>
               </div>
 
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('transaction')}
-                  className="w-full p-3 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                >
+              <div className="space-y-3 mt-10">
+                <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700">
-                      <DollarSign className="w-4 h-4" />
-                    </div>
-                    <span>Record Cash In / Cash Out Payment</span>
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    <span className="text-slate-600">Payable</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </button>
+                  <span className="font-bold text-slate-900">₹ 0</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#3baf57]" />
+                    <span className="text-slate-600">Receivable</span>
+                  </div>
+                  <span className="font-bold text-slate-900">₹ 27,500</span>
+                </div>
+              </div>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('boq')}
-                  className="w-full p-3 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                >
+            {/* Salary Expense */}
+            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
+              <h3 className="text-[13px] font-bold text-slate-900 mb-4">Salary Expense</h3>
+              
+              <div className="h-44"></div> {/* Placeholder for chart area */}
+              
+              <div className="space-y-4 mt-6">
+                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-red-50 text-red-600">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <span>Inspect BOQ Quantity Takeoff & Rate Analysis</span>
+                    <span className="w-2 h-2 rounded-full bg-[#6a4c9c]" />
+                    <span className="text-slate-600">Site Staff</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </button>
+                  <div className="flex gap-4 w-20 justify-end">
+                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#f39c12]" />
+                    <span className="text-slate-600">Labour Contractor</span>
+                  </div>
+                  <div className="flex gap-4 w-20 justify-end">
+                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('party')}
-                  className="w-full p-3 rounded-xl border border-slate-200 hover:bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
-                >
+                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
                   <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-700">
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <span>Check Client & Vendor Balance Ledgers</span>
+                    <span className="w-2 h-2 rounded-full bg-[#3498db]" />
+                    <span className="text-slate-600">Office Staff</span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </button>
+                  <div className="flex gap-4 w-20 justify-end">
+                    <span className="font-bold text-slate-900">₹ 0</span>
+                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

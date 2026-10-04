@@ -288,14 +288,6 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
               </button>
             )}
             
-            {/* Project Avatar */}
-            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-600 to-rose-700 shadow-xs shadow-red-500/25 flex items-center justify-center text-white font-black text-xs sm:text-sm overflow-hidden shrink-0 border border-red-300/40 select-none">
-              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white/25 pointer-events-none" />
-              <div className="absolute -bottom-1.5 -left-1.5 w-5 h-5 rounded-full bg-white/20 pointer-events-none" />
-              <span className="relative z-10 uppercase tracking-wide font-bold">
-                {projectInitials}
-              </span>
-            </div>
 
             {/* Project Header Info: Name, Code, Site, Status (Requirement 3) */}
             <div className="flex flex-col min-w-0" ref={projDropdownRef}>
@@ -328,12 +320,7 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                   <strong className="text-slate-800">{project.client_name || 'Client'}</strong>
                 </span>
 
-                <span className="text-slate-300">•</span>
 
-                <span className="inline-flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dotColor}`} />
-                  <span className="font-semibold text-slate-800">{statusConfig.label}</span>
-                </span>
               </div>
 
               {/* Project Switcher Dropdown */}

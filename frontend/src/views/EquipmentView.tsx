@@ -570,7 +570,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="search"
-              className="w-full pl-3.5 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-[#5B45E0] focus:ring-1 focus:ring-[#5B45E0] shadow-2xs transition"
+              className="w-full pl-3.5 pr-9 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 shadow-2xs transition"
             />
             {searchQuery ? (
               <button 
@@ -590,7 +590,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
             <button
               type="button"
               onClick={handleOpenAddModal}
-              className="px-4 py-2 bg-[#5B45E0] hover:bg-[#4E37D3] text-white rounded-lg text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer active:scale-98"
             >
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>New Asset</span>

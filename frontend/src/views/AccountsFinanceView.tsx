@@ -15,6 +15,10 @@ import { Project } from '../types';
 import { CustomSelect } from '../components/CustomSelect';
 import { AddPartyDrawer, PartyFormData } from '../components/finance/AddPartyDrawer';
 import { AddAccountDrawer, AccountFormData } from '../components/finance/AddAccountDrawer';
+import { CreateTransactionModalFlow } from '../components/finance/CreateTransactionModalFlow';
+import { CreatePaymentRequestDrawerFlow, PaymentRequestSubmitData } from '../components/finance/CreatePaymentRequestDrawerFlow';
+import { PaymentRequestOverviewDrawer } from '../components/finance/PaymentRequestOverviewDrawer';
+import { ensurePartyExists, getFinanceParties, saveFinanceParties } from '../lib/financeSyncService';
 import { exportInvoiceToPDF } from '../lib/invoiceExportService';
 
 export interface PaymentRequestItem {
@@ -25,13 +29,15 @@ export interface PaymentRequestItem {
   projectName: string;
   subProjectText: string;
   amount: number;
-  status: 'Paid' | 'Approved' | 'Pending' | 'Rejected';
+  status: 'Paid' | 'Approved' | 'Pending' | 'Rejected' | 'Unpaid' | 'On Hold';
   category: string;
   paymentMode?: string;
   referenceNo?: string;
   paidDate?: string;
+  dueDate?: string;
   notes?: string;
   invoiceFile?: string;
+  entryBy?: string;
 }
 
 export interface PartyRecord {
@@ -87,6 +93,9 @@ export interface FinanceTransaction {
   mode: 'NEFT/RTGS' | 'UPI' | 'CHEQUE' | 'CASH';
   referenceNo: string;
   status: 'Completed' | 'Pending' | 'Reconciled';
+  transactionType?: string;
+  costCode?: string;
+  notes?: string;
 }
 
 export interface BankAccountRecord {
@@ -770,7 +779,7 @@ const toIsoDate = (displayStr: string) => {
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Approved' | 'Pending' | 'Rejected'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Approved' | 'Pending' | 'Rejected' | 'Unpaid' | 'On Hold'>('All');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [selectedProjectFilter, setSelectedProjectFilter] = useState('All');
 
@@ -785,6 +794,16 @@ const toIsoDate = (displayStr: string) => {
   const [isAddPartyModalOpen, setIsAddPartyModalOpen] = useState(false);
   const [isRecordTxnModalOpen, setIsRecordTxnModalOpen] = useState(false);
   const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
+
+  // New Create Transaction Flow (Image 1 Menu -> Image 2 Select Project -> Image 3 Slide-bar Drawer)
+  const [isCreateTxnFlowOpen, setIsCreateTxnFlowOpen] = useState(false);
+  const [createTxnFlowStep, setCreateTxnFlowStep] = useState<'menu' | 'select_project' | 'drawer'>('menu');
+
+  // Transaction Tab Filters
+  const [txnSearchQuery, setTxnSearchQuery] = useState('');
+  const [txnTypeFilter, setTxnTypeFilter] = useState('All');
+  const [txnProjectFilter, setTxnProjectFilter] = useState('All');
+  const [txnModeFilter, setTxnModeFilter] = useState('All');
 
   // Add Bank / Cash Account Form State
   const [newAccName, setNewAccName] = useState('');
@@ -1237,14 +1256,24 @@ const toIsoDate = (displayStr: string) => {
   // Filtered Payment Requests
   const filteredPaymentRequests = useMemo(() => {
     return paymentRequests.filter(req => {
-      if (statusFilter !== 'All' && req.status !== statusFilter) return false;
+      if (statusFilter !== 'All') {
+        if (statusFilter === 'Unpaid') {
+          if (req.status !== 'Unpaid' && req.status !== 'Pending') return false;
+        } else if (statusFilter === 'Paid') {
+          if (req.status !== 'Paid') return false;
+        } else if (statusFilter === 'On Hold') {
+          if (req.status !== 'On Hold') return false;
+        } else if (req.status !== statusFilter) {
+          return false;
+        }
+      }
       if (selectedProjectFilter !== 'All' && !req.projectName.toLowerCase().includes(selectedProjectFilter.toLowerCase())) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesParty = req.partyName.toLowerCase().includes(q);
         const matchesProj = req.projectName.toLowerCase().includes(q);
         const matchesCode = req.requestCode.toLowerCase().includes(q);
-        const matchesCategory = req.category.toLowerCase().includes(q);
+        const matchesCategory = (req.category || '').toLowerCase().includes(q);
         if (!matchesParty && !matchesProj && !matchesCode && !matchesCategory) return false;
       }
       return true;
@@ -1253,7 +1282,7 @@ const toIsoDate = (displayStr: string) => {
 
   // Financial summary metrics
   const totalPaidAmount = paymentRequests.filter(r => r.status === 'Paid').reduce((sum, r) => sum + r.amount, 0);
-  const totalPendingAmount = paymentRequests.filter(r => r.status === 'Pending' || r.status === 'Approved').reduce((sum, r) => sum + r.amount, 0);
+  const totalPendingAmount = paymentRequests.filter(r => r.status === 'Pending' || r.status === 'Unpaid' || r.status === 'Approved').reduce((sum, r) => sum + r.amount, 0);
 
   // Submit New Payment Request
   const handleSavePaymentRequest = (e: React.FormEvent) => {
@@ -1296,6 +1325,98 @@ const toIsoDate = (displayStr: string) => {
     }
   };
 
+  // Submit Handler for 2-step Payment Request Drawer flow (Images 1 & 2)
+  const handleSavePaymentRequestFromFlow = (reqData: PaymentRequestSubmitData) => {
+    let formattedDate = reqData.date;
+    try {
+      const d = new Date(reqData.date);
+      if (!isNaN(d.getTime())) {
+        formattedDate = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+    } catch {}
+
+    let formattedDueDate: string | undefined = undefined;
+    if (reqData.dueDate) {
+      try {
+        const dd = new Date(reqData.dueDate);
+        if (!isNaN(dd.getTime())) {
+          formattedDueDate = dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        } else {
+          formattedDueDate = reqData.dueDate;
+        }
+      } catch {
+        formattedDueDate = reqData.dueDate;
+      }
+    }
+
+    const newReq: PaymentRequestItem = {
+      id: `pr-${Date.now()}`,
+      requestCode: reqData.requestCode,
+      date: formattedDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      partyName: reqData.partyName,
+      projectName: reqData.projectName,
+      subProjectText: reqData.category,
+      amount: reqData.amount,
+      status: 'Unpaid',
+      category: reqData.category,
+      dueDate: formattedDueDate,
+      notes: reqData.notes,
+      paidDate: undefined,
+      entryBy: 'Managing Director - 3 - Nivedhitha Arumugam'
+    };
+
+    setPaymentRequests(prev => {
+      const updated = [newReq, ...prev];
+      try {
+        localStorage.setItem('booshnam_finance_payment_requests', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    setIsNewRequestModalOpen(false);
+
+    if (onShowToast) {
+      onShowToast(`Created Payment Request ${reqData.requestCode} for ₹${reqData.amount.toLocaleString('en-IN')}`);
+    }
+  };
+
+  // Status Change Handler for Payment Request (Interactive Status in Image 4)
+  const handleUpdatePaymentRequestStatus = (id: string, newStatus: 'Unpaid' | 'Paid' | 'On Hold') => {
+    setPaymentRequests(prev => {
+      const updated = prev.map(r => {
+        if (r.id === id) {
+          return {
+            ...r,
+            status: newStatus,
+            paidDate: newStatus === 'Paid' ? (r.paidDate || new Date().toISOString().split('T')[0]) : undefined
+          };
+        }
+        return r;
+      });
+      try {
+        localStorage.setItem('booshnam_finance_payment_requests', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    setSelectedRequestDetails(prev => prev && prev.id === id ? {
+      ...prev,
+      status: newStatus,
+      paidDate: newStatus === 'Paid' ? (prev.paidDate || new Date().toISOString().split('T')[0]) : undefined
+    } : prev);
+
+    if (onShowToast) {
+      onShowToast(`Payment request status changed to ${newStatus}`);
+    }
+  };
+
+  // Record Payment from Overview Drawer
+  const handleRecordPaymentFromDrawer = (req: PaymentRequestItem) => {
+    handleUpdatePaymentRequestStatus(req.id, 'Paid');
+    if (onShowToast) {
+      onShowToast(`Payment recorded for ${req.requestCode} (₹${req.amount.toLocaleString('en-IN')})`);
+    }
+  };
+
   // Submit New Party
   const handleSaveParty = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1327,6 +1448,27 @@ const toIsoDate = (displayStr: string) => {
 
     if (onShowToast) {
       onShowToast(`Party "${newPty.name}" registered successfully`);
+    }
+  };
+
+  // Delete Party Handler
+  const handleDeleteParty = (partyId: string, partyName: string) => {
+    if (confirm(`Are you sure you want to delete party "${partyName}"? This will permanently remove the party from the directory.`)) {
+      setParties(prev => {
+        const updated = prev.filter(p => p.id !== partyId);
+        try {
+          localStorage.setItem('booshnam_finance_parties', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+
+      if (activePartyOverview && activePartyOverview.id === partyId) {
+        setActivePartyOverview(null);
+      }
+
+      if (onShowToast) {
+        onShowToast(`Party "${partyName}" deleted successfully`);
+      }
     }
   };
 
@@ -1414,6 +1556,249 @@ const toIsoDate = (displayStr: string) => {
 
     if (onShowToast) {
       onShowToast(`Recorded ₹${amt.toLocaleString('en-IN')} ${newTxnType === 'INCOME' ? 'Inflow' : 'Outflow'} for ${partyName}`);
+    }
+  };
+
+  // Submit Handler for New 3-Step Create Transaction Flow (Images 1, 2, 3)
+  const handleSaveTransactionFromFlow = (txData: {
+    transactionType: string;
+    subType: string;
+    projectName: string;
+    projectId?: string;
+    voucherNo: string;
+    date: string;
+    partyName: string;
+    partyId?: string;
+    amount: number;
+    paymentMethod: 'Cash' | 'Bank Transfer' | 'Cheque';
+    bankAccountId?: string;
+    bankAccountName?: string;
+    costCode?: string;
+    referenceNo?: string;
+    category?: string;
+    notes?: string;
+    files?: File[];
+  }) => {
+    const isIncome = [
+      'Payment In', 'Debit Note', 'Sales Invoice', 
+      'Material Sales', 'Material Return', 'Upload Payments'
+    ].includes(txData.transactionType);
+    const type: 'INCOME' | 'EXPENSE' = isIncome ? 'INCOME' : 'EXPENSE';
+
+    const dObj = new Date(txData.date);
+    const day = String(dObj.getDate()).padStart(2, '0');
+    const month = dObj.toLocaleDateString('en-GB', { month: 'short' });
+    const year = String(dObj.getFullYear());
+    const formattedDate = `${day} ${month} ${year.slice(-2)}`;
+
+    const modeMapping: FinanceTransaction['mode'] = 
+      txData.paymentMethod === 'Bank Transfer' ? 'NEFT/RTGS' :
+      txData.paymentMethod === 'Cheque' ? 'CHEQUE' : 'CASH';
+
+    const newTx: FinanceTransaction = {
+      id: `tx-${Date.now()}`,
+      txnCode: txData.voucherNo,
+      date: formattedDate,
+      type,
+      partyName: txData.partyName,
+      projectName: txData.projectName,
+      category: txData.costCode || txData.transactionType,
+      amount: txData.amount,
+      mode: modeMapping,
+      referenceNo: txData.referenceNo || `REF-${Date.now().toString().slice(-6)}`,
+      status: 'Completed',
+      transactionType: txData.transactionType,
+      costCode: txData.costCode,
+      notes: txData.notes
+    };
+
+    // 1. Update Transactions state & localStorage
+    setTransactions(prev => {
+      const updated = [newTx, ...prev];
+      try {
+        localStorage.setItem('booshnam_finance_transactions', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+
+    // 2. Ensure party exists or update party balances
+    let matchedParty = parties.find(p => p.name.trim().toLowerCase() === txData.partyName.trim().toLowerCase());
+    if (!matchedParty) {
+      matchedParty = ensurePartyExists(txData.partyName, txData.projectName, isIncome ? 'Client' : 'Vendor');
+      const latestParties = getFinanceParties();
+      setParties(latestParties);
+      matchedParty = latestParties.find(p => p.id === matchedParty!.id) || matchedParty;
+    } else {
+      setParties(prev => {
+        const next = prev.map(p => {
+          if (p.id === matchedParty!.id) {
+            const amt = txData.amount;
+            let newBal = p.balanceDue;
+            let newPaid = (p.totalPaid || 0) + amt;
+            let newBilled = p.totalBilled || 0;
+
+            if (p.type === 'Client') {
+              if (txData.transactionType === 'Sales Invoice' || txData.transactionType === 'Material Sales') {
+                newBilled += amt;
+                newBal = Math.max(0, newBilled - (p.totalPaid || 0));
+              } else {
+                newBal = Math.max(0, (newBilled || p.balanceDue || 0) - amt);
+              }
+            } else {
+              if (isIncome) {
+                newBal = Math.max(0, p.balanceDue - amt);
+              } else {
+                newBal = Math.max(0, p.balanceDue + (txData.transactionType.includes('Bill') || txData.transactionType.includes('Purchase') ? amt : -amt));
+              }
+            }
+
+            const partyStatus: PartyRecord['status'] = newBal === 0 
+              ? 'Settled' 
+              : (p.type === 'Client' ? 'To Receive' : 'To Pay');
+
+            return {
+              ...p,
+              totalPaid: newPaid,
+              totalBilled: newBilled,
+              balanceDue: newBal,
+              status: partyStatus
+            };
+          }
+          return p;
+        });
+        saveFinanceParties(next);
+        return next;
+      });
+    }
+
+    // 3. Add to Party Ledger
+    if (matchedParty) {
+      const partyLedgerEntry: PartyLedgerTransaction = {
+        id: `ptx-${Date.now()}`,
+        partyId: matchedParty.id,
+        partyName: matchedParty.name,
+        date: `${day} ${month} ${year}`,
+        day,
+        month,
+        year,
+        title: `${txData.transactionType} (${txData.paymentMethod})`,
+        projectName: txData.projectName,
+        category: txData.costCode || txData.transactionType,
+        notes: `Voucher: ${txData.voucherNo}${txData.costCode ? ` • Cost Code: ${txData.costCode}` : ''}${txData.referenceNo ? ` • Ref: ${txData.referenceNo}` : ''}`,
+        amount: txData.amount,
+        type: isIncome 
+          ? (txData.transactionType.includes('Sales') ? 'SALES_INVOICE' : 'PAYMENT_IN') 
+          : (txData.transactionType.includes('Bill') || txData.transactionType.includes('Purchase') ? 'EXPENSE' : 'PAYMENT_OUT')
+      };
+
+      setPartyTransactions(prev => {
+        const next = {
+          ...prev,
+          [matchedParty!.id]: [partyLedgerEntry, ...(prev[matchedParty!.id] || [])]
+        };
+        try {
+          localStorage.setItem('booshnam_party_transactions_v2', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    // 4. Update Bank Account Balance if Bank Transfer or Cash
+    if (txData.paymentMethod === 'Bank Transfer' && txData.bankAccountId) {
+      setBankAccounts(prev => {
+        const next = prev.map(b => {
+          if (b.id === txData.bankAccountId) {
+            return {
+              ...b,
+              balance: isIncome ? b.balance + txData.amount : Math.max(0, b.balance - txData.amount)
+            };
+          }
+          return b;
+        });
+        try {
+          localStorage.setItem('booshnam_finance_bank_accounts_v4', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    // 5. If Expense, sync to Expenses tab
+    if (!isIncome) {
+      let expCategory: ExpenseItem['category'] = 'Site Petty Cash';
+      const cLower = (txData.costCode || txData.transactionType || '').toLowerCase();
+      if (cLower.includes('material')) expCategory = 'Materials';
+      else if (cLower.includes('sub con') || cLower.includes('subcontractor')) expCategory = 'Subcontractor';
+      else if (cLower.includes('machinery') || cLower.includes('equipment')) expCategory = 'Machinery & Equipment';
+      else if (cLower.includes('labour') || cLower.includes('wage')) expCategory = 'Labour & Daily Wages';
+      else if (cLower.includes('fuel') || cLower.includes('logistics')) expCategory = 'Fuel & Logistics';
+      else if (cLower.includes('safety') || cLower.includes('compliance')) expCategory = 'Safety & Compliance';
+      else if (cLower.includes('util') || cLower.includes('admin')) expCategory = 'Utilities & Admin';
+      else expCategory = 'Site Petty Cash';
+
+      const expMode: ExpenseItem['paymentMode'] = 
+        txData.paymentMethod === 'Bank Transfer' ? 'NEFT/RTGS' :
+        txData.paymentMethod === 'Cheque' ? 'Cheque' : 'Petty Cash';
+
+      const expItem: ExpenseItem = {
+        id: `exp-${Date.now()}`,
+        expenseCode: txData.voucherNo.replace('#', ''),
+        date: formattedDate,
+        title: `${txData.transactionType} - ${txData.partyName}`,
+        category: expCategory,
+        amount: txData.amount,
+        projectName: txData.projectName,
+        partyOrVendorName: txData.partyName,
+        paidFromAccount: txData.bankAccountName || (txData.paymentMethod === 'Cash' ? 'Cash in Hand' : 'Primary Account'),
+        paymentMode: expMode,
+        status: 'Paid',
+        referenceNo: txData.referenceNo || txData.voucherNo
+      };
+      setExpenses(prev => {
+        const next = [expItem, ...prev];
+        try {
+          localStorage.setItem('booshnam_finance_expenses_v1', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+
+    // 6. Sync to Project Transactions in localStorage
+    try {
+      const rawProjs = localStorage.getItem('booshnam_project_transactions');
+      const allProjTxns: Record<string, any[]> = rawProjs ? JSON.parse(rawProjs) : {};
+      const projKey = txData.projectId || txData.projectName;
+      const existingList = allProjTxns[projKey] || allProjTxns[txData.projectName] || [];
+
+      const projTx = {
+        id: `ptx-${Date.now()}`,
+        transaction_number: txData.voucherNo,
+        date: txData.date,
+        type: isIncome ? 'IN' : 'OUT',
+        amount: txData.amount,
+        payment_mode: txData.paymentMethod,
+        party_name: txData.partyName,
+        transaction_sub_type: txData.transactionType,
+        category: txData.costCode || txData.transactionType,
+        reference_no: txData.referenceNo || txData.voucherNo,
+        notes: txData.notes || `${txData.transactionType} for ${txData.projectName}`,
+        status: 'VERIFIED'
+      };
+
+      allProjTxns[projKey] = [projTx, ...existingList];
+      if (projKey !== txData.projectName) {
+        allProjTxns[txData.projectName] = [projTx, ...(allProjTxns[txData.projectName] || [])];
+      }
+      localStorage.setItem('booshnam_project_transactions', JSON.stringify(allProjTxns));
+    } catch (err) {
+      console.error('Failed to sync to project transactions:', err);
+    }
+
+    // 7. Dispatch events so all tabs & modules update in real-time
+    window.dispatchEvent(new CustomEvent('booshnam_finance_updated'));
+    window.dispatchEvent(new Event('storage'));
+
+    if (onShowToast) {
+      onShowToast(`Recorded ${txData.transactionType} (${txData.voucherNo}) of ₹${txData.amount.toLocaleString('en-IN')} for ${txData.partyName}`);
     }
   };
 
@@ -1655,6 +2040,75 @@ const toIsoDate = (displayStr: string) => {
       localStorage.setItem('booshnam_finance_transfers_v1', JSON.stringify(transfers));
     } catch {}
   }, [transfers]);
+
+  // Real-time synchronization when transactions or parties are added from Project Workspace
+  useEffect(() => {
+    const handleFinanceUpdated = () => {
+      try {
+        const saved = localStorage.getItem('booshnam_finance_parties');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setParties(parsed);
+        }
+      } catch {}
+      try {
+        const savedTx = localStorage.getItem('booshnam_finance_transactions');
+        if (savedTx) {
+          const parsed = JSON.parse(savedTx);
+          if (Array.isArray(parsed)) setTransactions(parsed);
+        }
+      } catch {}
+      try {
+        const savedPR = localStorage.getItem('booshnam_finance_payment_requests');
+        if (savedPR) {
+          const parsed = JSON.parse(savedPR);
+          if (Array.isArray(parsed)) setPaymentRequests(parsed);
+        }
+      } catch {}
+      try {
+        const savedPTx = localStorage.getItem('booshnam_party_transactions_v2');
+        if (savedPTx) {
+          const parsed = JSON.parse(savedPTx);
+          if (parsed && typeof parsed === 'object') setPartyTransactions(parsed);
+        }
+      } catch {}
+      try {
+        const savedSumm = localStorage.getItem('booshnam_party_summaries');
+        if (savedSumm) {
+          const parsed = JSON.parse(savedSumm);
+          if (parsed && typeof parsed === 'object') setPartySummaries(parsed);
+        }
+      } catch {}
+      try {
+        const savedBanks = localStorage.getItem('booshnam_finance_bank_accounts_v4');
+        if (savedBanks) {
+          const parsed = JSON.parse(savedBanks);
+          if (Array.isArray(parsed)) setBankAccounts(parsed);
+        }
+      } catch {}
+      try {
+        const savedStmts = localStorage.getItem('booshnam_statement_transactions_v1');
+        if (savedStmts) {
+          const parsed = JSON.parse(savedStmts);
+          if (Array.isArray(parsed)) setStatementTransactions(parsed);
+        }
+      } catch {}
+      try {
+        const savedExps = localStorage.getItem('booshnam_finance_expenses_v1');
+        if (savedExps) {
+          const parsed = JSON.parse(savedExps);
+          if (Array.isArray(parsed)) setExpenses(parsed);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleFinanceUpdated);
+    window.addEventListener('booshnam_finance_updated', handleFinanceUpdated);
+    return () => {
+      window.removeEventListener('storage', handleFinanceUpdated);
+      window.removeEventListener('booshnam_finance_updated', handleFinanceUpdated);
+    };
+  }, []);
 
   // Account Transfers Filters & Search State
   const [transferSearchQuery, setTransferSearchQuery] = useState('');
@@ -1917,12 +2371,102 @@ const toIsoDate = (displayStr: string) => {
 
   const totalPendingNotifications = pendingPaymentRequests.length + pendingExpenses.length;
 
+  // Helper to ensure 100% of transactions accurately map to one of the 15 Create Transaction types
+  const inferTransactionType = (t: FinanceTransaction): string => {
+    if (t.transactionType && t.transactionType.trim()) {
+      return t.transactionType.trim();
+    }
+    const cat = (t.category || '').toLowerCase();
+    const notes = (t.notes || '').toLowerCase();
+    const code = (t.txnCode || '').toLowerCase();
+
+    if (cat.includes('debit note') || notes.includes('debit note')) return 'Debit Note';
+    if (cat.includes('credit note') || notes.includes('credit note')) return 'Credit Note';
+    if (cat.includes('party to party') || notes.includes('party to party')) return 'Party to Party Payment';
+    if (cat.includes('internal transfer') || notes.includes('internal transfer')) return 'Internal Transfer';
+    if (cat.includes('upload payment') || notes.includes('upload payment')) return 'Upload Payments';
+    if (cat.includes('material sale') || notes.includes('material sale')) return 'Material Sales';
+    if (cat.includes('material return') || notes.includes('material return')) return 'Material Return';
+    if (cat.includes('material transfer') || notes.includes('material transfer')) return 'Material Transfer';
+    if (cat.includes('sub con') || cat.includes('subcontractor') || notes.includes('sub con')) return 'Sub Con Bill';
+    if (cat.includes('equipment') || cat.includes('machinery') || notes.includes('machinery') || notes.includes('equipment')) return 'Equipment Expense';
+    if (cat.includes('material') || cat.includes('purchase')) return 'Material Purchase';
+    if (cat.includes('sale') || cat.includes('invoice') || notes.includes('invoice') || code.includes('inv')) return 'Sales Invoice';
+    if (cat.includes('other expense') || cat.includes('general') || cat.includes('admin') || cat.includes('petty cash')) return 'Other Expense';
+
+    if (t.type === 'INCOME') return 'Payment In';
+    return 'Payment Out';
+  };
+
+  // Transaction counts per type for filter dropdown badges
+  const txnTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const t of transactions) {
+      const type = inferTransactionType(t);
+      counts[type] = (counts[type] || 0) + 1;
+    }
+    return counts;
+  }, [transactions]);
+
+  // Filtered transactions for the Transaction tab
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      // 1. Transaction Type filter (Categorized with ALL options from Create Transaction)
+      if (txnTypeFilter !== 'All') {
+        const inferred = inferTransactionType(t);
+        const matchType = (t.transactionType || '').toLowerCase().trim();
+        const matchCat = (t.category || '').toLowerCase().trim();
+        const target = txnTypeFilter.toLowerCase().trim();
+
+        const isExactInferred = inferred.toLowerCase() === target;
+        const isExactType = matchType === target;
+        const isCatMatch = matchCat === target || matchCat.includes(target);
+
+        if (!isExactInferred && !isExactType && !isCatMatch) {
+          return false;
+        }
+      }
+
+      // 2. Project filter
+      if (txnProjectFilter !== 'All') {
+        if ((t.projectName || '').toLowerCase() !== txnProjectFilter.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 3. Mode filter
+      if (txnModeFilter !== 'All') {
+        const m = (t.mode || '').toLowerCase();
+        const targetM = txnModeFilter.toLowerCase();
+        if (!m.includes(targetM)) return false;
+      }
+
+      // 4. Search query
+      if (txnSearchQuery.trim()) {
+        const q = txnSearchQuery.toLowerCase().trim();
+        const mCode = (t.txnCode || '').toLowerCase().includes(q);
+        const mParty = (t.partyName || '').toLowerCase().includes(q);
+        const mProj = (t.projectName || '').toLowerCase().includes(q);
+        const mRef = (t.referenceNo || '').toLowerCase().includes(q);
+        const mCat = (t.category || '').toLowerCase().includes(q);
+        const mType = (t.transactionType || '').toLowerCase().includes(q);
+        const mInferred = inferTransactionType(t).toLowerCase().includes(q);
+        if (!mCode && !mParty && !mProj && !mRef && !mCat && !mType && !mInferred) return false;
+      }
+
+      return true;
+    });
+  }, [transactions, txnTypeFilter, txnProjectFilter, txnModeFilter, txnSearchQuery]);
+
   // Transaction metrics for project cashbook
   const transactionMetrics = useMemo(() => {
-    const totalInflow = transactions
+    const listToCount = (txnTypeFilter !== 'All' || txnProjectFilter !== 'All' || txnModeFilter !== 'All' || txnSearchQuery) 
+      ? filteredTransactions 
+      : transactions;
+    const totalInflow = listToCount
       .filter(t => t.type === 'INCOME')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const totalOutflow = transactions
+    const totalOutflow = listToCount
       .filter(t => t.type === 'EXPENSE')
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const netOperatingCash = totalInflow - totalOutflow;
@@ -1930,10 +2474,10 @@ const toIsoDate = (displayStr: string) => {
       totalInflow,
       totalOutflow,
       netOperatingCash,
-      inflowCount: transactions.filter(t => t.type === 'INCOME').length,
-      outflowCount: transactions.filter(t => t.type === 'EXPENSE').length,
+      inflowCount: listToCount.filter(t => t.type === 'INCOME').length,
+      outflowCount: listToCount.filter(t => t.type === 'EXPENSE').length,
     };
-  }, [transactions]);
+  }, [transactions, filteredTransactions, txnTypeFilter, txnProjectFilter, txnModeFilter, txnSearchQuery]);
 
   // Handle Delete / Archive Account
   const handleDeleteAccount = (accId: string, accName: string) => {
@@ -1952,16 +2496,23 @@ const toIsoDate = (displayStr: string) => {
     const pName = p.name.trim().toLowerCase();
     const pId = p.id;
 
-    // Direct ledger transactions
-    const ledgers = partyTransactions[pId] || [];
-    const ledgerPaidIn = ledgers.filter(t => t.type === 'PAYMENT_IN').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const ledgerPaidOut = ledgers.filter(t => t.type === 'PAYMENT_OUT' || t.type === 'EXPENSE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-    const ledgerSales = ledgers.filter(t => t.type === 'SALES_INVOICE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
-
     // Cashbook transactions
     const matchedTxns = transactions.filter(t => t.partyName && t.partyName.trim().toLowerCase() === pName);
     const txnIncome = matchedTxns.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const txnExpense = matchedTxns.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    // Direct ledger transactions (excluding any ledger entries that mirror cashbook transactions)
+    const txCodes = new Set(matchedTxns.map(t => t.txnCode?.toLowerCase()).filter(Boolean));
+    const txIds = new Set(matchedTxns.map(t => t.id));
+    const nonTxnLedgers = (partyTransactions[pId] || []).filter(t => {
+      if (txIds.has(t.id.replace(/^ptx-/, '')) || txIds.has(t.id)) return false;
+      if (t.notes && t.notes.includes('Cashbook Txn') && Array.from(txCodes).some(c => t.notes?.toLowerCase().includes(c))) return false;
+      return true;
+    });
+
+    const ledgerPaidIn = nonTxnLedgers.filter(t => t.type === 'PAYMENT_IN').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const ledgerPaidOut = nonTxnLedgers.filter(t => t.type === 'PAYMENT_OUT' || t.type === 'EXPENSE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+    const ledgerSales = nonTxnLedgers.filter(t => t.type === 'SALES_INVOICE').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     // Payment requests
     const matchedPRs = paymentRequests.filter(r => r.partyName && r.partyName.trim().toLowerCase() === pName);
@@ -2002,7 +2553,7 @@ const toIsoDate = (displayStr: string) => {
       status,
       totalPaid,
       totalBilled,
-      totalActivityCount: ledgers.length + matchedTxns.length + matchedPRs.length + matchedExps.length
+      totalActivityCount: nonTxnLedgers.length + matchedTxns.length + matchedPRs.length + matchedExps.length
     };
   };
 
@@ -2021,7 +2572,13 @@ const toIsoDate = (displayStr: string) => {
 
     // 1. Direct party ledger transactions
     const directTxns = partyTransactions[pId] || [];
+    const directTxnCodes = new Set(transactions.map(t => t.txnCode?.toLowerCase()).filter(Boolean));
+    const directTxnIds = new Set(transactions.map(t => t.id));
     directTxns.forEach(t => {
+      const isAlreadyInCashbook = directTxnIds.has(t.id.replace(/^ptx-/, '')) || directTxnIds.has(t.id) ||
+        (t.notes && t.notes.includes('Cashbook Txn') && Array.from(directTxnCodes).some(c => t.notes?.toLowerCase().includes(c)));
+      if (isAlreadyInCashbook) return;
+
       items.push({
         id: t.id,
         source: 'LEDGER',
@@ -2397,26 +2954,39 @@ const toIsoDate = (displayStr: string) => {
                   )}
                 </div>
 
-                {/* Quick Status Pills */}
-                <div className="hidden lg:flex items-center gap-1.5 pl-2">
-                  {(['All', 'Paid', 'Approved', 'Pending', 'Rejected'] as const).map(st => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setStatusFilter(st)}
-                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all cursor-pointer ${
-                        statusFilter === st 
-                          ? 'bg-red-600 text-white shadow-2xs' 
-                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                      }`}
-                    >
-                      {st}
-                    </button>
-                  ))}
+                {/* Quick Status Filter Pills (Matching User Voice Instructions: All, Unpaid, Paid, On Hold) */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {(['All', 'Unpaid', 'Paid', 'On Hold'] as const).map(st => {
+                    const count = st === 'All' 
+                      ? paymentRequests.length 
+                      : st === 'Unpaid' 
+                      ? paymentRequests.filter(r => r.status === 'Unpaid' || r.status === 'Pending').length
+                      : paymentRequests.filter(r => r.status === st).length;
+
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setStatusFilter(st)}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                          statusFilter === st 
+                            ? 'bg-red-600 text-white shadow-2xs' 
+                            : 'bg-white text-slate-700 hover:bg-red-50 hover:text-red-700 border border-slate-200'
+                        }`}
+                      >
+                        <span>{st}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                          statusFilter === st ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Right: Payment Request Action Button (purple matching screenshot) */}
+              {/* Right: Payment Request Action Button */}
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
@@ -2439,10 +3009,9 @@ const toIsoDate = (displayStr: string) => {
                     onChange={(val) => setStatusFilter(val as any)}
                     options={[
                       { label: 'All Statuses', value: 'All' },
+                      { label: 'Unpaid', value: 'Unpaid', dotColor: 'bg-rose-500' },
                       { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
-                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
-                      { label: 'Pending', value: 'Pending', dotColor: 'bg-amber-500' },
-                      { label: 'Rejected', value: 'Rejected', dotColor: 'bg-rose-500' },
+                      { label: 'On Hold', value: 'On Hold', dotColor: 'bg-amber-500' },
                     ]}
                     size="sm"
                     variant="brand"
@@ -2557,12 +3126,12 @@ const toIsoDate = (displayStr: string) => {
                         <div className="mt-1">
                           <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${
                             req.status === 'Paid'
-                              ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
-                              : req.status === 'Approved'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : req.status === 'Pending'
+                              : req.status === 'On Hold'
                               ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-red-50 text-red-600 border border-red-200'
+                              : req.status === 'Approved'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : 'bg-rose-50 text-rose-600 border border-rose-200'
                           }`}>
                             {req.status}
                           </span>
@@ -2844,6 +3413,17 @@ const toIsoDate = (displayStr: string) => {
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteParty(p.id, p.name);
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                            title="Delete Party"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     );
@@ -2941,6 +3521,15 @@ const toIsoDate = (displayStr: string) => {
                         title="Download Party Statement CSV"
                       >
                         <Download className="w-5 h-5 stroke-[2]" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteParty(currentParty.id, currentParty.name)}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Party"
+                      >
+                        <Trash2 className="w-5 h-5 stroke-[2]" />
                       </button>
                     </div>
                   </div>
@@ -3210,11 +3799,14 @@ const toIsoDate = (displayStr: string) => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsRecordTxnModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                onClick={() => {
+                  setCreateTxnFlowStep('menu');
+                  setIsCreateTxnFlowOpen(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Record Transaction</span>
+                <span>Create Transaction</span>
+                <Plus className="w-4 h-4 stroke-[2.5]" />
               </button>
             </div>
 
@@ -3241,6 +3833,156 @@ const toIsoDate = (displayStr: string) => {
               </div>
             </div>
 
+            {/* Comprehensive Filter Bar matching user request with ALL Create Transaction Options */}
+            <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-3">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                {/* Search query */}
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={txnSearchQuery}
+                    onChange={e => setTxnSearchQuery(e.target.value)}
+                    placeholder="Search voucher #, party name, project, reference..."
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 text-slate-800"
+                  />
+                  {txnSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setTxnSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Selectors Row */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* TRANSACTION TYPE FILTER: All Create Transaction Options categorized */}
+                  <div className="relative min-w-[200px]">
+                    <select
+                      value={txnTypeFilter}
+                      onChange={e => setTxnTypeFilter(e.target.value)}
+                      className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none transition-colors ${
+                        txnTypeFilter !== 'All' 
+                          ? 'border-red-600 text-red-600 bg-red-50/60' 
+                          : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <option value="All">All Transaction Types ({transactions.length})</option>
+                      
+                      <optgroup label="─── PAYMENT ───">
+                        <option value="Payment In">Payment In (Receipt) {txnTypeCounts['Payment In'] ? `(${txnTypeCounts['Payment In']})` : ''}</option>
+                        <option value="Payment Out">Payment Out (Disbursement) {txnTypeCounts['Payment Out'] ? `(${txnTypeCounts['Payment Out']})` : ''}</option>
+                        <option value="Debit Note">Debit Note {txnTypeCounts['Debit Note'] ? `(${txnTypeCounts['Debit Note']})` : ''}</option>
+                        <option value="Credit Note">Credit Note {txnTypeCounts['Credit Note'] ? `(${txnTypeCounts['Credit Note']})` : ''}</option>
+                        <option value="Party to Party Payment">Party to Party Payment {txnTypeCounts['Party to Party Payment'] ? `(${txnTypeCounts['Party to Party Payment']})` : ''}</option>
+                        <option value="Internal Transfer">Internal Transfer {txnTypeCounts['Internal Transfer'] ? `(${txnTypeCounts['Internal Transfer']})` : ''}</option>
+                        <option value="Upload Payments">Upload Payments {txnTypeCounts['Upload Payments'] ? `(${txnTypeCounts['Upload Payments']})` : ''}</option>
+                      </optgroup>
+
+                      <optgroup label="─── SALES ───">
+                        <option value="Sales Invoice">Sales Invoice {txnTypeCounts['Sales Invoice'] ? `(${txnTypeCounts['Sales Invoice']})` : ''}</option>
+                        <option value="Material Sales">Material Sales {txnTypeCounts['Material Sales'] ? `(${txnTypeCounts['Material Sales']})` : ''}</option>
+                      </optgroup>
+
+                      <optgroup label="─── EXPENSE ───">
+                        <option value="Material Purchase">Material Purchase {txnTypeCounts['Material Purchase'] ? `(${txnTypeCounts['Material Purchase']})` : ''}</option>
+                        <option value="Material Return">Material Return {txnTypeCounts['Material Return'] ? `(${txnTypeCounts['Material Return']})` : ''}</option>
+                        <option value="Material Transfer">Material Transfer {txnTypeCounts['Material Transfer'] ? `(${txnTypeCounts['Material Transfer']})` : ''}</option>
+                        <option value="Sub Con Bill">Sub Con Bill {txnTypeCounts['Sub Con Bill'] ? `(${txnTypeCounts['Sub Con Bill']})` : ''}</option>
+                        <option value="Other Expense">Other Expense {txnTypeCounts['Other Expense'] ? `(${txnTypeCounts['Other Expense']})` : ''}</option>
+                        <option value="Equipment Expense">Equipment Expense {txnTypeCounts['Equipment Expense'] ? `(${txnTypeCounts['Equipment Expense']})` : ''}</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  {/* PROJECT FILTER */}
+                  <div className="relative min-w-[150px]">
+                    <select
+                      value={txnProjectFilter}
+                      onChange={e => setTxnProjectFilter(e.target.value)}
+                      className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none transition-colors ${
+                        txnProjectFilter !== 'All' 
+                          ? 'border-red-600 text-red-600 bg-red-50/60' 
+                          : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <option value="All">All Projects</option>
+                      {projects.map(p => (
+                        <option key={p.id} value={p.name}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* PAYMENT MODE FILTER */}
+                  <div className="relative min-w-[130px]">
+                    <select
+                      value={txnModeFilter}
+                      onChange={e => setTxnModeFilter(e.target.value)}
+                      className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border cursor-pointer focus:outline-none transition-colors ${
+                        txnModeFilter !== 'All' 
+                          ? 'border-red-600 text-red-600 bg-red-50/60' 
+                          : 'border-slate-200 text-slate-700 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <option value="All">All Modes</option>
+                      <option value="CASH">Cash</option>
+                      <option value="NEFT/RTGS">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                      <option value="UPI">UPI / Online</option>
+                    </select>
+                  </div>
+
+                  {/* Clear / Reset Filter Button */}
+                  {(txnTypeFilter !== 'All' || txnProjectFilter !== 'All' || txnModeFilter !== 'All' || txnSearchQuery) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTxnTypeFilter('All');
+                        setTxnProjectFilter('All');
+                        setTxnModeFilter('All');
+                        setTxnSearchQuery('');
+                      }}
+                      className="px-3 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Reset</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Filter Indicators */}
+              {(txnTypeFilter !== 'All' || txnProjectFilter !== 'All' || txnModeFilter !== 'All') && (
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Filters:</span>
+                  {txnTypeFilter !== 'All' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
+                      Type: {txnTypeFilter}
+                      <X className="w-3 h-3 cursor-pointer hover:text-red-900" onClick={() => setTxnTypeFilter('All')} />
+                    </span>
+                  )}
+                  {txnProjectFilter !== 'All' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
+                      Project: {txnProjectFilter}
+                      <X className="w-3 h-3 cursor-pointer hover:text-red-900" onClick={() => setTxnProjectFilter('All')} />
+                    </span>
+                  )}
+                  {txnModeFilter !== 'All' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
+                      Mode: {txnModeFilter}
+                      <X className="w-3 h-3 cursor-pointer hover:text-red-900" onClick={() => setTxnModeFilter('All')} />
+                    </span>
+                  )}
+                  <span className="text-[10px] text-slate-400 ml-auto">
+                    Showing {filteredTransactions.length} of {transactions.length} records
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Transactions Table */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
               <table className="w-full text-xs text-left">
@@ -3250,38 +3992,60 @@ const toIsoDate = (displayStr: string) => {
                     <th className="py-3 px-4 font-semibold">Voucher</th>
                     <th className="py-3 px-4 font-semibold">Type</th>
                     <th className="py-3 px-4 font-semibold">Party</th>
-                    <th className="py-3 px-4 font-semibold">Category</th>
+                    <th className="py-3 px-4 font-semibold">Project / Category</th>
                     <th className="py-3 px-4 font-semibold">Mode</th>
                     <th className="py-3 px-4 font-semibold text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {transactions.length === 0 ? (
+                  {filteredTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-400">
                         <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
                           <Receipt className="w-5 h-5" />
                         </div>
-                        <p className="font-semibold text-slate-700">No project transactions recorded</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">Click "Record Transaction" to record incoming receipts or disbursements.</p>
+                        <p className="font-semibold text-slate-700">
+                          {transactions.length === 0 ? 'No project transactions recorded' : 'No transactions matching selected filter'}
+                        </p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {transactions.length === 0 ? (
+                            'Click "Create Transaction" to record incoming receipts or disbursements.'
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTxnTypeFilter('All');
+                                setTxnProjectFilter('All');
+                                setTxnModeFilter('All');
+                                setTxnSearchQuery('');
+                              }}
+                              className="text-red-600 font-semibold hover:underline cursor-pointer"
+                            >
+                              Reset filters to view all {transactions.length} transactions
+                            </button>
+                          )}
+                        </p>
                       </td>
                     </tr>
                   ) : (
-                    transactions.map(t => (
+                    filteredTransactions.map(t => (
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-4 text-slate-600">{t.date}</td>
-                        <td className="py-3 px-4 font-medium text-slate-800">{t.txnCode}</td>
+                        <td className="py-3 px-4 font-mono font-medium text-slate-800">{t.txnCode}</td>
                         <td className="py-3 px-4">
                           <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
-                            t.type === 'INCOME' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                            t.type === 'INCOME' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
                           }`}>
-                            {t.type}
+                            {inferTransactionType(t)}
                           </span>
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-900">{t.partyName}</td>
-                        <td className="py-3 px-4 text-slate-600">{t.category}</td>
-                        <td className="py-3 px-4 text-slate-500">{t.mode}</td>
-                        <td className={`py-3 px-4 text-right font-bold ${
+                        <td className="py-3 px-4 text-slate-600">
+                          <div className="font-medium text-slate-800 truncate max-w-[180px]">{t.projectName || 'General Project'}</div>
+                          {t.category && <div className="text-[10px] text-slate-400 truncate max-w-[180px]">{t.category}</div>}
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 font-medium">{t.mode}</td>
+                        <td className={`py-3 px-4 text-right font-bold font-mono ${
                           t.type === 'INCOME' ? 'text-emerald-700' : 'text-slate-900'
                         }`}>
                           {t.type === 'INCOME' ? '+' : '-'} ₹{t.amount.toLocaleString('en-IN')}
@@ -4928,284 +5692,29 @@ const toIsoDate = (displayStr: string) => {
           4. MODALS & POPUPS
       ───────────────────────────────────────────────────────────── */}
 
-      {/* MODAL A: NEW PAYMENT REQUEST (as in screenshot) */}
-      {isNewRequestModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center">
-                  <Receipt className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">Create Payment Request</h3>
-              </div>
-              <button 
-                onClick={() => setIsNewRequestModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSavePaymentRequest} className="p-6 space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-slate-700">
-                    Party / Vendor Name *
-                  </label>
-                  {parties.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsCustomPRPartyInput(!isCustomPRPartyInput)}
-                      className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
-                    >
-                      {isCustomPRPartyInput ? '← Select registered party' : '+ Enter custom name'}
-                    </button>
-                  )}
-                </div>
-                {!isCustomPRPartyInput && parties.length > 0 ? (
-                  <CustomSelect
-                    value={newPartyName}
-                    onChange={(val) => setNewPartyName(val)}
-                    options={parties.map(p => ({
-                      label: p.name,
-                      value: p.name,
-                      badge: p.type,
-                      description: p.phone ? `${p.phone}` : undefined
-                    }))}
-                    placeholder="Select registered party..."
-                    size="md"
-                    variant="brand"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Vendor / Contractor Name"
-                    value={newPartyName}
-                    onChange={e => setNewPartyName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Amount (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="e.g. 5000"
-                    value={newAmount}
-                    onChange={e => setNewAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Voucher Date
-                  </label>
-                  <input
-                    type="text"
-                    value={newDate}
-                    onChange={e => setNewDate(e.target.value)}
-                    placeholder="e.g. 15 Oct 26"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Project Name / Allocation
-                </label>
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={e => setNewProjectName(e.target.value)}
-                  placeholder="e.g. Project Name / Code"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Category / Against
-                  </label>
-                  <CustomSelect
-                    value={newSubProjectText}
-                    onChange={val => setNewSubProjectText(val)}
-                    options={[
-                      'Against Other',
-                      'Against Material PO',
-                      'Against Machinery Hire',
-                      'Against Labour Bill',
-                      'Against Subcontractor Bill',
-                    ]}
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Status
-                  </label>
-                  <CustomSelect
-                    value={newStatus}
-                    onChange={(val) => setNewStatus(val as any)}
-                    options={[
-                      { label: 'Paid', value: 'Paid', dotColor: 'bg-emerald-500' },
-                      { label: 'Approved', value: 'Approved', dotColor: 'bg-blue-500' },
-                      { label: 'Pending', value: 'Pending', dotColor: 'bg-amber-500' },
-                    ]}
-                    align="right"
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Description / Purpose
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Details of expense, site work, or invoice reference..."
-                  value={newNotes}
-                  onChange={e => setNewNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsNewRequestModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-all cursor-pointer"
-                >
-                  Save Request
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ─── CREATE PAYMENT REQUEST 2-STEP FLOW (Images 1 & 2 Reference, Red & White Theme) ─── */}
+      <CreatePaymentRequestDrawerFlow
+        isOpen={isNewRequestModalOpen}
+        onClose={() => setIsNewRequestModalOpen(false)}
+        projects={projects}
+        parties={parties}
+        existingRequestsCount={paymentRequests.length}
+        onSaveSuccess={handleSavePaymentRequestFromFlow}
+      />
 
 
-      {/* MODAL B: PAYMENT REQUEST DETAILS */}
-      {selectedRequestDetails && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#198754] text-white flex flex-col items-center justify-center font-bold text-[10px]">
-                  <span>{selectedRequestDetails.date}</span>
-                  <Receipt className="w-3.5 h-3.5 text-white/90 mt-0.5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">{selectedRequestDetails.requestCode}</h3>
-                  <p className="text-xs text-slate-500">{selectedRequestDetails.partyName}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedRequestDetails(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs">
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/80 flex items-center justify-between">
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Request Amount</span>
-                  <span className="text-xl font-bold text-slate-900">
-                    ₹ {selectedRequestDetails.amount.toLocaleString('en-IN')}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[11px] text-right">Status</span>
-                  <span className={`inline-block text-xs font-bold px-2.5 py-0.5 rounded ${
-                    selectedRequestDetails.status === 'Paid'
-                      ? 'bg-[#FEF2F2] text-red-600 border border-red-200'
-                      : selectedRequestDetails.status === 'Approved'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-amber-50 text-amber-700 border border-amber-200'
-                  }`}>
-                    {selectedRequestDetails.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div>
-                  <span className="font-semibold text-slate-700 block">Project Description:</span>
-                  <p className="text-slate-600 font-medium">{selectedRequestDetails.projectName}</p>
-                </div>
-                <div>
-                  <span className="font-semibold text-slate-700 block">Category / Type:</span>
-                  <p className="text-slate-600">{selectedRequestDetails.subProjectText} ({selectedRequestDetails.category})</p>
-                </div>
-                {selectedRequestDetails.paymentMode && (
-                  <div>
-                    <span className="font-semibold text-slate-700 block">Disbursal Mode & Ref:</span>
-                    <p className="text-slate-600">{selectedRequestDetails.paymentMode} • Ref: {selectedRequestDetails.referenceNo || 'N/A'}</p>
-                  </div>
-                )}
-                {selectedRequestDetails.notes && (
-                  <div>
-                    <span className="font-semibold text-slate-700 block">Remarks:</span>
-                    <p className="text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">{selectedRequestDetails.notes}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Actions */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (onShowToast) onShowToast(`Voucher ${selectedRequestDetails.requestCode} downloaded`);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Voucher</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  {selectedRequestDetails.status !== 'Paid' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentRequests(prev => prev.map(r => r.id === selectedRequestDetails.id ? { ...r, status: 'Paid', paidDate: 'Today' } : r));
-                        setSelectedRequestDetails(null);
-                        if (onShowToast) onShowToast(`Marked ${selectedRequestDetails.requestCode} as Paid`);
-                      }}
-                      className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg cursor-pointer"
-                    >
-                      Mark as Paid
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─── PAYMENT REQUEST OVERVIEW DRAWER (Exact match to Image 4, Red & White Theme) ─── */}
+      <PaymentRequestOverviewDrawer
+        isOpen={Boolean(selectedRequestDetails)}
+        onClose={() => setSelectedRequestDetails(null)}
+        request={selectedRequestDetails}
+        onStatusChange={handleUpdatePaymentRequestStatus}
+        onRecordPayment={handleRecordPaymentFromDrawer}
+        onDelete={(id) => {
+          setPaymentRequests(prev => prev.filter(r => r.id !== id));
+          if (onShowToast) onShowToast('Payment request deleted');
+        }}
+      />
 
 
       {/* MODAL C: BOOK DEMO */}
@@ -5750,6 +6259,18 @@ const toIsoDate = (displayStr: string) => {
         </div>
       )}
 
+
+      {/* ─── CREATE TRANSACTION FLOW (Images 1, 2, 3 Reference) ─── */}
+      <CreateTransactionModalFlow
+        isOpen={isCreateTxnFlowOpen}
+        currentStep={createTxnFlowStep}
+        onClose={() => setIsCreateTxnFlowOpen(false)}
+        projects={projects}
+        parties={parties}
+        bankAccounts={bankAccounts}
+        existingTransactionsCount={transactions.length}
+        onSaveSuccess={handleSaveTransactionFromFlow}
+      />
 
       {/* ─── ADD ACCOUNT DRAWER (Side Navigation Bar matching Reference) ─── */}
       <AddAccountDrawer

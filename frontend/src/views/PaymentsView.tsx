@@ -10,6 +10,7 @@ import { MOCK_PAYMENT_REQUESTS, MOCK_PROJECT_TRANSACTIONS, MOCK_PROJECTS } from 
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
 import { addNotification } from '../lib/notificationService';
+import { CreatePaymentRequestDrawerFlow, PaymentRequestSubmitData } from '../components/finance/CreatePaymentRequestDrawerFlow';
 
 interface PaymentsViewProps {
   projects?: Project[];
@@ -184,6 +185,32 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     setReqVendor('');
     setReqPurpose('');
     onShowToast?.(`Payment request ${newReq.request_code} submitted for supervisory audit!`);
+  };
+
+  // 2-Step Payment Request Flow handler
+  const handleSavePaymentRequestFromFlow = (reqData: PaymentRequestSubmitData) => {
+    const matchedProj = projects.find(p => p.name === reqData.projectName);
+    const newReq: ProjectPaymentRequest = {
+      id: `pay-${Date.now()}`,
+      project_id: matchedProj?.id || (projects[0]?.id || ''),
+      request_code: reqData.requestCode,
+      requested_by: 'Site Engineer',
+      requested_by_name: 'Site Engineer',
+      requested_by_role: 'Site Engineer',
+      request_date: reqData.date || new Date().toISOString().split('T')[0],
+      date: reqData.date || new Date().toISOString().split('T')[0],
+      amount: reqData.amount,
+      category: 'MATERIAL',
+      vendor_name: reqData.partyName,
+      purpose_description: reqData.notes || `${reqData.category} - ${reqData.partyName}`,
+      description: reqData.notes || `${reqData.category} - ${reqData.partyName}`,
+      status: 'PENDING_SUPERVISOR'
+    };
+
+    setPaymentRequests(prev => [newReq, ...prev]);
+    setIsNewRequestModalOpen(false);
+
+    onShowToast?.(`Payment Request ${reqData.requestCode} submitted for supervisory audit!`);
   };
 
   // Submit Record Transaction
@@ -513,97 +540,14 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
       </div>
 
-      {/* MODAL 1: Create New Payment Request (Site Engineer) */}
-      {isNewRequestModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-indigo-600" />
-                <span>Submit Field Payment Request</span>
-              </h3>
-              <button 
-                onClick={() => setIsNewRequestModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateRequest} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Vendor / Subcontractor / Beneficiary *</label>
-                <input
-                  type="text"
-                  value={reqVendor}
-                  onChange={(e) => setReqVendor(e.target.value)}
-                  placeholder="e.g. UltraTech Ready-Mix Depot or Geotech Lab"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Requested Amount (₹) *</label>
-                  <input
-                    type="number"
-                    value={reqAmount}
-                    onChange={(e) => setReqAmount(e.target.value)}
-                    placeholder="e.g. 75000"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1 text-xs">Cost Category</label>
-                  <CustomSelect
-                    value={reqCategory}
-                    onChange={(val) => setReqCategory(val as any)}
-                    options={[
-                      { label: 'Material Purchase', value: 'MATERIAL' },
-                      { label: 'Labor Muster Roll', value: 'LABOUR' },
-                      { label: 'Machinery / RMC Hire', value: 'MACHINERY' },
-                      { label: 'Subcontractor', value: 'SUBCONTRACTOR' },
-                      { label: 'Site Operational', value: 'SITE_EXPENSE' },
-                    ]}
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Purpose & Justification</label>
-                <textarea
-                  value={reqPurpose}
-                  onChange={(e) => setReqPurpose(e.target.value)}
-                  rows={3}
-                  placeholder="Describe delivery challan #, work done, or urgent site requirement..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                  required
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsNewRequestModalOpen(false)}
-                  className="px-3 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold cursor-pointer"
-                >
-                  Submit for Approval
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* ─── CREATE PAYMENT REQUEST 2-STEP FLOW (Images 1 & 2 Reference, Red & White Theme) ─── */}
+      <CreatePaymentRequestDrawerFlow
+        isOpen={isNewRequestModalOpen}
+        onClose={() => setIsNewRequestModalOpen(false)}
+        projects={projects}
+        existingRequestsCount={paymentRequests.length}
+        onSaveSuccess={handleSavePaymentRequestFromFlow}
+      />
 
       {/* MODAL 2: Record Financial Transaction (Accounts) */}
       {isRecordTxnModalOpen && (

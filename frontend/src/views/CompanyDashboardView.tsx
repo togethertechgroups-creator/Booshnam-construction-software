@@ -1479,10 +1479,11 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   </div>
                   <button
                     onClick={() => setIsUnderlyingPageView(false)}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                    className="p-2 text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-colors cursor-pointer flex items-center justify-center"
+                    title="Return to Dashboard"
+                    aria-label="Return to Dashboard"
                   >
                     <ArrowLeft className="w-4 h-4 text-slate-600" />
-                    <span>Return to Dashboard</span>
                   </button>
                 </div>
               </div>
@@ -1684,10 +1685,11 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               </div>
               <button
                 onClick={() => setIsUnderlyingHealthPageView(false)}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                className="p-2 text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg shadow-2xs transition-colors cursor-pointer flex items-center justify-center"
+                title="Return to Dashboard"
+                aria-label="Return to Dashboard"
               >
                 <ArrowLeft className="w-4 h-4 text-slate-600" />
-                <span>Return to Dashboard</span>
               </button>
             </div>
           </div>

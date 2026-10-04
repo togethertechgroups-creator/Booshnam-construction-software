@@ -385,6 +385,7 @@ export function logoutUser(): void {
 export function isPageAllowedForActiveUser(pageId: string): boolean {
   const account = getCurrentUserAccount();
   if (!account) return true;
+  if (account.role_code === 'SUPER_ADMIN' || account.role_code === 'ADMIN' || account.username === 'admin' || account.username === 'superadmin') return true;
 
   // Normalization for aliases
   let targetId = pageId;
@@ -396,7 +397,12 @@ export function isPageAllowedForActiveUser(pageId: string): boolean {
   if (pageId === 'report') targetId = 'site_ops';
   if (pageId === 'library') targetId = 'documents';
   if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
+  if (pageId === 'timesheet' || pageId === 'team_schedule' || pageId === 'schedule_timesheet') targetId = 'schedule';
   if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
+
+  if (targetId === 'schedule') {
+    return account.role_code !== 'CLIENT';
+  }
 
   // 1. Strictly enforce dynamic role permissions configured in Roles & Granular Permissions
   const rolePermissions = getStoredRolePermissions();

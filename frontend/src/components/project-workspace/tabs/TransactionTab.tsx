@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   DollarSign, Plus, ArrowUpRight, ArrowDownRight, Search, 
   Filter, Check, X, FileText, Calendar, Wallet, SlidersHorizontal,
@@ -8,6 +8,12 @@ import {
 } from 'lucide-react';
 import { Project, ProjectTransaction, PaymentRequest } from '../../../types';
 import { addNotification } from '../../../lib/notificationService';
+import { 
+  getFinanceParties, 
+  syncProjectTransactionToFinance, 
+  syncProjectPaymentRequestToFinance, 
+  PartyRecord 
+} from '../../../lib/financeSyncService';
 
 interface TransactionTabProps {
   project: Project;
@@ -15,14 +21,16 @@ interface TransactionTabProps {
 }
 
 export const PAYMENT_REQUEST_TYPES = [
-  'Select Request Type',
-  'Material Purchase',
-  'Vendor Payment',
-  'Subcontractor Payment',
-  'Labour Payment',
-  'Equipment Rental',
-  'Site Expense',
-  'Client Advance'
+  'Advance against PO',
+  'Advance against Subcon Work Order',
+  'Advance against BOQ',
+  'Payment against Material Purchase',
+  'Payment against Subcon Expense',
+  'Payment against Other Expense',
+  'Payment against Equipment Expense',
+  'Advance for Labour',
+  'Petty Cash',
+  'Other'
 ];
 
 export interface BankAccount {
@@ -163,7 +171,67 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   const [prMediaName, setPrMediaName] = useState<string | null>(null);
   const prFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state when project changes
+  // Parties from Accounts & Finance
+  const [financeParties, setFinanceParties] = useState<PartyRecord[]>(() => getFinanceParties());
+  const [isPartyDropdownOpen, setIsPartyDropdownOpen] = useState(false);
+  const partyDropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isPrPartyDropdownOpen, setIsPrPartyDropdownOpen] = useState(false);
+  const prPartyDropdownRef = useRef<HTMLDivElement>(null);
+
+  // All party options combining Accounts & Finance and current Project Client
+  const allPartyOptions = useMemo(() => {
+    const list = [...financeParties];
+    if (project.client_name && !list.some(p => p.name.trim().toLowerCase() === project.client_name.trim().toLowerCase())) {
+      list.unshift({
+        id: `pty-client-${project.id || 'default'}`,
+        name: project.client_name.trim(),
+        type: 'Client',
+        avatarText: project.client_name.trim().slice(0, 2).toUpperCase(),
+        avatarColor: 'bg-[#1E40AF]',
+        balanceDue: 0,
+        status: 'To Receive',
+        activeProjects: [project.name]
+      });
+    }
+    return list;
+  }, [financeParties, project.client_name, project.name, project.id]);
+
+  // Filtered Parties matching Transaction party input
+  const filteredTxPartyOptions = useMemo(() => {
+    const q = (formPartyName || '').trim().toLowerCase();
+    if (!q) return allPartyOptions;
+    return allPartyOptions.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.phone && p.phone.toLowerCase().includes(q)) ||
+      (p.type && p.type.toLowerCase().includes(q)) ||
+      (p.partyId && p.partyId.toLowerCase().includes(q))
+    );
+  }, [allPartyOptions, formPartyName]);
+
+  // Filtered Parties matching PR party input
+  const filteredPrPartyOptions = useMemo(() => {
+    const q = (prPartyName || '').trim().toLowerCase();
+    if (!q) return allPartyOptions;
+    return allPartyOptions.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.phone && p.phone.toLowerCase().includes(q)) ||
+      (p.type && p.type.toLowerCase().includes(q)) ||
+      (p.partyId && p.partyId.toLowerCase().includes(q))
+    );
+  }, [allPartyOptions, prPartyName]);
+
+  const selectedPartyRecord = useMemo(() => {
+    if (!formPartyName.trim()) return null;
+    return allPartyOptions.find(p => p.name.trim().toLowerCase() === formPartyName.trim().toLowerCase()) || null;
+  }, [allPartyOptions, formPartyName]);
+
+  const selectedPrPartyRecord = useMemo(() => {
+    if (!prPartyName.trim()) return null;
+    return allPartyOptions.find(p => p.name.trim().toLowerCase() === prPartyName.trim().toLowerCase()) || null;
+  }, [allPartyOptions, prPartyName]);
+
+  // Sync state when project changes & listen for finance sync updates
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`siteops_project_transactions_${projectIdKey}`);
@@ -174,6 +242,18 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       setPaymentRequests(savedPR ? JSON.parse(savedPR) : []);
     } catch (e) {}
   }, [projectIdKey]);
+
+  useEffect(() => {
+    const refreshFinanceParties = () => {
+      setFinanceParties(getFinanceParties());
+    };
+    window.addEventListener('storage', refreshFinanceParties);
+    window.addEventListener('booshnam_finance_updated', refreshFinanceParties);
+    return () => {
+      window.removeEventListener('storage', refreshFinanceParties);
+      window.removeEventListener('booshnam_finance_updated', refreshFinanceParties);
+    };
+  }, []);
 
   // Persist transactions helper
   const persistTransactions = (newTxList: ProjectTransaction[]) => {
@@ -205,6 +285,12 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       }
       if (prTypeDropdownRef.current && !prTypeDropdownRef.current.contains(event.target as Node)) {
         setIsPrTypeDropdownOpen(false);
+      }
+      if (partyDropdownRef.current && !partyDropdownRef.current.contains(event.target as Node)) {
+        setIsPartyDropdownOpen(false);
+      }
+      if (prPartyDropdownRef.current && !prPartyDropdownRef.current.contains(event.target as Node)) {
+        setIsPrPartyDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -245,6 +331,8 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
 
   // Handle Opening Create Modal from specific Dropdown Item
   const handleOpenCreateModal = (subtype: string, defaultFlow: 'IN' | 'OUT' = 'IN') => {
+    setFinanceParties(getFinanceParties());
+    setIsPartyDropdownOpen(false);
     setSelectedSubtype(subtype);
     setTxFlowType(defaultFlow);
     setFormPaymentNumber(`#CB-${String(transactions.length + 98)}`);
@@ -340,7 +428,11 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
 
     const updated = [newTx, ...transactions];
     persistTransactions(updated);
-    onShowToast?.(`${selectedSubtype} of ₹${finalAmount.toLocaleString('en-IN')} saved successfully!`);
+
+    // Synchronize transaction into Accounts & Finance
+    syncProjectTransactionToFinance(project, newTx);
+
+    onShowToast?.(`${selectedSubtype} of ₹${finalAmount.toLocaleString('en-IN')} saved & synced to Accounts & Finance under "${newTx.party_name}"!`);
     setIsCreateModalOpen(false);
   };
 
@@ -373,6 +465,8 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
 
   // Open Payment Request Modal (Matching Image 2)
   const handleOpenPaymentRequestModal = () => {
+    setFinanceParties(getFinanceParties());
+    setIsPrPartyDropdownOpen(false);
     setPrNumber(`#${paymentRequests.length + 7}`);
     setPrDate(new Date().toISOString().split('T')[0]);
     setPrPartyName('');
@@ -419,6 +513,9 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
     const updated = [newPr, ...paymentRequests];
     persistPaymentRequests(updated);
 
+    // Synchronize Payment Request into Accounts & Finance
+    syncProjectPaymentRequestToFinance(project, newPr);
+
     // Notify Admin & Accounts
     let senderName = 'Site Staff';
     try {
@@ -441,7 +538,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       requestCode: newPr.request_number
     });
 
-    onShowToast?.(`Payment Request ${newPr.request_number} of ₹${finalAmount.toLocaleString('en-IN')} created successfully!`);
+    onShowToast?.(`Payment Request ${newPr.request_number} of ₹${finalAmount.toLocaleString('en-IN')} created & synced to Accounts & Finance!`);
     setIsPaymentRequestModalOpen(false);
   };
 
@@ -1204,22 +1301,177 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                 </div>
               </div>
 
-              {/* Row 2: Party Name */}
-              <div className="relative border border-slate-200 rounded-xl px-3.5 pt-2.5 pb-2 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-100 transition-all">
-                <label className="absolute -top-2 left-2.5 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  PARTY NAME
-                </label>
-                <div className="flex items-center justify-between">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter party name (e.g. demo)"
-                    value={formPartyName}
-                    onChange={(e) => setFormPartyName(e.target.value)}
-                    className="w-full text-xs font-medium text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-300"
-                  />
-                  <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+              {/* Row 2: Party Name with Accounts & Finance Selector Dropdown */}
+              <div ref={partyDropdownRef} className="relative">
+                <div 
+                  onClick={() => setIsPartyDropdownOpen(true)}
+                  className={`relative border rounded-xl px-3.5 pt-2.5 pb-2 transition-all cursor-text ${
+                    isPartyDropdownOpen 
+                      ? 'border-red-600 ring-2 ring-red-100 shadow-xs' 
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <label className="absolute -top-2 left-2.5 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider pointer-events-none">
+                    PARTY NAME <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Select party from Accounts & Finance or type..."
+                      value={formPartyName}
+                      onFocus={() => setIsPartyDropdownOpen(true)}
+                      onChange={(e) => {
+                        setFormPartyName(e.target.value);
+                        setIsPartyDropdownOpen(true);
+                      }}
+                      className="w-full text-xs font-semibold text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-300"
+                    />
+                    <div className="flex items-center gap-1 shrink-0">
+                      {formPartyName && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFormPartyName('');
+                          }}
+                          className="p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsPartyDropdownOpen(!isPartyDropdownOpen);
+                        }}
+                        className="p-0.5 text-red-600 hover:text-red-700 cursor-pointer"
+                        title="Browse Accounts & Finance Parties"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isPartyDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Selected Party Badge Info if matched with Accounts & Finance */}
+                {selectedPartyRecord && (
+                  <div className="mt-1.5 flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`w-4 h-4 rounded-full ${selectedPartyRecord.avatarColor || 'bg-[#1E40AF]'} text-white text-[8px] font-bold flex items-center justify-center shrink-0`}>
+                        {selectedPartyRecord.avatarText || selectedPartyRecord.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-slate-700 truncate">{selectedPartyRecord.name}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                        selectedPartyRecord.type === 'Client' ? 'bg-blue-100 text-blue-700' :
+                        selectedPartyRecord.type === 'Staff' ? 'bg-purple-100 text-purple-700' :
+                        selectedPartyRecord.type === 'Vendor' ? 'bg-amber-100 text-amber-700' :
+                        selectedPartyRecord.type === 'Subcontractor' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-teal-100 text-teal-700'
+                      }`}>
+                        {selectedPartyRecord.type}
+                      </span>
+                    </div>
+                    <span className="font-medium text-slate-500 text-[10px] shrink-0">
+                      Balance: ₹ {(selectedPartyRecord.balanceDue || 0).toLocaleString('en-IN')} ({selectedPartyRecord.status})
+                    </span>
+                  </div>
+                )}
+
+                {/* Dropdown Menu of Accounts & Finance Parties */}
+                {isPartyDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-2xl border border-red-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1 max-h-64 overflow-y-auto">
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                      <span>Accounts & Finance Parties ({allPartyOptions.length})</span>
+                      <span className="text-[9px] text-red-600 font-semibold lowercase">click to select</span>
+                    </div>
+
+                    {filteredTxPartyOptions.length === 0 ? (
+                      <div className="p-3 text-center">
+                        <p className="text-xs text-slate-500">
+                          {formPartyName.trim() 
+                            ? `No party matches "${formPartyName}".`
+                            : 'No parties added in Accounts & Finance yet.'}
+                        </p>
+                        {formPartyName.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => setIsPartyDropdownOpen(false)}
+                            className="mt-2 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add & Sync "{formPartyName.trim()}"</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      filteredTxPartyOptions.map((p) => {
+                        const isSelected = formPartyName.trim().toLowerCase() === p.name.trim().toLowerCase();
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setFormPartyName(p.name);
+                              setIsPartyDropdownOpen(false);
+                            }}
+                            className={`px-3 py-2 rounded-xl text-xs transition-all cursor-pointer flex items-center justify-between group ${
+                              isSelected
+                                ? 'bg-red-50 text-red-900 font-bold border border-red-200 shadow-2xs'
+                                : 'hover:bg-red-50/50 hover:text-red-700 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-full ${p.avatarColor || 'bg-[#1E40AF]'} text-white font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs`}>
+                                {p.avatarText || p.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs truncate text-slate-900 group-hover:text-red-700">
+                                  {p.name}
+                                </div>
+                                <div className="text-[10px] text-slate-400 flex items-center gap-2 truncate">
+                                  <span>ID: {p.partyId || 'N/A'}</span>
+                                  {p.phone && <span>• {p.phone}</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0 flex items-center gap-2">
+                              <div>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  p.type === 'Client' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                  p.type === 'Staff' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                  p.type === 'Vendor' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                  p.type === 'Subcontractor' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                                  'bg-teal-50 text-teal-700 border border-teal-200'
+                                }`}>
+                                  {p.type}
+                                </span>
+                                <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                  ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
+                                </div>
+                              </div>
+                              {isSelected && <Check className="w-4 h-4 text-red-600 stroke-[3]" />}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+
+                    {/* Quick option to use custom typed party name */}
+                    {formPartyName.trim() && !filteredTxPartyOptions.some(p => p.name.trim().toLowerCase() === formPartyName.trim().toLowerCase()) && (
+                      <div
+                        onClick={() => setIsPartyDropdownOpen(false)}
+                        className="p-2 border-t border-dashed border-slate-200 text-center"
+                      >
+                        <div className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer flex items-center justify-center gap-1">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Use "{formPartyName.trim()}" (Will be created in Accounts & Finance)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Row 3: Amount */}
@@ -1944,22 +2196,177 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                 </div>
               </div>
 
-              {/* Row 2: PARTY NAME */}
-              <div className="relative border border-slate-200 rounded-xl px-3.5 pt-2.5 pb-2 focus-within:border-red-600 focus-within:ring-1 focus-within:ring-red-100 transition-all">
-                <label className="absolute -top-2 left-2.5 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  PARTY NAME<span className="text-red-500">*</span>
-                </label>
-                <div className="flex items-center justify-between">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter party name (e.g. demo)"
-                    value={prPartyName}
-                    onChange={(e) => setPrPartyName(e.target.value)}
-                    className="w-full text-xs font-medium text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-300"
-                  />
-                  <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+              {/* Row 2: PARTY NAME with Accounts & Finance Selector Dropdown */}
+              <div ref={prPartyDropdownRef} className="relative">
+                <div 
+                  onClick={() => setIsPrPartyDropdownOpen(true)}
+                  className={`relative border rounded-xl px-3.5 pt-2.5 pb-2 transition-all cursor-text ${
+                    isPrPartyDropdownOpen 
+                      ? 'border-red-600 ring-2 ring-red-100 shadow-xs' 
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <label className="absolute -top-2 left-2.5 bg-white px-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider pointer-events-none">
+                    PARTY NAME <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center justify-between gap-2">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Select party from Accounts & Finance or type..."
+                      value={prPartyName}
+                      onFocus={() => setIsPrPartyDropdownOpen(true)}
+                      onChange={(e) => {
+                        setPrPartyName(e.target.value);
+                        setIsPrPartyDropdownOpen(true);
+                      }}
+                      className="w-full text-xs font-semibold text-slate-900 bg-transparent focus:outline-none placeholder:text-slate-300"
+                    />
+                    <div className="flex items-center gap-1 shrink-0">
+                      {prPartyName && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrPartyName('');
+                          }}
+                          className="p-0.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsPrPartyDropdownOpen(!isPrPartyDropdownOpen);
+                        }}
+                        className="p-0.5 text-red-600 hover:text-red-700 cursor-pointer"
+                        title="Browse Accounts & Finance Parties"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isPrPartyDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Selected Party Badge Info if matched with Accounts & Finance */}
+                {selectedPrPartyRecord && (
+                  <div className="mt-1.5 flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200/80 rounded-lg text-[11px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`w-4 h-4 rounded-full ${selectedPrPartyRecord.avatarColor || 'bg-[#1E40AF]'} text-white text-[8px] font-bold flex items-center justify-center shrink-0`}>
+                        {selectedPrPartyRecord.avatarText || selectedPrPartyRecord.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-slate-700 truncate">{selectedPrPartyRecord.name}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                        selectedPrPartyRecord.type === 'Client' ? 'bg-blue-100 text-blue-700' :
+                        selectedPrPartyRecord.type === 'Staff' ? 'bg-purple-100 text-purple-700' :
+                        selectedPrPartyRecord.type === 'Vendor' ? 'bg-amber-100 text-amber-700' :
+                        selectedPrPartyRecord.type === 'Subcontractor' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-teal-100 text-teal-700'
+                      }`}>
+                        {selectedPrPartyRecord.type}
+                      </span>
+                    </div>
+                    <span className="font-medium text-slate-500 text-[10px] shrink-0">
+                      Balance: ₹ {(selectedPrPartyRecord.balanceDue || 0).toLocaleString('en-IN')} ({selectedPrPartyRecord.status})
+                    </span>
+                  </div>
+                )}
+
+                {/* Dropdown Menu of Accounts & Finance Parties */}
+                {isPrPartyDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl shadow-2xl border border-red-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1 max-h-64 overflow-y-auto">
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                      <span>Accounts & Finance Parties ({allPartyOptions.length})</span>
+                      <span className="text-[9px] text-red-600 font-semibold lowercase">click to select</span>
+                    </div>
+
+                    {filteredPrPartyOptions.length === 0 ? (
+                      <div className="p-3 text-center">
+                        <p className="text-xs text-slate-500">
+                          {prPartyName.trim() 
+                            ? `No party matches "${prPartyName}".`
+                            : 'No parties added in Accounts & Finance yet.'}
+                        </p>
+                        {prPartyName.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => setIsPrPartyDropdownOpen(false)}
+                            className="mt-2 px-3 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 rounded-lg text-xs font-bold transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Add & Sync "{prPartyName.trim()}"</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      filteredPrPartyOptions.map((p) => {
+                        const isSelected = prPartyName.trim().toLowerCase() === p.name.trim().toLowerCase();
+                        return (
+                          <div
+                            key={p.id}
+                            onClick={() => {
+                              setPrPartyName(p.name);
+                              setIsPrPartyDropdownOpen(false);
+                            }}
+                            className={`px-3 py-2 rounded-xl text-xs transition-all cursor-pointer flex items-center justify-between group ${
+                              isSelected
+                                ? 'bg-red-50 text-red-900 font-bold border border-red-200 shadow-2xs'
+                                : 'hover:bg-red-50/50 hover:text-red-700 text-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-full ${p.avatarColor || 'bg-[#1E40AF]'} text-white font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs`}>
+                                {p.avatarText || p.name.slice(0, 2).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs truncate text-slate-900 group-hover:text-red-700">
+                                  {p.name}
+                                </div>
+                                <div className="text-[10px] text-slate-400 flex items-center gap-2 truncate">
+                                  <span>ID: {p.partyId || 'N/A'}</span>
+                                  {p.phone && <span>• {p.phone}</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0 flex items-center gap-2">
+                              <div>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  p.type === 'Client' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                                  p.type === 'Staff' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
+                                  p.type === 'Vendor' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                  p.type === 'Subcontractor' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                                  'bg-teal-50 text-teal-700 border border-teal-200'
+                                }`}>
+                                  {p.type}
+                                </span>
+                                <div className="text-[9px] text-slate-400 font-mono mt-0.5">
+                                  ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
+                                </div>
+                              </div>
+                              {isSelected && <Check className="w-4 h-4 text-red-600 stroke-[3]" />}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+
+                    {/* Quick option to use custom typed party name */}
+                    {prPartyName.trim() && !filteredPrPartyOptions.some(p => p.name.trim().toLowerCase() === prPartyName.trim().toLowerCase()) && (
+                      <div
+                        onClick={() => setIsPrPartyDropdownOpen(false)}
+                        className="p-2 border-t border-dashed border-slate-200 text-center"
+                      >
+                        <div className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer flex items-center justify-center gap-1">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Use "{prPartyName.trim()}" (Will be created in Accounts & Finance)</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Row 3: TYPE with Custom Red & White Dropdown */}

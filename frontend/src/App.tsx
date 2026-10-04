@@ -17,7 +17,10 @@ import { TasksView } from './views/TasksView';
 import { PaymentsView } from './views/PaymentsView';
 import { AccountsFinanceView } from './views/AccountsFinanceView';
 import { QuotationView } from './views/QuotationView';
+import { TeamScheduleView } from './views/TeamScheduleView';
 import { LoginView } from './views/LoginView';
+import { NotFound404View } from './components/common/NotFound404View';
+import { globalErrorService, Http404Details, clear404Error, trigger404Error } from './lib/errorService';
 import { MobileSiteSimulatorModal } from './components/MobileSiteSimulatorModal';
 import { GlobalConfirmationModal } from './components/GlobalConfirmationModal';
 import { GlobalToastNotification } from './components/GlobalToastNotification';
@@ -48,9 +51,64 @@ import { syncProjectAssignmentNotifications, getNotifications } from './lib/noti
 import { getOrInitializeProjects } from './lib/departmentService';
 
 
+const KNOWN_VIEWS = new Set([
+  'company_dashboard',
+  'dashboard',
+  'projects',
+  'procurement',
+  'warehouse',
+  'workforce',
+  'payroll',
+  'equipment',
+  'asset',
+  'site_ops',
+  'report',
+  'snags',
+  'setting',
+  'settings',
+  'approvals',
+  'quotation',
+  'schedule',
+  'timesheet',
+  'team_schedule',
+  'schedule_timesheet',
+  'documents',
+  'library',
+  'departments',
+  'soil_investigation',
+  'architecture',
+  'marketing',
+  'construction_dept',
+  'accounts_dept',
+  'client_portal',
+  'tasks',
+  'finance',
+  'accounts_finance',
+  'expenses',
+  'account_transfer',
+  'account-transfer',
+  'payments'
+]);
+
+const isKnownView = (view: string) => {
+  return KNOWN_VIEWS.has(view) || view.startsWith('dept_');
+};
+
 export function App() {
   const [currentUserAccount, setCurrentUserAccountState] = useState<UserAccount | null>(() => getCurrentUserAccount());
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
+  const [global404Error, setGlobal404Error] = useState<Http404Details | null>(null);
+
+  useEffect(() => {
+    // Expose helpers globally for testing/debugging
+    (window as any).trigger404Error = trigger404Error;
+    (window as any).clear404Error = clear404Error;
+
+    const unsubscribe = globalErrorService.subscribe((err) => {
+      setGlobal404Error(err);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // If clients, crm, tasks, or snags view is requested, route appropriately
   useEffect(() => {
@@ -442,207 +500,241 @@ export function App() {
         <main className={`flex-1 w-full min-w-0 bg-[#f8fafc] ${
           currentView === 'quotation' ? 'h-full flex flex-col overflow-hidden' : ''
         }`}>
-          {currentView === 'company_dashboard' && (
-            <CompanyDashboardView
-              projects={projects}
-              onSelectProject={setSelectedProject}
-              onNavigate={handleNavigateView}
-              canViewCost={canViewCost}
-              user={user}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'dashboard' && (
-            <DashboardView
-              projects={projects}
-              selectedProject={selectedProject}
-              onSelectProject={setSelectedProject}
-              onNavigate={setCurrentView}
-              activeRole={activeRole}
-              canViewCost={canViewCost}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'projects' && (
-            <ProjectsView
-              projects={projects}
-              setProjects={setProjects}
-              selectedProject={selectedProject}
-              onSelectProject={setSelectedProject}
-              tasks={tasks}
-              setTasks={setTasks}
-              approvals={approvals}
-              materialRequests={materialRequests}
-              canViewCost={canViewCost}
-              onNavigate={setCurrentView}
-              onShowToast={showToast}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-
-
-          {(currentView === 'procurement' || currentView === 'warehouse') && (
-            <ProcurementView
-              materialRequests={materialRequests}
-              purchaseOrders={purchaseOrders}
-              grns={grns}
-              invoices={invoices}
-              stockItems={stock}
-              projects={projects}
-              initialTab={currentView === 'warehouse' ? 'stock' : undefined}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {(currentView === 'workforce' || currentView === 'payroll') && (
-            <WorkforceView
-              project={selectedProject}
-              workers={workers}
-              attendance={attendance}
-              canViewCost={canViewCost}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {(currentView === 'equipment' || currentView === 'asset') && (
-            <EquipmentView
-              project={selectedProject}
-              projects={projects}
-              assets={assets}
-              onUpdateAssets={setAssets}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
-            />
-          )}
-
-          {(currentView === 'site_ops' || currentView === 'report') && (
-            <SiteOpsView
-              project={selectedProject}
-              dprs={dprs}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'snags' && (
-            <SnagsView
-              project={selectedProject}
-              snags={snags}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {(currentView === 'setting' || currentView === 'settings') && (
-            <SettingsView
-              activeRole={activeRole}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'approvals' && (
-            <ApprovalsView
-              approvals={approvals}
-              activeRole={activeRole}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {currentView === 'quotation' && (
-            <QuotationView
-              projects={projects}
-              onConvertSuccess={handleConvertLeadSuccess}
-              onShowToast={showToast}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {(currentView === 'documents' || currentView === 'library') && (
-            <DocumentsView
-              project={selectedProject}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-            />
-          )}
-
-          {(currentView === 'departments' || 
-            currentView.startsWith('dept_') || 
-            currentView === 'soil_investigation' || 
-            currentView === 'architecture' || 
-            currentView === 'marketing' || 
-            currentView === 'construction_dept' || 
-            currentView === 'accounts_dept') && (
-            <DepartmentsView
-              initialDepartment={
-                currentView === 'dept_architecture' || currentView === 'architecture' ? 'ARCHITECTURE' :
-                currentView === 'dept_marketing' || currentView === 'marketing' ? 'MARKETING' :
-                currentView === 'dept_construction' || currentView === 'construction_dept' ? 'CONSTRUCTION' :
-                currentView === 'dept_accounts' || currentView === 'accounts_dept' ? 'ACCOUNTS' :
-                'SOIL_INVESTIGATION'
-              }
-              projects={projects}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
-              onDepartmentChange={(dept) => {
-                if (dept === 'SOIL_INVESTIGATION') setCurrentView('dept_soil');
-                else if (dept === 'ARCHITECTURE') setCurrentView('dept_architecture');
-                else if (dept === 'MARKETING') setCurrentView('dept_marketing');
-                else if (dept === 'CONSTRUCTION') setCurrentView('dept_construction');
-                else if (dept === 'ACCOUNTS') setCurrentView('dept_accounts');
+          {/* Active 404 Error State (Shown until cleared) */}
+          {global404Error ? (
+            <NotFound404View
+              errorDetails={global404Error}
+              onClearError={() => clear404Error()}
+              onNavigateHome={() => {
+                clear404Error();
+                setCurrentView('company_dashboard');
               }}
             />
-          )}
-
-          {currentView === 'client_portal' && (
-            <ClientPortalView
-              project={selectedProject}
-              projects={projects}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
+          ) : !isKnownView(currentView) ? (
+            <NotFound404View
+              errorDetails={{
+                resourceName: currentView,
+                message: `The requested view "${currentView}" does not exist (404 Not Found).`,
+                timestamp: Date.now()
+              }}
+              onClearError={() => setCurrentView('company_dashboard')}
+              onNavigateHome={() => setCurrentView('company_dashboard')}
             />
-          )}
+          ) : (
+            <>
+              {currentView === 'company_dashboard' && (
+                <CompanyDashboardView
+                  projects={projects}
+                  onSelectProject={setSelectedProject}
+                  onNavigate={handleNavigateView}
+                  canViewCost={canViewCost}
+                  user={user}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
 
-          {currentView === 'tasks' && (
-            <TasksView
-              tasks={tasks}
-              projects={projects}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
-            />
-          )}
+              {currentView === 'dashboard' && (
+                <DashboardView
+                  projects={projects}
+                  selectedProject={selectedProject}
+                  onSelectProject={setSelectedProject}
+                  onNavigate={setCurrentView}
+                  activeRole={activeRole}
+                  canViewCost={canViewCost}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
 
-          {(currentView === 'finance' || currentView === 'accounts_finance' || currentView === 'expenses' || currentView === 'account_transfer' || currentView === 'account-transfer') && (
-            <AccountsFinanceView
-              projects={projects}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
-              initialTab={currentView === 'expenses' ? 'expenses' : (currentView === 'account_transfer' || currentView === 'account-transfer') ? 'account_transfer' : undefined}
-            />
-          )}
+              {currentView === 'projects' && (
+                <ProjectsView
+                  projects={projects}
+                  setProjects={setProjects}
+                  selectedProject={selectedProject}
+                  onSelectProject={setSelectedProject}
+                  tasks={tasks}
+                  setTasks={setTasks}
+                  approvals={approvals}
+                  materialRequests={materialRequests}
+                  canViewCost={canViewCost}
+                  onNavigate={setCurrentView}
+                  onShowToast={showToast}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
 
-          {currentView === 'payments' && (
-            <PaymentsView
-              projects={projects}
-              isSidebarOpen={isSidebarOpen}
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-              onShowToast={showToast}
-            />
+              {(currentView === 'procurement' || currentView === 'warehouse') && (
+                <ProcurementView
+                  materialRequests={materialRequests}
+                  purchaseOrders={purchaseOrders}
+                  grns={grns}
+                  invoices={invoices}
+                  stockItems={stock}
+                  projects={projects}
+                  initialTab={currentView === 'warehouse' ? 'stock' : undefined}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {(currentView === 'workforce' || currentView === 'payroll') && (
+                <WorkforceView
+                  project={selectedProject}
+                  workers={workers}
+                  attendance={attendance}
+                  canViewCost={canViewCost}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {(currentView === 'equipment' || currentView === 'asset') && (
+                <EquipmentView
+                  project={selectedProject}
+                  projects={projects}
+                  assets={assets}
+                  onUpdateAssets={setAssets}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                />
+              )}
+
+              {(currentView === 'site_ops' || currentView === 'report') && (
+                <SiteOpsView
+                  project={selectedProject}
+                  dprs={dprs}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {currentView === 'snags' && (
+                <SnagsView
+                  project={selectedProject}
+                  snags={snags}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {(currentView === 'setting' || currentView === 'settings') && (
+                <SettingsView
+                  activeRole={activeRole}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {currentView === 'approvals' && (
+                <ApprovalsView
+                  approvals={approvals}
+                  activeRole={activeRole}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {currentView === 'quotation' && (
+                <QuotationView
+                  projects={projects}
+                  onConvertSuccess={handleConvertLeadSuccess}
+                  onShowToast={showToast}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {(currentView === 'documents' || currentView === 'library') && (
+                <DocumentsView
+                  project={selectedProject}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                />
+              )}
+
+              {(currentView === 'departments' || 
+                currentView.startsWith('dept_') || 
+                currentView === 'soil_investigation' || 
+                currentView === 'architecture' || 
+                currentView === 'marketing' || 
+                currentView === 'construction_dept' || 
+                currentView === 'accounts_dept') && (
+                <DepartmentsView
+                  initialDepartment={
+                    currentView === 'dept_architecture' || currentView === 'architecture' ? 'ARCHITECTURE' :
+                    currentView === 'dept_marketing' || currentView === 'marketing' ? 'MARKETING' :
+                    currentView === 'dept_construction' || currentView === 'construction_dept' ? 'CONSTRUCTION' :
+                    currentView === 'dept_accounts' || currentView === 'accounts_dept' ? 'ACCOUNTS' :
+                    'SOIL_INVESTIGATION'
+                  }
+                  projects={projects}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                  onDepartmentChange={(dept) => {
+                    if (dept === 'SOIL_INVESTIGATION') setCurrentView('dept_soil');
+                    else if (dept === 'ARCHITECTURE') setCurrentView('dept_architecture');
+                    else if (dept === 'MARKETING') setCurrentView('dept_marketing');
+                    else if (dept === 'CONSTRUCTION') setCurrentView('dept_construction');
+                    else if (dept === 'ACCOUNTS') setCurrentView('dept_accounts');
+                  }}
+                />
+              )}
+
+              {currentView === 'client_portal' && (
+                <ClientPortalView
+                  project={selectedProject}
+                  projects={projects}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                />
+              )}
+
+              {currentView === 'tasks' && (
+                <TasksView
+                  tasks={tasks}
+                  projects={projects}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                />
+              )}
+
+              {(currentView === 'finance' || currentView === 'accounts_finance' || currentView === 'expenses' || currentView === 'account_transfer' || currentView === 'account-transfer') && (
+                <AccountsFinanceView
+                  projects={projects}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                  initialTab={currentView === 'expenses' ? 'expenses' : (currentView === 'account_transfer' || currentView === 'account-transfer') ? 'account_transfer' : undefined}
+                />
+              )}
+
+              {currentView === 'payments' && (
+                <PaymentsView
+                  projects={projects}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                />
+              )}
+
+              {(currentView === 'schedule' || currentView === 'timesheet' || currentView === 'team_schedule' || currentView === 'schedule_timesheet') && (
+                <TeamScheduleView
+                  projects={projects}
+                  tasks={tasks}
+                  activeRole={activeRole}
+                  isSidebarOpen={isSidebarOpen}
+                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  onShowToast={showToast}
+                  initialTab={currentView === 'timesheet' ? 'timesheet' : 'schedule'}
+                />
+              )}
+            </>
           )}
         </main>
       </div>

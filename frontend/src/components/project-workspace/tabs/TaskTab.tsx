@@ -15,6 +15,7 @@ import { addProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { confirmAction, setFormDirty, clearFormDirty, confirmNavigationIfDirty } from '../../../lib/dialogService';
 import { CustomSelect } from '../../CustomSelect';
 import { PREDEFINED_TASKS_TEMPLATE } from '../../../lib/mockData';
+import { syncQuotationTaskToProject, QuotationScheduleTask } from '../../../lib/quotationScheduleService';
 
 interface TaskTabProps {
   project: Project;
@@ -607,6 +608,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(taskList));
+      window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
 
       if (project?.id && Array.isArray(taskList) && taskList.length > 0) {
         const storedProjectsRaw = localStorage.getItem('booshnam_projects_v2');
@@ -748,6 +750,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       const newMap = { ...prevMap, [taskId]: updated };
       try {
         localStorage.setItem(`booshnam_task_meta_${project?.id || 'default'}`, JSON.stringify(newMap));
+        window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
       } catch (e) {}
       return newMap;
     });
@@ -810,7 +813,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        setFormProofUrl(reader.result);
+        const dataUrl = reader.result;
+        setFormProofUrl(dataUrl);
+        if (editingTask) {
+          setEditingTask(prev => prev ? { ...prev, completion_proof_url: dataUrl } : null);
+        }
+        onShowToast?.('Task photo attached! Click "Save Changes" below to apply & sync.');
       }
     };
     reader.readAsDataURL(file);
@@ -1046,6 +1054,125 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     }));
 
     onShowToast?.(`Task status updated to ${isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Start'}`);
+  };
+
+  // Save Changes button in Task Drawer (Audio Requirement: Commit image, status, and sync to Schedule)
+  const handleSaveTaskDrawer = () => {
+    if (!editingTask) return;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const isCompleted = editingTask.status === 'COMPLETED';
+
+    const proofUrlToSave = formProofUrl || editingTask.completion_proof_url;
+
+    const updatedTask: WBSTask = {
+      ...editingTask,
+      title: formTitle.trim() || editingTask.title,
+      department: formDepartment || editingTask.department,
+      start_date: formStartDate || editingTask.start_date,
+      end_date: formEndDate || editingTask.end_date,
+      actual_start: isCompleted ? (editingTask.actual_start || formStartDate || todayStr) : editingTask.actual_start,
+      actual_end: isCompleted ? (editingTask.actual_end || formEndDate || todayStr) : editingTask.actual_end,
+      duration_days: formDuration || editingTask.duration_days || 1,
+      tag: formTag || editingTask.tag,
+      assigned_to_name: formAssigned || editingTask.assigned_to_name,
+      delay_status: formDelayStatus || editingTask.delay_status,
+      completion_proof_url: proofUrlToSave,
+      completion_remarks: formRemarks || editingTask.completion_remarks,
+      completed_by: isCompleted ? (editingTask.completed_by || currentUser.first_name || 'Staff') : editingTask.completed_by,
+      completed_at: isCompleted ? (editingTask.completed_at || todayStr) : editingTask.completed_at,
+      progress_percentage: isCompleted ? 100 : (editingTask.progress_percentage || 0),
+      progress_label: isCompleted ? '1/1 lumpsum' : (editingTask.progress_label || '0/1 lumpsum')
+    };
+
+    // 1. Update taskList state in TaskTab
+    setEditingTask(updatedTask);
+    const updatedTaskList = taskList.map(t => t.id === updatedTask.id ? updatedTask : t);
+    setTaskList(updatedTaskList);
+
+    // 2. Save to localStorage immediately
+    try {
+      const storageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+      localStorage.setItem(storageKey, JSON.stringify(updatedTaskList));
+    } catch (e) {}
+
+    // 3. Save to extra metadata
+    saveTaskMeta(updatedTask.id, prev => ({
+      ...prev,
+      progressUpdates: proofUrlToSave ? [
+        {
+          id: `prog-${Date.now()}`,
+          user: currentUser.first_name || 'Staff',
+          amount: isCompleted ? '1 lumpsum ✓' : `${updatedTask.progress_percentage || 50}%`,
+          date: todayStr,
+          note: formRemarks || 'Updated task details and attached proof photo.',
+          proof_url: proofUrlToSave
+        },
+        ...(prev.progressUpdates || []).filter(p => p.proof_url !== proofUrlToSave)
+      ] : (prev.progressUpdates || []),
+      statusLogs: [
+        {
+          id: `log-${Date.now()}`,
+          text: `Task saved: Status is ${updatedTask.status}${proofUrlToSave ? ' with attached photo' : ''}`,
+          timestamp: `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          user: currentUser.first_name || 'Staff'
+        },
+        ...(prev.statusLogs || [])
+      ]
+    }));
+
+    // 4. Synchronize immediately to Team Schedule Gantt view!
+    try {
+      const isQuotation = 
+        (updatedTask.title && updatedTask.title.toLowerCase().includes('quot')) || 
+        (updatedTask.tag && updatedTask.tag.toLowerCase().includes('quot')) ||
+        (updatedTask.title && updatedTask.title.toLowerCase().includes('scope')) ||
+        updatedTask.department === 'MARKETING';
+
+      if (isQuotation) {
+        const quotationScheduleTask: QuotationScheduleTask = {
+          id: `proj-task-${updatedTask.id}`,
+          wbs_task_id: updatedTask.id,
+          task_name: updatedTask.title,
+          project_id: project?.id || '',
+          project_name: project?.name || 'Project',
+          assignee: updatedTask.assigned_to_name || 'Staff',
+          status: updatedTask.status === 'COMPLETED' ? 'COMPLETED' : updatedTask.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING',
+          start_date: updatedTask.start_date || '2026-09-01',
+          end_date: updatedTask.end_date || '2026-09-15',
+          actual_start: updatedTask.actual_start || updatedTask.start_date,
+          actual_end: updatedTask.actual_end || (updatedTask.status === 'COMPLETED' ? (updatedTask.end_date || 'Completed') : undefined),
+          forecast_end: updatedTask.forecast_end || updatedTask.end_date,
+          completed_at: updatedTask.status === 'COMPLETED' ? (updatedTask.completed_at || (updatedTask.end_date ? `${updatedTask.end_date}, 05:00 PM` : 'Completed')) : undefined,
+          duration_days: updatedTask.duration_days || 1,
+          progress_percentage: updatedTask.progress_percentage !== undefined ? updatedTask.progress_percentage : (updatedTask.status === 'COMPLETED' ? 100 : 0),
+          remarks: updatedTask.completion_remarks || updatedTask.description || 'Project quotation milestone.',
+          tag: updatedTask.tag || '--',
+          group_name: project?.name || 'Unassigned',
+          image_url: proofUrlToSave,
+          progress_user: updatedTask.completed_by || currentUser.first_name || 'Staff',
+          progress_date: updatedTask.completed_at || todayStr,
+          todos: currentTaskMeta.todos?.map(td => ({ id: td.id, text: td.text, done: Boolean(td.completed) })),
+          materials: currentTaskMeta.materials,
+          workforce: currentTaskMeta.workforce,
+          equipment: currentTaskMeta.equipment,
+          progressUpdates: currentTaskMeta.progressUpdates,
+          statusLogs: currentTaskMeta.statusLogs,
+          messages: currentTaskMeta.messages
+        };
+
+        syncQuotationTaskToProject(quotationScheduleTask);
+      }
+    } catch (e) {
+      console.error('Failed to sync to quotation schedule', e);
+    }
+
+    // 5. Emit custom events to update all views in real-time
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
+    window.dispatchEvent(new Event('booshnam_quotation_schedule_updated'));
+
+    clearFormDirty();
+    onShowToast?.(`Task "${updatedTask.title}" saved & synchronized to Schedule!`);
   };
 
   // Inline Title Save
@@ -2937,65 +3064,110 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   )}
                 </div>
 
-                {/* Sticky Bottom Action Bar (Screenshot 2: + Progress, Enter Message..., Camera, Options) */}
-                <div className="p-4 border-t border-slate-200 bg-white flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProgressAmountInput(editingTask.status === 'COMPLETED' ? '1 lumpsum' : '1 lumpsum');
-                      setProgressIsCompleted(true);
-                      setIsProgressModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>Progress</span>
-                  </button>
+                {/* Sticky Bottom Action Bar with Save Changes (Audio Requirement) */}
+                <div className="border-t border-slate-200 bg-white shrink-0">
+                  {/* Save Changes & Status Action Bar */}
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs">
+                      {(formProofUrl || editingTask.completion_proof_url) && (
+                        <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-semibold text-[11px] shadow-2xs">
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Photo Attached</span>
+                        </span>
+                      )}
+                      <span className="text-slate-500 text-xs hidden sm:inline">
+                        Status: <strong className={editingTask.status === 'COMPLETED' ? 'text-emerald-600 font-bold' : 'text-slate-700 font-semibold'}>{editingTask.status}</strong>
+                      </span>
+                    </div>
 
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="Enter Message..."
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                      className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-800 placeholder-slate-400"
-                    />
+                    <div className="flex items-center gap-2">
+                      {editingTask.status !== 'COMPLETED' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleQuickStatusChange('COMPLETED');
+                            setTimeout(handleSaveTaskDrawer, 50);
+                          }}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                          title="Mark task as completed and synchronize"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <span>Complete Process</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={handleSaveTaskDrawer}
+                        className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        title="Save all changes, uploaded photos and sync with Schedule"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => proofFileInputRef.current?.click()}
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
-                    title="Attach photo/proof"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
+                  {/* Message & Attachments Input Bar */}
+                  <div className="p-3.5 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProgressAmountInput(editingTask.status === 'COMPLETED' ? '1 lumpsum' : '1 lumpsum');
+                        setProgressIsCompleted(true);
+                        setIsProgressModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Progress</span>
+                    </button>
 
-                  {messageInput.trim() ? (
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="Enter Message..."
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-800 placeholder-slate-400"
+                      />
+                    </div>
+
                     <button
                       type="button"
-                      onClick={handleSendMessage}
-                      className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer transition-colors shrink-0"
-                      title="Send Message"
+                      onClick={() => proofFileInputRef.current?.click()}
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
+                      title="Attach photo/proof"
                     >
-                      <Send className="w-4 h-4" />
+                      <Camera className="w-4 h-4" />
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                      className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200 shrink-0"
-                      title="Options"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  )}
+
+                    {messageInput.trim() ? (
+                      <button
+                        type="button"
+                        onClick={handleSendMessage}
+                        className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer transition-colors shrink-0"
+                        title="Send Message"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+                        className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200 shrink-0"
+                        title="Options"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

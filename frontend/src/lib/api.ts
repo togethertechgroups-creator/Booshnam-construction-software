@@ -5,6 +5,7 @@ import {
   MOCK_DPR, MOCK_SNAGS, MOCK_APPROVALS, MOCK_LEADS, MOCK_ASSETS 
 } from './mockData';
 import { Project, User, Role } from '../types';
+import { trigger404Error } from './errorService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
@@ -50,6 +51,14 @@ class ApiClient {
         ...options,
         headers: { ...headers, ...(options.headers as Record<string, string>) },
       });
+
+      if (response.status === 404) {
+        trigger404Error({
+          url: `${API_BASE_URL}${endpoint}`,
+          resourceName: endpoint,
+          message: `API endpoint "${endpoint}" returned 404 Not Found.`
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

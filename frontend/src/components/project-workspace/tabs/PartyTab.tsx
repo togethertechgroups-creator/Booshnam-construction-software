@@ -1,22 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Phone, Mail, Search, Filter, 
   Building2, ArrowDownRight, ArrowUpRight, Check, X, FileText 
 } from 'lucide-react';
 import { Project, Party } from '../../../types';
 import { CustomSelect } from '../../CustomSelect';
+import { 
+  getFinanceParties, 
+  saveFinanceParties, 
+  PartyRecord, 
+  getPartyAvatarInfo 
+} from '../../../lib/financeSyncService';
 
 interface PartyTabProps {
   project: Project;
   onShowToast?: (msg: string) => void;
 }
 
-const DEFAULT_PARTIES: Party[] = [];
-
 export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
-  const [parties, setParties] = useState<Party[]>(DEFAULT_PARTIES);
+  const loadProjectParties = (): Party[] => {
+    const finParties = getFinanceParties();
+    const result: Party[] = finParties.map(p => ({
+      id: p.id,
+      name: p.name,
+      category: p.type === 'Client' ? 'CLIENT' :
+                p.type === 'Subcontractor' ? 'SUBCONTRACTOR' :
+                p.type === 'Supplier' ? 'SUPPLIER' : 'CONSULTANT',
+      contact_person: p.contactPerson || p.name,
+      phone: p.phone || '',
+      email: p.email || '',
+      gstin: p.gstin || '',
+      balance_type: p.status === 'To Receive' || p.type === 'Client' ? 'RECEIVABLE' : 'PAYABLE',
+      current_balance: p.balanceDue || 0,
+      city: p.address || 'Chennai',
+      notes: p.address ? `Address: ${p.address}` : 'Accounts & Finance Party'
+    }));
+
+    if (project.client_name && !result.some(p => p.name.trim().toLowerCase() === project.client_name.trim().toLowerCase())) {
+      result.unshift({
+        id: `pty-client-${project.id || 'default'}`,
+        name: project.client_name.trim(),
+        category: 'CLIENT',
+        contact_person: project.client_name.trim(),
+        phone: '+91 98000 00000',
+        email: `${project.client_name.trim().toLowerCase().replace(/\s+/g, '')}@gmail.com`,
+        gstin: '33AAAAA0000A1Z5',
+        balance_type: 'RECEIVABLE',
+        current_balance: 0,
+        city: 'Chennai',
+        notes: `Client for project ${project.name}`
+      });
+    }
+
+    return result;
+  };
+
+  const [parties, setParties] = useState<Party[]>(() => loadProjectParties());
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
+
+  useEffect(() => {
+    const refreshParties = () => {
+      setParties(loadProjectParties());
+    };
+    window.addEventListener('storage', refreshParties);
+    window.addEventListener('booshnam_finance_updated', refreshParties);
+    return () => {
+      window.removeEventListener('storage', refreshParties);
+      window.removeEventListener('booshnam_finance_updated', refreshParties);
+    };
+  }, [project.client_name, project.name, project.id]);
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -62,22 +115,50 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
       return;
     }
 
-    const newPty: Party = {
+    const pType: PartyRecord['type'] = 
+      newCategory === 'CLIENT' ? 'Client' :
+      newCategory === 'SUBCONTRACTOR' ? 'Subcontractor' :
+      newCategory === 'SUPPLIER' ? 'Supplier' : 'Consultant';
+
+    const { text, color } = getPartyAvatarInfo(newName.trim(), pType);
+
+    const newRecord: PartyRecord = {
       id: `pty-${Date.now()}`,
+      name: newName.trim(),
+      avatarText: text,
+      avatarColor: color,
+      type: pType,
+      contactPerson: newContact.trim() || newName.trim(),
+      phone: newPhone.trim() ? `+91 ${newPhone.trim()}` : undefined,
+      email: newEmail.trim() || undefined,
+      gstin: newGstin.trim() || undefined,
+      balanceDue: Number(newBalance) || 0,
+      status: newBalanceType === 'RECEIVABLE' ? 'To Receive' : 'To Pay',
+      activeStatus: 'Active',
+      totalBilled: Number(newBalance) || 0,
+      totalPaid: 0,
+      activeProjects: [project.name]
+    };
+
+    const finParties = getFinanceParties();
+    saveFinanceParties([newRecord, ...finParties]);
+
+    const newPty: Party = {
+      id: newRecord.id,
       name: newName.trim(),
       category: newCategory,
       contact_person: newContact.trim() || newName.trim(),
-      phone: newPhone.trim() || '+91 98000 00000',
+      phone: newPhone.trim() ? `+91 ${newPhone.trim()}` : '+91 98000 00000',
       email: newEmail.trim() || `${newName.toLowerCase().replace(/\s+/g, '')}@gmail.com`,
       gstin: newGstin.trim() || '33AAAAA0000A1Z5',
       balance_type: newBalanceType,
       current_balance: Number(newBalance) || 0,
       city: 'Chennai',
-      notes: 'New party added to project directory.'
+      notes: 'Added from project directory & synced to Accounts & Finance.'
     };
 
-    setParties([...parties, newPty]);
-    onShowToast?.(`Party "${newPty.name}" added successfully!`);
+    setParties([newPty, ...parties]);
+    onShowToast?.(`Party "${newPty.name}" added and synced to Accounts & Finance!`);
     setIsAddOpen(false);
 
     // Reset

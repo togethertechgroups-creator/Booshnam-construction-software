@@ -9,12 +9,13 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'dashboard', name: 'Dashboard', category: 'Core Operations', description: 'Company performance KPIs, active projects count, revenue & operations overview' },
   { id: 'projects', name: 'Projects', category: 'Core Operations', description: 'Project directory, WBS scheduling, task execution & site progress tracking' },
   { id: 'quotation', name: 'Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
+  { id: 'schedule', name: 'Schedule & Timesheet', category: 'Core Operations', description: 'Team Gantt schedule for quotation tasks & staff timesheets' },
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
   { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
   { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
-  { id: 'equipment', name: 'Fleet & Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
+  { id: 'equipment', name: 'Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
   { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
   { id: 'approvals', name: 'Approvals', category: 'Repository & Quality', description: 'Multi-tiered authorization workflow for expenses, drawings & change orders' },
   { id: 'site_ops', name: 'Reports (DPR)', category: 'Repository & Quality', description: 'Daily Progress Reports (DPR), site photos, weather logs & labour counts' },
@@ -49,21 +50,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'PROJECT_MANAGER',
     roleName: 'Project Manager',
     description: 'Overall project leadership, team delegation, budget & schedule execution',
-    allowedPages: ['dashboard', 'projects', 'quotation', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'setting'],
+    allowedPages: ['dashboard', 'projects', 'quotation', 'schedule', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   SUPERVISOR: {
     roleCode: 'SUPERVISOR',
     roleName: 'Supervisor',
     description: 'Assigned project supervision, daily progress, attendance & site operations',
-    allowedPages: ['projects', 'workforce', 'site_ops', 'documents', 'approvals', 'setting'],
+    allowedPages: ['projects', 'schedule', 'workforce', 'site_ops', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   SITE_ENGINEER: {
     roleCode: 'SITE_ENGINEER',
     roleName: 'Site Engineer',
     description: 'Assigned project execution, daily DPR updates, material tracking & payment requests',
-    allowedPages: ['projects', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'setting'],
+    allowedPages: ['projects', 'schedule', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   ARCHITECT: {
@@ -108,9 +109,13 @@ export function getStoredRolePermissions(): Record<string, RoleAccessPermission>
     // Filter out obsolete 'tasks' and 'snags' standalone module IDs
     const sanitized: Record<string, RoleAccessPermission> = {};
     for (const [code, perm] of Object.entries(merged)) {
+      const pages = (perm.allowedPages || []).filter(p => p !== 'tasks' && p !== 'snags');
+      if (code !== 'CLIENT' && !pages.includes('schedule')) {
+        pages.push('schedule');
+      }
       sanitized[code] = {
         ...perm,
-        allowedPages: (perm.allowedPages || []).filter(p => p !== 'tasks' && p !== 'snags')
+        allowedPages: pages
       };
     }
     return sanitized;
@@ -185,9 +190,7 @@ export function resetRolePermissions(): Record<string, RoleAccessPermission> {
 }
 
 export function isPageAllowedForRole(roleCode: string, pageId: string): boolean {
-  const permissions = getStoredRolePermissions();
-  const config = permissions[roleCode];
-  if (!config) return true; // default allow if unknown
+  if (roleCode === 'SUPER_ADMIN' || roleCode === 'ADMIN') return true;
 
   let targetId = pageId;
   if (pageId === 'company_dashboard') targetId = 'dashboard';
@@ -198,7 +201,16 @@ export function isPageAllowedForRole(roleCode: string, pageId: string): boolean 
   if (pageId === 'report') targetId = 'site_ops';
   if (pageId === 'library') targetId = 'documents';
   if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
+  if (pageId === 'timesheet' || pageId === 'team_schedule' || pageId === 'schedule_timesheet') targetId = 'schedule';
   if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
+
+  if (targetId === 'schedule') {
+    return roleCode !== 'CLIENT';
+  }
+
+  const permissions = getStoredRolePermissions();
+  const config = permissions[roleCode];
+  if (!config) return true; // default allow if unknown
 
   return config.allowedPages.includes(pageId) || config.allowedPages.includes(targetId);
 }

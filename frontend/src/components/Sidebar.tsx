@@ -6,7 +6,7 @@ import {
   BookOpen, Settings, ChevronDown, ArrowLeft, Shield,
   Layers, ListTodo, Calculator, ShieldCheck, Menu, LogOut,
   Landmark, Compass, BarChart3, HardHat, DollarSign, Building2, CheckCircle2, Bell,
-  FolderPlus
+  FolderPlus, Calendar
 } from 'lucide-react';
 
 export function ChevronLeftIcon({ size = 24, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
@@ -290,7 +290,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             icon: Calculator, 
             badge: followUpsCount > 0 ? `${followUpsCount}` : null,
             hasBell: followUpsCount > 0
-          }
+          },
+          { id: 'schedule', label: 'Schedule & Timesheet', icon: Calendar }
         ]
       },
       // Group 2: Workforce & Payroll
@@ -313,7 +314,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             badge: unacknowledgedLowStockCount > 0 ? `${unacknowledgedLowStockCount}` : null,
             hasDot: unacknowledgedLowStockCount > 0
           },
-          { id: 'equipment', label: 'Fleet & Assets', icon: Truck }
+          { id: 'equipment', label: 'Assets', icon: Truck }
         ]
       },
       // Group 4: Repository, Governance & Config
@@ -351,6 +352,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       (itemId === 'procurement' && (currentView === 'procurement' || currentView === 'warehouse')) ||
       (itemId === 'equipment' && (currentView === 'equipment' || currentView === 'asset')) ||
       (itemId === 'documents' && (currentView === 'documents' || currentView === 'library')) ||
+      (itemId === 'schedule' && (currentView === 'schedule' || currentView === 'timesheet' || currentView === 'team_schedule' || currentView === 'schedule_timesheet')) ||
       (itemId === 'setting' && (currentView === 'setting' || currentView === 'settings'))
     );
   };

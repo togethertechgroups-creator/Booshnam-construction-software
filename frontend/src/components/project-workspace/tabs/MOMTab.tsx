@@ -380,10 +380,11 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
             <button
               type="button"
               onClick={() => setSelectedMeeting(null)}
-              className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 cursor-pointer"
+              className="p-1.5 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
+              title="Back to All Meetings"
+              aria-label="Back to All Meetings"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to All Meetings</span>
+              <ArrowLeft className="w-4 h-4" />
             </button>
 
             <button

@@ -160,11 +160,30 @@ export function App() {
         localStorage.removeItem('booshnam_finance_transfers_v1');
       }
 
+      // Purge dummy projects explicitly
+      const savedProjs = localStorage.getItem('booshnam_projects_v2');
+      if (savedProjs && (savedProjs.includes('"bn-') || savedProjs.includes('"proj-') || savedProjs.includes('Prestige Boulevard'))) {
+         // Read it, filter it, rewrite it
+         try {
+           const parsed = JSON.parse(savedProjs);
+           if (Array.isArray(parsed)) {
+             const cleaned = parsed.filter((p: any) => 
+               !p.id?.startsWith('proj-') && 
+               !p.id?.startsWith('bn-') &&
+               !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+             );
+             localStorage.setItem('booshnam_projects_v2', JSON.stringify(cleaned));
+           }
+         } catch(e) {}
+      }
+
       // Ensure all 10 departments have at least one project
       const allDeptsProjs = getOrInitializeProjects();
       setProjects(allDeptsProjs);
       if (allDeptsProjs.length > 0) {
         setSelectedProject(prev => prev || allDeptsProjs[0]);
+      } else {
+        setSelectedProject(null);
       }
       window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: allDeptsProjs }));
     } catch (e) {}
@@ -205,6 +224,7 @@ export function App() {
     try {
       const clean = (projects || []).filter((p: any) => 
         !p.id?.startsWith('proj-') &&
+        !p.id?.startsWith('bn-') &&
         !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
       );
       localStorage.setItem('booshnam_projects_v2', JSON.stringify(clean));
@@ -217,6 +237,7 @@ export function App() {
       if (e.detail && Array.isArray(e.detail)) {
         const clean = e.detail.filter((p: any) => 
           !p.id?.startsWith('proj-') &&
+          !p.id?.startsWith('bn-') &&
           !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
         );
         setProjects(clean);

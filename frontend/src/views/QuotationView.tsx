@@ -1275,7 +1275,8 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                         <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
                           {lead.source || 'Just dial'}
-                               <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        </td>
+                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="relative inline-block dropdown-trigger-container">
                             <button
                               type="button"

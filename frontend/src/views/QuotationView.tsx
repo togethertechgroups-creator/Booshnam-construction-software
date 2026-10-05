@@ -16,6 +16,7 @@ import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isRemi
 import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
 import { getTermsConditions } from '../lib/termsService';
 import { MOCK_ROLES } from '../lib/mockData';
+import { getStaffMembers, StaffMember } from '../lib/staffService';
 
 interface QuotationViewProps {
   projects?: Project[];
@@ -287,6 +288,9 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     } catch {}
     return merged;
   }, []);
+
+  // Fetch staff members to show in Assignment
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>(() => getStaffMembers());
 
   // =========================================================================
   // 1. LEADS STATE & PERSISTENCE
@@ -1677,13 +1681,28 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 <div className="flex gap-2">
                   <FloatingSelect
                     className="flex-1"
-                    label="ASSIGN TO DEPARTMENT"
-                    value={drawerAssignedRole}
-                    onChange={setDrawerAssignedRole}
-                    placeholder="Select Department/Role"
+                    label="ASSIGN TO"
+                    value={drawerAssignee}
+                    onChange={(val) => {
+                      setDrawerAssignee(val);
+                      const staff = staffMembers.find(s => s.name === val);
+                      if (staff) {
+                        setDrawerAssignedRole(staff.role_code || staff.role_name || '');
+                      } else {
+                        setDrawerAssignedRole('');
+                      }
+                    }}
+                    placeholder="Select Staff Member"
                     options={[
                       { label: 'Unassigned', value: '' },
-                      ...allRoles.map(r => ({ label: r.name, value: r.code }))
+                      ...staffMembers.map(staff => {
+                        const roleObj = allRoles.find(r => r.code === staff.role_code);
+                        const roleName = roleObj ? roleObj.name : (staff.role_name || staff.role_code);
+                        return { 
+                          label: `${staff.name} - ${roleName}`, 
+                          value: staff.name
+                        };
+                      })
                     ]}
                   />
                 </div>

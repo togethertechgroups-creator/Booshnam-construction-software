@@ -3132,24 +3132,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Assigned Department *
-                </label>
-                <select
-                  value={newTeamMemberForm.department}
-                  onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, department: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                >
-                  {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map((dept) => (
-                    <option key={dept.id} value={dept.name}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-slate-400 mt-1">When this member logs in, they will only see and access their assigned department.</p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Create Login Password *
                 </label>
                 <div className="relative">

@@ -1078,30 +1078,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        Department
-                      </label>
-                      <CustomSelect
-                        value={newStaffForm.department}
-                        onChange={(val) => setNewStaffForm({ ...newStaffForm, department: val })}
-                        options={[
-                          { label: 'Soil Investigation', value: 'Soil Investigation' },
-                          { label: 'Material Testing', value: 'Material Testing' },
-                          { label: 'Surveying', value: 'Surveying' },
-                          { label: 'Structural', value: 'Structural' },
-                          { label: 'Architectural', value: 'Architectural' },
-                          { label: 'Sculpture', value: 'Sculpture' },
-                          { label: 'Private Construction', value: 'Private Construction' },
-                          { label: 'Government Projects', value: 'Government Projects' },
-                          { label: 'Coimbatore – Soil Investigation', value: 'Coimbatore – Soil Investigation' },
-                          { label: 'Coimbatore – Material Testing', value: 'Coimbatore – Material Testing' },
-                        ]}
-                        variant="brand"
-                        triggerClassName="h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 focus:border-red-500"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">
                         Designation / Title

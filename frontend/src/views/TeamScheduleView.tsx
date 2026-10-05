@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Calendar, Clock, Search, Filter, Plus, ChevronDown, 
   MoreVertical, Download, ExternalLink, HelpCircle, 
-  Award, CheckCircle2, ChevronRight, ChevronLeft, Menu, 
+  Award, CheckCircle2, Menu, 
   FileSpreadsheet, FileText, Check, Trash2, Eye, Edit2,
   FolderKanban, Briefcase, User, Sparkles, X, AlertCircle, CheckCircle
 } from 'lucide-react';
@@ -207,28 +207,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     return Array.from(set);
   }, [timesheets]);
 
-  // Dynamic available years list: defaults to current year, previous, and future years (+1, +2, +3), plus any years in tasks/projects
-  const availableYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const set = new Set<number>([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
-    quotationTasks.forEach(t => {
-      if (t.start_date) {
-        const y = new Date(t.start_date).getFullYear();
-        if (!isNaN(y)) set.add(y);
-      }
-      if (t.end_date) {
-        const y = new Date(t.end_date).getFullYear();
-        if (!isNaN(y)) set.add(y);
-      }
-    });
-    projects.forEach(p => {
-      if (p.start_date) {
-        const y = new Date(p.start_date).getFullYear();
-        if (!isNaN(y)) set.add(y);
-      }
-    });
-    return Array.from(set).sort((a, b) => a - b);
-  }, [quotationTasks, projects]);
 
   // Dynamic Timeline Months (12 months of activeYear)
   const timelineMonths: TimelineMonth[] = useMemo(() => {
@@ -296,65 +274,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     return `Jan ${activeYear} - Dec ${activeYear}`;
   }, [granularityFilter, activeYear, activeMonth, activeQuarter, activeDay, customFromDate, customToDate]);
 
-  // Navigation handlers for toolbar
-  const handleTodayClick = () => {
-    const now = new Date();
-    setActiveYear(now.getFullYear());
-    setActiveMonth(now.getMonth());
-    setActiveQuarter(Math.floor(now.getMonth() / 3) + 1);
-    setActiveDay(now.toISOString().split('T')[0]);
-    setCustomFromDate('');
-    setCustomToDate('');
-    onShowToast?.('Centered timeline on current date');
-  };
-
-  const handlePrevPeriod = () => {
-    if (granularityFilter === 'Day') {
-      const d = new Date(activeDay);
-      d.setDate(d.getDate() - 1);
-      setActiveDay(d.toISOString().split('T')[0]);
-    } else if (granularityFilter === 'Month') {
-      if (activeMonth === 0) {
-        setActiveMonth(11);
-        setActiveYear(y => y - 1);
-      } else {
-        setActiveMonth(m => m - 1);
-      }
-    } else if (granularityFilter === 'Quarter') {
-      if (activeQuarter === 1) {
-        setActiveQuarter(4);
-        setActiveYear(y => y - 1);
-      } else {
-        setActiveQuarter(q => q - 1);
-      }
-    } else {
-      setActiveYear(y => y - 1);
-    }
-  };
-
-  const handleNextPeriod = () => {
-    if (granularityFilter === 'Day') {
-      const d = new Date(activeDay);
-      d.setDate(d.getDate() + 1);
-      setActiveDay(d.toISOString().split('T')[0]);
-    } else if (granularityFilter === 'Month') {
-      if (activeMonth === 11) {
-        setActiveMonth(0);
-        setActiveYear(y => y + 1);
-      } else {
-        setActiveMonth(m => m + 1);
-      }
-    } else if (granularityFilter === 'Quarter') {
-      if (activeQuarter === 4) {
-        setActiveQuarter(1);
-        setActiveYear(y => y + 1);
-      } else {
-        setActiveQuarter(q => q + 1);
-      }
-    } else {
-      setActiveYear(y => y + 1);
-    }
-  };
 
   // Filtered Quotation Tasks for Gantt View (supports All, Year, Quarter, Month, Day, and Date Range)
   const filteredQuotationTasks = useMemo(() => {
@@ -760,43 +679,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
             {/* Main Schedule Container (Toolbar + Gantt Table) */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               
-              {/* Toolbar with Period Navigation, Custom Date Range (From - To), and Filter Dropdown */}
-              <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
-                
-                {/* Left: Today, Prev/Next, Date Range */}
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleTodayClick}
-                    className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 shadow-2xs transition-colors cursor-pointer"
-                  >
-                    Today
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={handlePrevPeriod}
-                      className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors cursor-pointer"
-                      title="Previous Period"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleNextPeriod}
-                      className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors cursor-pointer"
-                      title="Next Period"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Date Range Label */}
-                  <span className="text-sm font-bold text-slate-800 tracking-tight ml-1">
-                    {displayDateRangeLabel}
-                  </span>
-                </div>
+              {/* Toolbar with Custom Date Range (From - To), and Filter Dropdown */}
+              <div className="px-5 py-3 border-b border-slate-200 flex flex-wrap items-center justify-end gap-2.5 bg-white">
 
                 {/* Right: Date-to-Date Calendar Picker (From - To) & Granularity Dropdown Filter */}
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -904,48 +788,9 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
                       <th className="w-16 px-2 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">Action</th>
                       
-                      {/* Year Header spanning full year with dynamic year switcher and automated rollover */}
+                      {/* Year Header spanning full year */}
                       <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 select-none">
-                        <div className="flex items-center justify-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setActiveYear(y => y - 1)}
-                            className="p-1 hover:bg-white rounded-md text-slate-500 hover:text-slate-800 border border-transparent hover:border-slate-200 transition-all cursor-pointer shadow-2xs"
-                            title={`Previous Year (${activeYear - 1})`}
-                          >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                          </button>
-
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-extrabold text-slate-800 tracking-wide">{activeYear}</span>
-                            {activeYear === new Date().getFullYear() && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Current</span>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => setActiveYear(y => y + 1)}
-                            className="p-1 hover:bg-white rounded-md text-slate-500 hover:text-slate-800 border border-transparent hover:border-slate-200 transition-all cursor-pointer shadow-2xs"
-                            title={`Next Year (${activeYear + 1}) - Auto-generates Jan - Dec`}
-                          >
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Quick Year Selector Dropdown */}
-                          <select
-                            value={activeYear}
-                            onChange={(e) => setActiveYear(Number(e.target.value))}
-                            className="ml-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-md px-2 py-0.5 cursor-pointer focus:outline-none focus:border-blue-500"
-                            title="Select Timeline Year"
-                          >
-                            {availableYears.map(yr => (
-                              <option key={yr} value={yr}>
-                                {yr} {yr === new Date().getFullYear() ? '(Current)' : yr === new Date().getFullYear() + 1 ? '(Next Year)' : ''}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <span className="text-sm font-extrabold text-slate-800 tracking-wide">{activeYear}</span>
                       </th>
                     </tr>
 

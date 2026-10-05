@@ -622,7 +622,7 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
               return (
                 <div
                   key={`${cell.dateStr}-${idx}`}
-                  className={`min-h-[110px] p-2 transition-colors relative flex flex-col group ${
+                  className={`h-[85px] p-1.5 transition-colors relative flex flex-col group overflow-hidden ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-50/50 text-slate-400 opacity-60'
                       : cell.isSunday
@@ -631,9 +631,9 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                   } hover:bg-indigo-50/30`}
                 >
                   {/* Date Number and Add Trigger */}
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1">
                     <span
-                      className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${
+                      className={`text-[11px] font-bold w-5 h-5 flex items-center justify-center rounded-full ${
                         cell.isToday
                           ? 'bg-indigo-600 text-white shadow-xs'
                           : cell.isSunday
@@ -648,7 +648,7 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                     <button
                       type="button"
                       onClick={() => handleOpenMarkHolidayModal(cell.dateStr)}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition cursor-pointer text-[10px] font-bold flex items-center gap-0.5"
                       title={`Mark holiday for ${cell.dateStr}`}
                     >
                       <Plus className="w-3 h-3" />
@@ -657,31 +657,23 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
 
                   {/* Sunday Weekly Off Tag */}
                   {cell.isSunday && (
-                    <div className="text-[10px] font-semibold text-red-500 mb-1 flex items-center gap-1">
+                    <div className="text-[9px] font-semibold text-red-500 mb-0.5 flex items-center gap-1 leading-none">
                       <span>Weekly Off</span>
                     </div>
                   )}
 
                   {/* Marked Holidays List inside cell */}
-                  <div className="space-y-1 mt-auto overflow-y-auto max-h-[85px]">
+                  <div className="flex flex-col gap-0.5 mt-auto overflow-y-auto min-h-0 scrollbar-hide pb-0.5">
                     {cellHolidays.map(h => (
                       <div
                         key={h.id}
                         onClick={() => handleEditHoliday(h)}
-                        className={`px-2 py-1 rounded-md text-[11px] font-semibold border cursor-pointer transition-all hover:scale-[1.02] shadow-2xs ${getCategoryBadgeClass(
+                        className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-semibold border cursor-pointer transition-all hover:scale-[1.02] shadow-2xs ${getCategoryBadgeClass(
                           h.category
                         )}`}
                         title={`${h.name} (${h.category || 'Holiday'}) - Click to edit`}
                       >
-                        <div className="font-bold truncate">{h.name}</div>
-                        <div className="flex items-center justify-between text-[9px] opacity-80 mt-0.5">
-                          <span>{h.category || 'Holiday'}</span>
-                          {h.applicableTo && h.applicableTo !== 'All Workforce' && (
-                            <span className="font-bold uppercase tracking-wider text-[8px] bg-white/70 px-1 rounded">
-                              {h.applicableTo.includes('Site') ? 'Site' : 'Office'}
-                            </span>
-                          )}
-                        </div>
+                        <div className="font-bold truncate leading-tight">{h.name}</div>
                       </div>
                     ))}
                   </div>

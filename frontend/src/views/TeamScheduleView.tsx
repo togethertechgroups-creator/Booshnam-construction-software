@@ -839,12 +839,12 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                     onMouseLeave={() => setHoveredMarkerTaskId(null)}
                                     onClick={() => setSelectedQuotationDrawerTask(task)}
                                   >
-                                    {/* Vertical Dotted Guideline */}
-                                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 border-l border-dashed border-slate-300 pointer-events-none" />
+                                    {/* Vertical Dotted Guideline - clearly visible above and under the dart */}
+                                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 border-l-2 border-dashed border-slate-400 pointer-events-none" />
 
-                                    {/* The Dot Marker (Dynamic Status Color) */}
+                                    {/* The Dot Marker (Dynamic Status Color) - smaller dart */}
                                     <div 
-                                      className={`relative z-10 w-3.5 h-3.5 rounded-full ${markerBgColor} ring-4 ${markerRingColor} shadow-xs transition-transform duration-200 hover:scale-125`}
+                                      className={`relative z-10 w-2.5 h-2.5 rounded-full ${markerBgColor} ring-2 ${markerRingColor} shadow-2xs transition-transform duration-200 hover:scale-125`}
                                     />
 
                                     {/* Floating Popover: Appears ONLY when hovering on marker, as commanded in Audio! */}

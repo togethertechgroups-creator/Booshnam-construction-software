@@ -4,7 +4,7 @@ import {
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
   Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
-  Camera, Eye
+  Camera, Eye, HardHat
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -16,8 +16,15 @@ import {
   deleteStaffMember,
   StaffMember,
   getStaffAllocatedProjects,
-  toggleStaffProjectAllocation
+  toggleStaffProjectAllocation,
+  getStaffCategory
 } from '../lib/staffService';
+import {
+  getActiveDepartment,
+  normalizeDepartmentId,
+  getIndividualDepartments,
+  DepartmentEntity
+} from '../lib/departmentService';
 import { confirmAction, setFormDirty, clearFormDirty } from '../lib/dialogService';
 import { MOCK_ROLES } from '../lib/mockData';
 import { StaffOverviewView } from '../components/StaffOverviewView';
@@ -175,20 +182,86 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     setOverviewInitialTab(defaultTab);
   };
 
+  // Active Department Management
+  const [activeDept, setActiveDept] = useState<DepartmentEntity>(() => getActiveDepartment());
+  useEffect(() => {
+    const syncDept = () => setActiveDept(getActiveDepartment());
+    window.addEventListener('booshnam_active_dept_changed', syncDept);
+    window.addEventListener('storage', syncDept);
+    return () => {
+      window.removeEventListener('booshnam_active_dept_changed', syncDept);
+      window.removeEventListener('storage', syncDept);
+    };
+  }, []);
+
+  const isOverview = activeDept.isMainOverview || activeDept.id === 'booshnam_associates';
+
+  // Filtered by department: If overview (Booshnam Associates), show all. Otherwise filter strictly to active department.
+  const departmentStaffList = useMemo(() => {
+    if (isOverview) return staffList;
+    const normActive = normalizeDepartmentId(activeDept.id);
+    return staffList.filter(s => {
+      const normStaffDept = normalizeDepartmentId(s.department);
+      return normStaffDept === normActive;
+    });
+  }, [staffList, isOverview, activeDept.id]);
+
+  // Office Staff vs Site Staff filter
+  const [staffCategoryFilter, setStaffCategoryFilter] = useState<'ALL' | 'OFFICE' | 'SITE'>('ALL');
+  const [attendanceActiveFilter, setAttendanceActiveFilter] = useState<'active' | 'all'>('active');
+  const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
+
   // New Staff Form State
-  const [newStaffForm, setNewStaffForm] = useState({
+  const [newStaffForm, setNewStaffForm] = useState<{
+    name: string;
+    role_code: string;
+    department: string;
+    designation: string;
+    dob: string;
+    doj: string;
+    phone: string;
+    email: string;
+    employment_type: 'Full-time' | 'Contract' | 'Part-time';
+    salary: number;
+    salary_type: 'Month' | 'Day';
+    staff_type: 'OFFICE' | 'SITE';
+  }>({
     name: '',
     role_code: 'SITE_ENGINEER',
-    department: 'Soil Investigation',
+    department: 'Soil Investigation (Chennai)',
     designation: 'Site Engineer',
     dob: '1995-05-15',
     doj: new Date().toISOString().split('T')[0],
     phone: '',
     email: '',
-    employment_type: 'Full-time' as 'Full-time' | 'Contract' | 'Part-time',
+    employment_type: 'Full-time',
     salary: 45000,
-    salary_type: 'Month' as 'Month' | 'Day'
+    salary_type: 'Month',
+    staff_type: 'SITE'
   });
+
+  const handleOpenAddStaffModal = (defaultType?: 'OFFICE' | 'SITE') => {
+    const chosenType = defaultType || (staffCategoryFilter === 'OFFICE' ? 'OFFICE' : 'SITE');
+    const defaultDeptName = !isOverview 
+      ? activeDept.name 
+      : (getIndividualDepartments()[0]?.name || 'Soil Investigation (Chennai)');
+
+    setNewStaffForm({
+      name: '',
+      role_code: chosenType === 'SITE' ? 'SITE_ENGINEER' : 'ADMIN',
+      department: defaultDeptName,
+      designation: chosenType === 'SITE' ? 'Site Engineer' : 'Office Administrator',
+      dob: '1995-05-15',
+      doj: new Date().toISOString().split('T')[0],
+      phone: '',
+      email: '',
+      employment_type: 'Full-time',
+      salary: 45000,
+      salary_type: 'Month',
+      staff_type: chosenType
+    });
+    setShowAddStaffModal(true);
+  };
 
   useEffect(() => {
     if (initialTab) setMainTab(initialTab);
@@ -242,17 +315,22 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     }
 
     const rolesMap = getStoredRolePermissions();
-    const roleObj = rolesMap[newStaffForm.role_code] || { roleName: newStaffForm.role_code };
+    const isSite = newStaffForm.staff_type === 'SITE';
+    const computedRoleCode = isSite ? 'SITE_ENGINEER' : 'ADMIN';
+    const roleObj = rolesMap[computedRoleCode] || { roleName: isSite ? 'Site Engineer' : 'Office Staff' };
     const generatedCode = `EMP-0${100 + staffList.length + 1}`;
+    const targetDept = !isOverview 
+      ? activeDept.name 
+      : (newStaffForm.department || getIndividualDepartments()[0]?.name || 'Soil Investigation (Chennai)');
 
     const newStaff: StaffMember = {
       id: `emp-${Date.now()}`,
       employee_code: generatedCode,
       name: newStaffForm.name.trim(),
-      role_code: newStaffForm.role_code,
-      role_name: roleObj.roleName || newStaffForm.role_code,
-      department: newStaffForm.department,
-      designation: newStaffForm.designation || roleObj.roleName || newStaffForm.role_code,
+      role_code: computedRoleCode,
+      role_name: roleObj.roleName || (isSite ? 'Site Engineer' : 'Office Staff'),
+      department: targetDept,
+      designation: newStaffForm.designation || (isSite ? 'Site Engineer' : 'Office Administrator'),
       dob: newStaffForm.dob,
       doj: newStaffForm.doj,
       phone: newStaffForm.phone,
@@ -261,13 +339,14 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       salary: Number(newStaffForm.salary) || 40000,
       salary_type: newStaffForm.salary_type,
       status: 'ACTIVE',
+      staff_type: newStaffForm.staff_type,
       has_login_account: true, // we are creating one now
       created_at: new Date().toISOString().split('T')[0]
     };
 
     const confirmed = await confirmAction({
-      title: 'Create Staff & Login Account',
-      message: `Create account for "${newStaff.name}"\nThey will log in using phone: ${newStaff.phone}`,
+      title: `Create ${isSite ? 'Site Staff' : 'Office Staff'}`,
+      message: `Add "${newStaff.name}" to ${newStaff.department}?\nThey will log in using phone: ${newStaff.phone}`,
       confirmText: 'Save Staff',
       cancelText: 'Cancel',
       variant: 'primary',
@@ -295,22 +374,11 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     saveUserAccount(newAccount);
 
     clearFormDirty();
+    setStaffList(getStaffMembers());
     setShowAddStaffModal(false);
-    setNewStaffForm({
-      name: '',
-      role_code: 'SITE_ENGINEER',
-      department: 'Civil Construction',
-      designation: 'Site Engineer',
-      dob: '1995-05-15',
-      doj: new Date().toISOString().split('T')[0],
-      phone: '',
-      email: '',
-      employment_type: 'Full-time',
-      salary: 45000,
-      salary_type: 'Month'
-    });
-    triggerToast(`Staff "${newStaff.name}" added successfully!`);
+    triggerToast(`Staff "${newStaff.name}" added to ${newStaff.department}!`);
   };
+
   const handleDeleteStaff = async (id: string, name: string) => {
     const confirmed = await confirmAction({
       title: 'Remove Staff Member',
@@ -323,19 +391,63 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
     if (confirmed) {
       deleteStaffMember(id);
+      setStaffList(getStaffMembers());
       triggerToast(`Staff "${name}" removed successfully`);
     }
   };
 
-  const filteredStaff = staffList.filter(s => {
-    const matchesQuery =
-      s.name.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
-      s.employee_code.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
-      s.department.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
-      s.designation.toLowerCase().includes(searchStaffQuery.toLowerCase());
-    const matchesRole = selectedRoleFilter === 'ALL' || s.role_code === selectedRoleFilter;
-    return matchesQuery && matchesRole;
-  });
+  const filteredStaff = useMemo(() => {
+    return departmentStaffList.filter(s => {
+      const matchesCategory =
+        staffCategoryFilter === 'ALL' ||
+        getStaffCategory(s) === staffCategoryFilter;
+      const matchesQuery =
+        s.name.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
+        s.employee_code.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
+        s.department.toLowerCase().includes(searchStaffQuery.toLowerCase()) ||
+        s.designation.toLowerCase().includes(searchStaffQuery.toLowerCase());
+      const matchesRole = selectedRoleFilter === 'ALL' || s.role_code === selectedRoleFilter;
+      return matchesCategory && matchesQuery && matchesRole;
+    });
+  }, [departmentStaffList, staffCategoryFilter, searchStaffQuery, selectedRoleFilter]);
+
+  const attendanceStaffList = useMemo(() => {
+    return departmentStaffList.filter(s => {
+      if (staffCategoryFilter !== 'ALL' && getStaffCategory(s) !== staffCategoryFilter) {
+        return false;
+      }
+      if (attendanceSearchQuery.trim()) {
+        const q = attendanceSearchQuery.toLowerCase();
+        const matches =
+          s.name.toLowerCase().includes(q) ||
+          s.employee_code.toLowerCase().includes(q) ||
+          s.designation.toLowerCase().includes(q) ||
+          s.department.toLowerCase().includes(q);
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [departmentStaffList, staffCategoryFilter, attendanceSearchQuery]);
+
+  const attendanceStats = useMemo(() => {
+    const list = staffCategoryFilter === 'ALL'
+      ? departmentStaffList
+      : departmentStaffList.filter(s => getStaffCategory(s) === staffCategoryFilter);
+    const presentCount = list.filter(s => {
+      const st = getAttendanceStatus(s.id);
+      return st === 'Present' || st === 'Late' || st === 'Half-day' || st === 'Overtime';
+    }).length;
+    const absentCount = list.filter(s => getAttendanceStatus(s.id) === 'Absent').length;
+    const leaveCount = list.filter(s => getAttendanceStatus(s.id) === 'Paid Leave').length;
+    const weekoffCount = list.filter(s => getAttendanceStatus(s.id) === 'Weekoff').length;
+    return {
+      total: list.length,
+      present: presentCount,
+      absent: absentCount,
+      leave: leaveCount,
+      weekoff: weekoffCount
+    };
+  }, [departmentStaffList, staffCategoryFilter, attendanceRecords, staffAttendanceStatus]);
 
   const totalPresent = attendance.filter(a => a.status !== 'ABSENT').length;
   const insideGeofenceCount = attendance.filter(a => a.is_inside_geofence).length;
@@ -413,45 +525,86 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
               {/* Quick Metrics Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Enrolled Staff</div>
-                  <div className="text-2xl font-black text-slate-900 mt-1">{staffList.length}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">Civil, Architecture & Operations</div>
+                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                    {isOverview ? 'Total Company Staff' : `${activeDept.name} Staff`}
+                  </div>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{departmentStaffList.length}</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {isOverview ? 'All Departments Combined' : 'Enrolled in active department'}
+                  </div>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
                   <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Site Workforce</div>
                   <div className="text-2xl font-black text-emerald-700 mt-1">
-                    {staffList.filter(s => s.role_code === 'SITE_ENGINEER' || s.role_code === 'SUPERVISOR').length} On Site
+                    {departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length} On Site
                   </div>
-                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5">Engineers & Supervisors</div>
+                  <div className="text-[10px] text-emerald-600 font-medium mt-0.5">Engineers & Field Staff</div>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
                   <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Office & Administration</div>
-                  <div className="text-2xl font-black text-red-700 mt-1">
-                    {staffList.filter(s => s.role_code === 'ADMIN' || s.role_code === 'ACCOUNTS' || s.role_code === 'ARCHITECT').length} Staff
+                  <div className="text-2xl font-black text-indigo-700 mt-1">
+                    {departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length} Staff
                   </div>
-                  <div className="text-[10px] text-red-600 font-medium mt-0.5">Admin, Design & Accounts</div>
+                  <div className="text-[10px] text-indigo-600 font-medium mt-0.5">Desk & Office Staff</div>
                 </div>
 
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
                   <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Workspace Access</div>
                   <div className="text-2xl font-black text-slate-900 mt-1">
-                    {staffList.filter(s => s.has_login_account).length} / {staffList.length} Active
+                    {departmentStaffList.filter(s => s.has_login_account).length} / {departmentStaffList.length} Active
                   </div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Configured via Roles & Access</div>
                 </div>
               </div>
 
-              {/* Action Header: Search + Filter + Add Staff Button */}
+              {/* Action Header: Search + Category Filter + Role Filter + Add Staff Button */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-                <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
+                <div className="flex flex-col sm:flex-row items-center gap-3 flex-1 flex-wrap">
+                  {/* Category Filter: All / Office / Site */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('ALL')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'ALL'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All ({departmentStaffList.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('OFFICE')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'OFFICE'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Office Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('SITE')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'SITE'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Site Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length})
+                    </button>
+                  </div>
+
                   {/* Search Bar */}
-                  <div className="relative flex-1 w-full sm:max-w-md">
+                  <div className="relative flex-1 w-full sm:max-w-xs">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="Search staff by name, code, designation, department..."
+                      placeholder="Search staff by name, code..."
                       value={searchStaffQuery}
                       onChange={(e) => setSearchStaffQuery(e.target.value)}
                       className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
@@ -460,7 +613,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setSearchStaffQuery('')}
-                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -468,12 +621,12 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   </div>
 
                   {/* Role Filter */}
-                  <div className="w-full sm:w-52">
+                  <div className="w-full sm:w-48">
                     <CustomSelect
                       value={selectedRoleFilter}
                       onChange={(val) => setSelectedRoleFilter(val)}
                       options={[
-                        { label: `All Roles (${staffList.length})`, value: 'ALL' },
+                        { label: `All Roles (${departmentStaffList.length})`, value: 'ALL' },
                         ...MOCK_ROLES.map(r => ({
                           label: r.name,
                           value: r.code
@@ -489,11 +642,11 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowAddStaffModal(true)}
+                    onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
                     className="w-full sm:w-auto px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer hover:shadow-md"
                   >
                     <UserPlus className="w-4 h-4" />
-                    <span>Add Staff</span>
+                    <span>+ Add {staffCategoryFilter === 'SITE' ? 'Site Staff' : staffCategoryFilter === 'OFFICE' ? 'Office Staff' : 'Staff'}</span>
                   </button>
                 </div>
               </div>
@@ -664,18 +817,56 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-full shadow-xs">Office Staff</button>
-                  <button className="px-3 py-1.5 bg-white text-indigo-600 border border-slate-200 text-xs font-semibold rounded-full hover:bg-slate-50">Site Staff</button>
+                  <button
+                    type="button"
+                    onClick={() => setStaffCategoryFilter(staffCategoryFilter === 'OFFICE' ? 'ALL' : 'OFFICE')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
+                      staffCategoryFilter === 'OFFICE'
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    Office Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStaffCategoryFilter(staffCategoryFilter === 'SITE' ? 'ALL' : 'SITE')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
+                      staffCategoryFilter === 'SITE'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    Site Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length})
+                  </button>
+                  {staffCategoryFilter !== 'ALL' && (
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('ALL')}
+                      className="text-xs text-indigo-600 hover:underline px-1 font-medium cursor-pointer"
+                    >
+                      Show All ({departmentStaffList.length})
+                    </button>
+                  )}
                   <div className="w-px h-4 bg-slate-300 mx-1"></div>
                   <CustomSelect
-                    value="active"
-                    onChange={() => { }}
+                    value={attendanceActiveFilter}
+                    onChange={(val: any) => setAttendanceActiveFilter(val)}
                     options={[{ label: 'Active Staff', value: 'active' }, { label: 'All Staff', value: 'all' }]}
                     triggerClassName="text-xs font-semibold text-indigo-600 border-none bg-transparent hover:bg-slate-50 px-2 rounded"
                   />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
+                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>+ Add {staffCategoryFilter === 'SITE' ? 'Site Staff' : staffCategoryFilter === 'OFFICE' ? 'Office Staff' : 'Staff'}</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
@@ -693,29 +884,37 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                     <input
                       type="text"
                       placeholder="Search Staff / Code..."
-                      className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      value={attendanceSearchQuery}
+                      onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-7 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     />
+                    {attendanceSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setAttendanceSearchQuery('')}
+                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="text-right ml-2">
                     <div className="text-sm font-bold text-slate-900">
-                      {staffList.filter(s => {
-                        const st = getAttendanceStatus(s.id);
-                        return st === 'Present' || st === 'Late' || st === 'Half-day' || st === 'Overtime';
-                      }).length} Present / {staffList.length} Total
+                      {attendanceStats.present} Present / {attendanceStats.total} Total
                     </div>
                     <div className="text-[10px] font-medium text-slate-500 flex items-center gap-2 mt-0.5">
                       <span className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-red-400 rounded-sm"></span>
-                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Absent').length} Absent
+                        {attendanceStats.absent} Absent
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-teal-500 rounded-sm"></span>
-                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Paid Leave').length} Leave
+                        {attendanceStats.leave} Leave
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-indigo-500 rounded-sm"></span>
-                        {staffList.filter(s => getAttendanceStatus(s.id) === 'Weekoff').length} Weekoff
+                        {attendanceStats.weekoff} Weekoff
                       </span>
                     </div>
                   </div>
@@ -735,34 +934,52 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {staffList.map((staff, idx) => {
-                        const colors = ['bg-indigo-600', 'bg-purple-600', 'bg-blue-600', 'bg-indigo-800'];
-                        const color = colors[idx % colors.length];
-                        const staffRecord = attendanceRecords.find(r => r.staff_id === staff.id && r.date === getTodayDateString()) || getStaffLatestRecordToday(staff.id);
+                      {attendanceStaffList.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                            No {staffCategoryFilter === 'SITE' ? 'site' : staffCategoryFilter === 'OFFICE' ? 'office' : ''} staff members found in {isOverview ? 'Booshnam Associates' : activeDept.name}.
+                          </td>
+                        </tr>
+                      ) : (
+                        attendanceStaffList.map((staff, idx) => {
+                          const colors = ['bg-indigo-600', 'bg-purple-600', 'bg-blue-600', 'bg-indigo-800'];
+                          const color = colors[idx % colors.length];
+                          const staffRecord = attendanceRecords.find(r => r.staff_id === staff.id && r.date === getTodayDateString()) || getStaffLatestRecordToday(staff.id);
 
-                        return (
-                          <tr key={staff.id} className="hover:bg-slate-50 transition-colors group">
-                            {/* 1. Staff Member Info */}
-                            <td className="py-4 px-6">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
-                                  {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <div
-                                    className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors"
-                                    onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
-                                  >
-                                    {staff.name}
+                          return (
+                            <tr key={staff.id} className="hover:bg-slate-50 transition-colors group">
+                              {/* 1. Staff Member Info */}
+                              <td className="py-4 px-6">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
+                                    {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                                   </div>
-                                  <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                                    <span className="tracking-tight text-slate-400">({staff.employee_code})</span>
-                                    <span>•</span>
-                                    <span>{staff.designation}</span>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors"
+                                        onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
+                                      >
+                                        {staff.name}
+                                      </span>
+                                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
+                                        getStaffCategory(staff) === 'SITE'
+                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                          : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                      }`}>
+                                        {getStaffCategory(staff) === 'SITE' ? 'Site' : 'Office'}
+                                      </span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                      <span className="tracking-tight text-slate-400">({staff.employee_code})</span>
+                                      <span>•</span>
+                                      <span>{staff.designation}</span>
+                                      <span>•</span>
+                                      <span className="text-slate-400">{staff.department}</span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
+                              </td>
 
                             {/* 2. Live Verification Photo */}
                             <td className="py-4 px-6">
@@ -921,7 +1138,8 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                             </td>
                           </tr>
                         );
-                      })}
+                      })
+                    )}
                     </tbody>
                   </table>
                 </div>
@@ -994,6 +1212,94 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             {/* Modal Form Content */}
             <div className="p-6 md:p-8 space-y-4 flex-1 overflow-y-auto max-h-[75vh]">
                 <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleCreateStaff(); }}>
+                  {/* 1. Staff Category Selection (Office vs Site) */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Staff Category *
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setNewStaffForm(prev => ({
+                          ...prev,
+                          staff_type: 'SITE',
+                          role_code: 'SITE_ENGINEER',
+                          designation: prev.designation === 'Office Administrator' ? 'Site Engineer' : (prev.designation || 'Site Engineer')
+                        }))}
+                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                          newStaffForm.staff_type === 'SITE'
+                            ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
+                          newStaffForm.staff_type === 'SITE' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          <HardHat className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Site Staff</div>
+                          <div className="text-[10px] text-slate-500">Field Engineers & Supervisors</div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNewStaffForm(prev => ({
+                          ...prev,
+                          staff_type: 'OFFICE',
+                          role_code: 'ADMIN',
+                          designation: prev.designation === 'Site Engineer' ? 'Office Administrator' : (prev.designation || 'Office Administrator')
+                        }))}
+                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                          newStaffForm.staff_type === 'OFFICE'
+                            ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
+                          newStaffForm.staff_type === 'OFFICE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          <Briefcase className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Office Staff</div>
+                          <div className="text-[10px] text-slate-500">Administration & Desk Staff</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Department Assignment */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Department Assignment *
+                    </label>
+                    {!isOverview ? (
+                      <div className="h-11 px-3.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-800">
+                        <span className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-red-600" />
+                          <span>{activeDept.name}</span>
+                        </span>
+                        <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium">
+                          Assigned to active department
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <CustomSelect
+                          value={newStaffForm.department}
+                          onChange={(val) => setNewStaffForm({ ...newStaffForm, department: val })}
+                          options={getIndividualDepartments().map(d => ({ label: d.name, value: d.name }))}
+                          triggerClassName="h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Select which department this staff member belongs to.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Full Name *

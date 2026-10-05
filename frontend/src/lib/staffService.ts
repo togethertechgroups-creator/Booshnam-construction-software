@@ -17,6 +17,24 @@ export interface StaffMember {
   has_login_account?: boolean;
   username?: string;
   created_at: string;
+  staff_type?: 'OFFICE' | 'SITE';
+}
+
+export function getStaffCategory(s: StaffMember): 'OFFICE' | 'SITE' {
+  if (s.staff_type) return s.staff_type;
+  const code = (s.role_code || '').toUpperCase();
+  const desig = (s.designation || '').toLowerCase();
+  if (
+    code === 'SITE_ENGINEER' || 
+    code === 'SUPERVISOR' || 
+    desig.includes('site') || 
+    desig.includes('supervisor') || 
+    desig.includes('field') ||
+    desig.includes('engineer')
+  ) {
+    return 'SITE';
+  }
+  return 'OFFICE';
 }
 
 const DEFAULT_STAFF_MEMBERS: StaffMember[] = [];

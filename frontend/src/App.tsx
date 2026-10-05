@@ -665,6 +665,7 @@ export function App() {
                   onShowToast={showToast}
                   isSidebarOpen={isSidebarOpen}
                   onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                  activeRole={activeRole?.roleCode}
                 />
               )}
 

@@ -22,6 +22,7 @@ interface QuotationViewProps {
   onShowToast?: (msg: string) => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  activeRole?: string;
 }
 
 // Initial Sample Leads
@@ -357,6 +358,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   // New Lead Drawer Form Fields (All empty by default per user request)
   const [drawerAssignee, setDrawerAssignee] = useState('');
+  const [drawerAssignedRole, setDrawerAssignedRole] = useState('');
   const [drawerDate, setDrawerDate] = useState('');
   const [drawerLeadType, setDrawerLeadType] = useState('');
   const [drawerContactName, setDrawerContactName] = useState('');
@@ -521,9 +523,13 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         if (leadFollowUpFilter === 'UPCOMING' && info.status !== 'UPCOMING') return false;
         if (leadFollowUpFilter === 'NO_DATE' && l.followup_date) return false;
       }
+      if (activeRole && !['SUPER_ADMIN', 'ADMIN', 'MARKETING'].includes(activeRole)) {
+        if (l.assigned_role !== activeRole && l.assigned_department !== activeRole) return false;
+      }
+      
       return true;
     });
-  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter, leadFollowUpFilter]);
+  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter, leadFollowUpFilter, activeRole]);
 
   const filteredQuotations = useMemo(() => {
     return quotations.filter(q => {
@@ -565,6 +571,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const handleOpenNewLeadDrawer = () => {
     setEditingLeadId(null);
     setDrawerAssignee('');
+    setDrawerAssignedRole('');
     setDrawerDate('');
     setDrawerLeadType('');
     setDrawerContactName('');
@@ -591,6 +598,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     markRemindersAsViewed([lead.id]);
     setEditingLeadId(lead.id);
     setDrawerAssignee(lead.assigned_to_name || '');
+    setDrawerAssignedRole(lead.assigned_role || '');
     setDrawerDate(lead.creation_date || '');
     setDrawerLeadType(lead.lead_type || '');
     setDrawerContactName(lead.client_name || '');
@@ -653,6 +661,9 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
           description: drawerDescription.trim(),
           estimated_value: resolvedValue,
           notes: drawerDescription.trim() || drawerNotes.trim(),
+          assigned_to_name: drawerAssignee,
+          assigned_role: drawerAssignedRole,
+          assigned_department: drawerAssignedRole,
           last_updated: todayStr
         };
       }));
@@ -685,7 +696,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         priority: drawerPriority || 'Medium',
         last_updated: todayStr,
         creation_date: drawerDate || '2026-09-25',
-        notes: drawerDescription.trim() || drawerNotes.trim()
+        notes: drawerDescription.trim() || drawerNotes.trim(),
+        assigned_to_name: drawerAssignee,
+        assigned_role: drawerAssignedRole,
+        assigned_department: drawerAssignedRole
       };
       setLeads(prev => [newLead, ...prev]);
       onShowToast?.(`New Lead registered successfully!`);
@@ -1639,19 +1653,24 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               {/* Row 1: LEAD ASSIGNEE & DATE (Perfect 2-col alignment) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* LEAD ASSIGNEE */}
-                <FloatingSelect
-                  label="LEAD ASSIGNEE"
-                  value={drawerAssignee}
-                  onChange={setDrawerAssignee}
-                  placeholder="Select Assignee"
-                  options={[
-                    { label: 'Select Assignee', value: '' },
-                    { label: 'Venkatesh (Site Ops)', value: 'Venkatesh (Site Ops)' },
-                    { label: 'Karthik (Sales)', value: 'Karthik (Sales)' },
-                    { label: 'Suryathaniga (Staff)', value: 'Suryathaniga (Staff)' },
-                    { label: 'Super Admin', value: 'Super Admin' },
-                  ]}
-                />
+                <div className="flex gap-2">
+                  <FloatingSelect
+                    className="flex-1"
+                    label="ASSIGN TO DEPARTMENT"
+                    value={drawerAssignedRole}
+                    onChange={setDrawerAssignedRole}
+                    placeholder="Select Department/Role"
+                    options={[
+                      { label: 'Unassigned', value: '' },
+                      { label: 'Sales', value: 'SALES' },
+                      { label: 'Marketing', value: 'MARKETING' },
+                      { label: 'Site Engineer', value: 'SITE_ENGINEER' },
+                      { label: 'Accounts', value: 'ACCOUNTS' },
+                      { label: 'Project Manager', value: 'PROJECT_MANAGER' },
+                      { label: 'Employee', value: 'EMPLOYEE' },
+                    ]}
+                  />
+                </div>
 
                 {/* DATE */}
                 <CustomDatePicker

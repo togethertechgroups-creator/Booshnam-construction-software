@@ -45,6 +45,20 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     department: 'Executive Management',
     allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
     created_at: '2024-01-01'
+  },
+  {
+    id: 'usr-mkt',
+    username: 'marketing',
+    password: 'password123',
+    phone: '9840000002',
+    staff_id: 'mkt-master',
+    staff_name: 'Marketing Team',
+    staff_code: 'EMP-0003',
+    role_code: 'MARKETING',
+    role_name: 'Marketing',
+    department: 'Marketing',
+    allowedPages: ['dashboard', 'quotation', 'setting'],
+    created_at: '2024-01-01'
   }
 ];
 
@@ -69,6 +83,10 @@ export function getUserAccounts(): UserAccount[] {
     // Ensure admin exists
     if (!cleaned.some(a => a.username === 'admin')) {
       cleaned.push(DEFAULT_ACCOUNTS[1]);
+    }
+    // Ensure marketing exists
+    if (!cleaned.some(a => a.username === 'marketing')) {
+      cleaned.push(DEFAULT_ACCOUNTS[2]);
     }
 
     const storedPerms = getStoredRolePermissions();

@@ -390,6 +390,8 @@ export interface Lead {
   stage: 'NEW' | 'CONTACTED' | 'PROPOSAL' | 'NEGOTIATION' | 'WON' | 'LOST';
   probability: number;
   assigned_to_name?: string;
+  assigned_department?: string;
+  assigned_role?: string;
   source?: string;
   notes?: string;
   lead_type?: string;

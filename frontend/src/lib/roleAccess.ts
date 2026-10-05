@@ -95,6 +95,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     allowedPages: ['projects', 'site_ops', 'documents', 'setting'],
     isSystemRole: true,
   },
+  MARKETING: {
+    roleCode: 'MARKETING',
+    roleName: 'Marketing',
+    description: 'Lead generation, CRM management, assign leads to sales or specific departments',
+    allowedPages: ['dashboard', 'quotation', 'setting'],
+    isSystemRole: true,
+    department: 'Marketing',
+  },
 };
 
 const STORAGE_KEY = 'booshnam_role_permissions_v2';

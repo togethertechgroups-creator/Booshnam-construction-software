@@ -459,11 +459,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }`}
                     title={canSwitchDepartment ? "Switch Department" : activeDeptEntity.name}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="relative flex items-center justify-center shrink-0">
-                        <div className="absolute w-2.5 h-2.5 rounded-full bg-[#ED1C24] opacity-40 animate-ping" />
-                        <div className="relative w-2 h-2 rounded-full bg-gradient-to-br from-[#ED1C24] to-[#B71C1C] shadow-xs" />
-                      </div>
+                    <div className="flex items-center min-w-0 flex-1">
                       <span className="text-[13px] font-black font-heading text-slate-800 tracking-tight truncate group-hover:text-[#ED1C24] transition-colors duration-200">
                         {activeDeptEntity.name}
                       </span>

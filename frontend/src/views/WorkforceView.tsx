@@ -193,15 +193,45 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
   const isOverview = activeDept.isMainOverview || activeDept.id === 'booshnam_associates';
 
-  // Filtered by department: If overview (Booshnam Associates), show all. Otherwise filter strictly to active department.
+  // Department filter for company-wide overview (Booshnam Associates Super Admin)
+  const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string>('ALL');
+
+  useEffect(() => {
+    setSelectedDepartmentFilter('ALL');
+  }, [activeDept.id]);
+
+  const departmentFilterOptions = useMemo(() => {
+    const depts = getIndividualDepartments();
+    return [
+      { label: `All Departments (${staffList.length})`, value: 'ALL' },
+      ...depts.map(d => {
+        const count = staffList.filter(s => normalizeDepartmentId(s.department) === d.id).length;
+        return {
+          label: `${d.name} (${count})`,
+          value: d.id,
+        };
+      })
+    ];
+  }, [staffList]);
+
+  // Filtered by department: If overview (Booshnam Associates), show all or filter by selectedDepartmentFilter. Otherwise filter strictly to active department.
   const departmentStaffList = useMemo(() => {
-    if (isOverview) return staffList;
-    const normActive = normalizeDepartmentId(activeDept.id);
+    if (!isOverview) {
+      const normActive = normalizeDepartmentId(activeDept.id);
+      return staffList.filter(s => {
+        const normStaffDept = normalizeDepartmentId(s.department);
+        return normStaffDept === normActive;
+      });
+    }
+    if (selectedDepartmentFilter === 'ALL') {
+      return staffList;
+    }
+    const normTarget = normalizeDepartmentId(selectedDepartmentFilter);
     return staffList.filter(s => {
       const normStaffDept = normalizeDepartmentId(s.department);
-      return normStaffDept === normActive;
+      return normStaffDept === normTarget;
     });
-  }, [staffList, isOverview, activeDept.id]);
+  }, [staffList, isOverview, activeDept.id, selectedDepartmentFilter]);
 
   // Office Staff vs Site Staff filter
   const [staffCategoryFilter, setStaffCategoryFilter] = useState<'ALL' | 'OFFICE' | 'SITE'>('ALL');
@@ -519,15 +549,63 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 1: STAFF & ACCESS ── */}
           {mainTab === 'staff' && (
             <div className="p-4 sm:p-6 space-y-6 flex-1">
+              {/* Department Pills Filter (Super Admin Overview) */}
+              {isOverview && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+                    Department:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDepartmentFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
+                      selectedDepartmentFilter === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    <span>All Departments</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      selectedDepartmentFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {staffList.length}
+                    </span>
+                  </button>
+                  {getIndividualDepartments().map((dept) => {
+                    const deptStaffCount = staffList.filter(s => normalizeDepartmentId(s.department) === dept.id).length;
+                    const isSelected = selectedDepartmentFilter === dept.id;
+                    return (
+                      <button
+                        key={dept.id}
+                        type="button"
+                        onClick={() => setSelectedDepartmentFilter(dept.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-red-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        <span>{dept.shortName || dept.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {deptStaffCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Quick Metrics Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
                   <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                    {isOverview ? 'Total Company Staff' : `${activeDept.name} Staff`}
+                    {isOverview ? (selectedDepartmentFilter === 'ALL' ? 'Total Company Staff' : `${departmentFilterOptions.find(d => d.value === selectedDepartmentFilter)?.label?.split('(')[0]?.trim() || 'Department'} Staff`) : `${activeDept.name} Staff`}
                   </div>
                   <div className="text-2xl font-black text-slate-900 mt-1">{departmentStaffList.length}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">
-                    {isOverview ? 'All Departments Combined' : 'Enrolled in active department'}
+                    {isOverview ? (selectedDepartmentFilter === 'ALL' ? 'All Departments Combined' : 'Filtered by selected department') : 'Enrolled in active department'}
                   </div>
                 </div>
 
@@ -633,6 +711,20 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
                     />
                   </div>
+
+                  {/* Department Filter (Overview) */}
+                  {isOverview && (
+                    <div className="w-full sm:w-56">
+                      <CustomSelect
+                        value={selectedDepartmentFilter}
+                        onChange={(val: any) => setSelectedDepartmentFilter(val)}
+                        options={departmentFilterOptions}
+                        prefix="Dept: "
+                        variant="brand"
+                        triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* + Add Staff Button */}
@@ -812,9 +904,57 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 2.1: ATTENDANCE ── */}
           {mainTab === 'payroll' && payrollTab === 'attendance' && (
             <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
+              {/* Department Pills Filter (Super Admin Overview) */}
+              {isOverview && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+                    Department:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDepartmentFilter('ALL')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
+                      selectedDepartmentFilter === 'ALL'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                  >
+                    <span>All Departments</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      selectedDepartmentFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {staffList.length}
+                    </span>
+                  </button>
+                  {getIndividualDepartments().map((dept) => {
+                    const deptStaffCount = staffList.filter(s => normalizeDepartmentId(s.department) === dept.id).length;
+                    const isSelected = selectedDepartmentFilter === dept.id;
+                    return (
+                      <button
+                        key={dept.id}
+                        type="button"
+                        onClick={() => setSelectedDepartmentFilter(dept.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-red-600 text-white shadow-xs'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                        }`}
+                      >
+                        <span>{dept.shortName || dept.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {deptStaffCount}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               {/* Action Toolbar: Filter Pills + Search + Summary Counter + Add Staff Button */}
               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                {/* Left Side: Category Pills + Active Filter */}
+                {/* Left Side: Category Pills + Active Filter + Department Filter */}
                 <div className="flex flex-wrap items-center gap-2.5">
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                     <button
@@ -863,6 +1003,19 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
                     />
                   </div>
+
+                  {isOverview && (
+                    <div className="w-56 shrink-0">
+                      <CustomSelect
+                        value={selectedDepartmentFilter}
+                        onChange={(val: any) => setSelectedDepartmentFilter(val)}
+                        options={departmentFilterOptions}
+                        prefix="Dept: "
+                        variant="brand"
+                        triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side: Search + Summary Stats + Add Staff Button */}

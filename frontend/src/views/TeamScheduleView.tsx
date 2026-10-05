@@ -971,9 +971,9 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {/* Quotation Task Rows matching User Image */}
                     {isUnassignedExpanded && filteredQuotationTasks.map((task, idx) => {
                       const placement = getTimelinePlacement(task.start_date, task.end_date);
-                      const isStatusCompleted = task.status === 'COMPLETED';
-                      const isStatusInProgress = task.status === 'IN_PROGRESS';
-                      const isStatusPending = task.status === 'PENDING';
+                      const isStatusCompleted = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
+                      const isStatusInProgress = !isStatusCompleted && (task.status === 'IN_PROGRESS' || (task.progress_percentage !== undefined && task.progress_percentage > 0));
+                      const isStatusPending = !isStatusCompleted && !isStatusInProgress && task.status === 'PENDING';
                       const isHovered = hoveredMarkerTaskId === task.id;
                       const openUpwards = idx >= (filteredQuotationTasks.length <= 3 ? Math.max(1, filteredQuotationTasks.length - 1) : 3);
 
@@ -1022,10 +1022,24 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             </div>
                           </td>
 
-                          {/* Progress Column matching Audio: shows progress bar + % and Ongoing/Completed */}
-                          <td className="px-4 py-3 border-r border-slate-200">
-                            <div className="flex items-center gap-2">
-                              <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          {/* Progress Column: Pure text (100% Completed / 50% Ongoing) above progress bar with NO box/border/bg/fading */}
+                          <td className="px-4 py-2.5 border-r border-slate-200">
+                            <div className="w-24">
+                              <div className="flex items-center gap-1.5 mb-1 leading-none">
+                                <span className="text-[11px] font-bold text-slate-700">
+                                  {task.progress_percentage || (isStatusCompleted ? 100 : 0)}%
+                                </span>
+                                {isStatusCompleted ? (
+                                  <span className="text-[11px] font-semibold text-emerald-600">
+                                    Completed
+                                  </span>
+                                ) : isStatusInProgress ? (
+                                  <span className="text-[11px] font-semibold text-blue-600">
+                                    Ongoing
+                                  </span>
+                                ) : null}
+                              </div>
+                              <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                 <div 
                                   className={`h-full transition-all duration-300 ${
                                     isStatusCompleted ? 'bg-emerald-500' : isStatusInProgress ? 'bg-blue-500' : 'bg-slate-300'
@@ -1033,18 +1047,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                   style={{ width: `${task.progress_percentage || (isStatusCompleted ? 100 : 0)}%` }}
                                 />
                               </div>
-                              <span className="text-[11px] font-semibold text-slate-600">
-                                {task.progress_percentage || (isStatusCompleted ? 100 : 0)}%
-                              </span>
-                              {isStatusCompleted ? (
-                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                                  Completed
-                                </span>
-                              ) : isStatusInProgress ? (
-                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
-                                  Ongoing
-                                </span>
-                              ) : null}
                             </div>
                           </td>
 
@@ -1090,7 +1092,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                                 ? 'bg-blue-50 text-blue-700 border border-blue-200'
                                                 : 'bg-rose-50 text-rose-700 border border-rose-200'
                                             }`}>
-                                              {isStatusCompleted ? 'Completed' : isStatusInProgress ? 'In Progress' : 'Pending'}
+                                              {isStatusCompleted ? 'Completed' : isStatusInProgress ? 'Ongoing' : 'Pending'}
                                             </span>
                                           </div>
                                           <div className="font-bold text-xs text-slate-900 mt-0.5">

@@ -153,6 +153,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const [isHeaderDropdownOpen, setIsHeaderDropdownOpen] = useState(false);
   const headerDropdownRef = useRef<HTMLDivElement>(null);
+  const [expandedBranchDepts, setExpandedBranchDepts] = useState<{ soil: boolean; material: boolean }>({
+    soil: false,
+    material: false,
+  });
+
+  useEffect(() => {
+    if (isHeaderDropdownOpen) {
+      const isSoil = activeDeptEntity.id === 'SOIL_INVESTIGATION' || activeDeptEntity.id === 'COIMBATORE_SOIL';
+      const isMaterial = activeDeptEntity.id === 'MATERIAL_TESTING' || activeDeptEntity.id === 'COIMBATORE_MATERIAL_TESTING';
+      setExpandedBranchDepts({
+        soil: isSoil,
+        material: isMaterial,
+      });
+    }
+  }, [isHeaderDropdownOpen, activeDeptEntity.id]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -500,34 +515,220 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {isHeaderDropdownOpen && canSwitchDepartment && (
                 <div className={`absolute ${isOpen ? 'left-2 w-[calc(100%-16px)]' : 'left-16 w-80'} top-[calc(100%+4px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800`}>
                   <div className="max-h-[75vh] overflow-y-auto divide-y divide-slate-100/80 scrollbar-thin scrollbar-thumb-slate-200">
-                    {finalAvailableDepts.map((dept) => {
-                      const isSelected = activeDeptEntity.id === dept.id;
+                    {(() => {
+                      const booshnamDept = finalAvailableDepts.find(d => d.id === 'booshnam_associates');
+                      const soilDepts = finalAvailableDepts.filter(d => d.id === 'SOIL_INVESTIGATION' || d.id === 'COIMBATORE_SOIL');
+                      const materialDepts = finalAvailableDepts.filter(d => d.id === 'MATERIAL_TESTING' || d.id === 'COIMBATORE_MATERIAL_TESTING');
+                      const otherDepts = finalAvailableDepts.filter(d => 
+                        d.id !== 'booshnam_associates' &&
+                        d.id !== 'SOIL_INVESTIGATION' &&
+                        d.id !== 'COIMBATORE_SOIL' &&
+                        d.id !== 'MATERIAL_TESTING' &&
+                        d.id !== 'COIMBATORE_MATERIAL_TESTING'
+                      );
+
+                      const isSoilActive = activeDeptEntity.id === 'SOIL_INVESTIGATION' || activeDeptEntity.id === 'COIMBATORE_SOIL';
+                      const isMaterialActive = activeDeptEntity.id === 'MATERIAL_TESTING' || activeDeptEntity.id === 'COIMBATORE_MATERIAL_TESTING';
 
                       return (
-                        <button
-                          key={dept.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveDepartmentId(dept.id);
-                            setIsHeaderDropdownOpen(false);
-                            onSelectView('company_dashboard');
-                          }}
-                          className={`w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
-                            isSelected ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1 pr-2">
-                            {/* Department / Company Title */}
-                            <div className={`text-[13px] font-bold truncate leading-snug ${isSelected ? 'text-[#C61D45]' : 'text-slate-800'}`}>
-                              {dept.name}
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <div className="w-2 h-2 rounded-full bg-[#C61D45] shrink-0 ml-1.5 shadow-xs" />
+                        <>
+                          {/* 1. Main Super Admin Overview */}
+                          {booshnamDept && (
+                            <button
+                              key={booshnamDept.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveDepartmentId(booshnamDept.id);
+                                setIsHeaderDropdownOpen(false);
+                                onSelectView('company_dashboard');
+                              }}
+                              className={`w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                activeDeptEntity.id === booshnamDept.id ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1 pr-2">
+                                <div className={`text-[13px] font-bold truncate leading-snug ${activeDeptEntity.id === booshnamDept.id ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                  {booshnamDept.name}
+                                </div>
+                              </div>
+                              {activeDeptEntity.id === booshnamDept.id && (
+                                <div className="w-2 h-2 rounded-full bg-[#C61D45] shrink-0 ml-1.5 shadow-xs" />
+                              )}
+                            </button>
                           )}
-                        </button>
+
+                          {/* 2. Soil Investigation (With Chennai & Coimbatore Branches) */}
+                          {soilDepts.length > 0 && (
+                            <div className="divide-y divide-slate-100/50">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedBranchDepts(prev => ({ ...prev, soil: !prev.soil }));
+                                }}
+                                className={`w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                  isSoilActive ? 'bg-red-50/40 font-bold' : 'hover:bg-slate-50/70'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <div className={`text-[13px] font-bold truncate leading-snug ${isSoilActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                    Soil Investigation
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-medium">
+                                    {activeDeptEntity.id === 'SOIL_INVESTIGATION'
+                                      ? 'Active: Chennai Branch'
+                                      : activeDeptEntity.id === 'COIMBATORE_SOIL'
+                                      ? 'Active: Coimbatore Branch'
+                                      : 'Branches: Chennai, Coimbatore'}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isSoilActive && (
+                                    <div className="w-2 h-2 rounded-full bg-[#C61D45] shadow-xs" />
+                                  )}
+                                  <ChevronDown
+                                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                      expandedBranchDepts.soil ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'
+                                    }`}
+                                  />
+                                </div>
+                              </button>
+
+                              {/* Soil Branches Submenu */}
+                              {expandedBranchDepts.soil && (
+                                <div className="bg-slate-50/80 border-t border-slate-100 py-1 px-2.5 space-y-1 animate-in fade-in duration-150">
+                                  {soilDepts.map((branch) => {
+                                    const isBranchSelected = activeDeptEntity.id === branch.id;
+                                    return (
+                                      <button
+                                        key={branch.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveDepartmentId(branch.id);
+                                          setIsHeaderDropdownOpen(false);
+                                          onSelectView('company_dashboard');
+                                        }}
+                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                                          isBranchSelected
+                                            ? 'bg-white font-bold text-[#C61D45] shadow-xs border border-red-200/80'
+                                            : 'text-slate-700 hover:bg-white hover:text-slate-900 font-medium'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isBranchSelected ? 'bg-[#C61D45]' : 'bg-slate-300'}`} />
+                                          <span className="truncate">{branch.name}</span>
+                                        </div>
+                                        {isBranchSelected && (
+                                          <div className="w-1.5 h-1.5 rounded-full bg-[#C61D45] shrink-0 ml-1.5" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 3. Material Testing (With Chennai & Coimbatore Branches) */}
+                          {materialDepts.length > 0 && (
+                            <div className="divide-y divide-slate-100/50">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setExpandedBranchDepts(prev => ({ ...prev, material: !prev.material }));
+                                }}
+                                className={`w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                  isMaterialActive ? 'bg-red-50/40 font-bold' : 'hover:bg-slate-50/70'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <div className={`text-[13px] font-bold truncate leading-snug ${isMaterialActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                    Material Testing
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 font-medium">
+                                    {activeDeptEntity.id === 'MATERIAL_TESTING'
+                                      ? 'Active: Chennai Branch'
+                                      : activeDeptEntity.id === 'COIMBATORE_MATERIAL_TESTING'
+                                      ? 'Active: Coimbatore Branch'
+                                      : 'Branches: Chennai, Coimbatore'}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {isMaterialActive && (
+                                    <div className="w-2 h-2 rounded-full bg-[#C61D45] shadow-xs" />
+                                  )}
+                                  <ChevronDown
+                                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                      expandedBranchDepts.material ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'
+                                    }`}
+                                  />
+                                </div>
+                              </button>
+
+                              {/* Material Branches Submenu */}
+                              {expandedBranchDepts.material && (
+                                <div className="bg-slate-50/80 border-t border-slate-100 py-1 px-2.5 space-y-1 animate-in fade-in duration-150">
+                                  {materialDepts.map((branch) => {
+                                    const isBranchSelected = activeDeptEntity.id === branch.id;
+                                    return (
+                                      <button
+                                        key={branch.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveDepartmentId(branch.id);
+                                          setIsHeaderDropdownOpen(false);
+                                          onSelectView('company_dashboard');
+                                        }}
+                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                                          isBranchSelected
+                                            ? 'bg-white font-bold text-[#C61D45] shadow-xs border border-red-200/80'
+                                            : 'text-slate-700 hover:bg-white hover:text-slate-900 font-medium'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isBranchSelected ? 'bg-[#C61D45]' : 'bg-slate-300'}`} />
+                                          <span className="truncate">{branch.name}</span>
+                                        </div>
+                                        {isBranchSelected && (
+                                          <div className="w-1.5 h-1.5 rounded-full bg-[#C61D45] shrink-0 ml-1.5" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 4. Other Standard Departments */}
+                          {otherDepts.map((dept) => {
+                            const isSelected = activeDeptEntity.id === dept.id;
+                            return (
+                              <button
+                                key={dept.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveDepartmentId(dept.id);
+                                  setIsHeaderDropdownOpen(false);
+                                  onSelectView('company_dashboard');
+                                }}
+                                className={`w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                  isSelected ? 'bg-slate-50 font-bold' : 'hover:bg-slate-50/70'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1 pr-2">
+                                  <div className={`text-[13px] font-bold truncate leading-snug ${isSelected ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                    {dept.name}
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <div className="w-2 h-2 rounded-full bg-[#C61D45] shrink-0 ml-1.5 shadow-xs" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </>
                       );
-                    })}
+                    })()}
                   </div>
                 </div>
               )}

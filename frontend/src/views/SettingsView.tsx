@@ -2543,16 +2543,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         {modalRoleCode === 'SUPER_ADMIN' && (
                           <option value="Booshnam Associates">Booshnam Associates (All Departments / Company-wide Overview)</option>
                         )}
-                        <option value="Soil Investigation">Soil Investigation</option>
-                        <option value="Material Testing">Material Testing</option>
+                        <option value="Soil Investigation (Chennai)">Soil Investigation (Chennai)</option>
+                        <option value="Soil Investigation (Coimbatore)">Soil Investigation (Coimbatore)</option>
+                        <option value="Material Testing (Chennai)">Material Testing (Chennai)</option>
+                        <option value="Material Testing (Coimbatore)">Material Testing (Coimbatore)</option>
                         <option value="Surveying">Surveying</option>
                         <option value="Structural">Structural</option>
                         <option value="Architectural">Architectural</option>
                         <option value="Sculpture">Sculpture</option>
                         <option value="Private Construction">Private Construction</option>
                         <option value="Government Projects">Government Projects</option>
-                        <option value="Coimbatore – Soil Investigation">Coimbatore – Soil Investigation</option>
-                        <option value="Coimbatore – Material Testing">Coimbatore – Material Testing</option>
                       </select>
                       <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
                     </div>

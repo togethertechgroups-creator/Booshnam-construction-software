@@ -7,7 +7,7 @@ import {
   ChevronDown, RotateCcw, Award, Layers, MoreVertical, Edit2,
   Gift, HelpCircle, Info, Bell, BellRing, Globe
 } from 'lucide-react';
-import { Project, Department, Lead, Quotation, QuotationItem } from '../types';
+import { Project, Department, Lead, Quotation, QuotationItem, Role } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
 import { CustomDatePicker } from '../components/CustomDatePicker';
@@ -15,6 +15,7 @@ import { confirmAction } from '../lib/dialogService';
 import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
 import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
 import { getTermsConditions } from '../lib/termsService';
+import { MOCK_ROLES } from '../lib/mockData';
 
 interface QuotationViewProps {
   projects?: Project[];
@@ -267,6 +268,25 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 }) => {
   // Top-level Sub-page Navigation: 'leads' (First Page) | 'quotations' (Second Page)
   const [activeTab, setActiveTab] = useState<'leads' | 'quotations'>('leads');
+
+  // Fetch dynamic roles to show in Assignment
+  const allRoles = useMemo(() => {
+    const merged = [...MOCK_ROLES];
+    try {
+      const saved = localStorage.getItem('booshnam_custom_roles_v2');
+      if (saved) {
+        const customRoles = JSON.parse(saved);
+        if (Array.isArray(customRoles)) {
+          customRoles.forEach((cr: Role) => {
+            if (!merged.find(r => r.code === cr.code)) {
+              merged.push(cr);
+            }
+          });
+        }
+      }
+    } catch {}
+    return merged;
+  }, []);
 
   // =========================================================================
   // 1. LEADS STATE & PERSISTENCE
@@ -1663,12 +1683,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                     placeholder="Select Department/Role"
                     options={[
                       { label: 'Unassigned', value: '' },
-                      { label: 'Sales', value: 'SALES' },
-                      { label: 'Marketing', value: 'MARKETING' },
-                      { label: 'Site Engineer', value: 'SITE_ENGINEER' },
-                      { label: 'Accounts', value: 'ACCOUNTS' },
-                      { label: 'Project Manager', value: 'PROJECT_MANAGER' },
-                      { label: 'Employee', value: 'EMPLOYEE' },
+                      ...allRoles.map(r => ({ label: r.name, value: r.code }))
                     ]}
                   />
                 </div>

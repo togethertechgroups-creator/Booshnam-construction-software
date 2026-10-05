@@ -175,11 +175,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     setOverviewInitialTab(defaultTab);
   };
 
-  // New Staff Form State & Wizard State
-  const [wizardStep, setWizardStep] = useState(1);
-  const [selectedPages, setSelectedPages] = useState<string[]>([]);
-  const [staffPassword, setStaffPassword] = useState('');
-  const [staffConfirmPassword, setStaffConfirmPassword] = useState('');
+  // New Staff Form State
   const [newStaffForm, setNewStaffForm] = useState({
     name: '',
     role_code: 'SITE_ENGINEER',
@@ -234,52 +230,15 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     }
     clearFormDirty();
     setShowAddStaffModal(false);
-    setWizardStep(1);
-    setStaffPassword('');
-    setStaffConfirmPassword('');
-    setSelectedPages([]);
-  };
-
-  const handleNextStep = () => {
-    if (wizardStep === 1) {
-      if (!newStaffForm.name.trim()) return triggerToast('Please enter staff full name');
-      if (!newStaffForm.phone || newStaffForm.phone.length !== 10) return triggerToast('Phone number must be exactly 10 digits (used for login)');
-      if (newStaffForm.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(newStaffForm.email.trim())) {
-        return triggerToast('Invalid email format');
-      }
-
-      // Initialize selected pages based on the default role if not already set
-      if (selectedPages.length === 0) {
-        const rolesMap = getStoredRolePermissions();
-        if (rolesMap[newStaffForm.role_code]) {
-          setSelectedPages(rolesMap[newStaffForm.role_code].allowedPages);
-        }
-      }
-
-      setWizardStep(2);
-    } else if (wizardStep === 2) {
-      if (!newStaffForm.role_code) return triggerToast('Please select a role');
-      setWizardStep(3);
-    } else if (wizardStep === 3) {
-      setWizardStep(4);
-    }
   };
 
   const handleCreateStaff = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (wizardStep < 4) {
-      handleNextStep();
-      return;
-    }
-
-    // Step 4 validations
-    if (staffPassword.length < 4) {
-      triggerToast('Password must be at least 4 characters');
-      return;
-    }
-    if (staffPassword !== staffConfirmPassword) {
-      triggerToast('Passwords do not match');
-      return;
+    
+    if (!newStaffForm.name.trim()) return triggerToast('Please enter staff full name');
+    if (!newStaffForm.phone || newStaffForm.phone.length !== 10) return triggerToast('Phone number must be exactly 10 digits (used for login)');
+    if (newStaffForm.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(newStaffForm.email.trim())) {
+      return triggerToast('Invalid email format');
     }
 
     const rolesMap = getStoredRolePermissions();
@@ -323,24 +282,20 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       id: `usr-${Date.now()}`,
       username: newStaff.phone, // Login using phone number
       phone: newStaff.phone,
-      password: staffPassword,
+      password: newStaff.phone, // Default password is phone number
       staff_id: newStaff.id,
       staff_name: newStaff.name,
       staff_code: newStaff.employee_code,
       role_code: newStaff.role_code,
       role_name: newStaff.role_name,
       department: newStaff.department,
-      allowedPages: selectedPages,
+      allowedPages: roleObj.allowedPages || [],
       created_at: new Date().toISOString().split('T')[0]
     };
     saveUserAccount(newAccount);
 
     clearFormDirty();
     setShowAddStaffModal(false);
-    setWizardStep(1);
-    setStaffPassword('');
-    setStaffConfirmPassword('');
-    setSelectedPages([]);
     setNewStaffForm({
       name: '',
       role_code: 'SITE_ENGINEER',
@@ -1007,41 +962,17 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                 <h2 className="text-sm font-bold text-slate-900 tracking-wide uppercase">
                   ADD NEW STAFF MEMBER
                 </h2>
-                <p className="text-[11px] text-slate-500">
-                  Step {wizardStep} of 4
-                </p>
               </div>
-
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
-                  {wizardStep > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setWizardStep(prev => prev - 1)}
-                      className="text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                    >
-                      Back
-                    </button>
-                  )}
-                  {wizardStep < 4 ? (
-                    <button
-                      type="button"
-                      onClick={handleNextStep}
-                      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <span>Next</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleCreateStaff}
-                      className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Save Staff</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleCreateStaff}
+                    className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save Staff</span>
+                  </button>
                 </div>
 
                 <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
@@ -1058,12 +989,11 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
 
             {/* Accent Line */}
-            <div className="h-1 bg-red-600 w-full" style={{ width: `${(wizardStep / 4) * 100}%`, transition: 'width 0.3s ease' }} />
+            <div className="h-1 bg-red-600 w-full" />
 
             {/* Modal Form Content */}
             <div className="p-6 md:p-8 space-y-4 flex-1 overflow-y-auto max-h-[75vh]">
-              {wizardStep === 1 && (
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleNextStep(); }}>
+                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleCreateStaff(); }}>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       Full Name *
@@ -1161,120 +1091,8 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       />
                     </div>
                   </div>
-                  <button type="submit" className="hidden">Next</button>
+                  <button type="submit" className="hidden">Save Staff</button>
                 </form>
-              )}
-
-              {wizardStep === 2 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 mb-2">Select Staff Role</h3>
-                  <p className="text-xs text-slate-500 mb-4">Choose the primary role. This determines their default page access, which you can customize in the next step.</p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.values(getStoredRolePermissions()).map(role => (
-                      <div
-                        key={role.roleCode}
-                        onClick={() => {
-                          setNewStaffForm({ ...newStaffForm, role_code: role.roleCode });
-                          setSelectedPages(role.allowedPages);
-                        }}
-                        className={`p-4 border rounded-xl cursor-pointer transition-all ${newStaffForm.role_code === role.roleCode
-                            ? 'border-red-500 bg-red-50 shadow-sm'
-                            : 'border-slate-200 hover:border-red-200 hover:bg-red-50/50'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-sm text-slate-900">{role.roleName}</span>
-                          {newStaffForm.role_code === role.roleCode && <CheckCircle2 className="w-4 h-4 text-red-600" />}
-                        </div>
-                        <p className="text-[10px] text-slate-500 leading-relaxed">{role.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {wizardStep === 3 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 mb-2">Page Permissions</h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    The following pages are recommended for the <strong>{getStoredRolePermissions()[newStaffForm.role_code]?.roleName || newStaffForm.role_code}</strong> role. You can check or uncheck modules to customize access for {newStaffForm.name}.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {ALL_SYSTEM_MODULES.map(module => (
-                      <label
-                        key={module.id}
-                        className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-colors ${selectedPages.includes(module.id) ? 'bg-red-50/50 border-red-200' : 'bg-white border-slate-200 hover:border-red-200 hover:bg-red-50/30'
-                          }`}
-                      >
-                        <div className="pt-0.5">
-                          <input
-                            type="checkbox"
-                            checked={selectedPages.includes(module.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) setSelectedPages([...selectedPages, module.id]);
-                              else setSelectedPages(selectedPages.filter(id => id !== module.id));
-                            }}
-                            className="w-4 h-4 rounded text-red-600 focus:ring-red-500 border-slate-300 cursor-pointer"
-                          />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900">{module.name}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5 leading-tight">{module.description}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {wizardStep === 4 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 mb-2">Setup Login Credentials</h3>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Configure login credentials for {newStaffForm.name}. They will log in using their mobile number.
-                  </p>
-
-                  <div className="space-y-4 max-w-sm">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Username (Mobile Number)</label>
-                      <input
-                        type="text"
-                        value={newStaffForm.phone}
-                        readOnly
-                        className="w-full h-11 px-3.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 cursor-not-allowed"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Create Password *</label>
-                      <input
-                        type="password"
-                        placeholder="Enter a secure password"
-                        value={staffPassword}
-                        onChange={(e) => setStaffPassword(e.target.value)}
-                        className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium focus:border-red-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Confirm Password *</label>
-                      <input
-                        type="password"
-                        placeholder="Re-enter password"
-                        value={staffConfirmPassword}
-                        onChange={(e) => setStaffConfirmPassword(e.target.value)}
-                        className={`w-full h-11 px-3.5 rounded-lg border text-xs font-medium focus:border-red-500 ${staffConfirmPassword && staffPassword !== staffConfirmPassword ? 'border-red-500 bg-red-50' : 'border-slate-200'
-                          }`}
-                      />
-                      {staffConfirmPassword && staffPassword !== staffConfirmPassword && (
-                        <p className="text-[10px] text-red-600 mt-1">Passwords do not match.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

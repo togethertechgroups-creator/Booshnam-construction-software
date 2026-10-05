@@ -902,6 +902,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       <th className="w-12 px-3 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">S.No</th>
                       <th className="w-72 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Task name</th>
                       <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
+                      <th className="w-16 px-2 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">Action</th>
                       
                       {/* Year Header spanning full year with dynamic year switcher and automated rollover */}
                       <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 select-none">
@@ -946,13 +947,11 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           </select>
                         </div>
                       </th>
-
-                      {/* Right Action column */}
-                      <th className="w-10 px-2 py-2 text-center font-bold text-slate-700" />
                     </tr>
 
                     {/* Timeline Header Row 2: Months */}
                     <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-600 bg-white">
+                      <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
@@ -977,7 +976,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           {m.label}
                         </th>
                       ))}
-                      <th />
                     </tr>
                   </thead>
 
@@ -993,18 +991,17 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isUnassignedExpanded ? '' : '-rotate-90'}`} />
                         </button>
                       </td>
-                      <td colSpan={2} className="px-4 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
+                      <td colSpan={3} className="px-4 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
                         <div className="flex items-center gap-2">
                           <FolderKanban className="w-4 h-4 text-red-600" />
                           <span>Unassigned ({filteredQuotationTasks.length} Quotation Tasks)</span>
                         </div>
                       </td>
-                      <td colSpan={12} className="px-4 py-2.5 text-left border-r border-red-100/80">
+                      <td colSpan={12} className="px-4 py-2.5 text-left border-red-100/80">
                         <span className="px-2.5 py-0.5 bg-red-600 text-white rounded-md text-[11px] font-bold shadow-xs">
                           {filteredQuotationTasks.length} Tasks
                         </span>
                       </td>
-                      <td />
                     </tr>
 
                     {/* Empty State when no tasks match active filter */}
@@ -1132,6 +1129,21 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             </div>
                           </td>
 
+                          {/* Action Column: View Details Eye Button (Directly visible without horizontal scrolling) */}
+                          <td className="px-2 py-2.5 text-center border-r border-slate-200">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedQuotationDrawerTask(task);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-red-200"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
+
                           {/* 12 Timeline Months */}
                           {timelineMonths.map((m, mIdx) => {
                             const isMilestoneCell = placement.isCurrentYear && mIdx === placement.colIndex;
@@ -1192,21 +1204,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                               </td>
                             );
                           })}
-
-                          {/* Row Actions (View Details only) */}
-                          <td className="px-2 py-3 text-center">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedQuotationDrawerTask(task);
-                              }}
-                              className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </td>
                         </tr>
                       );
                     })}

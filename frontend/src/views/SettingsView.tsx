@@ -77,6 +77,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [selectedStaffForProjects, setSelectedStaffForProjects] = useState<StaffMember | null>(null);
   const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState<boolean>(false);
   const [newTeamMemberForm, setNewTeamMemberForm] = useState({
+    is_existing_staff: true,
+    staff_id: '',
     name: '',
     phone: '',
     email: '',
@@ -3018,44 +3020,62 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   return;
                 }
                 const todayStr = new Date().toISOString().split('T')[0];
-                const newMemberId = `mem-${Date.now()}`;
-                const newMember: StaffMember = {
-                  id: newMemberId,
-                  name: newTeamMemberForm.name.trim(),
-                  employee_code: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
-                  phone: newTeamMemberForm.phone.trim(),
-                  email:
-                    newTeamMemberForm.email.trim() ||
-                    `${newTeamMemberForm.name.toLowerCase().replace(/\s+/g, '')}@booshnam.com`,
-                  role_code: newTeamMemberForm.role_code,
-                  role_name: newTeamMemberForm.role_name,
-                  department: newTeamMemberForm.department,
-                  designation: newTeamMemberForm.role_name,
-                  dob: '1995-01-01',
-                  doj: todayStr,
-                  employment_type: 'Full-time',
-                  salary: 45000,
-                  salary_type: 'Month',
-                  status: 'ACTIVE',
-                  has_login_account: true,
-                  username: newTeamMemberForm.phone.trim(),
-                  created_at: todayStr,
-                };
-                saveStaffMember(newMember);
+                
+                let finalStaffMember: StaffMember;
+                if (newTeamMemberForm.is_existing_staff && newTeamMemberForm.staff_id) {
+                  const existingStaff = staffList.find(s => s.id === newTeamMemberForm.staff_id);
+                  if (existingStaff) {
+                    finalStaffMember = {
+                      ...existingStaff,
+                      role_code: newTeamMemberForm.role_code,
+                      role_name: newTeamMemberForm.role_name,
+                      has_login_account: true,
+                    };
+                    saveStaffMember(finalStaffMember);
+                  } else {
+                    showToast('Selected staff not found');
+                    return;
+                  }
+                } else {
+                  const newMemberId = `mem-${Date.now()}`;
+                  finalStaffMember = {
+                    id: newMemberId,
+                    name: newTeamMemberForm.name.trim(),
+                    employee_code: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+                    phone: newTeamMemberForm.phone.trim(),
+                    email:
+                      newTeamMemberForm.email.trim() ||
+                      `${newTeamMemberForm.name.toLowerCase().replace(/\s+/g, '')}@booshnam.com`,
+                    role_code: newTeamMemberForm.role_code,
+                    role_name: newTeamMemberForm.role_name,
+                    department: newTeamMemberForm.department,
+                    designation: newTeamMemberForm.role_name,
+                    dob: '1995-01-01',
+                    doj: todayStr,
+                    employment_type: 'Full-time',
+                    salary: 45000,
+                    salary_type: 'Month',
+                    status: 'ACTIVE',
+                    has_login_account: true,
+                    username: newTeamMemberForm.phone.trim(),
+                    created_at: todayStr,
+                  };
+                  saveStaffMember(finalStaffMember);
+                }
 
                 // Create associated login credentials for phone + password authentication
-                const allowedPages = computeMemberAllowedPages(newMember.role_code, newMember.department);
+                const allowedPages = computeMemberAllowedPages(finalStaffMember.role_code, finalStaffMember.department);
                 const newAccount: UserAccount = {
                   id: `usr-${Date.now()}`,
-                  username: newMember.phone,
-                  phone: newMember.phone,
+                  username: finalStaffMember.phone,
+                  phone: finalStaffMember.phone,
                   password: newTeamMemberForm.password.trim(),
-                  staff_id: newMember.id,
-                  staff_name: newMember.name,
-                  staff_code: newMember.employee_code,
-                  role_code: newMember.role_code,
-                  role_name: newMember.role_name,
-                  department: newMember.department,
+                  staff_id: finalStaffMember.id,
+                  staff_name: finalStaffMember.name,
+                  staff_code: finalStaffMember.employee_code,
+                  role_code: finalStaffMember.role_code,
+                  role_name: finalStaffMember.role_name,
+                  department: finalStaffMember.department,
                   allowedPages,
                   created_at: todayStr,
                 };
@@ -3064,6 +3084,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 setStaffList(getStaffMembers());
                 setShowAddTeamMemberModal(false);
                 setNewTeamMemberForm({
+                  is_existing_staff: true,
+                  staff_id: '',
                   name: '',
                   phone: '',
                   email: '',
@@ -3072,38 +3094,94 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   department: 'Construction Department',
                   password: '',
                 });
-                showToast(`Member "${newMember.name}" added with password login credentials`);
+                showToast(`Role assigned to "${finalStaffMember.name}" with login credentials`);
               }}
               className="p-6 space-y-4"
             >
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Full Name *
+              <div className="flex items-center gap-4 mb-4">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="is_existing_staff"
+                    checked={newTeamMemberForm.is_existing_staff}
+                    onChange={() => setNewTeamMemberForm({ ...newTeamMemberForm, is_existing_staff: true, name: '', phone: '', staff_id: '' })}
+                    className="text-red-600 focus:ring-red-500"
+                  />
+                  Select Existing Staff
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ramesh Kumar"
-                  value={newTeamMemberForm.name}
-                  onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                />
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="is_existing_staff"
+                    checked={!newTeamMemberForm.is_existing_staff}
+                    onChange={() => setNewTeamMemberForm({ ...newTeamMemberForm, is_existing_staff: false, staff_id: '' })}
+                    className="text-red-600 focus:ring-red-500"
+                  />
+                  Create New Member
+                </label>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Mobile Number (Login ID) *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="e.g. 9840123456"
-                  value={newTeamMemberForm.phone}
-                  onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">This number will be used by the member to log in.</p>
-              </div>
+              {newTeamMemberForm.is_existing_staff ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Select Staff Member *
+                  </label>
+                  <select
+                    required
+                    value={newTeamMemberForm.staff_id}
+                    onChange={(e) => {
+                      const staffId = e.target.value;
+                      const staff = staffList.find((s) => s.id === staffId);
+                      setNewTeamMemberForm({
+                        ...newTeamMemberForm,
+                        staff_id: staffId,
+                        name: staff?.name || '',
+                        phone: staff?.phone || '',
+                        email: staff?.email || '',
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  >
+                    <option value="">-- Choose Staff --</option>
+                    {staffList.map((staff) => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.name} ({staff.employee_code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Kumar"
+                      value={newTeamMemberForm.name}
+                      onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Mobile Number (Login ID) *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="e.g. 9840123456"
+                      value={newTeamMemberForm.phone}
+                      onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">This number will be used by the member to log in.</p>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">

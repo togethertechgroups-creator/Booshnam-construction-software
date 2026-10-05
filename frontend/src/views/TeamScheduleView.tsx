@@ -43,6 +43,7 @@ interface TimelineMonth {
   isFilterActive?: boolean;
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   projects = [],
@@ -212,8 +213,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   const timelineMonths: TimelineMonth[] = useMemo(() => {
     const currentRealYear = new Date().getFullYear();
     const currentRealMonth = new Date().getMonth();
-    const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return MONTH_LABELS.map((label, monthIndex) => {
+    return MONTH_NAMES.map((label, monthIndex) => {
       const q = Math.floor(monthIndex / 3) + 1;
       const isCurrent = activeYear === currentRealYear && monthIndex === currentRealMonth;
       const isFilterActive = (
@@ -244,8 +244,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       return `Up to ${new Date(customToDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
     }
 
-    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
     if (granularityFilter === 'Day') {
       const d = new Date(activeDay);
       const isToday = activeDay === new Date().toISOString().split('T')[0];
@@ -271,9 +269,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       return `Year ${activeYear}`;
     }
 
-    return `Jan ${activeYear} - Dec ${activeYear}`;
+    return `All Tasks (${activeYear})`;
   }, [granularityFilter, activeYear, activeMonth, activeQuarter, activeDay, customFromDate, customToDate]);
-
 
   // Filtered Quotation Tasks for Gantt View (supports All, Year, Quarter, Month, Day, and Date Range)
   const filteredQuotationTasks = useMemo(() => {
@@ -288,38 +285,89 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
         return false;
       }
 
-      // Date Filtering Logic
-      const taskDateStr = task.start_date || task.end_date;
-      if (!taskDateStr) return true;
+      // Collect all candidate dates associated with this task
+      const dates: Date[] = [];
+      const parseAndAdd = (dStr?: string) => {
+        if (!dStr) return;
+        const d = new Date(dStr);
+        if (!isNaN(d.getTime())) dates.push(d);
+      };
+      parseAndAdd(task.start_date);
+      parseAndAdd(task.end_date);
+      parseAndAdd(task.actual_start);
+      parseAndAdd(task.actual_end);
+      parseAndAdd(task.completed_at);
+      parseAndAdd((task as any).target_date);
 
-      const tDate = new Date(taskDateStr);
-      const tYear = tDate.getFullYear();
-      const tMonth = tDate.getMonth();
-      const tQuarter = Math.floor(tMonth / 3) + 1;
-      const tDayStr = taskDateStr.substring(0, 10);
+      // Milestone date string parsing (e.g. "10 Sep", "05 Oct")
+      if (task.milestone_date && typeof task.milestone_date === 'string') {
+        const parts = task.milestone_date.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const day = parseInt(parts[0], 10);
+          const mNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+          const mIdx = mNames.indexOf(parts[1].toLowerCase().substring(0, 3));
+          if (!isNaN(day) && mIdx >= 0) {
+            dates.push(new Date(activeYear, mIdx, day));
+          }
+        }
+      }
+
+      // If status completed, ensure completed_at or actual_end is counted
+      const isStatusCompleted = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
+      const activeMarkerDate = (isStatusCompleted && (task.actual_end || task.completed_at))
+        ? (task.actual_end || task.completed_at || task.end_date)
+        : (task.start_date || task.end_date);
+      parseAndAdd(activeMarkerDate);
+
+      // If no valid dates found, keep task by default
+      if (dates.length === 0) return true;
+
+      // Determine min and max dates
+      let minDate = dates[0];
+      let maxDate = dates[0];
+      for (const d of dates) {
+        if (d < minDate) minDate = d;
+        if (d > maxDate) maxDate = d;
+      }
 
       // 1. Custom Date Range filter
       if (customFromDate || customToDate) {
-        if (customFromDate && tDayStr < customFromDate) return false;
-        if (customToDate && tDayStr > customToDate) return false;
-        return true;
+        const fromD = customFromDate ? new Date(customFromDate + 'T00:00:00') : new Date('1970-01-01');
+        const toD = customToDate ? new Date(customToDate + 'T23:59:59') : new Date('2099-12-31');
+        const hasDateInRange = dates.some(d => d >= fromD && d <= toD);
+        const spansRange = minDate <= toD && maxDate >= fromD;
+        return hasDateInRange || spansRange;
       }
 
       // 2. Granularity filters
       if (granularityFilter === 'Day') {
-        return tDayStr === activeDay;
+        const hasDayMatch = dates.some(d => d.toISOString().split('T')[0] === activeDay);
+        const startDay = minDate.toISOString().split('T')[0];
+        const endDay = maxDate.toISOString().split('T')[0];
+        const spansDay = startDay <= activeDay && endDay >= activeDay;
+        return hasDayMatch || spansDay;
       }
 
       if (granularityFilter === 'Month') {
-        return tYear === activeYear && tMonth === activeMonth;
+        const startOfMonth = new Date(activeYear, activeMonth, 1, 0, 0, 0);
+        const endOfMonth = new Date(activeYear, activeMonth + 1, 0, 23, 59, 59);
+        const hasMonthMatch = dates.some(d => d.getFullYear() === activeYear && d.getMonth() === activeMonth);
+        const spansMonth = minDate <= endOfMonth && maxDate >= startOfMonth;
+        return hasMonthMatch || spansMonth;
       }
 
       if (granularityFilter === 'Quarter') {
-        return tYear === activeYear && tQuarter === activeQuarter;
+        const startOfQ = new Date(activeYear, (activeQuarter - 1) * 3, 1, 0, 0, 0);
+        const endOfQ = new Date(activeYear, activeQuarter * 3, 0, 23, 59, 59);
+        const hasQMatch = dates.some(d => d.getFullYear() === activeYear && Math.floor(d.getMonth() / 3) + 1 === activeQuarter);
+        const spansQ = minDate <= endOfQ && maxDate >= startOfQ;
+        return hasQMatch || spansQ;
       }
 
       if (granularityFilter === 'Year') {
-        return tYear === activeYear;
+        const hasYearMatch = dates.some(d => d.getFullYear() === activeYear);
+        const spansYear = minDate.getFullYear() <= activeYear && maxDate.getFullYear() >= activeYear;
+        return hasYearMatch || spansYear;
       }
 
       // 'All': show all tasks across all years and dates
@@ -558,7 +606,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
               
               {/* Left Title & Icon */}
               <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm flex items-center justify-center text-white shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-red-700 shadow-sm flex items-center justify-center text-white shrink-0">
                   <FileText className="w-6 h-6 stroke-[2.2]" />
                 </div>
                 <div>
@@ -641,7 +689,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           setActiveDropdown(null);
                         }}
                         className={`w-full px-3 py-2 text-left font-medium hover:bg-slate-50 cursor-pointer ${
-                          ganttProjectFilter === 'All' ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                          ganttProjectFilter === 'All' ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
                         }`}
                       >
                         All Projects
@@ -654,7 +702,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             setActiveDropdown(null);
                           }}
                           className={`w-full px-3 py-2 text-left truncate font-medium hover:bg-slate-50 cursor-pointer ${
-                            ganttProjectFilter === p ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                            ganttProjectFilter === p ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
                           }`}
                         >
                           {p}
@@ -668,7 +716,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddTaskModalOpen(true)}
-                  className="h-10 px-4 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="h-10 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
                   <span>Add Task</span>
@@ -693,7 +741,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         type="date"
                         value={customFromDate}
                         onChange={(e) => setCustomFromDate(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
                       />
                     </div>
                     <span className="text-slate-300">-</span>
@@ -703,7 +751,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         type="date"
                         value={customToDate}
                         onChange={(e) => setCustomToDate(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
                       />
                     </div>
                     {(customFromDate || customToDate) && (
@@ -730,15 +778,15 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         e.stopPropagation();
                         setActiveDropdown(activeDropdown === 'granularity' ? null : 'granularity');
                       }}
-                      className="h-9 px-3.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                      className="h-9 px-3.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
                     >
                       <span>
                         {customFromDate || customToDate 
                           ? 'Custom Range' 
                           : granularityFilter === 'All' ? 'All' 
-                          : granularityFilter === 'Year' ? 'Year' 
-                          : granularityFilter === 'Quarter' ? 'Quarter' 
-                          : granularityFilter === 'Month' ? 'Month' 
+                          : granularityFilter === 'Year' ? `Year (${activeYear})` 
+                          : granularityFilter === 'Quarter' ? `Quarter (Q${activeQuarter})` 
+                          : granularityFilter === 'Month' ? `Month (${MONTH_NAMES[activeMonth]})` 
                           : 'Day'}
                       </span>
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -747,7 +795,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {granularityDropdownOpen && (
                       <div 
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-40 text-xs animate-in fade-in zoom-in-95"
+                        className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-44 text-xs animate-in fade-in zoom-in-95"
                       >
                         {(['All', 'Year', 'Quarter', 'Month', 'Day'] as const).map(option => (
                           <button
@@ -755,17 +803,35 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             type="button"
                             onClick={() => {
                               setGranularityFilter(option);
+                              if (option === 'Month') {
+                                setActiveMonth(new Date().getMonth());
+                                setActiveYear(new Date().getFullYear());
+                              } else if (option === 'Quarter') {
+                                setActiveQuarter(Math.floor(new Date().getMonth() / 3) + 1);
+                                setActiveYear(new Date().getFullYear());
+                              } else if (option === 'Year') {
+                                setActiveYear(new Date().getFullYear());
+                              } else if (option === 'Day') {
+                                setActiveDay(new Date().toISOString().split('T')[0]);
+                                setActiveYear(new Date().getFullYear());
+                              }
                               setCustomFromDate('');
                               setCustomToDate('');
                               setActiveDropdown(null);
                             }}
-                            className={`w-full px-3.5 py-2 text-left font-medium hover:bg-slate-50 cursor-pointer flex items-center justify-between ${
-                              granularityFilter === option && !customFromDate && !customToDate ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                            className={`w-full px-3.5 py-2 text-left font-medium hover:bg-red-50 cursor-pointer flex items-center justify-between ${
+                              granularityFilter === option && !customFromDate && !customToDate ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
                             }`}
                           >
-                            <span>{option === 'All' ? 'All (All Time)' : option}</span>
+                            <span>
+                              {option === 'All' ? 'All (All Time)' 
+                                : option === 'Year' ? `Year (${activeYear})` 
+                                : option === 'Quarter' ? `Quarter (Q${activeQuarter})` 
+                                : option === 'Month' ? `Month (${MONTH_NAMES[activeMonth]})` 
+                                : 'Day'}
+                            </span>
                             {granularityFilter === option && !customFromDate && !customToDate && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-red-600" />
                             )}
                           </button>
                         ))}
@@ -778,25 +844,26 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
               {/* Main Table Grid matching Image 1 */}
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1250px]">
+                <table className="w-full text-left border-collapse">
                   
                   {/* Timeline Header Row 1: Years */}
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 bg-slate-50/70">
-                      <th className="w-12 px-3 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">S.No</th>
-                      <th className="w-72 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Task name</th>
-                      <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
-                      <th className="w-16 px-2 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">Action</th>
+                      <th className="w-10 px-2 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700 text-xs">S.No</th>
+                      <th className="w-44 lg:w-48 px-3 py-2.5 border-r border-slate-200 font-bold text-slate-700 text-xs">Task name</th>
+                      <th className="w-24 px-2.5 py-2.5 border-r border-slate-200 font-bold text-slate-700 text-xs">Progress</th>
                       
                       {/* Year Header spanning full year */}
                       <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 select-none">
                         <span className="text-sm font-extrabold text-slate-800 tracking-wide">{activeYear}</span>
                       </th>
+
+                      {/* Action column at the END */}
+                      <th className="w-12 px-2 py-2.5 text-center font-bold text-slate-700 text-xs">Action</th>
                     </tr>
 
                     {/* Timeline Header Row 2: Months */}
                     <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-600 bg-white">
-                      <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
@@ -805,29 +872,31 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           key={idx}
                           onClick={() => {
                             setActiveMonth(m.monthIndex);
+                            setActiveYear(m.year);
                             setGranularityFilter('Month');
                             setCustomFromDate('');
                             setCustomToDate('');
                           }}
-                          className={`py-2 px-2 text-center border-r border-slate-200 font-medium cursor-pointer transition-colors ${
+                          className={`py-2 px-1 text-center border-r border-slate-200 font-medium cursor-pointer transition-colors text-[11px] min-w-[34px] ${
                             m.isFilterActive 
-                              ? 'bg-blue-50 text-blue-700 font-bold border-b-2 border-b-blue-600'
+                              ? 'bg-red-50 text-red-700 font-bold border-b-2 border-b-red-600'
                               : m.isCurrent 
                               ? 'bg-rose-50/60 text-red-600 font-bold' 
                               : 'text-slate-600 hover:bg-slate-50'
                           }`}
-                          title={`Click to view ${m.label} ${activeYear}`}
+                          title={`Click to filter by ${m.label} ${activeYear}`}
                         >
                           {m.label}
                         </th>
                       ))}
+                      <th />
                     </tr>
                   </thead>
 
                   <tbody>
                     {/* Expandable Group Row: "v 📕 Unassigned (8 Quotation Tasks)   [8 Tasks]" matching user image */}
                     <tr className="bg-[#fff1f2] border-b border-red-100/80">
-                      <td className="px-3 py-2.5 text-center border-r border-red-100/80">
+                      <td className="px-2 py-2.5 text-center border-r border-red-100/80">
                         <button 
                           type="button"
                           onClick={() => setIsUnassignedExpanded(!isUnassignedExpanded)}
@@ -836,17 +905,18 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isUnassignedExpanded ? '' : '-rotate-90'}`} />
                         </button>
                       </td>
-                      <td colSpan={3} className="px-4 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
+                      <td colSpan={2} className="px-3 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
                         <div className="flex items-center gap-2">
                           <FolderKanban className="w-4 h-4 text-red-600" />
                           <span>Unassigned ({filteredQuotationTasks.length} Quotation Tasks)</span>
                         </div>
                       </td>
-                      <td colSpan={12} className="px-4 py-2.5 text-left border-red-100/80">
+                      <td colSpan={12} className="px-3 py-2.5 text-left border-r border-red-100/80">
                         <span className="px-2.5 py-0.5 bg-red-600 text-white rounded-md text-[11px] font-bold shadow-xs">
                           {filteredQuotationTasks.length} Tasks
                         </span>
                       </td>
+                      <td className="border-b border-red-100/80" />
                     </tr>
 
                     {/* Empty State when no tasks match active filter */}
@@ -868,7 +938,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                 setCustomFromDate('');
                                 setCustomToDate('');
                               }}
-                              className="mt-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-blue-600 text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
+                              className="mt-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-red-600 text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
                             >
                               View All Tasks
                             </button>
@@ -917,24 +987,24 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           className="border-b border-slate-100 hover:bg-slate-50/70 transition-colors text-xs text-slate-800 group"
                         >
                           {/* S.No */}
-                          <td className="px-3 py-3 text-center border-r border-slate-200 text-slate-500 font-medium">
+                          <td className="px-2 py-2.5 text-center border-r border-slate-200 text-slate-500 font-medium">
                             {idx + 1}
                           </td>
 
                           {/* Task Name & Project */}
                           <td 
                             onClick={() => setSelectedQuotationDrawerTask(task)}
-                            className="px-4 py-3 border-r border-slate-200 cursor-pointer hover:bg-red-50/40 transition-colors"
+                            className="px-3 py-2.5 border-r border-slate-200 cursor-pointer hover:bg-red-50/40 transition-colors max-w-[190px]"
                           >
                             <div className="font-bold text-slate-900 leading-tight flex items-center justify-between">
-                              <span className="truncate hover:text-red-600 transition-colors">{task.task_name}</span>
+                              <span className="truncate hover:text-red-600 transition-colors block">{task.task_name}</span>
                               {!placement.isCurrentYear && (
                                 <span 
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setActiveYear(placement.taskYear);
                                   }}
-                                  className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 transition-colors cursor-pointer shrink-0"
+                                  className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-red-100 text-slate-600 hover:text-red-700 transition-colors cursor-pointer shrink-0"
                                   title={`Scheduled for year ${placement.taskYear}. Click to view.`}
                                 >
                                   {placement.taskYear}
@@ -947,18 +1017,18 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           </td>
 
                           {/* Progress Column: Pure text (100% Completed / 50% Ongoing) above progress bar with NO box/border/bg/fading */}
-                          <td className="px-4 py-2.5 border-r border-slate-200">
-                            <div className="w-24">
-                              <div className="flex items-center gap-1.5 mb-1 leading-none">
-                                <span className="text-[11px] font-bold text-slate-700">
+                          <td className="px-2.5 py-2.5 border-r border-slate-200">
+                            <div className="w-20">
+                              <div className="flex items-center gap-1 mb-1 leading-none">
+                                <span className="text-[10px] font-bold text-slate-700">
                                   {task.progress_percentage || (isStatusCompleted ? 100 : 0)}%
                                 </span>
                                 {isStatusCompleted ? (
-                                  <span className="text-[11px] font-semibold text-emerald-600">
-                                    Completed
+                                  <span className="text-[10px] font-semibold text-emerald-600">
+                                    Done
                                   </span>
                                 ) : isStatusInProgress ? (
-                                  <span className="text-[11px] font-semibold text-blue-600">
+                                  <span className="text-[10px] font-semibold text-amber-600">
                                     Ongoing
                                   </span>
                                 ) : null}
@@ -966,27 +1036,12 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                 <div 
                                   className={`h-full transition-all duration-300 ${
-                                    isStatusCompleted ? 'bg-emerald-500' : isStatusInProgress ? 'bg-blue-500' : 'bg-slate-300'
+                                    isStatusCompleted ? 'bg-emerald-500' : isStatusInProgress ? 'bg-amber-500' : 'bg-slate-300'
                                   }`}
                                   style={{ width: `${task.progress_percentage || (isStatusCompleted ? 100 : 0)}%` }}
                                 />
                               </div>
                             </div>
-                          </td>
-
-                          {/* Action Column: View Details Eye Button (Directly visible without horizontal scrolling) */}
-                          <td className="px-2 py-2.5 text-center border-r border-slate-200">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedQuotationDrawerTask(task);
-                              }}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-red-200"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
                           </td>
 
                           {/* 12 Timeline Months */}
@@ -996,8 +1051,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             return (
                               <td 
                                 key={mIdx}
-                                className={`relative py-2 px-1 border-r border-slate-100 text-center ${
-                                  m.isFilterActive ? 'bg-blue-50/20' : m.isCurrent ? 'bg-rose-50/20' : ''
+                                className={`relative py-2 px-0.5 border-r border-slate-100 text-center min-w-[34px] ${
+                                  m.isFilterActive ? 'bg-red-50/20' : m.isCurrent ? 'bg-rose-50/20' : ''
                                 }`}
                               >
                                 {isMilestoneCell && (
@@ -1015,20 +1070,20 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                       className={`relative z-10 w-2.5 h-2.5 rounded-full ${markerBgColor} ring-2 ${markerRingColor} shadow-2xs transition-transform duration-200 hover:scale-125`}
                                     />
 
-                                    {/* Floating Popover: Appears ONLY when hovering on marker, as commanded in Audio! */}
+                                    {/* Floating Popover: Appears ONLY when hovering on marker */}
                                     {isHovered && (
                                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-auto">
                                         <div className="px-3.5 py-2.5 rounded-xl border border-slate-200 shadow-2xl flex flex-col gap-1 text-left min-w-[210px] bg-white text-slate-900 animate-in fade-in zoom-in-95 duration-150">
                                           <div className="flex items-center justify-between gap-2 border-b pb-1.5 border-slate-100">
                                             <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
-                                              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                                              <Calendar className="w-3.5 h-3.5 text-red-600" />
                                               <span>{task.milestone_date || (isStatusCompleted && task.actual_end ? new Date(task.actual_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '05 Oct')}</span>
                                             </div>
                                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                               isStatusCompleted 
                                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                                                 : isStatusInProgress 
-                                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                                 : 'bg-rose-50 text-rose-700 border border-rose-200'
                                             }`}>
                                               {isStatusCompleted ? 'Completed' : isStatusInProgress ? 'Ongoing' : 'Pending'}
@@ -1049,6 +1104,21 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                               </td>
                             );
                           })}
+
+                          {/* Action Column: View Details Eye Button at the END (Right Side) */}
+                          <td className="w-12 px-2 py-2.5 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedQuotationDrawerTask(task);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-red-200"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -1084,7 +1154,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
             <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
+                  <FileText className="w-5 h-5 text-red-600" />
                   <h3 className="font-bold text-slate-900 text-sm">Add Quotation Task</h3>
                 </div>
                 <button
@@ -1107,7 +1177,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     placeholder="e.g. Quotation, Collect Client Details"
                     value={newTaskName}
                     onChange={(e) => setNewTaskName(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                   />
                 </div>
 
@@ -1118,7 +1188,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <select
                     value={newTaskProjectId}
                     onChange={(e) => setNewTaskProjectId(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-white"
+                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 bg-white"
                   >
                     <option value="">Select Project</option>
                     {projects.map(p => (
@@ -1136,7 +1206,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       type="date"
                       value={newTaskDate}
                       onChange={(e) => setNewTaskDate(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                      className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                     />
                   </div>
 
@@ -1147,7 +1217,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     <select
                       value={newTaskStatus}
                       onChange={(e) => setNewTaskStatus(e.target.value as any)}
-                      className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 bg-white"
+                      className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 bg-white"
                     >
                       <option value="NOT_STARTED">Not Started</option>
                       <option value="IN_PROGRESS">In Progress</option>
@@ -1166,7 +1236,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     placeholder="e.g. Send Quotation, Client Meeting, Prepare Quotation"
                     value={newTaskStage}
                     onChange={(e) => setNewTaskStage(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
+                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                   />
                 </div>
 
@@ -1180,7 +1250,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
+                    className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-sm transition-colors cursor-pointer"
                   >
                     Save Task
                   </button>

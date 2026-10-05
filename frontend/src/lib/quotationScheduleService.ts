@@ -141,6 +141,42 @@ export const DEFAULT_QUOTATION_SCHEDULE_TASKS: QuotationScheduleTask[] = [
     progress_percentage: 0,
     remarks: 'Final submission of quotation package.',
     group_name: 'Unassigned'
+  },
+  {
+    id: 'q-task-09',
+    task_name: 'Quotation Preparation',
+    project_id: 'proj-01',
+    project_name: 'Project',
+    assignee: 'Sunil Kumar',
+    status: 'IN_PROGRESS',
+    start_date: '2026-08-10',
+    end_date: '2026-08-18',
+    milestone_date: '18 Aug',
+    stage_label: 'Prepare Quotation',
+    color_theme: 'red',
+    duration_days: 8,
+    progress_percentage: 50,
+    remarks: 'August quotation preparation.',
+    group_name: 'Unassigned'
+  },
+  {
+    id: 'q-task-10',
+    task_name: 'Final Quotation Review',
+    project_id: 'proj-02',
+    project_name: 'Project',
+    assignee: 'Sunil Kumar',
+    status: 'COMPLETED',
+    start_date: '2026-10-01',
+    end_date: '2026-10-05',
+    actual_end: '2026-10-05',
+    completed_at: '2026-10-05',
+    milestone_date: '05 Oct',
+    stage_label: 'Send Quotation',
+    color_theme: 'green',
+    duration_days: 5,
+    progress_percentage: 100,
+    remarks: 'October final quotation approval and client submission.',
+    group_name: 'Unassigned'
   }
 ];
 
@@ -153,6 +189,11 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         stored = parsed;
+        DEFAULT_QUOTATION_SCHEDULE_TASKS.forEach(def => {
+          if (!stored.some(s => s.id === def.id)) {
+            stored.push(def);
+          }
+        });
       }
     }
   } catch (e) {

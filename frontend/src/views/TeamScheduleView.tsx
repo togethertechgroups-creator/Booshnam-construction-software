@@ -487,48 +487,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     }
   };
 
-  // If a user has clicked on a timesheet row to view it, render the full Time Log View (Image from user)
-  if (viewingTimesheet) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <TimeLogDetailView
-          timesheet={viewingTimesheet}
-          onBack={() => setViewingTimesheet(null)}
-          onEdit={(entry) => {
-            setEditingTimesheet(entry);
-            setIsDrawerOpen(true);
-          }}
-          onDelete={(id) => {
-            deleteTimesheet(id);
-            setTimesheets(prev => prev.filter(t => t.id !== id));
-            setViewingTimesheet(null);
-          }}
-          onShowToast={onShowToast}
-        />
-
-        <NewTimesheetDrawer
-          isOpen={isDrawerOpen}
-          onClose={() => {
-            setIsDrawerOpen(false);
-            setEditingTimesheet(null);
-          }}
-          editEntry={editingTimesheet}
-          onSaved={(newEntry) => {
-            setTimesheets(prev => {
-              const exists = prev.some(t => t.id === newEntry.id);
-              if (exists) {
-                return prev.map(t => t.id === newEntry.id ? newEntry : t);
-              }
-              return [newEntry, ...prev];
-            });
-            setViewingTimesheet(newEntry);
-          }}
-          projects={projects}
-          onShowToast={onShowToast}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#fafbfc] flex flex-col">
@@ -1535,6 +1493,9 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
             }
             return [newEntry, ...prev];
           });
+          if (editingTimesheet) {
+            setViewingTimesheet(newEntry);
+          }
         }}
         projects={projects}
         onShowToast={onShowToast}
@@ -1553,6 +1514,27 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
           syncQuotationTaskToProject(updated);
           setQuotationTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
         }}
+      />
+
+      {/* ---------------------------------------------------------------- */}
+      {/* TIME LOG DETAILS DRAWER (Matching User Audio & Screenshot)       */}
+      {/* ---------------------------------------------------------------- */}
+      <TimeLogDetailView
+        isOpen={!!viewingTimesheet}
+        timesheet={viewingTimesheet}
+        onClose={() => setViewingTimesheet(null)}
+        onEdit={(entry) => {
+          setViewingTimesheet(null);
+          setEditingTimesheet(entry);
+          setIsDrawerOpen(true);
+        }}
+        onDelete={(id) => {
+          const updated = deleteTimesheet(id);
+          setTimesheets(updated);
+          setViewingTimesheet(null);
+          onShowToast?.('Timesheet deleted successfully.');
+        }}
+        onShowToast={onShowToast}
       />
 
     </div>

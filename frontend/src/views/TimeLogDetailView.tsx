@@ -1,31 +1,38 @@
 import React, { useState } from 'react';
 import { 
-  ArrowLeft, Edit2, MoreVertical, X, 
-  ChevronLeft, ChevronRight, Download, Trash2,
-  FileText, ExternalLink, Calendar, Clock, Building2, 
-  User, CheckCircle2, Paperclip, Printer, Eye, Timer,
-  FolderKanban, ListTodo, MessageSquare, Check
+  X, Edit2, Download, Trash2,
+  FileText, Calendar, Clock, 
+  User, Paperclip, Printer, Eye, Timer,
+  FolderKanban, ListTodo, MessageSquare, Check,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { TimesheetEntry } from '../lib/timesheetService';
 
 interface TimeLogDetailViewProps {
-  timesheet: TimesheetEntry;
-  onBack: () => void;
+  isOpen?: boolean;
+  timesheet: TimesheetEntry | null;
+  onClose?: () => void;
+  onBack?: () => void;
   onEdit: (entry: TimesheetEntry) => void;
   onDelete: (id: string) => void;
   onShowToast?: (msg: string) => void;
 }
 
 export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
+  isOpen = true,
   timesheet,
+  onClose,
   onBack,
   onEdit,
   onDelete,
   onShowToast
 }) => {
-  const [activeMenuOpen, setActiveMenuOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
+  const handleClose = onClose || onBack || (() => {});
+
+  if (!isOpen || !timesheet) return null;
 
   const files = timesheet.files || [];
   const primaryAttachment = files[0];
@@ -35,350 +42,344 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
     if (window.confirm('Are you sure you want to delete this timesheet entry?')) {
       onDelete(timesheet.id);
       onShowToast?.('Timesheet deleted successfully.');
-      onBack();
+      handleClose();
     }
   };
 
   const handlePrint = () => {
-    window.print();
+    onShowToast?.('Exporting timesheet voucher to PDF...');
+    setTimeout(() => window.print(), 200);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col animate-in fade-in duration-150">
-      
+    <>
       {/* ---------------------------------------------------------------- */}
-      {/* Top Header Bar (Modern Red & White Enterprise Brand Header) */}
+      {/* SIDE DRAWER OVERLAY & CONTAINER (Slide-in from right)            */}
       {/* ---------------------------------------------------------------- */}
-      <header className="px-6 py-3.5 border-b border-slate-200 bg-white sticky top-0 z-30 shadow-2xs flex items-center justify-between w-full">
-          
-          {/* Left: Back button & Breadcrumb Title */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="p-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-              title="Back to Timesheets"
-              aria-label="Back to Timesheets"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-700" />
-            </button>
+      <div 
+        className="fixed inset-0 z-[120] overflow-hidden bg-slate-900/40 backdrop-blur-2xs flex justify-end animate-in fade-in duration-200"
+        onClick={handleClose}
+      >
+        <div 
+          className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Top Brand Line */}
+          <div className="h-1.5 w-full bg-linear-to-r from-red-600 via-rose-500 to-red-600 shrink-0" />
 
-            <div className="h-4 w-px bg-slate-200" />
+          {/* ---------------------------------------------------------------- */}
+          {/* DRAWER HEADER BAR                                                */}
+          {/* ---------------------------------------------------------------- */}
+          <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                title="Close drawer"
+                aria-label="Close drawer"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 font-medium">Schedule & Timesheet</span>
-              <span className="text-xs text-slate-300">/</span>
-              <h1 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <span>Time Log View</span>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-slate-900 tracking-wider uppercase">
+                  Time Log Details
+                </h2>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Verified Log
+                  Verified
                 </span>
-              </h1>
-            </div>
-          </div>
-
-          {/* Right Action Buttons */}
-          <div className="flex items-center gap-2 relative">
-            <button
-              onClick={() => onEdit(timesheet)}
-              className="px-3 py-1.5 bg-white border border-slate-300 hover:border-red-600 hover:text-red-600 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-              title="Edit Timesheet"
-            >
-              <Edit2 className="w-3.5 h-3.5" />
-              <span>Edit</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onShowToast?.('Exporting timesheet voucher to PDF...');
-                setTimeout(() => window.print(), 300);
-              }}
-              className="px-3 py-1.5 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer hidden sm:flex"
-              title="Print or Export PDF"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-500" />
-              <span>Print / PDF</span>
-            </button>
-
-            <button
-              onClick={() => setActiveMenuOpen(!activeMenuOpen)}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
-              title="More Options"
-            >
-              <MoreVertical className="w-4 h-4 text-slate-600" />
-            </button>
-
-            {/* Dropdown menu */}
-            {activeMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-44 text-xs animate-in fade-in zoom-in-95">
-                <button
-                  onClick={() => {
-                    setActiveMenuOpen(false);
-                    onEdit(timesheet);
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
-                >
-                  <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Edit Log</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuOpen(false);
-                    handlePrint();
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Download / Print</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuOpen(false);
-                    handleDelete();
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-red-50 flex items-center gap-2 text-red-600 cursor-pointer border-t border-slate-100"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            )}
-          </div>
-      </header>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* Main Content Area (Polished Red & White Theme Card Layout) */}
-      {/* ---------------------------------------------------------------- */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 lg:px-10 py-8 space-y-6">
-        
-        {/* Top Summary Metrics Cards (Start Time | End Time | Duration) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          
-          {/* Start Time Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs hover:shadow-xs transition-shadow relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Start Time
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-                <Clock className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight group-hover:text-red-600 transition-colors">
-              {timesheet.start_time}
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              Recorded Site Check-in
+
+            {/* Right Action Buttons */}
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onEdit(timesheet)}
+                className="px-3 py-1.5 bg-white border border-slate-300 hover:border-red-600 hover:text-red-600 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer"
+                title="Edit Timesheet"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Print or Export PDF"
+              >
+                <Printer className="w-4 h-4 text-slate-600" />
+              </button>
+
+              <button
+                onClick={handleDelete}
+                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Delete Timesheet"
+              >
+                <Trash2 className="w-4 h-4 text-slate-600 hover:text-red-600" />
+              </button>
             </div>
           </div>
 
-          {/* End Time Card */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-2xs hover:shadow-xs transition-shadow relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                End Time
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {timesheet.end_time}
-            </div>
-            <div className="text-xs text-slate-400 mt-1">
-              Recorded Site Checkout
-            </div>
-          </div>
-
-          {/* Duration Card */}
-          <div className="bg-white rounded-2xl border border-red-200/80 bg-linear-to-br from-white via-red-50/20 to-red-50/40 p-5 shadow-2xs hover:shadow-xs transition-shadow relative overflow-hidden group">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold text-red-700 uppercase tracking-wider">
-                Duration
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shadow-xs">
-                <Timer className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="text-3xl font-black text-red-600 tracking-tight">
-              {timesheet.duration}
-            </div>
-            <div className="text-xs text-red-500/90 font-medium mt-1 flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" />
-              <span>Total Logged Hours</span>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ---------------------------------------------------------------- */}
-        {/* Additional Details Dossier Card */}
-        {/* ---------------------------------------------------------------- */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
-          
-          {/* Card Header */}
-          <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-1 h-4 bg-red-600 rounded-full" />
-              <h2 className="text-sm font-bold text-slate-900 tracking-tight">
-                Additional Details:
-              </h2>
-            </div>
-            <span className="text-xs text-slate-400">
-              Entry ID: <code className="font-mono text-slate-600">{timesheet.id}</code>
-            </span>
-          </div>
-
-          {/* Details Table Rows with crisp dividers */}
-          <div className="divide-y divide-slate-100 text-sm">
+          {/* ---------------------------------------------------------------- */}
+          {/* DRAWER SCROLLABLE BODY                                           */}
+          {/* ---------------------------------------------------------------- */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 bg-white">
             
-            {/* Party: */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2">
-                <User className="w-4 h-4 text-slate-400" />
-                <span>Party:</span>
-              </span>
-              <div className="flex-1 flex items-center gap-2">
-                <span className="text-slate-900 font-semibold">
-                  {timesheet.party_name}
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                  Supervisor
-                </span>
-              </div>
-            </div>
-
-            {/* Project: */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-slate-400" />
-                <span>Project:</span>
-              </span>
-              <div className="flex-1">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 text-red-700 font-semibold text-xs border border-red-100">
-                  <FolderKanban className="w-3.5 h-3.5 text-red-500" />
-                  {timesheet.project_name}
-                </span>
-              </div>
-            </div>
-
-            {/* Task: */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-slate-400" />
-                <span>Task:</span>
-              </span>
-              <div className="flex-1 text-slate-700 font-medium">
-                {timesheet.task_name || '--'}
-              </div>
-            </div>
-
-            {/* Date: */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <span>Date:</span>
-              </span>
-              <div className="flex-1 text-slate-900 font-semibold">
-                {timesheet.display_date || timesheet.date}
-              </div>
-            </div>
-
-            {/* Remarks: */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2 pt-1">
-                <MessageSquare className="w-4 h-4 text-slate-400" />
-                <span>Remarks:</span>
-              </span>
-              <div className="flex-1">
-                <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-slate-800 text-xs sm:text-sm leading-relaxed font-normal">
-                  {timesheet.remarks || '--'}
+            {/* -------------------------------------------------------------- */}
+            {/* COMPACT TIME & DURATION METRIC CARDS                           */}
+            {/* Smaller, neat, proportional cards (Start Time | End Time | Dur) */}
+            {/* -------------------------------------------------------------- */}
+            <div className="grid grid-cols-3 gap-2.5">
+              
+              {/* Start Time Mini Card */}
+              <div className="bg-slate-50/80 rounded-xl border border-slate-200/90 p-3 hover:border-slate-300 transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Start Time
+                  </span>
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+                  {timesheet.start_time}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                  Site Check-in
                 </div>
               </div>
+
+              {/* End Time Mini Card */}
+              <div className="bg-slate-50/80 rounded-xl border border-slate-200/90 p-3 hover:border-slate-300 transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    End Time
+                  </span>
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
+                  {timesheet.end_time}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                  Site Checkout
+                </div>
+              </div>
+
+              {/* Duration Mini Card */}
+              <div className="bg-red-50/60 rounded-xl border border-red-200/90 p-3 hover:border-red-300 transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                    Duration
+                  </span>
+                  <Timer className="w-3.5 h-3.5 text-red-600" />
+                </div>
+                <div className="text-sm sm:text-base font-black text-red-600 tracking-tight">
+                  {timesheet.duration}
+                </div>
+                <div className="text-[10px] text-red-600/90 font-medium mt-0.5 truncate flex items-center gap-0.5">
+                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                  <span>Total Logged</span>
+                </div>
+              </div>
+
             </div>
 
-            {/* Attachments: (Square Thumbnail + "+1" Badge matching screenshot) */}
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start justify-between gap-2 hover:bg-slate-50/50 transition-colors">
-              <span className="w-36 text-slate-500 font-medium shrink-0 flex items-center gap-2 pt-2">
-                <Paperclip className="w-4 h-4 text-slate-400" />
-                <span>Attachments:</span>
-              </span>
+            {/* -------------------------------------------------------------- */}
+            {/* ADDITIONAL DETAILS DOSSIER CARD                                */}
+            {/* -------------------------------------------------------------- */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
               
-              <div className="flex-1">
-                {files.length === 0 ? (
-                  <span className="text-slate-400 italic text-xs">No attachments uploaded</span>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <div 
-                      onClick={() => {
-                        setActivePhotoIdx(0);
-                        setLightboxOpen(true);
-                      }}
-                      className="relative group cursor-pointer inline-block"
-                      title="Click to view full attachment"
-                    >
-                      {/* Thumbnail Container */}
-                      <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-slate-200 group-hover:border-red-600 bg-slate-100 shadow-2xs group-hover:shadow-md transition-all relative">
-                        {primaryAttachment?.url ? (
-                          <img 
-                            src={primaryAttachment.url} 
-                            alt={primaryAttachment.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-500">
-                            <FileText className="w-6 h-6 text-red-500" />
+              {/* Card Header: Red Bar + Title + Entry ID */}
+              <div className="px-4 py-3 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-3.5 bg-red-600 rounded-full" />
+                  <h3 className="text-xs font-bold text-slate-900 tracking-tight">
+                    Additional Details:
+                  </h3>
+                </div>
+                <span className="text-[11px] text-slate-400">
+                  Entry ID: <code className="font-mono text-slate-600 font-semibold">{timesheet.id}</code>
+                </span>
+              </div>
+
+              {/* Details List */}
+              <div className="divide-y divide-slate-100 text-xs">
+                
+                {/* Party */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Party:</span>
+                  </span>
+                  <div className="flex-1 flex flex-wrap items-center gap-2">
+                    <span className="text-slate-900 font-semibold">
+                      {timesheet.party_name}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                      Supervisor
+                    </span>
+                  </div>
+                </div>
+
+                {/* Project */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <FolderKanban className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Project:</span>
+                  </span>
+                  <div className="flex-1">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-50 text-red-700 font-semibold text-xs border border-red-100">
+                      <FolderKanban className="w-3 h-3 text-red-500" />
+                      {timesheet.project_name}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Task */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <ListTodo className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Task:</span>
+                  </span>
+                  <div className="flex-1 text-slate-700 font-medium">
+                    {timesheet.task_name || '--'}
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Date:</span>
+                  </span>
+                  <div className="flex-1 text-slate-900 font-semibold">
+                    {timesheet.display_date || timesheet.date}
+                  </div>
+                </div>
+
+                {/* Remarks */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Remarks:</span>
+                  </span>
+                  <div className="flex-1">
+                    <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-lg text-slate-800 text-xs leading-relaxed font-normal">
+                      {timesheet.remarks || '--'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attachments */}
+                <div className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors">
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-1">
+                    <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Attachments:</span>
+                  </span>
+                  <div className="flex-1">
+                    {files.length === 0 ? (
+                      <span className="text-slate-400 italic text-xs">No attachments uploaded</span>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        {/* Thumbnail with +count badge and hover eye */}
+                        <div 
+                          onClick={() => {
+                            setActivePhotoIdx(0);
+                            setLightboxOpen(true);
+                          }}
+                          className="relative group cursor-pointer inline-block shrink-0"
+                          title="Click to view full attachment"
+                        >
+                          <div className="w-14 h-14 rounded-xl overflow-hidden border-2 border-slate-200 group-hover:border-red-600 bg-slate-100 shadow-2xs group-hover:shadow-md transition-all relative">
+                            {primaryAttachment?.url ? (
+                              <img 
+                                src={primaryAttachment.url} 
+                                alt={primaryAttachment.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-500">
+                                <FileText className="w-5 h-5 text-red-500" />
+                              </div>
+                            )}
+                            
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Eye className="w-4 h-4 text-white drop-shadow" />
+                            </div>
                           </div>
-                        )}
-                        
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye className="w-5 h-5 text-white drop-shadow" />
+
+                          {additionalFilesCount > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-[#2a1b4e] text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full shadow-sm border border-white">
+                              +{additionalFilesCount}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* File summary and Lightbox trigger */}
+                        <div className="text-xs space-y-0.5">
+                          <div className="font-semibold text-slate-800">
+                            {files.length} Site Attachment{files.length > 1 ? 's' : ''}
+                          </div>
+                          <p className="text-slate-400 text-[11px] truncate max-w-[200px]">
+                            {primaryAttachment?.name || 'Inspection photo'}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActivePhotoIdx(0);
+                              setLightboxOpen(true);
+                            }}
+                            className="text-red-600 hover:text-red-700 font-semibold inline-flex items-center gap-1 hover:underline cursor-pointer text-xs"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>View High-Res Photo Lightbox</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* "+1" Badge if multiple files (matching screenshot) */}
-                      {additionalFilesCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 bg-[#2a1b4e] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border border-white">
-                          +{additionalFilesCount}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Secondary attachment details & lightbox trigger */}
-                    <div className="text-xs space-y-1">
-                      <div className="font-semibold text-slate-800">
-                        {files.length} Site Attachment{files.length > 1 ? 's' : ''}
-                      </div>
-                      <p className="text-slate-400 text-[11px]">
-                        {primaryAttachment?.name || 'Inspection photo'}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActivePhotoIdx(0);
-                          setLightboxOpen(true);
-                        }}
-                        className="text-red-600 hover:text-red-700 font-semibold inline-flex items-center gap-1 hover:underline cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>View High-Res Photo Lightbox</span>
-                      </button>
-                    </div>
-
+                    )}
                   </div>
-                )}
+                </div>
+
               </div>
+
             </div>
 
           </div>
 
-        </div>
+          {/* ---------------------------------------------------------------- */}
+          {/* DRAWER FOOTER                                                    */}
+          {/* ---------------------------------------------------------------- */}
+          <div className="px-5 py-3 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
+            <button
+              onClick={handleDelete}
+              className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Log</span>
+            </button>
 
-      </main>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleClose}
+                className="px-4 py-1.5 border border-slate-300 hover:bg-white text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => onEdit(timesheet)}
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-all hover:shadow cursor-pointer flex items-center gap-1.5"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>Edit Timesheet</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       {/* ---------------------------------------------------------------- */}
-      {/* PHOTO LIGHTBOX MODAL (Click on attachment thumbnail) */}
+      {/* PHOTO LIGHTBOX MODAL (Click on attachment thumbnail)             */}
       {/* ---------------------------------------------------------------- */}
       {lightboxOpen && files.length > 0 && (
         <div className="fixed inset-0 z-[150] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
@@ -477,7 +478,6 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
           </div>
         </div>
       )}
-
-    </div>
+    </>
   );
 };

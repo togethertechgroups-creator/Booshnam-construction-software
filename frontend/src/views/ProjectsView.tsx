@@ -29,6 +29,7 @@ import { MOMTab } from '../components/project-workspace/tabs/MOMTab';
 import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department } from '../types';
 import { SelectOrTypeInput, SelectOption } from '../components/SelectOrTypeInput';
 import { CustomSelect } from '../components/CustomSelect';
+import { DepartmentMultiSelectFilter } from '../components/DepartmentMultiSelectFilter';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { PREDEFINED_TASKS_TEMPLATE, formatProjectTitle } from '../lib/mockData';
 import { getStaffMembers, getStaffTeamOptions, StaffMember } from '../lib/staffService';
@@ -106,11 +107,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // Active Department State (Synchronized with global switcher)
   const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
 
-  // In-view department filter for Booshnam Associates (Super Admin Overview)
-  const [overviewDeptFilter, setOverviewDeptFilter] = useState<string>('ALL');
+  // In-view multi-department filter for Booshnam Associates (Super Admin Overview)
+  const [overviewDeptIds, setOverviewDeptIds] = useState<string[]>(['ALL']);
 
   useEffect(() => {
-    setOverviewDeptFilter('ALL');
+    setOverviewDeptIds(['ALL']);
   }, [activeDeptId]);
 
   useEffect(() => {
@@ -353,6 +354,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       }))
     ];
   }, [isRestrictedDeptUser, userDept, allProjects]);
+
+  const projectDepartmentFilterItems = useMemo(() => {
+    return ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
+      id: d.id,
+      name: d.name,
+      shortName: d.shortName,
+      count: allProjects.filter(p => normalizeDepartmentId(p.department as string) === d.id).length
+    }));
+  }, [allProjects]);
 
   const handleUpdateProjects = (newProjs: Project[]) => {
     try {
@@ -609,9 +619,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         const pDept = normalizeDepartmentId(p.department as string);
         if (pDept !== userNormDept) return false;
       } else if (activeDeptId === 'booshnam_associates') {
-        if (overviewDeptFilter !== 'ALL') {
+        if (!overviewDeptIds.includes('ALL') && overviewDeptIds.length > 0) {
+          const normSelected = new Set(overviewDeptIds.map(id => normalizeDepartmentId(id)));
           const pDept = normalizeDepartmentId(p.department as string);
-          if (pDept !== overviewDeptFilter) return false;
+          if (!normSelected.has(pDept)) return false;
         }
       } else {
         const pDept = normalizeDepartmentId(p.department as string);
@@ -626,15 +637,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId, overviewDeptFilter, isRestrictedDeptUser, userDept]);
+  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId, overviewDeptIds, isRestrictedDeptUser, userDept]);
 
   const filteredProjectIds = useMemo(() => new Set(filteredProjects.map(p => p.id)), [filteredProjects]);
   const deptPendingApprovals = useMemo(() => {
     return approvals.filter(a => 
       a.status === 'PENDING' && 
-      (activeDeptId === 'booshnam_associates' && overviewDeptFilter === 'ALL' ? true : filteredProjectIds.has(a.project || a.project_id || ''))
+      (activeDeptId === 'booshnam_associates' && (overviewDeptIds.includes('ALL') || overviewDeptIds.length === 0) ? true : filteredProjectIds.has(a.project || a.project_id || ''))
     ).length;
-  }, [approvals, activeDeptId, overviewDeptFilter, filteredProjectIds]);
+  }, [approvals, activeDeptId, overviewDeptIds, filteredProjectIds]);
 
   const deptPendingMaterials = useMemo(() => {
     return filteredProjects.reduce((sum, p) => sum + (p.material_pending_count || 0), 0);
@@ -2431,54 +2442,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </div>
       </div>
 
-      {/* ── DEPARTMENT FILTER PILLS (Booshnam Associates Super Admin) ── */}
-      {activeDeptId === 'booshnam_associates' && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
-            Department:
-          </span>
-          <button
-            type="button"
-            onClick={() => setOverviewDeptFilter('ALL')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
-              overviewDeptFilter === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            <span>All Projects</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-              overviewDeptFilter === 'ALL' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-            }`}>
-              {allProjects.length}
-            </span>
-          </button>
-          {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map((dept) => {
-            const count = allProjects.filter(p => normalizeDepartmentId(p.department as string) === dept.id).length;
-            const isSelected = overviewDeptFilter === dept.id;
-            return (
-              <button
-                key={dept.id}
-                type="button"
-                onClick={() => setOverviewDeptFilter(dept.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-red-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <span>{dept.shortName || dept.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-                }`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* ── UNIFIED FILTER & ACTION TOOLBAR ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         {/* Left: Filter Controls */}
@@ -2500,32 +2463,33 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
-          {/* Department Filter Dropdown */}
-          <div className="w-56">
-            <CustomSelect
-              value={
-                isRestrictedDeptUser && userDept
-                  ? normalizeDepartmentId(userDept)
-                  : activeDeptId === 'booshnam_associates'
-                  ? (overviewDeptFilter === 'ALL' ? 'booshnam_associates' : overviewDeptFilter)
-                  : activeDeptId
-              }
-              onChange={(val) => {
-                if (isRestrictedDeptUser) return;
-                if (activeDeptId === 'booshnam_associates') {
-                  setOverviewDeptFilter(val === 'booshnam_associates' ? 'ALL' : val);
-                } else {
-                  setActiveDepartmentId(val as any);
-                  setActiveDeptId(val);
-                }
-              }}
-              disabled={isRestrictedDeptUser}
-              options={departmentFilterOptions}
-              prefix="Dept: "
-              size="sm"
-              variant="brand"
+          {/* Department Filter: Multi-Select Filter in Booshnam Associates, or Single-Select in restricted branches */}
+          {activeDeptId === 'booshnam_associates' ? (
+            <DepartmentMultiSelectFilter
+              selectedIds={overviewDeptIds}
+              onChange={setOverviewDeptIds}
+              departments={projectDepartmentFilterItems}
+              totalCount={allProjects.length}
+              labelPrefix="Dept"
             />
-          </div>
+          ) : (
+            <div className="w-56">
+              <CustomSelect
+                value={isRestrictedDeptUser && userDept ? normalizeDepartmentId(userDept) : activeDeptId}
+                onChange={(val) => {
+                  if (!isRestrictedDeptUser) {
+                    setActiveDepartmentId(val as any);
+                    setActiveDeptId(val);
+                  }
+                }}
+                disabled={isRestrictedDeptUser}
+                options={departmentFilterOptions}
+                prefix="Dept: "
+                size="sm"
+                variant="brand"
+              />
+            </div>
+          )}
 
           {/* Project Type Dropdown */}
           <div className="w-44">

@@ -263,6 +263,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   onShowToast,
   isSidebarOpen,
   onToggleSidebar,
+  activeRole,
 }) => {
   // Top-level Sub-page Navigation: 'leads' (First Page) | 'quotations' (Second Page)
   const [activeTab, setActiveTab] = useState<'leads' | 'quotations'>('leads');

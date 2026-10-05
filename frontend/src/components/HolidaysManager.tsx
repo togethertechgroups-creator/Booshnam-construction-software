@@ -487,16 +487,7 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
             />
           </div>
 
-          <div className="w-40">
-            <CustomSelect
-              value={selectedCategoryFilter}
-              onChange={val => setSelectedCategoryFilter(val)}
-              options={[
-                { label: 'All Categories', value: 'all' },
-                ...HOLIDAY_CATEGORIES.map(c => ({ label: c.label, value: c.value })),
-              ]}
-            />
-          </div>
+
         </div>
 
         {/* Right: View Mode Toggle & Primary Actions */}
@@ -668,10 +659,8 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                       <div
                         key={h.id}
                         onClick={() => handleEditHoliday(h)}
-                        className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-semibold border cursor-pointer transition-all hover:scale-[1.02] shadow-2xs ${getCategoryBadgeClass(
-                          h.category
-                        )}`}
-                        title={`${h.name} (${h.category || 'Holiday'}) - Click to edit`}
+                        className="px-1.5 py-0.5 rounded-[4px] text-[9px] font-semibold border cursor-pointer transition-all hover:scale-[1.02] shadow-2xs bg-indigo-50 border-indigo-100 text-indigo-700"
+                        title={`${h.name} - Click to edit`}
                       >
                         <div className="font-bold truncate leading-tight">{h.name}</div>
                       </div>
@@ -717,9 +706,8 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
             <div className="divide-y divide-slate-100">
               <div className="grid grid-cols-12 px-6 py-3 bg-slate-50/80 text-xs font-bold text-slate-500 uppercase tracking-wider">
                 <div className="col-span-3 sm:col-span-2">Date & Day</div>
-                <div className="col-span-5 sm:col-span-4">Holiday Reason / Name</div>
-                <div className="hidden sm:block sm:col-span-2">Category</div>
-                <div className="hidden md:block md:col-span-2">Applicable To</div>
+                <div className="col-span-6 sm:col-span-5">Holiday Reason / Name</div>
+                <div className="hidden md:block md:col-span-3">Applicable To</div>
                 <div className="col-span-4 sm:col-span-2 text-right">Actions</div>
               </div>
 
@@ -750,7 +738,7 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                     </div>
 
                     {/* Holiday Name & Remarks */}
-                    <div className="col-span-5 sm:col-span-4 pr-4">
+                    <div className="col-span-6 sm:col-span-5 pr-4">
                       <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
                         {holiday.name}
                       </div>
@@ -761,19 +749,8 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                       )}
                     </div>
 
-                    {/* Category */}
-                    <div className="hidden sm:block sm:col-span-2">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-bold border ${getCategoryBadgeClass(
-                          holiday.category
-                        )}`}
-                      >
-                        {holiday.category || 'Company'}
-                      </span>
-                    </div>
-
                     {/* Applicable To */}
-                    <div className="hidden md:block md:col-span-2">
+                    <div className="hidden md:block md:col-span-3">
                       <div className="flex items-center gap-1.5 text-slate-700">
                         {holiday.applicableTo?.includes('Site') ? (
                           <HardHat className="w-3.5 h-3.5 text-amber-600" />
@@ -984,19 +961,8 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
                   </div>
                 </div>
 
-                {/* Category & Applicability */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Holiday Type / Category
-                    </label>
-                    <CustomSelect
-                      value={modalCategory}
-                      onChange={val => setModalCategory(val)}
-                      options={HOLIDAY_CATEGORIES}
-                    />
-                  </div>
-
+                {/* Applicability */}
+                <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Applicable To

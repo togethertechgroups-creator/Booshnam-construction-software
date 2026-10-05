@@ -34,28 +34,15 @@ interface TeamScheduleViewProps {
   initialTab?: 'schedule' | 'timesheet';
 }
 
-// Timeline Month definition for Gantt Chart (covering full year 2026 Jan - Dec)
+// Timeline Month definition for Gantt Chart
 interface TimelineMonth {
   year: number;
   monthIndex: number; // 0-11
   label: string;
   isCurrent?: boolean;
+  isFilterActive?: boolean;
 }
 
-const TIMELINE_MONTHS: TimelineMonth[] = [
-  { year: 2026, monthIndex: 0, label: 'Jan' },
-  { year: 2026, monthIndex: 1, label: 'Feb' },
-  { year: 2026, monthIndex: 2, label: 'Mar' },
-  { year: 2026, monthIndex: 3, label: 'Apr' },
-  { year: 2026, monthIndex: 4, label: 'May' },
-  { year: 2026, monthIndex: 5, label: 'Jun' },
-  { year: 2026, monthIndex: 6, label: 'Jul' },
-  { year: 2026, monthIndex: 7, label: 'Aug' },
-  { year: 2026, monthIndex: 8, label: 'Sep' },
-  { year: 2026, monthIndex: 9, label: 'Oct', isCurrent: true },
-  { year: 2026, monthIndex: 10, label: 'Nov' },
-  { year: 2026, monthIndex: 11, label: 'Dec' },
-];
 
 export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   projects = [],
@@ -93,7 +80,13 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
   // Gantt Filters state
   const [ganttPeriod, setGanttPeriod] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Month');
-  const [granularityFilter, setGranularityFilter] = useState<'Month' | 'Quarter' | 'Year' | 'All'>('Month');
+  const [granularityFilter, setGranularityFilter] = useState<'All' | 'Year' | 'Quarter' | 'Month' | 'Day'>('All');
+  const [activeYear, setActiveYear] = useState<number>(2026);
+  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth()); // 9 for Oct
+  const [activeQuarter, setActiveQuarter] = useState<number>(Math.floor(new Date().getMonth() / 3) + 1); // 4 for Q4
+  const [activeDay, setActiveDay] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [customFromDate, setCustomFromDate] = useState<string>('');
+  const [customToDate, setCustomToDate] = useState<string>('');
   const [ganttAssigneeFilter, setGanttAssigneeFilter] = useState('All');
   const [ganttStatusFilter, setGanttStatusFilter] = useState('All');
   const [ganttProjectFilter, setGanttProjectFilter] = useState('All');
@@ -197,7 +190,133 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     return Array.from(set);
   }, [timesheets]);
 
-  // Filtered Quotation Tasks for Gantt View
+  // Dynamic Timeline Months (12 months of activeYear)
+  const timelineMonths: TimelineMonth[] = useMemo(() => {
+    const currentRealYear = new Date().getFullYear();
+    const currentRealMonth = new Date().getMonth();
+    const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return MONTH_LABELS.map((label, monthIndex) => {
+      const q = Math.floor(monthIndex / 3) + 1;
+      const isCurrent = activeYear === currentRealYear && monthIndex === currentRealMonth;
+      const isFilterActive = (
+        (granularityFilter === 'Month' && monthIndex === activeMonth) ||
+        (granularityFilter === 'Quarter' && q === activeQuarter)
+      );
+      return {
+        year: activeYear,
+        monthIndex,
+        label,
+        isCurrent,
+        isFilterActive
+      };
+    });
+  }, [activeYear, granularityFilter, activeMonth, activeQuarter]);
+
+  // Display Date Range label for schedule toolbar
+  const displayDateRangeLabel = useMemo(() => {
+    if (customFromDate && customToDate) {
+      const f = new Date(customFromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const t = new Date(customToDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return `${f} - ${t}`;
+    }
+    if (customFromDate) {
+      return `From ${new Date(customFromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    }
+    if (customToDate) {
+      return `Up to ${new Date(customToDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+    }
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    if (granularityFilter === 'Day') {
+      const d = new Date(activeDay);
+      const isToday = activeDay === new Date().toISOString().split('T')[0];
+      const formatted = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      return isToday ? `Today (${formatted})` : formatted;
+    }
+
+    if (granularityFilter === 'Month') {
+      return `${MONTH_NAMES[activeMonth]} ${activeYear}`;
+    }
+
+    if (granularityFilter === 'Quarter') {
+      const qMonths = [
+        'Jan - Mar',
+        'Apr - Jun',
+        'Jul - Sep',
+        'Oct - Dec'
+      ];
+      return `Q${activeQuarter} ${activeYear} (${qMonths[activeQuarter - 1]})`;
+    }
+
+    if (granularityFilter === 'Year') {
+      return `Year ${activeYear}`;
+    }
+
+    return `Jan ${activeYear} - Dec ${activeYear}`;
+  }, [granularityFilter, activeYear, activeMonth, activeQuarter, activeDay, customFromDate, customToDate]);
+
+  // Navigation handlers for toolbar
+  const handleTodayClick = () => {
+    const now = new Date();
+    setActiveYear(now.getFullYear());
+    setActiveMonth(now.getMonth());
+    setActiveQuarter(Math.floor(now.getMonth() / 3) + 1);
+    setActiveDay(now.toISOString().split('T')[0]);
+    setCustomFromDate('');
+    setCustomToDate('');
+    onShowToast?.('Centered timeline on current date');
+  };
+
+  const handlePrevPeriod = () => {
+    if (granularityFilter === 'Day') {
+      const d = new Date(activeDay);
+      d.setDate(d.getDate() - 1);
+      setActiveDay(d.toISOString().split('T')[0]);
+    } else if (granularityFilter === 'Month') {
+      if (activeMonth === 0) {
+        setActiveMonth(11);
+        setActiveYear(y => y - 1);
+      } else {
+        setActiveMonth(m => m - 1);
+      }
+    } else if (granularityFilter === 'Quarter') {
+      if (activeQuarter === 1) {
+        setActiveQuarter(4);
+        setActiveYear(y => y - 1);
+      } else {
+        setActiveQuarter(q => q - 1);
+      }
+    } else {
+      setActiveYear(y => y - 1);
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (granularityFilter === 'Day') {
+      const d = new Date(activeDay);
+      d.setDate(d.getDate() + 1);
+      setActiveDay(d.toISOString().split('T')[0]);
+    } else if (granularityFilter === 'Month') {
+      if (activeMonth === 11) {
+        setActiveMonth(0);
+        setActiveYear(y => y + 1);
+      } else {
+        setActiveMonth(m => m + 1);
+      }
+    } else if (granularityFilter === 'Quarter') {
+      if (activeQuarter === 4) {
+        setActiveQuarter(1);
+        setActiveYear(y => y + 1);
+      } else {
+        setActiveQuarter(q => q + 1);
+      }
+    } else {
+      setActiveYear(y => y + 1);
+    }
+  };
+
+  // Filtered Quotation Tasks for Gantt View (supports All, Year, Quarter, Month, Day, and Date Range)
   const filteredQuotationTasks = useMemo(() => {
     return quotationTasks.filter(task => {
       if (ganttAssigneeFilter !== 'All' && task.assignee !== ganttAssigneeFilter) {
@@ -209,9 +328,57 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       if (ganttProjectFilter !== 'All' && task.project_name !== ganttProjectFilter) {
         return false;
       }
+
+      // Date Filtering Logic
+      const taskDateStr = task.start_date || task.end_date;
+      if (!taskDateStr) return true;
+
+      const tDate = new Date(taskDateStr);
+      const tYear = tDate.getFullYear();
+      const tMonth = tDate.getMonth();
+      const tQuarter = Math.floor(tMonth / 3) + 1;
+      const tDayStr = taskDateStr.substring(0, 10);
+
+      // 1. Custom Date Range filter
+      if (customFromDate || customToDate) {
+        if (customFromDate && tDayStr < customFromDate) return false;
+        if (customToDate && tDayStr > customToDate) return false;
+        return true;
+      }
+
+      // 2. Granularity filters
+      if (granularityFilter === 'Day') {
+        return tDayStr === activeDay;
+      }
+
+      if (granularityFilter === 'Month') {
+        return tYear === activeYear && tMonth === activeMonth;
+      }
+
+      if (granularityFilter === 'Quarter') {
+        return tYear === activeYear && tQuarter === activeQuarter;
+      }
+
+      if (granularityFilter === 'Year') {
+        return tYear === activeYear;
+      }
+
+      // 'All': show all tasks across all years and dates
       return true;
     });
-  }, [quotationTasks, ganttAssigneeFilter, ganttStatusFilter, ganttProjectFilter]);
+  }, [
+    quotationTasks,
+    ganttAssigneeFilter,
+    ganttStatusFilter,
+    ganttProjectFilter,
+    granularityFilter,
+    activeYear,
+    activeMonth,
+    activeQuarter,
+    activeDay,
+    customFromDate,
+    customToDate
+  ]);
 
   // Unique assignees for Gantt filter
   const uniqueGanttAssignees = useMemo(() => {
@@ -287,11 +454,11 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       const eYear = e.getFullYear();
       const eMonth = e.getMonth();
 
-      // Find matching column in TIMELINE_MONTHS
-      const startCol = TIMELINE_MONTHS.findIndex(m => m.year === sYear && m.monthIndex === sMonth);
-      const endCol = TIMELINE_MONTHS.findIndex(m => m.year === eYear && m.monthIndex === eMonth);
+      // Find matching column in timelineMonths
+      const startCol = timelineMonths.findIndex(m => m.year === sYear && m.monthIndex === sMonth);
+      const endCol = timelineMonths.findIndex(m => m.year === eYear && m.monthIndex === eMonth);
 
-      const resolvedStart = startCol >= 0 ? startCol : 6; // default Jun
+      const resolvedStart = startCol >= 0 ? startCol : (sMonth >= 0 && sMonth < 12 ? sMonth : 6);
       const resolvedEnd = endCol >= 0 ? endCol : resolvedStart;
 
       // Calculate approximate day offset within the month (0% to 100%)
@@ -450,7 +617,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Tasks</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {quotationTasks.length}
+                      {filteredQuotationTasks.length}
                     </span>
                   </div>
                 </div>
@@ -463,7 +630,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {quotationTasks.filter(t => t.status === 'COMPLETED').length}
+                      {filteredQuotationTasks.filter(t => t.status === 'COMPLETED').length}
                     </span>
                   </div>
                 </div>
@@ -478,7 +645,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {quotationTasks.filter(t => t.status === 'PENDING' || t.status === 'NOT_STARTED').length}
+                      {filteredQuotationTasks.filter(t => t.status === 'PENDING' || t.status === 'NOT_STARTED').length}
                     </span>
                   </div>
                 </div>
@@ -548,17 +715,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
             {/* Main Schedule Container (Toolbar + Gantt Table) */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               
-              {/* Toolbar matching User Image */}
+              {/* Toolbar with Period Navigation, Custom Date Range (From - To), and Filter Dropdown */}
               <div className="px-5 py-3.5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
                 
                 {/* Left: Today, Prev/Next, Date Range */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <button
                     type="button"
-                    onClick={() => {
-                      setGranularityFilter('Month');
-                      onShowToast?.('Centered timeline on current date');
-                    }}
+                    onClick={handleTodayClick}
                     className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-700 shadow-2xs transition-colors cursor-pointer"
                   >
                     Today
@@ -567,26 +731,69 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
+                      onClick={handlePrevPeriod}
                       className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors cursor-pointer"
+                      title="Previous Period"
                     >
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
+                      onClick={handleNextPeriod}
                       className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 shadow-2xs transition-colors cursor-pointer"
+                      title="Next Period"
                     >
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
-                  {/* Date Range: starts Jan 2026 as explicitly instructed */}
+                  {/* Date Range Label */}
                   <span className="text-sm font-bold text-slate-800 tracking-tight ml-1">
-                    Jan 2026 - Dec 2026
+                    {displayDateRangeLabel}
                   </span>
                 </div>
 
-                {/* Right: Granularity Filter Dropdown (Audio: "ட்ராப்டவுன்ல இருக்கிற மாதிரி... ஆல் இருக்கணும், நான் இயர்லின்னு போட்டா அந்த இயரோடது மட்டும் எனக்கு பில்டர் ஆகி வரணும்") */}
-                <div className="flex items-center gap-3">
+                {/* Right: Date-to-Date Calendar Picker (From - To) & Granularity Dropdown Filter */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* From - To Calendar Date Range Filter */}
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
+                    <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-slate-400">From</span>
+                      <input 
+                        type="date"
+                        value={customFromDate}
+                        onChange={(e) => setCustomFromDate(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                      />
+                    </div>
+                    <span className="text-slate-300">-</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-semibold text-slate-400">To</span>
+                      <input 
+                        type="date"
+                        value={customToDate}
+                        onChange={(e) => setCustomToDate(e.target.value)}
+                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                      />
+                    </div>
+                    {(customFromDate || customToDate) && (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setCustomFromDate('');
+                          setCustomToDate('');
+                          onShowToast?.('Date range filter cleared');
+                        }}
+                        className="p-1 hover:bg-slate-200 rounded-md text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        title="Clear Date Range"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Granularity Dropdown Filter (All, Year, Quarter, Month, Day) */}
                   <div className="relative">
                     <button
                       type="button"
@@ -597,7 +804,13 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       className="h-9 px-3.5 bg-blue-600 text-white hover:bg-blue-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
                     >
                       <span>
-                        {granularityFilter === 'All' ? 'All' : granularityFilter === 'Quarter' ? 'Quarter' : granularityFilter === 'Year' ? 'Year' : 'Month'}
+                        {customFromDate || customToDate 
+                          ? 'Custom Range' 
+                          : granularityFilter === 'All' ? 'All' 
+                          : granularityFilter === 'Year' ? 'Year' 
+                          : granularityFilter === 'Quarter' ? 'Quarter' 
+                          : granularityFilter === 'Month' ? 'Month' 
+                          : 'Day'}
                       </span>
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
@@ -605,21 +818,26 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {granularityDropdownOpen && (
                       <div 
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-36 text-xs animate-in fade-in zoom-in-95"
+                        className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-40 text-xs animate-in fade-in zoom-in-95"
                       >
-                        {(['All', 'Month', 'Quarter', 'Year'] as const).map(option => (
+                        {(['All', 'Year', 'Quarter', 'Month', 'Day'] as const).map(option => (
                           <button
                             key={option}
                             type="button"
                             onClick={() => {
                               setGranularityFilter(option);
+                              setCustomFromDate('');
+                              setCustomToDate('');
                               setActiveDropdown(null);
                             }}
-                            className={`w-full px-3.5 py-2 text-left font-medium hover:bg-slate-50 cursor-pointer ${
-                              granularityFilter === option ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
+                            className={`w-full px-3.5 py-2 text-left font-medium hover:bg-slate-50 cursor-pointer flex items-center justify-between ${
+                              granularityFilter === option && !customFromDate && !customToDate ? 'text-blue-600 font-bold bg-blue-50/50' : 'text-slate-700'
                             }`}
                           >
-                            {option === 'All' ? 'All' : option === 'Month' ? 'Month' : option === 'Quarter' ? 'Quarter' : 'Year'}
+                            <span>{option === 'All' ? 'All (All Time)' : option}</span>
+                            {granularityFilter === option && !customFromDate && !customToDate && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                            )}
                           </button>
                         ))}
                       </div>
@@ -641,9 +859,9 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Status</th>
                       <th className="w-32 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
                       
-                      {/* 2026 Header spanning full year (starts at Jan 2026 per audio instruction) */}
+                      {/* Year Header spanning full year */}
                       <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/60 border-r border-slate-200">
-                        2026
+                        {activeYear}
                       </th>
 
                       {/* Right Action column */}
@@ -656,14 +874,23 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
-                      {TIMELINE_MONTHS.map((m, idx) => (
+                      {timelineMonths.map((m, idx) => (
                         <th 
                           key={idx}
-                          className={`py-2 px-2 text-center border-r border-slate-200 font-medium ${
-                            m.isCurrent 
+                          onClick={() => {
+                            setActiveMonth(m.monthIndex);
+                            setGranularityFilter('Month');
+                            setCustomFromDate('');
+                            setCustomToDate('');
+                          }}
+                          className={`py-2 px-2 text-center border-r border-slate-200 font-medium cursor-pointer transition-colors ${
+                            m.isFilterActive 
+                              ? 'bg-blue-50 text-blue-700 font-bold border-b-2 border-b-blue-600'
+                              : m.isCurrent 
                               ? 'bg-rose-50/60 text-red-600 font-bold' 
-                              : 'text-slate-600'
+                              : 'text-slate-600 hover:bg-slate-50'
                           }`}
+                          title={`Click to view ${m.label} ${activeYear}`}
                         >
                           {m.label}
                         </th>
@@ -697,6 +924,34 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       </td>
                       <td />
                     </tr>
+
+                    {/* Empty State when no tasks match active filter */}
+                    {isUnassignedExpanded && filteredQuotationTasks.length === 0 && (
+                      <tr>
+                        <td colSpan={17} className="py-10 text-center bg-slate-50/40">
+                          <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                            <Calendar className="w-8 h-8 text-slate-300" />
+                            <p className="text-xs font-semibold text-slate-600">
+                              No quotation tasks found for {displayDateRangeLabel}
+                            </p>
+                            <p className="text-[11px] text-slate-400">
+                              Try selecting another period, adjusting the date range, or click below to view all tasks.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGranularityFilter('All');
+                                setCustomFromDate('');
+                                setCustomToDate('');
+                              }}
+                              className="mt-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-blue-600 text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
+                            >
+                              View All Tasks
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
 
                     {/* Quotation Task Rows matching User Image */}
                     {isUnassignedExpanded && filteredQuotationTasks.map((task, idx) => {
@@ -823,14 +1078,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           </td>
 
                           {/* 12 Timeline Months */}
-                          {TIMELINE_MONTHS.map((m, mIdx) => {
+                          {timelineMonths.map((m, mIdx) => {
                             const isMilestoneCell = mIdx === placement.colIndex;
 
                             return (
                               <td 
                                 key={mIdx}
                                 className={`relative py-2 px-1 border-r border-slate-100 text-center ${
-                                  m.isCurrent ? 'bg-rose-50/20' : ''
+                                  m.isFilterActive ? 'bg-blue-50/20' : m.isCurrent ? 'bg-rose-50/20' : ''
                                 }`}
                               >
                                 {isMilestoneCell && (

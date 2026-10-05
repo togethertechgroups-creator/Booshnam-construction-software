@@ -99,7 +99,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'MARKETING',
     roleName: 'Marketing',
     description: 'Lead generation, CRM management, assign leads to sales or specific departments',
-    allowedPages: ['dashboard', 'quotation', 'setting'],
+    allowedPages: ['quotation'],
     isSystemRole: true,
     department: 'Marketing',
   },

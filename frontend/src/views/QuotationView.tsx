@@ -15,6 +15,7 @@ import { confirmAction } from '../lib/dialogService';
 import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
 import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
 import { getTermsConditions } from '../lib/termsService';
+import { getUserAccounts, UserAccount } from '../lib/authService';
 
 interface QuotationViewProps {
   projects?: Project[];
@@ -268,6 +269,16 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   // Top-level Sub-page Navigation: 'leads' (First Page) | 'quotations' (Second Page)
   const [activeTab, setActiveTab] = useState<'leads' | 'quotations'>('leads');
 
+  const [allUsers, setAllUsers] = useState<UserAccount[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+
+  useEffect(() => {
+    import('../lib/authService').then(({ getUserAccounts, getCurrentUserAccount }) => {
+      setAllUsers(getUserAccounts());
+      setCurrentUser(getCurrentUserAccount());
+    });
+  }, []);
+
   // =========================================================================
   // 1. LEADS STATE & PERSISTENCE
   // =========================================================================
@@ -359,7 +370,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   // New Lead Drawer Form Fields (All empty by default per user request)
   const [drawerAssignee, setDrawerAssignee] = useState('');
-  const [drawerAssignedRole, setDrawerAssignedRole] = useState('');
+  const [drawerAssignedToUserId, setDrawerAssignedToUserId] = useState('');
   const [drawerDate, setDrawerDate] = useState('');
   const [drawerLeadType, setDrawerLeadType] = useState('');
   const [drawerContactName, setDrawerContactName] = useState('');
@@ -525,12 +536,12 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         if (leadFollowUpFilter === 'NO_DATE' && l.followup_date) return false;
       }
       if (activeRole && !['SUPER_ADMIN', 'ADMIN', 'MARKETING'].includes(activeRole)) {
-        if (l.assigned_role !== activeRole && l.assigned_department !== activeRole) return false;
+        if (l.assigned_to_id !== currentUser?.id && l.assigned_role !== activeRole && l.assigned_department !== activeRole) return false;
       }
       
       return true;
     });
-  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter, leadFollowUpFilter, activeRole]);
+  }, [leads, leadSearch, leadPriorityFilter, leadStatusFilter, leadSourceFilter, leadCategoryFilter, leadFollowUpFilter, activeRole, currentUser]);
 
   const filteredQuotations = useMemo(() => {
     return quotations.filter(q => {
@@ -572,7 +583,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const handleOpenNewLeadDrawer = () => {
     setEditingLeadId(null);
     setDrawerAssignee('');
-    setDrawerAssignedRole('');
+    setDrawerAssignedToUserId('');
     setDrawerDate('');
     setDrawerLeadType('');
     setDrawerContactName('');
@@ -599,7 +610,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     markRemindersAsViewed([lead.id]);
     setEditingLeadId(lead.id);
     setDrawerAssignee(lead.assigned_to_name || '');
-    setDrawerAssignedRole(lead.assigned_role || '');
+    setDrawerAssignedToUserId(lead.assigned_to_id || '');
     setDrawerDate(lead.creation_date || '');
     setDrawerLeadType(lead.lead_type || '');
     setDrawerContactName(lead.client_name || '');
@@ -662,9 +673,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
           description: drawerDescription.trim(),
           estimated_value: resolvedValue,
           notes: drawerDescription.trim() || drawerNotes.trim(),
-          assigned_to_name: drawerAssignee,
-          assigned_role: drawerAssignedRole,
-          assigned_department: drawerAssignedRole,
+          assigned_to_id: drawerAssignedToUserId,
+          assigned_to_name: allUsers.find(u => u.id === drawerAssignedToUserId)?.staff_name || drawerAssignee,
+          assigned_role: allUsers.find(u => u.id === drawerAssignedToUserId)?.role_code || l.assigned_role,
+          assigned_department: allUsers.find(u => u.id === drawerAssignedToUserId)?.department || l.assigned_department,
           last_updated: todayStr
         };
       }));
@@ -698,9 +710,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         last_updated: todayStr,
         creation_date: drawerDate || '2026-09-25',
         notes: drawerDescription.trim() || drawerNotes.trim(),
-        assigned_to_name: drawerAssignee,
-        assigned_role: drawerAssignedRole,
-        assigned_department: drawerAssignedRole
+        assigned_to_id: drawerAssignedToUserId,
+        assigned_to_name: allUsers.find(u => u.id === drawerAssignedToUserId)?.staff_name || '',
+        assigned_role: allUsers.find(u => u.id === drawerAssignedToUserId)?.role_code || '',
+        assigned_department: allUsers.find(u => u.id === drawerAssignedToUserId)?.department || ''
       };
       setLeads(prev => [newLead, ...prev]);
       onShowToast?.(`New Lead registered successfully!`);
@@ -1657,18 +1670,15 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                 <div className="flex gap-2">
                   <FloatingSelect
                     className="flex-1"
-                    label="ASSIGN TO DEPARTMENT"
-                    value={drawerAssignedRole}
-                    onChange={setDrawerAssignedRole}
-                    placeholder="Select Department/Role"
+                    label="ASSIGN TO PERSON"
+                    value={drawerAssignedToUserId}
+                    onChange={setDrawerAssignedToUserId}
+                    placeholder="Select Staff Member"
                     options={[
                       { label: 'Unassigned', value: '' },
-                      { label: 'Sales', value: 'SALES' },
-                      { label: 'Marketing', value: 'MARKETING' },
-                      { label: 'Site Engineer', value: 'SITE_ENGINEER' },
-                      { label: 'Accounts', value: 'ACCOUNTS' },
-                      { label: 'Project Manager', value: 'PROJECT_MANAGER' },
-                      { label: 'Employee', value: 'EMPLOYEE' },
+                      ...allUsers
+                        .filter(u => !(activeRole === 'MARKETING' && u.role_code === 'MARKETING'))
+                        .map(u => ({ label: `${u.staff_name} (${u.role_name})`, value: u.id }))
                     ]}
                   />
                 </div>

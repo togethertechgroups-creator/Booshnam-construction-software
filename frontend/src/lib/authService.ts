@@ -57,7 +57,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     role_code: 'MARKETING',
     role_name: 'Marketing',
     department: 'Marketing',
-    allowedPages: ['dashboard', 'quotation', 'setting'],
+    allowedPages: ['quotation'],
     created_at: '2024-01-01'
   }
 ];

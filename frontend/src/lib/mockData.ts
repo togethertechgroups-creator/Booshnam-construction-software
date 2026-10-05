@@ -16,6 +16,7 @@ export const MOCK_ROLES: Role[] = [
   { id: '7', name: 'Client', code: 'CLIENT', description: 'Dedicated Client Portal: view project, approve designs, & payment milestones' },
   { id: '8', name: 'Accounts', code: 'ACCOUNTS', description: 'Financial ledger, payment processing, invoices, BOQ, & payroll' },
   { id: '9', name: 'Other Staff / Employee', code: 'EMPLOYEE', description: 'Field task execution, attendance, & daily work logs' },
+  { id: '10', name: 'Marketing', code: 'MARKETING', description: 'Lead generation, CRM management, assign leads' },
 ];
 
 export const MOCK_USER: User = {

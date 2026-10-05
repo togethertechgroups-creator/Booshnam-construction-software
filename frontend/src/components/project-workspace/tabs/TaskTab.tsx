@@ -1793,7 +1793,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     handleCloseStartModal();
   };
 
-  // Helper to render progress pill with bold purple numerator and regular slate denominator (Image 1)
+  // Helper to render progress pill with bold red numerator and regular slate denominator
   const renderProgressPillContent = (label?: string, percentage?: number) => {
     if (label && label.includes('/')) {
       const parts = label.split('/');
@@ -1801,7 +1801,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       const rest = parts.slice(1).join('/').trim();
       return (
         <span className="inline-flex items-center gap-0.5">
-          <span className="font-bold text-[#6d28d9]">{firstNum}</span>
+          <span className="font-bold text-red-600">{firstNum}</span>
           <span className="text-slate-600 font-medium">/{rest}</span>
         </span>
       );
@@ -1810,12 +1810,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       const parts = label.split('%');
       return (
         <span className="inline-flex items-center gap-0.5">
-          <span className="font-bold text-[#6d28d9]">{parts[0].trim()}</span>
+          <span className="font-bold text-red-600">{parts[0].trim()}</span>
           <span className="text-slate-600 font-medium"> %</span>
         </span>
       );
     }
-    return <span className="font-bold text-[#6d28d9]">{label || `${percentage || 0} %`}</span>;
+    return <span className="font-bold text-red-600">{label || `${percentage || 0} %`}</span>;
   };
 
   // Close dropdown on click outside
@@ -1845,7 +1845,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-xl focus:outline-none focus:border-[#704fe6] w-36 sm:w-44 text-slate-800 placeholder-slate-400 shadow-2xs"
+              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 hover:border-slate-300 rounded-xl focus:outline-none focus:border-red-600 w-36 sm:w-44 text-slate-800 placeholder-slate-400 shadow-2xs"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
           </div>
@@ -1857,7 +1857,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 statusFilter !== 'ALL'
-                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
+                  ? 'bg-red-50 text-red-600 border border-red-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1881,7 +1881,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      statusFilter === st.id ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      statusFilter === st.id ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {st.label}
@@ -1898,7 +1898,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               onClick={() => setOpenDropdown(openDropdown === 'assignee' ? null : 'assignee')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 assigneeFilter !== 'ALL'
-                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
+                  ? 'bg-red-50 text-red-600 border border-red-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1917,7 +1917,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      assigneeFilter === a ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      assigneeFilter === a ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {a === 'ALL' ? 'All Assignees' : a}
@@ -1934,7 +1934,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               onClick={() => setOpenDropdown(openDropdown === 'tag' ? null : 'tag')}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
                 tagFilter !== 'ALL'
-                  ? 'bg-purple-50 text-[#704fe6] border border-purple-300'
+                  ? 'bg-red-50 text-red-600 border border-red-300'
                   : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
               }`}
             >
@@ -1953,7 +1953,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       setOpenDropdown(null);
                     }}
                     className={`w-full text-left px-3.5 py-1.5 font-medium transition-colors cursor-pointer ${
-                      tagFilter === tg ? 'bg-purple-50 text-[#704fe6] font-bold' : 'text-slate-700 hover:bg-slate-50'
+                      tagFilter === tg ? 'bg-red-50 text-red-600 font-bold' : 'text-slate-700 hover:bg-slate-50'
                     }`}
                   >
                     {tg === 'ALL' ? 'All Tags' : tg}
@@ -1963,11 +1963,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             )}
           </div>
 
-          {/* Create Baseline Button (Image 2 - Outlined Pill with Purple Border) */}
+          {/* Create Baseline Button (Red border & text) */}
           <button
             type="button"
             onClick={handleCreateBaseline}
-            className="px-3.5 py-1.5 border border-[#704fe6] hover:bg-purple-50 text-[#704fe6] bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+            className="px-3.5 py-1.5 border border-red-600 hover:bg-red-50 text-red-600 bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
           >
             <span>Create Baseline</span>
           </button>
@@ -2014,21 +2014,21 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             <Download className="w-4 h-4" />
           </button>
 
-          {/* ⟳ Replan Button (Image 2 - Outlined Pill with Purple Border) */}
+          {/* ⟳ Replan Button (Red border & text) */}
           <button
             type="button"
             onClick={handleReplan}
-            className="px-3 py-1.5 border border-[#704fe6] hover:bg-purple-50 text-[#704fe6] bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1.5 border border-red-600 hover:bg-red-50 text-red-600 bg-white rounded-xl text-xs font-semibold transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Replan</span>
           </button>
 
-          {/* + Task Button (Image 2 - Solid Purple) */}
+          {/* + Task Button (Solid Red) */}
           <button
             type="button"
             onClick={handleOpenCreate}
-            className="px-4 py-2 bg-[#704fe6] hover:bg-[#5f3dc4] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Task</span>
@@ -2060,7 +2060,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   <button
                     type="button"
                     onClick={handleOpenCreate}
-                    className="p-1 text-slate-500 hover:text-[#704fe6] transition-colors cursor-pointer"
+                    className="p-1 text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
                     title="Add Task"
                   >
                     <PlusCircle className="w-4 h-4 stroke-[1.6]" />
@@ -2079,7 +2079,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     <button
                       type="button"
                       onClick={handleOpenCreate}
-                      className="mt-4 px-4 py-2 bg-[#704fe6] hover:bg-[#5f3dc4] text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs"
+                      className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs"
                     >
                       + Create First Task
                     </button>
@@ -2106,7 +2106,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       onDrop={(e) => handleDrop(e, idx)}
                       onClick={() => handleOpenEdit(t)}
                       className={`hover:bg-slate-50/70 transition-colors group cursor-pointer border-b border-slate-200/60 last:border-b-0 ${
-                        draggedIdx === idx ? 'opacity-40 bg-purple-50/30' : 'bg-white'
+                        draggedIdx === idx ? 'opacity-40 bg-red-50/40' : 'bg-white'
                       }`}
                     >
                       {/* 1. S NO. (6-dots drag icon + number) */}
@@ -2119,7 +2119,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         </div>
                       </td>
 
-                      {/* 2. TASK NAME (Bold, dark clean text + purple arrow for subtasks) */}
+                      {/* 2. TASK NAME (Bold, dark clean text + red arrow for subtasks) */}
                       <td className="py-3.5 px-4 border-r border-slate-200/70 relative">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
@@ -2140,8 +2140,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </button>
                             )}
-                            {(t.is_subtask || t.s_no === 2) && <CornerDownRight className="w-4 h-4 text-[#704fe6] shrink-0" />}
-                            <span className={`font-bold text-slate-900 text-[13px] tracking-tight group-hover:text-[#704fe6] transition-colors`}>
+                            {(t.is_subtask || t.s_no === 2) && <CornerDownRight className="w-4 h-4 text-red-600 shrink-0" />}
+                            <span className={`font-bold text-slate-900 text-[13px] tracking-tight group-hover:text-red-600 transition-colors`}>
                               {t.title}
                             </span>
                           </div>
@@ -2152,15 +2152,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 e.stopPropagation();
                                 handleOpenCreateSubtask(t);
                               }}
-                              className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 bg-[#1e1b4b] hover:bg-[#2e2b5e] text-white px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-md absolute right-3"
+                              className="opacity-0 group-hover:opacity-100 flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-md absolute right-3"
                             >
-                              Add Subtask <CornerDownRight className="w-3 h-3 text-[#b49cf5]" />
+                              Add Subtask <CornerDownRight className="w-3 h-3 text-red-200" />
                             </button>
                           )}
                         </div>
                       </td>
 
-                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or lavender "Start" button) */}
+                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or red "Start" button) */}
                       <td className="py-3.5 px-4 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {isDone ? (
                           <button
@@ -2186,7 +2186,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenStartModal(t)}
-                            className="px-4 py-1 bg-[#ede9fe] hover:bg-[#ddd6fe] text-[#6d28d9] rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95 inline-flex items-center justify-center"
+                            className="px-4 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95 inline-flex items-center justify-center"
                             title="Click to start task"
                           >
                             Start
@@ -2194,21 +2194,21 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         )}
                       </td>
 
-                      {/* 4. PROGRESS (Pill badge with bold purple numerator + outline chat bubble icon on right) */}
+                      {/* 4. PROGRESS (Pill badge with bold red numerator + outline chat bubble icon on right) */}
                       <td className="py-3.5 px-3.5 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between gap-3 px-1">
-                          <div className="px-3 py-1 rounded-full text-xs font-semibold bg-[#f0edff] border border-purple-100/60 inline-flex items-center justify-center shadow-2xs">
+                          <div className="px-3 py-1 rounded-full text-xs font-semibold bg-red-50 border border-red-100 inline-flex items-center justify-center shadow-2xs">
                             {renderProgressPillContent(t.progress_label, t.progress_percentage)}
                           </div>
                           <button
                             type="button"
                             onClick={() => setActiveCommentTask(t)}
-                            className="relative p-1 text-[#8b5cf6] hover:text-[#704fe6] rounded-md transition-colors cursor-pointer"
+                            className="relative p-1 text-red-600 hover:text-red-700 rounded-md transition-colors cursor-pointer"
                             title="View/Add Comments"
                           >
                             <MessageSquare className="w-4 h-4 stroke-[1.6]" />
                             {(t.comments_count || 0) > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-[#704fe6] text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                                 {t.comments_count}
                               </span>
                             )}
@@ -2231,9 +2231,9 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <div className="flex items-center justify-center -space-x-1.5">
                             {t.assigned_team.map((m, mIdx) => {
                               const getAvatarStyle = (init: string) => {
-                                if (init === 'SM') return 'bg-[#e0e7ff] text-[#4338ca]';
+                                if (init === 'SM') return 'bg-red-100 text-red-700';
                                 if (init === '+6' || init.startsWith('+')) return 'bg-[#f1f3f9] text-[#64748b]';
-                                return 'bg-[#ede9fe] text-[#6d28d9]';
+                                return 'bg-red-50 text-red-600 border border-red-100';
                               };
                               return (
                                 <div
@@ -2332,7 +2332,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
                             : editingTask.status === 'IN_PROGRESS'
                             ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
+                            : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
                         }`}
                       >
                         <span>
@@ -2437,8 +2437,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   </div>
                 </div>
 
-                {/* Violet Accent Stripe */}
-                <div className="h-0.5 bg-indigo-600 w-full shrink-0" />
+                {/* Red Accent Stripe */}
+                <div className="h-0.5 bg-red-600 w-full shrink-0" />
 
                 {/* Scrollable Upper Area: Title, 6-Box Grid, Dates Card */}
                 <div className="shrink-0 bg-white">
@@ -2455,12 +2455,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             if (e.key === 'Escape') setIsEditingTitleInline(false);
                           }}
                           autoFocus
-                          className="text-xl font-bold text-slate-900 border-b-2 border-indigo-600 focus:outline-none flex-1 bg-transparent py-0.5"
+                          className="text-xl font-bold text-slate-900 border-b-2 border-red-600 focus:outline-none flex-1 bg-transparent py-0.5"
                         />
                         <button
                           type="button"
                           onClick={handleSaveInlineTitle}
-                          className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg cursor-pointer"
+                          className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg cursor-pointer"
                           title="Save Name"
                         >
                           <Check className="w-4 h-4" />
@@ -2481,16 +2481,16 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             setInlineTitleValue(editingTask.title);
                             setIsEditingTitleInline(true);
                           }}
-                          className="text-2xl font-extrabold text-slate-900 tracking-tight hover:text-indigo-600 transition-colors cursor-pointer group flex items-center gap-2"
+                          className="text-2xl font-extrabold text-slate-900 tracking-tight hover:text-red-600 transition-colors cursor-pointer group flex items-center gap-2"
                           title="Click to rename task"
                         >
                           <span>{editingTask.title}</span>
-                          <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 text-indigo-500 transition-opacity" />
+                          <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 text-red-500 transition-opacity" />
                         </h2>
                         <button
                           type="button"
                           onClick={() => proofFileInputRef.current?.click()}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200"
                           title="Upload task photo or proof"
                         >
                           <Camera className="w-4 h-4" />
@@ -2505,7 +2505,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       {/* Box 1: ASSIGN TO */}
                       <div 
                         onClick={() => setIsAssigneeModalOpen(true)}
-                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-red-300 hover:shadow-2xs transition-all cursor-pointer group"
                       >
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                           ASSIGN TO
@@ -2516,7 +2516,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                               {editingTask.assigned_team.slice(0, 2).map((m, mIdx) => (
                                 <div
                                   key={mIdx}
-                                  className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 border-2 border-white flex items-center justify-center text-[10px] font-bold shadow-2xs"
+                                  className="w-6 h-6 rounded-full bg-red-100 text-red-700 border-2 border-white flex items-center justify-center text-[10px] font-bold shadow-2xs"
                                   title={m.name}
                                 >
                                   {m.initials}
@@ -2530,7 +2530,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5">
-                              <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                              <div className="w-6 h-6 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-[10px] font-bold">
                                 {(editingTask.assigned_to_name || 'P')[0].toUpperCase()}
                               </div>
                               <span className="text-xs font-semibold text-slate-800 truncate max-w-[65px]">
@@ -2538,7 +2538,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                               </span>
                             </div>
                           )}
-                          <Plus className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 ml-auto transition-colors" />
+                          <Plus className="w-3 h-3 text-slate-400 group-hover:text-red-600 ml-auto transition-colors" />
                         </div>
                       </div>
 
@@ -2555,18 +2555,18 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       {/* Box 3: TO DO */}
                       <div 
                         onClick={() => setIsAddToDoOpen(!isAddToDoOpen)}
-                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-red-300 hover:shadow-2xs transition-all cursor-pointer group"
                       >
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                           TO DO
                         </span>
                         {currentTaskMeta.todos && currentTaskMeta.todos.length > 0 ? (
-                          <span className="text-xs font-bold text-indigo-600 flex items-center justify-between">
+                          <span className="text-xs font-bold text-red-600 flex items-center justify-between">
                             <span>{currentTaskMeta.todos.filter(t => t.completed).length}/{currentTaskMeta.todos.length}</span>
-                            <ChevronRight className="w-3.5 h-3.5 text-indigo-400" />
+                            <ChevronRight className="w-3.5 h-3.5 text-red-400" />
                           </span>
                         ) : (
-                          <span className="text-xs font-bold text-indigo-600 group-hover:underline">
+                          <span className="text-xs font-bold text-red-600 group-hover:underline">
                             + Add To Do
                           </span>
                         )}
@@ -2586,14 +2586,14 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       {/* Box 5: DEPENDENCIES */}
                       <div 
                         onClick={() => setActiveDependencyTask(editingTask)}
-                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer group"
+                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-red-300 hover:shadow-2xs transition-all cursor-pointer group"
                       >
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                           DEPENDENCIES
                         </span>
                         <span className="text-xs font-bold text-slate-800 flex items-center justify-between">
                           <span>{editingTask.dependencies?.length || 0}</span>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" />
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-red-600" />
                         </span>
                       </div>
 
@@ -2612,10 +2612,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   {/* Expandable To-Do Checklist (Screenshot 2: Subtasks) */}
                   {isAddToDoOpen && (
                     <div className="px-6 py-2 animate-in fade-in slide-in-from-top-2 duration-150">
-                      <div className="p-3.5 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-2.5">
+                      <div className="p-3.5 bg-red-50/50 border border-red-100 rounded-2xl space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                            <CheckSquare className="w-4 h-4 text-indigo-600" />
+                          <span className="text-xs font-bold text-red-900 flex items-center gap-1.5">
+                            <CheckSquare className="w-4 h-4 text-red-600" />
                             <span>To-Do Checklist ({currentTaskMeta.todos?.filter(t => t.completed).length || 0}/{currentTaskMeta.todos?.length || 0})</span>
                           </span>
                           <button
@@ -2632,14 +2632,14 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           {currentTaskMeta.todos && currentTaskMeta.todos.map((todo) => (
                             <div
                               key={todo.id}
-                              className="flex items-center justify-between p-2 bg-white border border-slate-200/70 rounded-xl text-xs hover:border-indigo-200 transition-colors"
+                              className="flex items-center justify-between p-2 bg-white border border-slate-200/70 rounded-xl text-xs hover:border-red-200 transition-colors"
                             >
                               <div
                                 onClick={() => handleToggleToDo(todo.id)}
                                 className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
                               >
                                 <div className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors shrink-0 ${
-                                  todo.completed ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 hover:border-indigo-500'
+                                  todo.completed ? 'bg-red-600 border-red-600 text-white' : 'border-slate-300 hover:border-red-500'
                                 }`}>
                                   {todo.completed && <Check className="w-3 h-3 stroke-[3]" />}
                                 </div>
@@ -2671,12 +2671,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 handleAddToDo();
                               }
                             }}
-                            className="flex-1 text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-800"
+                            className="flex-1 text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 text-slate-800"
                           />
                           <button
                             type="button"
                             onClick={handleAddToDo}
-                            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer shrink-0"
+                            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold cursor-pointer shrink-0"
                           >
                             Add
                           </button>
@@ -2690,13 +2690,13 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     <div className="border border-slate-200/90 rounded-2xl p-3.5 bg-white shadow-2xs">
                       <div className="flex items-center justify-between text-xs">
                         <div className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-indigo-600" />
+                          <Calendar className="w-4 h-4 text-red-600" />
                           <span>START {formatDateSnippet(editingTask.start_date)}  ·  END {formatDateSnippet(editingTask.end_date)}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setIsDatesExpanded(!isDatesExpanded)}
-                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                          className="text-[11px] font-semibold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer"
                         >
                           <span>{isDatesExpanded ? 'Hide dates' : 'View dates'}</span>
                           {isDatesExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -2742,7 +2742,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         onClick={() => setDrawerTab('progress')}
                         className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
                           drawerTab === 'progress'
-                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            ? 'text-red-600 border-b-2 border-red-600'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
@@ -2753,7 +2753,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         onClick={() => setDrawerTab('resources')}
                         className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
                           drawerTab === 'resources'
-                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            ? 'text-red-600 border-b-2 border-red-600'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
@@ -2764,7 +2764,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         onClick={() => setDrawerTab('logs')}
                         className={`pb-2.5 text-xs font-bold transition-all relative cursor-pointer ${
                           drawerTab === 'logs'
-                            ? 'text-indigo-600 border-b-2 border-indigo-600'
+                            ? 'text-red-600 border-b-2 border-red-600'
                             : 'text-slate-500 hover:text-slate-800'
                         }`}
                       >
@@ -2789,7 +2789,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             <button
                               type="button"
                               onClick={() => setPreviewProofModal(editingTask.completion_proof_url || formProofUrl)}
-                              className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                              className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1 cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               <span>View Full Proof</span>
@@ -2822,7 +2822,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shadow-2xs">
+                                  <div className="w-7 h-7 rounded-full bg-red-100 text-red-700 flex items-center justify-center text-xs font-bold shadow-2xs">
                                     {prog.user.slice(0, 2).toUpperCase()}
                                   </div>
                                   <div>
@@ -2883,7 +2883,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setExpandedResources(prev => ({ ...prev, material: !prev.material }))}
-                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-red-600 cursor-pointer"
                           >
                             {expandedResources.material ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             <span>Material</span>
@@ -2891,7 +2891,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setActiveResourceModal('material')}
-                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
                           >
                             [Add]
                           </button>
@@ -2936,7 +2936,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setExpandedResources(prev => ({ ...prev, workforce: !prev.workforce }))}
-                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-red-600 cursor-pointer"
                           >
                             {expandedResources.workforce ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             <span>Workforce</span>
@@ -2944,7 +2944,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setActiveResourceModal('workforce')}
-                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
                           >
                             [Add]
                           </button>
@@ -2989,7 +2989,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setExpandedResources(prev => ({ ...prev, equipment: !prev.equipment }))}
-                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-indigo-600 cursor-pointer"
+                            className="flex items-center gap-2 text-xs font-bold text-slate-800 hover:text-red-600 cursor-pointer"
                           >
                             {expandedResources.equipment ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
                             <span>Equipment</span>
@@ -2997,7 +2997,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => setActiveResourceModal('equipment')}
-                            className="px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition-colors"
+                            className="px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
                           >
                             [Add]
                           </button>
@@ -3010,7 +3010,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 {currentTaskMeta.equipment.map((eq) => (
                                   <div key={eq.id} className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between text-xs">
                                     <div className="flex items-center gap-2">
-                                      <Truck className="w-4 h-4 text-purple-600" />
+                                      <Truck className="w-4 h-4 text-red-600" />
                                       <div>
                                         <span className="font-bold text-slate-800 block">{eq.name}</span>
                                         <span className="text-[11px] text-slate-500">{eq.count} Units</span>
@@ -3045,7 +3045,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         {currentTaskMeta.statusLogs && currentTaskMeta.statusLogs.length > 0 ? (
                           currentTaskMeta.statusLogs.map((log) => (
                             <div key={log.id} className="relative">
-                              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-indigo-600 border-2 border-white shadow-2xs" />
+                              <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-red-600 border-2 border-white shadow-2xs" />
                               <div className="p-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs text-xs space-y-1">
                                 <span className="font-bold text-slate-800 block">{log.text}</span>
                                 <span className="text-[10px] text-slate-400">
@@ -3099,7 +3099,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <button
                         type="button"
                         onClick={handleSaveTaskDrawer}
-                        className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                        className="px-4 py-1.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                         title="Save all changes, uploaded photos and sync with Schedule"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -3117,7 +3117,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         setProgressIsCompleted(true);
                         setIsProgressModalOpen(true);
                       }}
-                      className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                      className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Plus className="w-3.5 h-3.5 stroke-[3]" />
                       <span>Progress</span>
@@ -3135,14 +3135,14 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                             handleSendMessage();
                           }
                         }}
-                        className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-800 placeholder-slate-400"
+                        className="w-full text-xs px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:bg-white text-slate-800 placeholder-slate-400"
                       />
                     </div>
 
                     <button
                       type="button"
                       onClick={() => proofFileInputRef.current?.click()}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
                       title="Attach photo/proof"
                     >
                       <Camera className="w-4 h-4" />
@@ -3152,7 +3152,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <button
                         type="button"
                         onClick={handleSendMessage}
-                        className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl cursor-pointer transition-colors shrink-0"
+                        className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-xl cursor-pointer transition-colors shrink-0"
                         title="Send Message"
                       >
                         <Send className="w-4 h-4" />
@@ -3178,7 +3178,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
                   <div>
-                    <span className={`text-[10px] font-bold ${isAddingSubtask ? 'text-[#704fe6]' : 'text-red-600'} uppercase tracking-wider block`}>
+                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block">
                       {isAddingSubtask ? 'ADDING SUB TASK' : 'CREATE NEW TASK'}
                     </span>
                     <h3 className="text-sm font-bold text-slate-900 mt-0.5">
@@ -3189,7 +3189,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     <button
                       type="button"
                       onClick={handleSaveTask}
-                      className="px-4 py-1.5 bg-[#704fe6] hover:bg-[#5f3dc4] text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
+                      className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg shadow-sm cursor-pointer"
                     >
                       Save
                     </button>
@@ -3204,7 +3204,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 </div>
 
                 {/* Red Accent Stripe */}
-                <div className={`h-1 ${isAddingSubtask ? 'bg-[#704fe6]' : 'bg-red-600'} w-full shrink-0`} />
+                <div className="h-1 bg-red-600 w-full shrink-0" />
 
                 {/* Form */}
                 <form onSubmit={handleSaveTask} className="p-6 space-y-5 overflow-y-auto flex-1">
@@ -3393,7 +3393,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-indigo-600" />
+                <CheckCircle2 className="w-5 h-5 text-red-600" />
                 <h4 className="text-sm font-bold text-slate-900">Record Task Progress</h4>
               </div>
               <button
@@ -3415,7 +3415,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   placeholder="e.g. 1 lumpsum or 100%"
                   value={progressAmountInput}
                   onChange={(e) => setProgressAmountInput(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                 />
               </div>
 
@@ -3428,7 +3428,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   placeholder="e.g. Quotation estimation submitted and approved by client."
                   value={progressNoteInput}
                   onChange={(e) => setProgressNoteInput(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 resize-none text-slate-900"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 resize-none text-slate-900"
                 />
               </div>
 
@@ -3457,7 +3457,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               <button
                 type="button"
                 onClick={handleSaveProgressUpdate}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
               >
                 Save Progress
               </button>
@@ -3476,7 +3476,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               <div className="flex items-center gap-2">
                 {activeResourceModal === 'material' ? <Package className="w-5 h-5 text-amber-600" /> :
                  activeResourceModal === 'workforce' ? <HardHat className="w-5 h-5 text-blue-600" /> :
-                 <Truck className="w-5 h-5 text-purple-600" />}
+                 <Truck className="w-5 h-5 text-red-600" />}
                 <h4 className="text-sm font-bold text-slate-900">
                   {activeResourceModal === 'material' ? 'Add Material Resource' :
                    activeResourceModal === 'workforce' ? 'Add Workforce Trade' :
@@ -3504,7 +3504,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       placeholder="e.g. Ultratech Cement 53G, Sand, TMT Steel"
                       value={resMatName}
                       onChange={(e) => setResMatName(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -3517,7 +3517,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         placeholder="e.g. 50"
                         value={resMatQty}
                         onChange={(e) => setResMatQty(e.target.value)}
-                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                       />
                     </div>
                     <div>
@@ -3527,7 +3527,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <select
                         value={resMatUnit}
                         onChange={(e) => setResMatUnit(e.target.value)}
-                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                        className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                       >
                         <option value="Bags">Bags</option>
                         <option value="MT">MT (Tons)</option>
@@ -3552,7 +3552,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       placeholder="e.g. Mason, Barbender, Helper, Carpenter"
                       value={resWorkRole}
                       onChange={(e) => setResWorkRole(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                     />
                   </div>
                   <div>
@@ -3564,7 +3564,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       min={1}
                       value={resWorkCount}
                       onChange={(e) => setResWorkCount(Math.max(1, Number(e.target.value)))}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                     />
                   </div>
                 </>
@@ -3581,7 +3581,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       placeholder="e.g. JCB 3DX Excavator, Concrete Mixer, Crane"
                       value={resEquipName}
                       onChange={(e) => setResEquipName(e.target.value)}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                     />
                   </div>
                   <div>
@@ -3593,7 +3593,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       min={1}
                       value={resEquipCount}
                       onChange={(e) => setResEquipCount(Math.max(1, Number(e.target.value)))}
-                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 text-slate-900"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
                     />
                   </div>
                 </>
@@ -3615,7 +3615,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   if (activeResourceModal === 'workforce') handleAddWorkforce();
                   if (activeResourceModal === 'equipment') handleAddEquipment();
                 }}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
               >
                 Add Resource
               </button>
@@ -3632,7 +3632,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-600" />
+                <Users className="w-5 h-5 text-red-600" />
                 <h4 className="text-sm font-bold text-slate-900">Assign Staff Member</h4>
               </div>
               <button
@@ -3662,7 +3662,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   }}
                   className={`w-full text-left p-2.5 rounded-xl border flex items-center justify-between text-xs transition-colors cursor-pointer ${
                     (editingTask.assigned_to_name === member)
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-900 font-bold'
+                      ? 'bg-red-50 border-red-200 text-red-900 font-bold'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
@@ -3673,7 +3673,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     <span>{member}</span>
                   </div>
                   {editingTask.assigned_to_name === member && (
-                    <Check className="w-4 h-4 text-indigo-600" />
+                    <Check className="w-4 h-4 text-red-600" />
                   )}
                 </button>
               ))}
@@ -3861,7 +3861,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             </div>
 
             {/* Field: ACTUAL START DATE * */}
-            <fieldset className="border border-purple-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-[#6440db] transition-colors">
+            <fieldset className="border border-red-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-red-600 transition-colors">
               <legend className="text-[11px] font-bold text-slate-400 px-1 uppercase tracking-wider">
                 ACTUAL START DATE <span className="text-red-500">*</span>
               </legend>
@@ -3877,7 +3877,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
             </fieldset>
 
             {/* Field: COMMENT */}
-            <fieldset className="border border-purple-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-[#6440db] transition-colors">
+            <fieldset className="border border-red-200/90 rounded-2xl px-4 pt-1.5 pb-2.5 relative focus-within:border-red-600 transition-colors">
               <legend className="text-[11px] font-bold text-slate-400 px-1 uppercase tracking-wider">
                 COMMENT
               </legend>
@@ -3903,7 +3903,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               <button
                 type="button"
                 onClick={handleSaveStartModal}
-                className="px-7 py-2.5 bg-[#6440db] hover:bg-[#5333bf] text-white font-semibold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                className="px-7 py-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 Save
               </button>

@@ -471,9 +471,7 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                 onClick={() => onSelectTab(tab.id)}
                 className={`relative pb-1 text-xs sm:text-[13px] font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   isActive 
-                    ? tab.id === 'task'
-                      ? 'text-[#704fe6] font-bold border-b-2 border-[#704fe6] -mb-px'
-                      : 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
+                    ? 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >

@@ -1325,7 +1325,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-indigo-600" />
+                          <Users className="w-3.5 h-3.5 text-red-600" />
                           Additional Team Members ({additionalTeam.length})
                         </span>
                         <p className="text-[11px] text-slate-500">Add draftsmen, safety officers, quality auditors, or sub-engineers.</p>
@@ -1334,7 +1334,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowAddExtraMember(true)}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-indigo-200/60 transition-colors"
+                          className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-red-200/60 transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Add More Staff</span>
@@ -1348,12 +1348,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         {additionalTeam.map((m, idx) => (
                           <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center">
+                              <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-bold text-[11px] flex items-center justify-center">
                                 {m.name.slice(0, 1).toUpperCase()}
                               </div>
                               <div>
                                 <span className="font-bold text-slate-800 block leading-tight">{m.name}</span>
-                                <span className="text-[10px] text-indigo-600 font-medium">{m.role}</span>
+                                <span className="text-[10px] text-red-600 font-medium">{m.role}</span>
                               </div>
                             </div>
                             <button
@@ -1370,8 +1370,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
                     {/* Inline Form to Add Extra Member */}
                     {showAddExtraMember && (
-                      <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-3">
-                        <div className="text-xs font-bold text-indigo-900">
+                      <div className="p-4 bg-red-50/50 border border-red-100 rounded-2xl space-y-3">
+                        <div className="text-xs font-bold text-red-900">
                           Assign Staff Member with Designation
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1401,7 +1401,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                               value={extraMemberRole}
                               onChange={(e) => setExtraMemberRole(e.target.value)}
                               placeholder="e.g. Architect, Quality Auditor..."
-                              className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-medium bg-white focus:outline-none focus:border-indigo-600"
+                              className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-medium bg-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                             />
                           </div>
                         </div>
@@ -1421,7 +1421,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             type="button"
                             onClick={handleAddExtraMember}
                             disabled={!extraMemberName.trim()}
-                            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                            className="px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl cursor-pointer flex items-center gap-1.5 shadow-2xs"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             <span>Assign Staff</span>

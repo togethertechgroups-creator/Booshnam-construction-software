@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'projects', label: 'Projects', icon: Home },
           { 
             id: 'quotation', 
-            label: 'CRM', 
+            label: 'Leads & Quotation', 
             icon: Calculator, 
             badge: followUpsCount > 0 ? `${followUpsCount}` : null,
             hasBell: followUpsCount > 0

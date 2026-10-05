@@ -227,7 +227,7 @@ export const PartyTab: React.FC<PartyTabProps> = ({ project, onShowToast }) => {
             placeholder="Search party by name or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
           />
         </div>
 

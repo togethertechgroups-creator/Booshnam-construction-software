@@ -104,6 +104,15 @@ export interface Project {
   address?: string;
   cash_in?: number;
   cash_out?: number;
+  boq_value?: number;
+  estimated_margin?: number;
+  sales_invoice?: number;
+  work_done?: number;
+  payables?: number;
+  receivables?: number;
+  site_staff_expense?: number;
+  labour_contractor_expense?: number;
+  office_staff_expense?: number;
   todo_count?: number;
   material_pending_count?: number;
   approval_pending_count?: number;

@@ -8,7 +8,7 @@ export interface SystemModule {
 export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'dashboard', name: 'Dashboard', category: 'Core Operations', description: 'Company performance KPIs, active projects count, revenue & operations overview' },
   { id: 'projects', name: 'Projects', category: 'Core Operations', description: 'Project directory, WBS scheduling, task execution & site progress tracking' },
-  { id: 'quotation', name: 'Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
+  { id: 'quotation', name: 'Leads & Quotation', category: 'Core Operations', description: 'Commercial cost estimation, quotations & client lead inquiries' },
   { id: 'schedule', name: 'Schedule & Timesheet', category: 'Core Operations', description: 'Team Gantt schedule for quotation tasks & staff timesheets' },
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },

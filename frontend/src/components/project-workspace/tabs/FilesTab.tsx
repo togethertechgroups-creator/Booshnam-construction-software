@@ -136,7 +136,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded">
+            <span className="px-2 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded">
               CLOUD REPOSITORY
             </span>
             <h2 className="text-lg font-bold text-slate-900">Project Files, Contracts & Test Reports</h2>
@@ -224,7 +224,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
                 <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                         <FileText className="w-4 h-4" />
                       </div>
                       <div className="font-semibold text-slate-900 line-clamp-1">{doc.title}</div>

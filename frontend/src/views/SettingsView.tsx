@@ -38,8 +38,6 @@ import { confirmAction } from '../lib/dialogService';
 import { 
   getTermsConditions, 
   saveTermsConditions, 
-  loadDefaultTerms, 
-  TermsCondition,
   saveInvoiceTerms, 
   saveQuotationTerms, 
   saveSubconTerms, 

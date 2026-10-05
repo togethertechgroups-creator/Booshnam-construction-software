@@ -136,6 +136,23 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     };
   }, []);
 
+  // Sync quotation schedule tasks with live projects and tasks
+  useEffect(() => {
+    const handleQuotationSync = () => {
+      setQuotationTasks(getQuotationScheduleTasks(projects));
+    };
+    window.addEventListener('booshnam_projects_updated', handleQuotationSync);
+    window.addEventListener('booshnam_wbs_tasks_updated', handleQuotationSync);
+    window.addEventListener('booshnam_quotation_schedule_updated', handleQuotationSync);
+    window.addEventListener('storage', handleQuotationSync);
+    return () => {
+      window.removeEventListener('booshnam_projects_updated', handleQuotationSync);
+      window.removeEventListener('booshnam_wbs_tasks_updated', handleQuotationSync);
+      window.removeEventListener('booshnam_quotation_schedule_updated', handleQuotationSync);
+      window.removeEventListener('storage', handleQuotationSync);
+    };
+  }, [projects]);
+
   // Sync quotation schedule tasks
   useEffect(() => {
     const handleTaskSync = () => {
@@ -855,9 +872,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 bg-slate-50/70">
                       <th className="w-12 px-3 py-2.5 border-r border-slate-200 text-center font-bold text-slate-700">S.No</th>
-                      <th className="w-64 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Task name</th>
-                      <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Status</th>
-                      <th className="w-32 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
+                      <th className="w-72 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Task name</th>
+                      <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
                       
                       {/* Year Header spanning full year */}
                       <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/60 border-r border-slate-200">
@@ -870,7 +886,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
                     {/* Timeline Header Row 2: Months */}
                     <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-600 bg-white">
-                      <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
                       <th className="border-r border-slate-200" />
@@ -911,7 +926,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isUnassignedExpanded ? '' : '-rotate-90'}`} />
                         </button>
                       </td>
-                      <td colSpan={3} className="px-4 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
+                      <td colSpan={2} className="px-4 py-2.5 font-bold text-red-700 text-xs border-r border-red-100/80">
                         <div className="flex items-center gap-2">
                           <FolderKanban className="w-4 h-4 text-red-600" />
                           <span>Unassigned ({filteredQuotationTasks.length} Quotation Tasks)</span>
@@ -928,7 +943,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {/* Empty State when no tasks match active filter */}
                     {isUnassignedExpanded && filteredQuotationTasks.length === 0 && (
                       <tr>
-                        <td colSpan={17} className="py-10 text-center bg-slate-50/40">
+                        <td colSpan={16} className="py-10 text-center bg-slate-50/40">
                           <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
                             <Calendar className="w-8 h-8 text-slate-300" />
                             <p className="text-xs font-semibold text-slate-600">
@@ -1007,60 +1022,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             </div>
                           </td>
 
-                          {/* Status Pill with interactive Dropdown */}
-                          <td className="px-3 py-2.5 border-r border-slate-200 relative">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveTaskStatusMenuId(activeTaskStatusMenuId === task.id ? null : task.id);
-                              }}
-                              className={`px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                                isStatusCompleted
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                                  : isStatusInProgress
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
-                                  : isStatusPending
-                                  ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                              }`}
-                            >
-                              <span className={`w-2 h-2 rounded-full ${
-                                isStatusCompleted ? 'bg-emerald-500' : isStatusInProgress ? 'bg-blue-500' : isStatusPending ? 'bg-red-500' : 'bg-slate-600'
-                              }`} />
-                              <span>
-                                {isStatusCompleted ? 'Completed' : isStatusInProgress ? 'In Progress' : isStatusPending ? 'Pending' : 'Not Started'}
-                              </span>
-                              <ChevronDown className="w-3 h-3 text-slate-400" />
-                            </button>
-
-                            {activeTaskStatusMenuId === task.id && (
-                              <div 
-                                onClick={(e) => e.stopPropagation()}
-                                className={`absolute left-2 ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1'} z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs animate-in fade-in zoom-in-95`}
-                              >
-                                {(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'PENDING'] as const).map(st => (
-                                  <button
-                                    key={st}
-                                    onClick={() => {
-                                      handleUpdateStatus(task.id, st);
-                                      setActiveTaskStatusMenuId(null);
-                                    }}
-                                    className={`w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-50 cursor-pointer ${
-                                      task.status === st ? 'font-bold bg-slate-50 text-slate-900' : 'text-slate-700'
-                                    }`}
-                                  >
-                                    <span className={`w-2 h-2 rounded-full ${
-                                      st === 'COMPLETED' ? 'bg-emerald-500' : st === 'IN_PROGRESS' ? 'bg-blue-500' : st === 'PENDING' ? 'bg-red-500' : 'bg-slate-600'
-                                    }`} />
-                                    <span>{st === 'NOT_STARTED' ? 'Not Started' : st === 'IN_PROGRESS' ? 'In Progress' : st === 'COMPLETED' ? 'Completed' : 'Pending'}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Progress Column matching Image */}
+                          {/* Progress Column matching Audio: shows progress bar + % and Ongoing/Completed */}
                           <td className="px-4 py-3 border-r border-slate-200">
                             <div className="flex items-center gap-2">
                               <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -1074,6 +1036,15 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                               <span className="text-[11px] font-semibold text-slate-600">
                                 {task.progress_percentage || (isStatusCompleted ? 100 : 0)}%
                               </span>
+                              {isStatusCompleted ? (
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                                  Completed
+                                </span>
+                              ) : isStatusInProgress ? (
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                                  Ongoing
+                                </span>
+                              ) : null}
                             </div>
                           </td>
 
@@ -1129,22 +1100,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                             {task.project_name}
                                           </div>
 
-                                          {/* Quick Complete / Toggle Button */}
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleUpdateStatus(task.id, isStatusCompleted ? 'PENDING' : 'COMPLETED');
-                                            }}
-                                            className={`mt-1.5 w-full py-1.5 px-2 rounded-lg text-[10.5px] font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer ${
-                                              isStatusCompleted 
-                                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' 
-                                                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                            }`}
-                                          >
-                                            <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
-                                            <span>{isStatusCompleted ? 'Mark as Pending' : 'Mark as Completed'}</span>
-                                          </button>
                                         </div>
                                       </div>
                                     )}
@@ -1154,67 +1109,19 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             );
                           })}
 
-                          {/* Row Actions Menu (⋮) */}
-                          <td className="px-2 py-3 text-center relative">
+                          {/* Row Actions (View Details only) */}
+                          <td className="px-2 py-3 text-center">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveRowMenuId(activeRowMenuId === task.id ? null : task.id);
+                                setSelectedQuotationDrawerTask(task);
                               }}
-                              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                              className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="View Details"
                             >
-                              <MoreVertical className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </button>
-
-                            {activeRowMenuId === task.id && (
-                              <div 
-                                onClick={(e) => e.stopPropagation()}
-                                className={`absolute right-4 ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1'} z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-44 text-xs animate-in fade-in zoom-in-95`}
-                              >
-                                <button
-                                  onClick={() => {
-                                    handleUpdateStatus(task.id, 'COMPLETED');
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-emerald-50 text-emerald-700 font-semibold cursor-pointer"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Mark as Completed</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    handleUpdateStatus(task.id, 'IN_PROGRESS');
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-blue-50 text-blue-700 cursor-pointer"
-                                >
-                                  <Clock className="w-3.5 h-3.5 text-blue-600" />
-                                  <span>Mark as In Progress</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    handleUpdateStatus(task.id, 'PENDING');
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-red-50 text-red-700 cursor-pointer"
-                                >
-                                  <AlertCircle className="w-3.5 h-3.5 text-red-600" />
-                                  <span>Mark as Pending</span>
-                                </button>
-                                <div className="my-1 border-t border-slate-100" />
-                                <button
-                                  onClick={() => {
-                                    setSelectedQuotationDrawerTask(task);
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-left flex items-center gap-2 hover:bg-slate-50 text-slate-700 cursor-pointer"
-                                >
-                                  <Eye className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>View Details</span>
-                                </button>
-                              </div>
-                            )}
                           </td>
                         </tr>
                       );

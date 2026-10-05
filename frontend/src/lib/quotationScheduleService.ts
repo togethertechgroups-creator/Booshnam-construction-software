@@ -276,7 +276,39 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     } catch (e) {}
   });
 
-  // 3. Combine: Live project tasks take precedence and update any stored tasks
+  // 3. Ensure every created project in allProjectsMap has a Quotation Task
+  allProjectsMap.forEach((p, pid) => {
+    const hasTaskInProject = projectTasks.some(pt => pt.project_id === pid);
+    const hasTaskInStored = stored.some(st => st.project_id === pid);
+    if (!hasTaskInProject && !hasTaskInStored) {
+      const isCompleted = p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100);
+      const isOngoing = p.status === 'ACTIVE' || (p.progress_percentage !== undefined && p.progress_percentage > 0);
+      const sDate = p.start_date || new Date().toISOString().split('T')[0];
+      const dateObj = new Date(sDate);
+      const milestoneStr = isNaN(dateObj.getTime()) 
+        ? '10 Oct' 
+        : dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+      projectTasks.push({
+        id: `proj-quotation-${pid}`,
+        task_name: 'Quotation',
+        project_id: pid,
+        project_name: p.name || 'Project',
+        assignee: (p.assigned_team && p.assigned_team[0]?.name) || 'Project Lead',
+        status: isCompleted ? 'COMPLETED' : isOngoing ? 'IN_PROGRESS' : 'PENDING',
+        start_date: sDate,
+        end_date: sDate,
+        milestone_date: milestoneStr,
+        stage_label: isCompleted ? 'Completed' : isOngoing ? 'Ongoing' : 'Prepare Quotation',
+        color_theme: isCompleted ? 'green' : isOngoing ? 'blue' : 'red',
+        progress_percentage: isCompleted ? 100 : (p.progress_percentage || 0),
+        remarks: p.description || 'Project quotation milestone.',
+        group_name: 'Unassigned'
+      });
+    }
+  });
+
+  // 4. Combine: Live project tasks take precedence and update any stored tasks
   const combined: QuotationScheduleTask[] = [];
 
   // First add all live project tasks
@@ -293,6 +325,26 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     );
     if (!isAlreadyCovered) {
       combined.push(st);
+    }
+  });
+
+  // 5. Sync each task's progress and status directly with its live project state
+  combined.forEach(t => {
+    if (t.project_id && allProjectsMap.has(t.project_id)) {
+      const p = allProjectsMap.get(t.project_id)!;
+      if (p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100)) {
+        t.status = 'COMPLETED';
+        t.progress_percentage = 100;
+        t.color_theme = 'green';
+        t.stage_label = 'Completed';
+      } else if (p.status === 'ACTIVE' || (p.progress_percentage !== undefined && p.progress_percentage > 0)) {
+        if (t.status !== 'COMPLETED') {
+          t.status = 'IN_PROGRESS';
+          t.progress_percentage = t.progress_percentage || p.progress_percentage || 50;
+          t.color_theme = 'blue';
+          t.stage_label = 'Ongoing';
+        }
+      }
     }
   });
 

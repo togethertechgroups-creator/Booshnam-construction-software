@@ -81,7 +81,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   // Gantt Filters state
   const [ganttPeriod, setGanttPeriod] = useState<'Day' | 'Week' | 'Month' | 'Year'>('Month');
   const [granularityFilter, setGranularityFilter] = useState<'All' | 'Year' | 'Quarter' | 'Month' | 'Day'>('All');
-  const [activeYear, setActiveYear] = useState<number>(2026);
+  const [activeYear, setActiveYear] = useState<number>(() => new Date().getFullYear());
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth()); // 9 for Oct
   const [activeQuarter, setActiveQuarter] = useState<number>(Math.floor(new Date().getMonth() / 3) + 1); // 4 for Q4
   const [activeDay, setActiveDay] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -98,7 +98,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskProjectId, setNewTaskProjectId] = useState('');
-  const [newTaskDate, setNewTaskDate] = useState('2026-06-18');
+  const [newTaskDate, setNewTaskDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [newTaskStage, setNewTaskStage] = useState('Prepare Quotation');
   const [newTaskStatus, setNewTaskStatus] = useState<'NOT_STARTED' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>('NOT_STARTED');
 
@@ -206,6 +206,29 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
     timesheets.forEach(t => set.add(t.party_name));
     return Array.from(set);
   }, [timesheets]);
+
+  // Dynamic available years list: defaults to current year, previous, and future years (+1, +2, +3), plus any years in tasks/projects
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const set = new Set<number>([currentYear - 1, currentYear, currentYear + 1, currentYear + 2]);
+    quotationTasks.forEach(t => {
+      if (t.start_date) {
+        const y = new Date(t.start_date).getFullYear();
+        if (!isNaN(y)) set.add(y);
+      }
+      if (t.end_date) {
+        const y = new Date(t.end_date).getFullYear();
+        if (!isNaN(y)) set.add(y);
+      }
+    });
+    projects.forEach(p => {
+      if (p.start_date) {
+        const y = new Date(p.start_date).getFullYear();
+        if (!isNaN(y)) set.add(y);
+      }
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [quotationTasks, projects]);
 
   // Dynamic Timeline Months (12 months of activeYear)
   const timelineMonths: TimelineMonth[] = useMemo(() => {
@@ -471,11 +494,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       const eYear = e.getFullYear();
       const eMonth = e.getMonth();
 
+      // Check if this task belongs to the actively viewed year (e.g. 2026, 2027)
+      const isCurrentYear = sYear === activeYear || eYear === activeYear;
+
       // Find matching column in timelineMonths
       const startCol = timelineMonths.findIndex(m => m.year === sYear && m.monthIndex === sMonth);
       const endCol = timelineMonths.findIndex(m => m.year === eYear && m.monthIndex === eMonth);
 
-      const resolvedStart = startCol >= 0 ? startCol : (sMonth >= 0 && sMonth < 12 ? sMonth : 6);
+      const resolvedStart = startCol >= 0 ? startCol : (sMonth >= 0 && sMonth < 12 ? sMonth : 0);
       const resolvedEnd = endCol >= 0 ? endCol : resolvedStart;
 
       // Calculate approximate day offset within the month (0% to 100%)
@@ -483,12 +509,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       const leftOffsetPercent = (startDay / 31) * 100;
 
       return {
+        isCurrentYear,
+        taskYear: sYear,
         colIndex: resolvedStart,
         leftPercent: Math.max(5, Math.min(85, leftOffsetPercent)),
         colSpan: Math.max(1, resolvedEnd - resolvedStart + 1)
       };
     } catch {
-      return { colIndex: 6, leftPercent: 20, colSpan: 1 };
+      return { isCurrentYear: true, taskYear: activeYear, colIndex: 6, leftPercent: 20, colSpan: 1 };
     }
   };
 
@@ -875,9 +903,48 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       <th className="w-72 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Task name</th>
                       <th className="w-36 px-4 py-2.5 border-r border-slate-200 font-bold text-slate-700">Progress</th>
                       
-                      {/* Year Header spanning full year */}
-                      <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/60 border-r border-slate-200">
-                        {activeYear}
+                      {/* Year Header spanning full year with dynamic year switcher and automated rollover */}
+                      <th colSpan={12} className="px-3 py-2 text-center font-bold text-slate-800 bg-slate-100/70 border-r border-slate-200 select-none">
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setActiveYear(y => y - 1)}
+                            className="p-1 hover:bg-white rounded-md text-slate-500 hover:text-slate-800 border border-transparent hover:border-slate-200 transition-all cursor-pointer shadow-2xs"
+                            title={`Previous Year (${activeYear - 1})`}
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-extrabold text-slate-800 tracking-wide">{activeYear}</span>
+                            {activeYear === new Date().getFullYear() && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Current</span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveYear(y => y + 1)}
+                            className="p-1 hover:bg-white rounded-md text-slate-500 hover:text-slate-800 border border-transparent hover:border-slate-200 transition-all cursor-pointer shadow-2xs"
+                            title={`Next Year (${activeYear + 1}) - Auto-generates Jan - Dec`}
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Quick Year Selector Dropdown */}
+                          <select
+                            value={activeYear}
+                            onChange={(e) => setActiveYear(Number(e.target.value))}
+                            className="ml-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-md px-2 py-0.5 cursor-pointer focus:outline-none focus:border-blue-500"
+                            title="Select Timeline Year"
+                          >
+                            {availableYears.map(yr => (
+                              <option key={yr} value={yr}>
+                                {yr} {yr === new Date().getFullYear() ? '(Current)' : yr === new Date().getFullYear() + 1 ? '(Next Year)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </th>
 
                       {/* Right Action column */}
@@ -1014,8 +1081,20 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             onClick={() => setSelectedQuotationDrawerTask(task)}
                             className="px-4 py-3 border-r border-slate-200 cursor-pointer hover:bg-red-50/40 transition-colors"
                           >
-                            <div className="font-bold text-slate-900 leading-tight">
+                            <div className="font-bold text-slate-900 leading-tight flex items-center justify-between">
                               <span className="truncate hover:text-red-600 transition-colors">{task.task_name}</span>
+                              {!placement.isCurrentYear && (
+                                <span 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveYear(placement.taskYear);
+                                  }}
+                                  className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 hover:bg-blue-100 text-slate-600 hover:text-blue-700 transition-colors cursor-pointer shrink-0"
+                                  title={`Scheduled for year ${placement.taskYear}. Click to view.`}
+                                >
+                                  {placement.taskYear}
+                                </span>
+                              )}
                             </div>
                             <div className="text-[11px] text-slate-400 font-normal truncate mt-0.5">
                               {task.project_name}
@@ -1052,7 +1131,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
                           {/* 12 Timeline Months */}
                           {timelineMonths.map((m, mIdx) => {
-                            const isMilestoneCell = mIdx === placement.colIndex;
+                            const isMilestoneCell = placement.isCurrentYear && mIdx === placement.colIndex;
 
                             return (
                               <td 

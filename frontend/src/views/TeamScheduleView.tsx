@@ -1037,10 +1037,13 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
                     {/* Quotation Task Rows matching User Image */}
                     {isUnassignedExpanded && filteredQuotationTasks.map((task, idx) => {
-                      const placement = getTimelinePlacement(task.start_date, task.end_date);
                       const isStatusCompleted = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
                       const isStatusInProgress = !isStatusCompleted && (task.status === 'IN_PROGRESS' || (task.progress_percentage !== undefined && task.progress_percentage > 0));
                       const isStatusPending = !isStatusCompleted && !isStatusInProgress && task.status === 'PENDING';
+                      const activeMarkerDate = (isStatusCompleted && (task.actual_end || task.completed_at))
+                        ? (task.actual_end || task.completed_at || task.end_date)
+                        : (task.start_date || task.end_date);
+                      const placement = getTimelinePlacement(activeMarkerDate, task.end_date);
                       const isHovered = hoveredMarkerTaskId === task.id;
                       const openUpwards = idx >= (filteredQuotationTasks.length <= 3 ? Math.max(1, filteredQuotationTasks.length - 1) : 3);
 
@@ -1162,7 +1165,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                           <div className="flex items-center justify-between gap-2 border-b pb-1.5 border-slate-100">
                                             <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
                                               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                                              <span>{task.milestone_date || '18 Jun'}</span>
+                                              <span>{task.milestone_date || (isStatusCompleted && task.actual_end ? new Date(task.actual_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '05 Oct')}</span>
                                             </div>
                                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                               isStatusCompleted 

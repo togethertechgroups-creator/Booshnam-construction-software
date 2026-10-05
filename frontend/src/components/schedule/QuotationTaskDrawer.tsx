@@ -61,7 +61,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
 
   // Format date helper: "2026-06-29" -> "29 Jun 26"
   const formatDisplayDate = (dStr?: string) => {
-    if (!dStr) return '29 Jun 26';
+    if (!dStr) return '- - -';
     try {
       const d = new Date(dStr);
       if (isNaN(d.getTime())) return dStr;
@@ -76,9 +76,9 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
 
   const startDateFormatted = formatDisplayDate(task.start_date);
   const endDateFormatted = formatDisplayDate(task.end_date);
-  const actualStart = task.actual_start || startDateFormatted;
-  const actualEnd = task.actual_end || endDateFormatted;
-  const forecastEnd = task.forecast_end || endDateFormatted;
+  const actualStart = task.actual_start ? formatDisplayDate(task.actual_start) : startDateFormatted;
+  const actualEnd = task.actual_end ? formatDisplayDate(task.actual_end) : (task.status === 'COMPLETED' ? endDateFormatted : '- - -');
+  const forecastEnd = task.forecast_end ? formatDisplayDate(task.forecast_end) : endDateFormatted;
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,8 +138,8 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
     }
   };
 
-  // The actual photo uploaded in Project -> Tasks, or fallback crane image if present on sample
-  const samplePhotoUrl = task.image_url || '/crane-construction.png';
+  // The actual photo uploaded in Project -> Tasks
+  const samplePhotoUrl = task.image_url || '';
 
   return (
     <div 
@@ -169,25 +169,28 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
 
             {/* Status indicator pill matching screenshot: ● 1/1 % (Completed) */}
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${
+                task.status === 'COMPLETED' ? 'bg-emerald-500' :
+                task.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-amber-500'
+              }`} />
               <span>
-                {task.progress_percentage || 1}/{task.progress_percentage || 1} % 
+                {task.progress_percentage !== undefined ? `${task.progress_percentage}%` : (task.status === 'COMPLETED' ? '100%' : '0%')} 
                 <span className="text-slate-400 font-normal ml-1">
-                  ({task.status === 'COMPLETED' ? 'Completed' : 'In Progress'})
+                  ({task.status === 'COMPLETED' ? 'Completed' : task.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending'})
                 </span>
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 relative">
-            {/* Status Button */}
-            <button
-              type="button"
-              onClick={() => setStatusMenuOpen(!statusMenuOpen)}
-              className="px-3 py-1 bg-slate-50 border border-slate-200 hover:border-slate-300 text-slate-700 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              <span>{task.status === 'COMPLETED' ? 'Completed' : task.status}</span>
-            </button>
+          <div className="flex items-center gap-2">
+            {/* Status Badge */}
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+              task.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+              task.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+              'bg-amber-50 text-amber-700 border border-amber-200'
+            }`}>
+              {task.status === 'COMPLETED' ? 'Completed' : task.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending'}
+            </span>
 
             {/* Three Dots Menu */}
             <button
@@ -197,27 +200,6 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
             >
               <MoreVertical className="w-4 h-4" />
             </button>
-
-            {/* Status dropdown */}
-            {statusMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs animate-in fade-in zoom-in-95">
-                {(['COMPLETED', 'IN_PROGRESS', 'PENDING'] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => {
-                      setStatusMenuOpen(false);
-                      onUpdateTask?.({ ...task, status: st });
-                      onShowToast?.(`Task status changed to ${st}`);
-                    }}
-                    className={`w-full px-3 py-1.5 text-left hover:bg-red-50 hover:text-red-700 cursor-pointer ${
-                      task.status === st ? 'font-bold text-red-600 bg-red-50/50' : 'text-slate-700'
-                    }`}
-                  >
-                    {st === 'COMPLETED' ? 'Completed' : st === 'IN_PROGRESS' ? 'In Progress' : 'Pending'}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 

@@ -675,8 +675,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // Form Fields
   const [formTitle, setFormTitle] = useState('');
   const [formDepartment, setFormDepartment] = useState<Department>('CONSTRUCTION');
-  const [formStartDate, setFormStartDate] = useState('2026-09-17');
-  const [formEndDate, setFormEndDate] = useState('2026-09-18');
+  const [formStartDate, setFormStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [formEndDate, setFormEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [formActualStart, setFormActualStart] = useState<string>('');
+  const [formActualEnd, setFormActualEnd] = useState<string>('');
   const [formDuration, setFormDuration] = useState<number>(1);
   const [formTag, setFormTag] = useState('Field Survey');
   const [formAssigned, setFormAssigned] = useState('Pavani');
@@ -939,8 +941,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     setInlineTitleValue(t.title);
     setIsEditingTitleInline(false);
     setFormDepartment(t.department || normalizeTaskDepartment(t));
-    setFormStartDate(t.start_date || '2026-09-17');
-    setFormEndDate(t.end_date || '2026-09-18');
+    setFormStartDate(t.start_date || new Date().toISOString().split('T')[0]);
+    setFormEndDate(t.end_date || new Date().toISOString().split('T')[0]);
+    setFormActualStart(t.actual_start || '');
+    setFormActualEnd(t.actual_end || '');
     setFormDuration(t.duration_days || 1);
     setFormTag(t.tag || 'Field Survey');
     setFormAssigned(t.assigned_to_name || 'Pavani');
@@ -1056,9 +1060,124 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     onShowToast?.(`Task status updated to ${isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Start'}`);
   };
 
-  // Save Changes button in Task Drawer (Audio Requirement: Commit image, status, and sync to Schedule)
+  // Complete Process Handler (Audio Requirement):
+  // User attaches photo/proof and clicks "Complete Process" -> Status becomes COMPLETED (100%),
+  // Completion date is set to TODAY's date, and synchronizes to Schedule Gantt view!
+  const handleCompleteProcess = () => {
+    if (!editingTask) return;
+    const todayIso = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const todayTimeStr = `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    const proofUrlToSave = formProofUrl || editingTask.completion_proof_url;
+
+    const completedTask: WBSTask = {
+      ...editingTask,
+      status: 'COMPLETED',
+      progress_percentage: 100,
+      progress_label: '1/1 lumpsum',
+      start_date: formStartDate || editingTask.start_date || project?.start_date || todayIso,
+      end_date: todayIso, // Completion date as required by user!
+      actual_start: formActualStart || editingTask.actual_start || formStartDate || editingTask.start_date || todayIso,
+      actual_end: todayIso, // Completion date!
+      delay_status: 'On Time',
+      completion_proof_url: proofUrlToSave,
+      completion_remarks: formRemarks || 'Quotation process completed with attached proof.',
+      completed_by: currentUser.first_name || currentUser.username || 'Staff',
+      completed_at: todayTimeStr
+    };
+
+    setFormActualEnd(todayIso);
+    setEditingTask(completedTask);
+    const updatedTaskList = taskList.map(t => t.id === completedTask.id ? completedTask : t);
+    setTaskList(updatedTaskList);
+
+    // Save to localStorage
+    try {
+      const storageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+      localStorage.setItem(storageKey, JSON.stringify(updatedTaskList));
+    } catch (e) {}
+
+    // Save metadata
+    saveTaskMeta(completedTask.id, prev => ({
+      ...prev,
+      progressUpdates: [
+        {
+          id: `prog-${Date.now()}`,
+          user: currentUser.first_name || 'Staff',
+          amount: '1 lumpsum ✓ (100%)',
+          date: todayStr,
+          note: formRemarks || 'Quotation completed via Complete Process with attached proof.',
+          proof_url: proofUrlToSave
+        },
+        ...(prev.progressUpdates || []).filter(p => p.proof_url !== proofUrlToSave)
+      ],
+      statusLogs: [
+        {
+          id: `log-${Date.now()}`,
+          text: `Task marked as Completed on ${todayStr}`,
+          timestamp: todayTimeStr,
+          user: currentUser.first_name || 'Staff'
+        },
+        ...(prev.statusLogs || [])
+      ]
+    }));
+
+    // Synchronize to Quotation Schedule
+    try {
+      const quotationScheduleTask: QuotationScheduleTask = {
+        id: `proj-task-${completedTask.id}`,
+        wbs_task_id: completedTask.id,
+        task_name: completedTask.title,
+        project_id: project?.id || '',
+        project_name: project?.name || 'Project',
+        assignee: completedTask.assigned_to_name || 'Staff',
+        status: 'COMPLETED',
+        start_date: completedTask.start_date || project?.start_date || todayIso,
+        end_date: todayIso,
+        actual_start: completedTask.actual_start || todayIso,
+        actual_end: todayIso,
+        forecast_end: todayIso,
+        completed_at: todayTimeStr,
+        duration_days: completedTask.duration_days || 1,
+        progress_percentage: 100,
+        milestone_date: new Date(todayIso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        remarks: completedTask.completion_remarks || 'Completed with attached proof.',
+        tag: completedTask.tag || '--',
+        group_name: project?.name || 'Unassigned',
+        image_url: proofUrlToSave,
+        progress_user: completedTask.completed_by || 'Staff',
+        progress_date: todayStr,
+        stage_label: 'Completed',
+        color_theme: 'green'
+      };
+      syncQuotationTaskToProject(quotationScheduleTask);
+    } catch (e) {}
+
+    // Sync attached photo to Centralized Project Photos
+    if (proofUrlToSave) {
+      try {
+        addProjectPhoto(project.id || project.code, {
+          url: proofUrlToSave,
+          title: `Task Proof: ${completedTask.title}`,
+          source: 'Task',
+          category: completedTask.tag || 'Execution',
+          details: `Completed by ${completedTask.completed_by} on ${todayStr}. Remarks: ${formRemarks || 'Completed'}`
+        });
+      } catch (e) {}
+    }
+
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
+    window.dispatchEvent(new Event('booshnam_quotation_schedule_updated'));
+
+    onShowToast?.(`Task "${completedTask.title}" marked as Completed on ${todayStr}!`);
+  };
+
+  // Save Changes button in Task Drawer (Audio Requirement: Commit image, updated dates, and sync to Schedule)
   const handleSaveTaskDrawer = () => {
     if (!editingTask) return;
+    const todayIso = new Date().toISOString().split('T')[0];
     const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const isCompleted = editingTask.status === 'COMPLETED';
 
@@ -1070,8 +1189,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       department: formDepartment || editingTask.department,
       start_date: formStartDate || editingTask.start_date,
       end_date: formEndDate || editingTask.end_date,
-      actual_start: isCompleted ? (editingTask.actual_start || formStartDate || todayStr) : editingTask.actual_start,
-      actual_end: isCompleted ? (editingTask.actual_end || formEndDate || todayStr) : editingTask.actual_end,
+      actual_start: formActualStart || editingTask.actual_start || (isCompleted ? todayIso : undefined),
+      actual_end: formActualEnd || editingTask.actual_end || (isCompleted ? todayIso : undefined),
       duration_days: formDuration || editingTask.duration_days || 1,
       tag: formTag || editingTask.tag,
       assigned_to_name: formAssigned || editingTask.assigned_to_name,
@@ -1137,20 +1256,25 @@ export const TaskTab: React.FC<TaskTabProps> = ({
           project_name: project?.name || 'Project',
           assignee: updatedTask.assigned_to_name || 'Staff',
           status: updatedTask.status === 'COMPLETED' ? 'COMPLETED' : updatedTask.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING',
-          start_date: updatedTask.start_date || '2026-09-01',
-          end_date: updatedTask.end_date || '2026-09-15',
+          start_date: updatedTask.start_date || project?.start_date || todayIso,
+          end_date: updatedTask.actual_end || updatedTask.end_date || todayIso,
           actual_start: updatedTask.actual_start || updatedTask.start_date,
-          actual_end: updatedTask.actual_end || (updatedTask.status === 'COMPLETED' ? (updatedTask.end_date || 'Completed') : undefined),
+          actual_end: updatedTask.actual_end || (updatedTask.status === 'COMPLETED' ? (updatedTask.end_date || todayIso) : undefined),
           forecast_end: updatedTask.forecast_end || updatedTask.end_date,
-          completed_at: updatedTask.status === 'COMPLETED' ? (updatedTask.completed_at || (updatedTask.end_date ? `${updatedTask.end_date}, 05:00 PM` : 'Completed')) : undefined,
+          completed_at: updatedTask.status === 'COMPLETED' ? (updatedTask.completed_at || `${updatedTask.actual_end || todayIso}, 05:00 PM`) : undefined,
           duration_days: updatedTask.duration_days || 1,
           progress_percentage: updatedTask.progress_percentage !== undefined ? updatedTask.progress_percentage : (updatedTask.status === 'COMPLETED' ? 100 : 0),
+          milestone_date: (updatedTask.status === 'COMPLETED' && (updatedTask.actual_end || updatedTask.end_date))
+            ? new Date(updatedTask.actual_end || updatedTask.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            : (updatedTask.start_date ? new Date(updatedTask.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '05 Oct'),
           remarks: updatedTask.completion_remarks || updatedTask.description || 'Project quotation milestone.',
           tag: updatedTask.tag || '--',
           group_name: project?.name || 'Unassigned',
           image_url: proofUrlToSave,
           progress_user: updatedTask.completed_by || currentUser.first_name || 'Staff',
           progress_date: updatedTask.completed_at || todayStr,
+          stage_label: updatedTask.status === 'COMPLETED' ? 'Completed' : updatedTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Prepare Quotation',
+          color_theme: updatedTask.status === 'COMPLETED' ? 'green' : updatedTask.status === 'IN_PROGRESS' ? 'blue' : 'red',
           todos: currentTaskMeta.todos?.map(td => ({ id: td.id, text: td.text, done: Boolean(td.completed) })),
           materials: currentTaskMeta.materials,
           workforce: currentTaskMeta.workforce,
@@ -1164,6 +1288,19 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       }
     } catch (e) {
       console.error('Failed to sync to quotation schedule', e);
+    }
+
+    // Sync attached photo to Centralized Project Photos
+    if (proofUrlToSave) {
+      try {
+        addProjectPhoto(project.id || project.code, {
+          url: proofUrlToSave,
+          title: `Task Photo: ${updatedTask.title}`,
+          source: 'Task',
+          category: updatedTask.tag || 'Execution',
+          details: `Updated by ${currentUser.first_name || 'Staff'} on ${todayStr}. Remarks: ${formRemarks || 'Details updated'}`
+        });
+      } catch (e) {}
     }
 
     // 5. Emit custom events to update all views in real-time
@@ -2322,56 +2459,6 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Status Dropdown Switcher (Screenshot 2: Completed ▾) */}
-                    <div className="relative" data-task-dropdown>
-                      <button
-                        type="button"
-                        onClick={() => setIsStatusMenuOpen(!isStatusMenuOpen)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs ${
-                          editingTask.status === 'COMPLETED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                            : editingTask.status === 'IN_PROGRESS'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-                            : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                        }`}
-                      >
-                        <span>
-                          {editingTask.status === 'COMPLETED' ? 'Completed' :
-                           editingTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Start'}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                      </button>
-
-                      {isStatusMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1.5 w-36 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in duration-100">
-                          <button
-                            type="button"
-                            onClick={() => handleQuickStatusChange('COMPLETED')}
-                            className="w-full text-left px-3.5 py-2 hover:bg-emerald-50 text-emerald-800 font-semibold flex items-center gap-2 cursor-pointer"
-                          >
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>Completed</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickStatusChange('IN_PROGRESS')}
-                            className="w-full text-left px-3.5 py-2 hover:bg-blue-50 text-blue-800 font-semibold flex items-center gap-2 cursor-pointer"
-                          >
-                            <span className="w-2 h-2 rounded-full bg-blue-500" />
-                            <span>Ongoing</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleQuickStatusChange('TODO')}
-                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-800 font-semibold flex items-center gap-2 cursor-pointer"
-                          >
-                            <span className="w-2 h-2 rounded-full bg-amber-500" />
-                            <span>Start</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
                     {/* Options ⋮ */}
                     <div className="relative" data-task-dropdown>
                       <button
@@ -2685,49 +2772,69 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     </div>
                   )}
 
-                  {/* Dates Card (Screenshot 2: START 30 Sep 26 · END 30 Sep 26) */}
+                  {/* Dates Card (Interactive with date pickers) */}
                   <div className="px-6 py-2">
                     <div className="border border-slate-200/90 rounded-2xl p-3.5 bg-white shadow-2xs">
                       <div className="flex items-center justify-between text-xs">
                         <div className="font-extrabold text-slate-800 tracking-tight flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-red-600" />
-                          <span>START {formatDateSnippet(editingTask.start_date)}  ·  END {formatDateSnippet(editingTask.end_date)}</span>
+                          <span>START {formatDateSnippet(formStartDate || editingTask.start_date)}  ·  END {formatDateSnippet(formEndDate || editingTask.end_date)}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setIsDatesExpanded(!isDatesExpanded)}
                           className="text-[11px] font-semibold text-red-600 hover:text-red-800 flex items-center gap-1 cursor-pointer"
                         >
-                          <span>{isDatesExpanded ? 'Hide dates' : 'View dates'}</span>
+                          <span>{isDatesExpanded ? 'Hide dates' : 'Edit dates'}</span>
                           {isDatesExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
                       </div>
 
                       {isDatesExpanded && (
-                        <div className="pt-3 mt-3 border-t border-slate-100 grid grid-cols-3 gap-2 text-xs animate-in fade-in">
+                        <div className="pt-3 mt-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs animate-in fade-in">
                           <div>
-                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
-                              Actual start
-                            </span>
-                            <span className="font-semibold text-slate-800">
-                              {formatDateSnippet(editingTask.actual_start) || '- - -'}
-                            </span>
+                            <label className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider mb-1">
+                              Start Date
+                            </label>
+                            <input
+                              type="date"
+                              value={formStartDate}
+                              onChange={(e) => setFormStartDate(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                            />
                           </div>
                           <div>
-                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
-                              Actual end
-                            </span>
-                            <span className="font-semibold text-slate-800">
-                              {formatDateSnippet(editingTask.actual_end) || '- - -'}
-                            </span>
+                            <label className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider mb-1">
+                              End / Forecast
+                            </label>
+                            <input
+                              type="date"
+                              value={formEndDate}
+                              onChange={(e) => setFormEndDate(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                            />
                           </div>
                           <div>
-                            <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider mb-0.5">
-                              Forecast end
-                            </span>
-                            <span className="font-bold text-red-600">
-                              {formatDateSnippet(editingTask.end_date) || '- - -'}
-                            </span>
+                            <label className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider mb-1">
+                              Actual Start
+                            </label>
+                            <input
+                              type="date"
+                              value={formActualStart}
+                              onChange={(e) => setFormActualStart(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider mb-1">
+                              Actual End
+                            </label>
+                            <input
+                              type="date"
+                              value={formActualEnd}
+                              onChange={(e) => setFormActualEnd(e.target.value)}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                            />
                           </div>
                         </div>
                       )}
@@ -3084,12 +3191,9 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       {editingTask.status !== 'COMPLETED' && (
                         <button
                           type="button"
-                          onClick={() => {
-                            handleQuickStatusChange('COMPLETED');
-                            setTimeout(handleSaveTaskDrawer, 50);
-                          }}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                          title="Mark task as completed and synchronize"
+                          onClick={handleCompleteProcess}
+                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                          title="Mark task as completed, set today as completion date and synchronize"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                           <span>Complete Process</span>
@@ -3099,8 +3203,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <button
                         type="button"
                         onClick={handleSaveTaskDrawer}
-                        className="px-4 py-1.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
-                        title="Save all changes, uploaded photos and sync with Schedule"
+                        className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Save updated dates, photos and sync with Schedule"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                         <span>Save Changes</span>

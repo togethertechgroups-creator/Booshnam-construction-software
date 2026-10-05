@@ -247,12 +247,19 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             project_name: pName,
             assignee: t.assigned_to_name || t.assigned_to || (t.assigned_team && t.assigned_team[0]?.name) || 'Staff',
             status: t.status === 'COMPLETED' ? 'COMPLETED' : t.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING',
-            start_date: t.start_date || new Date().toISOString().split('T')[0],
-            end_date: t.end_date || new Date().toISOString().split('T')[0],
+            start_date: t.start_date || p?.start_date || new Date().toISOString().split('T')[0],
+            end_date: (t.status === 'COMPLETED' && t.actual_end) ? t.actual_end.substring(0, 10) : (t.end_date || new Date().toISOString().split('T')[0]),
             actual_start: t.actual_start || t.start_date,
             actual_end: t.actual_end || (t.status === 'COMPLETED' ? (t.end_date || 'Completed') : undefined),
             forecast_end: t.forecast_end || t.end_date,
-            completed_at: t.status === 'COMPLETED' ? (t.completed_at || (t.end_date ? `${t.end_date}, 05:00 PM` : 'Completed')) : undefined,
+            completed_at: t.status === 'COMPLETED' ? (t.completed_at || (t.actual_end ? `${t.actual_end}, 05:00 PM` : 'Completed')) : undefined,
+            milestone_date: (t.status === 'COMPLETED' && (t.actual_end || t.completed_at))
+              ? new Date(t.actual_end || t.completed_at || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              : (t.start_date || p?.start_date)
+              ? new Date(t.start_date || p?.start_date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              : '05 Oct',
+            stage_label: t.status === 'COMPLETED' ? 'Completed' : t.status === 'IN_PROGRESS' ? 'Ongoing' : 'Prepare Quotation',
+            color_theme: t.status === 'COMPLETED' ? 'green' : t.status === 'IN_PROGRESS' ? 'blue' : 'red',
             duration_days: t.duration_days || 1,
             progress_percentage: t.progress_percentage !== undefined ? t.progress_percentage : (t.status === 'COMPLETED' ? 100 : 0),
             remarks: t.completion_remarks || t.description || 'Project quotation milestone.',

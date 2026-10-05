@@ -38,6 +38,10 @@ import { confirmAction } from '../lib/dialogService';
 import { 
   getTermsConditions, 
   saveTermsConditions, 
+  loadDefaultTerms, 
+  TermsCondition 
+} from '../lib/termsService';
+import { HolidaysManager } from '../components/HolidaysManager';
   saveInvoiceTerms, 
   saveQuotationTerms, 
   saveSubconTerms, 
@@ -808,6 +812,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'company', label: 'Company' },
     { id: 'document_fields', label: 'Document & Fields' },
     { id: 'roles_access', label: 'Roles & Access' },
+    { id: 'holidays', label: 'Holidays & Week Offs' },
   ];
 
   const primaryBranch = branches.find(b => b.isPrimary) || branches[0];
@@ -3179,6 +3184,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {activeNav === 'holidays' && (
+        <div className="max-w-7xl mx-auto py-6 w-full">
+          <HolidaysManager onShowToast={showToast} />
         </div>
       )}
     </div>

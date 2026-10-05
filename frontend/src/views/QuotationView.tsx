@@ -275,7 +275,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((l: Lead) => !l.id?.startsWith('lead-'));
+          return parsed;
         }
       }
     } catch {}
@@ -389,7 +389,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.filter((q: Quotation) => !q.id?.startsWith('quo-'));
+          return parsed;
         }
       }
     } catch {}

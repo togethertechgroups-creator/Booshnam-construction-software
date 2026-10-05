@@ -128,11 +128,11 @@ export function App() {
         localStorage.removeItem('booshnam_statement_transactions_v1');
       }
       const leads = localStorage.getItem('booshnam_leads_v2');
-      if (leads && (leads.includes('LD-101') || leads.includes('lead-101') || leads.includes('lead-1'))) {
+      if (leads && (leads.includes('"id":"lead-101"') || leads.includes('"id":"LD-101"'))) {
         localStorage.removeItem('booshnam_leads_v2');
       }
       const quots = localStorage.getItem('booshnam_quotations_v2');
-      if (quots && (quots.includes('QBAG/3078') || quots.includes('quo-1'))) {
+      if (quots && (quots.includes('"id":"quo-101"') || quots.includes('"id":"QBAG/3078"'))) {
         localStorage.removeItem('booshnam_quotations_v2');
       }
       const banks = localStorage.getItem('booshnam_finance_bank_accounts_v4');
@@ -140,23 +140,23 @@ export function App() {
         localStorage.removeItem('booshnam_finance_bank_accounts_v4');
       }
       const finParties = localStorage.getItem('booshnam_finance_parties');
-      if (finParties && (finParties.includes('pty-1') || finParties.includes('pty-2') || finParties.includes('pty-3'))) {
+      if (finParties && (finParties.includes('"id":"pty-101"') || finParties.includes('"id":"pty-102"'))) {
         localStorage.removeItem('booshnam_finance_parties');
       }
       const payReqs = localStorage.getItem('booshnam_finance_payment_requests');
-      if (payReqs && (payReqs.includes('pr-1') || payReqs.includes('pr-2') || payReqs.includes('pr-3'))) {
+      if (payReqs && (payReqs.includes('"id":"pr-101"') || payReqs.includes('"id":"pr-102"'))) {
         localStorage.removeItem('booshnam_finance_payment_requests');
       }
       const finTxns = localStorage.getItem('booshnam_finance_transactions');
-      if (finTxns && (finTxns.includes('tx-1') || finTxns.includes('tx-2') || finTxns.includes('tx-3'))) {
+      if (finTxns && (finTxns.includes('"id":"tx-101"') || finTxns.includes('"id":"tx-102"'))) {
         localStorage.removeItem('booshnam_finance_transactions');
       }
       const finExps = localStorage.getItem('booshnam_finance_expenses_v1');
-      if (finExps && (finExps.includes('exp-1') || finExps.includes('exp-2') || finExps.includes('exp-3'))) {
+      if (finExps && (finExps.includes('"id":"exp-101"') || finExps.includes('"id":"exp-102"'))) {
         localStorage.removeItem('booshnam_finance_expenses_v1');
       }
       const finTrfs = localStorage.getItem('booshnam_finance_transfers_v1');
-      if (finTrfs && (finTrfs.includes('trf-1') || finTrfs.includes('trf-2') || finTrfs.includes('trf-3'))) {
+      if (finTrfs && (finTrfs.includes('"id":"trf-101"') || finTrfs.includes('"id":"trf-102"'))) {
         localStorage.removeItem('booshnam_finance_transfers_v1');
       }
 

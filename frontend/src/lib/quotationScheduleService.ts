@@ -2,185 +2,144 @@ import { WBSTask, Project } from '../types';
 import { QuotationScheduleTask } from './timesheetService';
 export type { QuotationScheduleTask };
 
-const QUOTATION_SCHEDULE_STORAGE_KEY = 'booshnam_quotation_schedule_tasks_v1';
+const QUOTATION_SCHEDULE_STORAGE_KEY = 'booshnam_quotation_schedule_tasks_v3';
 
-// Default realistic sample quotation tasks as depicted in user Image 1
+// Default realistic sample quotation tasks matching user image exactly
 export const DEFAULT_QUOTATION_SCHEDULE_TASKS: QuotationScheduleTask[] = [
   {
     id: 'q-task-01',
     task_name: 'Quotation',
     project_id: 'proj-01',
-    project_name: 'Navalur Residential Enclave',
-    assignee: 'Dasari Uma Sridevi',
-    status: 'COMPLETED',
-    start_date: '2026-06-29',
-    end_date: '2026-06-29',
-    actual_start: '29 Jun 26',
-    actual_end: '29 Jun 26',
-    forecast_end: '29 Jun 26',
+    project_name: 'Project',
+    assignee: 'Sunil Kumar',
+    status: 'NOT_STARTED',
+    start_date: '2026-09-10',
+    end_date: '2026-09-10',
+    milestone_date: '10 Sep',
+    stage_label: 'Send Quotation',
+    color_theme: 'red',
     duration_days: 1,
-    progress_percentage: 1,
-    progress_user: 'Dasari Uma Sridevi',
-    progress_date: 'Jun 29, 26',
-    tag: '--',
-    completed_at: '29 Jun 2026, 04:25 PM',
-    remarks: 'Quotation scope completed & approved by client representative.',
+    progress_percentage: 0,
+    remarks: 'Send finalized commercial quotation to client.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-02',
-    task_name: 'Quotation',
+    task_name: 'Collect Client Details',
     project_id: 'proj-02',
-    project_name: 'Tambaram Commercial Hub',
-    assignee: 'Dasari Uma Sridevi',
-    status: 'COMPLETED',
-    start_date: '2026-06-29',
-    end_date: '2026-06-29',
-    actual_start: '29 Jun 26',
-    actual_end: '29 Jun 26',
-    forecast_end: '29 Jun 26',
+    project_name: 'Project',
+    assignee: 'Sunil Kumar',
+    status: 'NOT_STARTED',
+    start_date: '2026-09-15',
+    end_date: '2026-09-15',
+    milestone_date: '15 Sep',
+    stage_label: 'Collect Details',
+    color_theme: 'red',
     duration_days: 1,
-    progress_percentage: 1,
-    progress_user: 'Dasari Uma Sridevi',
-    progress_date: 'Jun 29, 26',
-    tag: '--',
-    completed_at: '29 Jun 2026, 11:30 AM',
-    remarks: 'Commercial BOQ quotation verified and dispatched.',
+    progress_percentage: 0,
+    remarks: 'Collect site measurements and client requirements.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-03',
     task_name: 'Quotation',
     project_id: 'proj-03',
-    project_name: 'Medavakkam Villa Plots',
-    assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-07-12',
-    end_date: '2026-07-16',
-    completed_at: '16 Jul 2026, 05:15 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Client discount rate negotiated and confirmed.',
+    project_name: 'Navalur Residential Enclave',
+    assignee: 'Dasari Uma Sridevi',
+    status: 'NOT_STARTED',
+    start_date: '2026-06-10',
+    end_date: '2026-06-10',
+    milestone_date: '10 Jun',
+    stage_label: 'Prepare Quotation',
+    color_theme: 'blue',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Prepare BOQ quotation drafts.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-04',
     task_name: 'Quotation',
     project_id: 'proj-04',
-    project_name: 'Velachery Tech Park Extension',
-    assignee: 'Nivedhitha Arumugam',
-    status: 'COMPLETED',
-    start_date: '2026-05-18',
-    end_date: '2026-05-22',
-    completed_at: '22 May 2026, 03:40 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Structural investigation cost estimates finalized.',
+    project_name: 'Tambaram Commercial Hub',
+    assignee: 'Dasari Uma Sridevi',
+    status: 'NOT_STARTED',
+    start_date: '2026-06-18',
+    end_date: '2026-06-18',
+    milestone_date: '18 Jun',
+    stage_label: 'Client Meeting',
+    color_theme: 'green',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Client consultation & scope agreement.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-05',
     task_name: 'Quotation',
-    project_id: 'proj-01',
-    project_name: 'Navalur Residential Enclave',
+    project_id: 'proj-05',
+    project_name: 'Medavakkam Villa Plots',
     assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-07-08',
+    status: 'NOT_STARTED',
+    start_date: '2026-07-12',
     end_date: '2026-07-12',
-    completed_at: '12 Jul 2026, 02:10 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Architectural drawings elevation revision quotation.',
+    milestone_date: '12 Jul',
+    stage_label: 'Follow Up',
+    color_theme: 'orange',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Commercial negotiation follow up with client.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-06',
     task_name: 'Quotation',
-    project_id: 'proj-05',
-    project_name: 'Guindy Industrial Shed',
-    assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-05-12',
-    end_date: '2026-05-16',
-    completed_at: '16 May 2026, 06:00 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'PEB steel structure erection quotation.',
+    project_id: 'proj-06',
+    project_name: 'Velachery Tech Park Extension',
+    assignee: 'Nivedhitha Arumugam',
+    status: 'NOT_STARTED',
+    start_date: '2026-05-20',
+    end_date: '2026-05-20',
+    milestone_date: '20 May',
+    stage_label: 'Review & Update',
+    color_theme: 'red',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Review site rate deviations and revision.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-07',
     task_name: 'Quotation',
-    project_id: 'proj-02',
-    project_name: 'Tambaram Commercial Hub',
-    assignee: 'Ramesh Babu',
-    status: 'COMPLETED',
-    start_date: '2026-06-10',
-    end_date: '2026-06-14',
-    completed_at: '14 Jun 2026, 12:45 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Soil borehole sampling estimation sent.',
+    project_id: 'proj-07',
+    project_name: 'Guindy Industrial Shed',
+    assignee: 'Sunil Kumar',
+    status: 'NOT_STARTED',
+    start_date: '2026-05-28',
+    end_date: '2026-05-28',
+    milestone_date: '28 May',
+    stage_label: 'Client Discussion',
+    color_theme: 'blue',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Structural steel quote technical discussion.',
     group_name: 'Unassigned'
   },
   {
     id: 'q-task-08',
     task_name: 'Quotation',
-    project_id: 'proj-03',
-    project_name: 'Medavakkam Villa Plots',
+    project_id: 'proj-08',
+    project_name: 'Chromepet IT Complex',
     assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-07-03',
-    end_date: '2026-07-07',
-    completed_at: '07 Jul 2026, 01:20 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Boundary wall construction quote accepted.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-09',
-    task_name: 'Quotation',
-    project_id: 'proj-06',
-    project_name: 'Sholinganallur IT Complex',
-    assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-07-09',
-    end_date: '2026-07-13',
-    completed_at: '13 Jul 2026, 05:00 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'HVAC & MEP rough quotation estimate signoff.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-10',
-    task_name: 'Quotation',
-    project_id: 'proj-01',
-    project_name: 'Navalur Residential Enclave',
-    assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-06-22',
-    end_date: '2026-06-26',
-    completed_at: '26 Jun 2026, 04:15 PM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Interior woodwork & tiling quote submitted.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-11',
-    task_name: 'Quotation',
-    project_id: 'proj-04',
-    project_name: 'Velachery Tech Park Extension',
-    assignee: 'Nivedhitha Arumugam',
-    status: 'COMPLETED',
-    start_date: '2026-07-15',
-    end_date: '2026-07-19',
-    completed_at: '19 Jul 2026, 10:45 AM',
-    duration_days: 4,
-    progress_percentage: 100,
-    remarks: 'Subcontractor civil works quotation sign-off.',
+    status: 'NOT_STARTED',
+    start_date: '2026-07-26',
+    end_date: '2026-07-26',
+    milestone_date: '26 Jul',
+    stage_label: 'Final Submission',
+    color_theme: 'purple',
+    duration_days: 1,
+    progress_percentage: 0,
+    remarks: 'Final submission of quotation package.',
     group_name: 'Unassigned'
   }
 ];
@@ -346,6 +305,59 @@ export function saveQuotationScheduleTask(task: QuotationScheduleTask): Quotatio
   const updated = exists 
     ? current.map(t => t.id === task.id ? task : t)
     : [task, ...current];
+  try {
+    localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: updated }));
+  } catch (e) {}
+  return updated;
+}
+
+export function updateQuotationTaskStatus(
+  taskId: string, 
+  newStatus: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'NOT_STARTED'
+): QuotationScheduleTask[] {
+  const current = getQuotationScheduleTasks();
+  const isComp = newStatus === 'COMPLETED';
+  const updated = current.map(t => {
+    if (t.id === taskId) {
+      return {
+        ...t,
+        status: newStatus,
+        progress_percentage: isComp ? 100 : newStatus === 'IN_PROGRESS' ? 50 : 0,
+        completed_at: isComp 
+          ? (t.completed_at || new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ', 04:30 PM')
+          : undefined
+      };
+    }
+    return t;
+  });
+  try {
+    localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: updated }));
+  } catch (e) {}
+  return updated;
+}
+
+export function addQuotationScheduleTask(taskData: Partial<QuotationScheduleTask>): QuotationScheduleTask[] {
+  const current = getQuotationScheduleTasks();
+  const newTask: QuotationScheduleTask = {
+    id: `q-task-${Date.now()}`,
+    task_name: taskData.task_name || 'Quotation',
+    project_id: taskData.project_id || 'proj-01',
+    project_name: taskData.project_name || 'Project',
+    assignee: taskData.assignee || 'Sunil Kumar',
+    status: taskData.status || 'NOT_STARTED',
+    start_date: taskData.start_date || '2026-06-15',
+    end_date: taskData.end_date || '2026-06-15',
+    milestone_date: taskData.milestone_date || '15 Jun',
+    stage_label: taskData.stage_label || 'Prepare Quotation',
+    color_theme: taskData.color_theme || 'blue',
+    duration_days: taskData.duration_days || 1,
+    progress_percentage: taskData.status === 'COMPLETED' ? 100 : 0,
+    remarks: taskData.remarks || 'Quotation milestone',
+    group_name: 'Unassigned'
+  };
+  const updated = [...current, newTask];
   try {
     localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: updated }));

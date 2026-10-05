@@ -32,6 +32,7 @@ export interface Role {
   name: string;
   code: string;
   description: string;
+  roleCode?: string;
 }
 
 

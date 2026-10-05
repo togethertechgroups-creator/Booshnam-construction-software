@@ -20,9 +20,12 @@ export interface QuotationScheduleTask {
   project_id: string;
   project_name: string;
   assignee: string;
-  status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING';
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'PENDING' | 'NOT_STARTED';
   start_date: string; // '2026-06-15'
   end_date: string; // '2026-07-10'
+  milestone_date?: string; // '18 Jun' or '2026-06-18'
+  stage_label?: string; // 'Client Meeting', 'Send Quotation', etc.
+  color_theme?: string; // 'green' | 'blue' | 'red' | 'orange' | 'purple'
   completed_at?: string; // '03 Oct 2026, 04:25 PM'
   duration_days?: number;
   progress_percentage: number;

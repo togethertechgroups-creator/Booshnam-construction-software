@@ -863,8 +863,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Main Settings Body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full">
+        {activeNav === 'holidays' && (
+          <div className="w-full min-w-0">
+            <HolidaysManager onShowToast={showToast} />
+          </div>
+        )}
         {/* Settings Content Panel */}
-        <main className="w-full min-w-0 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 md:p-8">
+        {activeNav !== 'holidays' && (
+          <main className="w-full min-w-0 bg-white rounded-xl border border-slate-200 shadow-2xs p-6 md:p-8">
           {activeNav === 'company' && (
             <div>
               {/* Horizontal Tabs: Company Details | Branches | Business Profile */}
@@ -2141,6 +2147,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
         </main>
+        )}
       </div>
 
       {/* New Branch Page / Modal Matching Screenshot */}
@@ -3186,11 +3193,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {activeNav === 'holidays' && (
-        <div className="max-w-7xl mx-auto py-6 w-full">
-          <HolidaysManager onShowToast={showToast} />
-        </div>
-      )}
     </div>
   );
 };

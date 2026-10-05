@@ -4,7 +4,7 @@ import {
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
   Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
-  Camera, Eye, HardHat
+  Camera, Eye, HardHat, Smartphone
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -30,7 +30,6 @@ import { MOCK_ROLES } from '../lib/mockData';
 import { StaffOverviewView } from '../components/StaffOverviewView';
 import { getStoredRolePermissions, ALL_SYSTEM_MODULES } from '../lib/roleAccess';
 import { saveUserAccount, UserAccount } from '../lib/authService';
-import { LivePhotoAttendanceModal } from '../components/LivePhotoAttendanceModal';
 import { LivePhotoViewModal } from '../components/LivePhotoViewModal';
 import {
   getAllStaffAttendanceRecords,
@@ -93,9 +92,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access' | 'leave_dashboard'>('details');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
-  // Live Photo Punch & Verification Modals State
-  const [isPunchModalOpen, setIsPunchModalOpen] = useState(false);
-  const [punchModalStaffId, setPunchModalStaffId] = useState<string | undefined>(undefined);
+  // Live Photo Verification Proof Modal State
   const [viewPhotoRecord, setViewPhotoRecord] = useState<StaffAttendanceRecord | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<StaffAttendanceRecord[]>(() => getAllStaffAttendanceRecords());
 
@@ -815,109 +812,112 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 2.1: ATTENDANCE ── */}
           {mainTab === 'payroll' && payrollTab === 'attendance' && (
             <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStaffCategoryFilter(staffCategoryFilter === 'OFFICE' ? 'ALL' : 'OFFICE')}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
-                      staffCategoryFilter === 'OFFICE'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Office Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStaffCategoryFilter(staffCategoryFilter === 'SITE' ? 'ALL' : 'SITE')}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors cursor-pointer ${
-                      staffCategoryFilter === 'SITE'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Site Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length})
-                  </button>
-                  {staffCategoryFilter !== 'ALL' && (
+              {/* Action Toolbar: Filter Pills + Search + Summary Counter + Add Staff Button */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                {/* Left Side: Category Pills + Active Filter */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
                     <button
                       type="button"
                       onClick={() => setStaffCategoryFilter('ALL')}
-                      className="text-xs text-indigo-600 hover:underline px-1 font-medium cursor-pointer"
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'ALL'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      Show All ({departmentStaffList.length})
+                      All ({departmentStaffList.length})
                     </button>
-                  )}
-                  <div className="w-px h-4 bg-slate-300 mx-1"></div>
-                  <CustomSelect
-                    value={attendanceActiveFilter}
-                    onChange={(val: any) => setAttendanceActiveFilter(val)}
-                    options={[{ label: 'Active Staff', value: 'active' }, { label: 'All Staff', value: 'all' }]}
-                    triggerClassName="text-xs font-semibold text-indigo-600 border-none bg-transparent hover:bg-slate-50 px-2 rounded"
-                  />
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('OFFICE')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'OFFICE'
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Office Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStaffCategoryFilter('SITE')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                        staffCategoryFilter === 'SITE'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Site Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length})
+                    </button>
+                  </div>
+
+                  <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+
+                  <div className="w-36">
+                    <CustomSelect
+                      value={attendanceActiveFilter}
+                      onChange={(val: any) => setAttendanceActiveFilter(val)}
+                      options={[{ label: 'Active Staff', value: 'active' }, { label: 'All Staff', value: 'all' }]}
+                      variant="brand"
+                      triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
-                    className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition cursor-pointer"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>+ Add {staffCategoryFilter === 'SITE' ? 'Site Staff' : staffCategoryFilter === 'OFFICE' ? 'Office Staff' : 'Staff'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPunchModalStaffId(undefined);
-                      setIsPunchModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm shadow-emerald-600/20 transition cursor-pointer"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Punch Attendance (Live Photo)</span>
-                  </button>
-
-                  <div className="relative w-56 hidden sm:block">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+                {/* Right Side: Search + Summary Stats + Add Staff Button */}
+                <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
+                  {/* Search Bar */}
+                  <div className="relative w-full sm:w-56">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                     <input
                       type="text"
                       placeholder="Search Staff / Code..."
                       value={attendanceSearchQuery}
                       onChange={(e) => setAttendanceSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-7 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      className="w-full pl-9 pr-7 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     />
                     {attendanceSearchQuery && (
                       <button
                         type="button"
                         onClick={() => setAttendanceSearchQuery('')}
-                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
 
-                  <div className="text-right ml-2">
-                    <div className="text-sm font-bold text-slate-900">
+                  {/* Attendance Stats Pill */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-right shrink-0">
+                    <div className="text-xs font-bold text-slate-900">
                       {attendanceStats.present} Present / {attendanceStats.total} Total
                     </div>
-                    <div className="text-[10px] font-medium text-slate-500 flex items-center gap-2 mt-0.5">
+                    <div className="text-[10px] font-medium text-slate-500 flex items-center justify-end gap-2 mt-0.5">
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-red-400 rounded-sm"></span>
+                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
                         {attendanceStats.absent} Absent
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-sm"></span>
+                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span>
                         {attendanceStats.leave} Leave
                       </span>
                       <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-sm"></span>
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
                         {attendanceStats.weekoff} Weekoff
                       </span>
                     </div>
                   </div>
+
+                  {/* + Add Staff Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
+                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-md shrink-0"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>+ Add {staffCategoryFilter === 'SITE' ? 'Site Staff' : staffCategoryFilter === 'OFFICE' ? 'Office Staff' : 'Staff'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -1012,17 +1012,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                   </div>
                                 </div>
                               ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPunchModalStaffId(staff.id);
-                                    setIsPunchModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 rounded-lg text-[11px] font-semibold transition cursor-pointer"
-                                >
-                                  <Camera className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Punch Live Selfie</span>
-                                </button>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200/80 rounded-lg text-[11px] font-medium">
+                                  <Smartphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>Punch via Mobile</span>
+                                </div>
                               )}
                             </td>
 
@@ -1071,19 +1064,6 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                             {/* 5. Attendance Status & Actions */}
                             <td className="py-4 px-6">
                               <div className="flex items-center justify-end gap-2.5">
-                                {/* Quick Punch button for this specific staff */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setPunchModalStaffId(staff.id);
-                                    setIsPunchModalOpen(true);
-                                  }}
-                                  title="Punch with live photo"
-                                  className="p-1.5 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-emerald-200"
-                                >
-                                  <Camera className="w-4 h-4" />
-                                </button>
-
                                 {/* Attendance Status Dropdown */}
                                 <div
                                   className="relative"
@@ -1544,24 +1524,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         </div>
       )}
 
-      {/* ── MODAL: LIVE PHOTO ATTENDANCE PUNCH ── */}
-      <LivePhotoAttendanceModal
-        isOpen={isPunchModalOpen}
-        onClose={() => setIsPunchModalOpen(false)}
-        staffList={staffList}
-        initialStaffId={punchModalStaffId}
-        onSuccess={(msg) => triggerToast(msg)}
-      />
-
       {/* ── MODAL: LIVE PHOTO PROOF VIEWER ── */}
       <LivePhotoViewModal
         record={viewPhotoRecord}
         onClose={() => setViewPhotoRecord(null)}
-        onRecapture={(staffId) => {
-          setViewPhotoRecord(null);
-          setPunchModalStaffId(staffId);
-          setIsPunchModalOpen(true);
-        }}
       />
     </div>
   );

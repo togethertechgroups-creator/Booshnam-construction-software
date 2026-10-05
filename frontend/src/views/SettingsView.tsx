@@ -39,15 +39,14 @@ import {
   getTermsConditions, 
   saveTermsConditions, 
   loadDefaultTerms, 
-  TermsCondition 
-} from '../lib/termsService';
-import { HolidaysManager } from '../components/HolidaysManager';
+  TermsCondition,
   saveInvoiceTerms, 
   saveQuotationTerms, 
   saveSubconTerms, 
   saveBOQTerms, 
   savePurchaseOrderTerms 
 } from '../lib/termsService';
+import { HolidaysManager } from '../components/HolidaysManager';
 
 interface Branch {
   id: string;

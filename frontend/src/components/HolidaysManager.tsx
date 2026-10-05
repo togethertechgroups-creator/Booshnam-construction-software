@@ -446,52 +446,6 @@ export const HolidaysManager: React.FC<HolidaysManagerProps> = ({ onShowToast })
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-150">
-      {/* ── TOP KPI / SUMMARY METRICS ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Holidays</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">In Year {selectedYear}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <CalendarIcon className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Upcoming</p>
-            <h3 className="text-2xl font-bold text-emerald-600 mt-1">{stats.upcoming}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Remaining this year</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <Sparkles className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">National / Gazetted</p>
-            <h3 className="text-2xl font-bold text-amber-600 mt-1">{stats.nationalGazetted}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Official public days</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-            <Flag className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Festivals & Company</p>
-            <h3 className="text-2xl font-bold text-indigo-600 mt-1">{stats.festival + stats.companySite}</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Site & Office off-days</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-            <HardHat className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
 
       {/* ── ACTION CONTROLS BAR ── */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">

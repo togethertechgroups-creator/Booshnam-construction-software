@@ -705,6 +705,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       const isStatusInProgress = task.status === 'IN_PROGRESS';
                       const isStatusPending = task.status === 'PENDING';
                       const isHovered = hoveredMarkerTaskId === task.id;
+                      const openUpwards = idx >= (filteredQuotationTasks.length <= 3 ? Math.max(1, filteredQuotationTasks.length - 1) : 3);
 
                       // Status dynamic color mapping:
                       // Completed MUST show Green as instructed in audio!
@@ -781,7 +782,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             {activeTaskStatusMenuId === task.id && (
                               <div 
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute left-2 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs animate-in fade-in zoom-in-95"
+                                className={`absolute left-2 ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1'} z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs animate-in fade-in zoom-in-95`}
                               >
                                 {(['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'PENDING'] as const).map(st => (
                                   <button
@@ -914,7 +915,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             {activeRowMenuId === task.id && (
                               <div 
                                 onClick={(e) => e.stopPropagation()}
-                                className="absolute right-4 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-44 text-xs animate-in fade-in zoom-in-95"
+                                className={`absolute right-4 ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1'} z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-44 text-xs animate-in fade-in zoom-in-95`}
                               >
                                 <button
                                   onClick={() => {
@@ -1250,7 +1251,9 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         </td>
                       </tr>
                     ) : (
-                      filteredTimesheets.map((entry) => (
+                      filteredTimesheets.map((entry, idx) => {
+                        const isTimesheetLowerRow = idx >= (filteredTimesheets.length <= 3 ? Math.max(1, filteredTimesheets.length - 1) : 3);
+                        return (
                         <tr 
                           key={entry.id}
                           onClick={() => setViewingTimesheet(entry)}
@@ -1297,7 +1300,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
                             {/* Dropdown Menu */}
                             {activeRowMenuId === entry.id && (
-                              <div className="absolute right-4 top-full mt-1 z-40 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs text-left animate-in fade-in zoom-in-95">
+                              <div className={`absolute right-4 ${isTimesheetLowerRow ? 'bottom-full mb-1.5' : 'top-full mt-1'} z-40 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-36 text-xs text-left animate-in fade-in zoom-in-95`}>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1336,7 +1339,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             )}
                           </td>
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
 

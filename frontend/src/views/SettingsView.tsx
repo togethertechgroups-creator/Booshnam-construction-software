@@ -268,13 +268,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Only include staff who have an assigned role & login account, AND belong to current active department
   const activeTeamMembers = useMemo(() => {
     const accounts = getUserAccounts();
-    const accountStaffIds = new Set(accounts.map(a => a.staff_id).filter(Boolean));
-    const accountPhones = new Set(accounts.map(a => a.phone).filter(Boolean));
 
     return staffList.filter(s => {
-      // Must have an active login account / role assigned by admin
-      const hasAccount = Boolean(s.has_login_account) || accountStaffIds.has(s.id) || accountPhones.has(s.phone);
-      if (!hasAccount) return false;
+      // Must have an explicit active login account / role assigned by admin via Add Member
+      if (!s.has_login_account) return false;
 
       // Filter by active department
       if (activeDeptId !== 'booshnam_associates') {

@@ -244,14 +244,19 @@ export function deleteUserAccount(identifier: string): void {
   const current = getUserAccounts();
   const clean = identifier.trim().toLowerCase();
   const cleanDigits = identifier.replace(/\D/g, '');
-  const updated = current.filter(a => 
-    a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super' || (
-      a.id !== identifier && 
-      a.staff_id !== identifier && 
-      a.username.toLowerCase() !== clean &&
-      (!cleanDigits || a.phone?.replace(/\D/g, '') !== cleanDigits)
-    )
-  );
+  const updated = current.filter(a => {
+    // Only preserve the primary root master superadmin accounts
+    if (a.id === 'usr-super' || a.username === 'superadmin') {
+      return true;
+    }
+    const aCleanDigits = (a.phone || '').replace(/\D/g, '');
+    const isTarget = 
+      a.id === identifier || 
+      a.staff_id === identifier || 
+      a.username.toLowerCase() === clean || 
+      (cleanDigits && cleanDigits.length >= 7 && (aCleanDigits.endsWith(cleanDigits) || cleanDigits.endsWith(aCleanDigits)));
+    return !isTarget;
+  });
   try {
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updated }));

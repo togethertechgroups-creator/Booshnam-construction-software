@@ -152,10 +152,15 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
           const isDone = t.status === 'COMPLETED' || (t.progress_percentage !== undefined && t.progress_percentage >= 100);
           const isOngoing = !isDone && (t.status === 'IN_PROGRESS' || (t.progress_percentage !== undefined && t.progress_percentage > 0));
 
+          const rawTaskTitle = (t.title || '').trim();
+          const cleanTaskName = (rawTaskTitle.toLowerCase().includes('scope') || rawTaskTitle.toLowerCase().includes('quotation & scope'))
+            ? 'Quotation'
+            : (rawTaskTitle || 'Quotation');
+
           const extractedTask: QuotationScheduleTask = {
             id: `proj-task-${t.id}`,
             wbs_task_id: t.id,
-            task_name: t.title || 'Quotation',
+            task_name: cleanTaskName,
             project_id: pid,
             project_name: pName,
             assignee: t.assigned_to_name || t.assigned_to || (t.assigned_team && t.assigned_team[0]?.name) || 'Staff',
@@ -206,6 +211,9 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
 
   // Then append any stored tasks that are not already matched by a live project task
   stored.forEach(st => {
+    if (st.task_name && (st.task_name.toLowerCase().includes('scope') || st.task_name.toLowerCase().includes('quotation & scope'))) {
+      st.task_name = 'Quotation';
+    }
     const isAlreadyCovered = combined.some(c => 
       c.id === st.id || 
       (c.wbs_task_id && st.wbs_task_id && c.wbs_task_id === st.wbs_task_id) ||
@@ -218,6 +226,9 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
 
   // 5. Strictly synchronize each task's progress and status with its actual live WBS task
   combined.forEach(t => {
+    if (t.task_name && (t.task_name.toLowerCase().includes('scope') || t.task_name.toLowerCase().includes('quotation & scope'))) {
+      t.task_name = 'Quotation';
+    }
     if (t.project_id) {
       try {
         const rawWbs = localStorage.getItem(`booshnam_wbs_tasks_v2_${t.project_id}`) || localStorage.getItem(`booshnam_wbs_tasks_v10_${t.project_id}`);

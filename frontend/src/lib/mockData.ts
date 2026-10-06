@@ -99,7 +99,7 @@ export const MOCK_PROJECT_TRANSACTIONS: ProjectTransactionRecord[] = [];
 // Predefined Default Tasks Template covering all company departments
 // ----------------------------------------------------
 export const PREDEFINED_TASKS_TEMPLATE: PredefinedTaskTemplate[] = [
-  { id: 1, code: 'TSK-01', title: 'Quotation & Scope Verification', department: 'MARKETING', default_priority: 'HIGH', description: 'Prepare commercial cost estimation and send quote to prospective client.' },
+  { id: 1, code: 'TSK-01', title: 'Quotation', department: 'MARKETING', default_priority: 'HIGH', description: 'Prepare commercial cost estimation and send quote to prospective client.' },
   { id: 2, code: 'TSK-02', title: 'Boundary & Topographical Survey', department: 'SURVEY', default_priority: 'HIGH', description: 'Field team site reconnaissance, DGPS boundary demarcation, and contour survey.' },
   { id: 3, code: 'TSK-03', title: 'Soil Investigation & Borehole Drilling', department: 'SOIL_INVESTIGATION', default_priority: 'URGENT', description: 'Geotechnical borehole drilling, visual stratum inspection, and GPS log.' },
   { id: 4, code: 'TSK-04', title: 'Soil Core Sample Collection & Lab Testing', department: 'SOIL_INVESTIGATION', default_priority: 'HIGH', description: 'Extract soil core samples and perform California Bearing Ratio (CBR), SPT, and moisture tests.' },

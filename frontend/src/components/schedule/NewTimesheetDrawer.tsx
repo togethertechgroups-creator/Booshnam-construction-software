@@ -33,7 +33,7 @@ const COMMON_PARTIES = [
 ];
 
 const COMMON_TASKS = [
-  'Quotation & Scope Verification',
+  'Quotation',
   'Site Topographical & Soil Inspection',
   'Boundary & DGPS Demarcation',
   'Structural Foundation Vetting',

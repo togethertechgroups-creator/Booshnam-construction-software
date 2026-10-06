@@ -59,6 +59,10 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
 
   if (!isOpen || !task) return null;
 
+  const cleanTaskTitle = (task.task_name && (task.task_name.toLowerCase().includes('scope') || task.task_name.toLowerCase().includes('quotation & scope')))
+    ? 'Quotation'
+    : (task.task_name || 'Quotation');
+
   // Format date helper: "2026-06-29" -> "29 Jun 26"
   const formatDisplayDate = (dStr?: string) => {
     if (!dStr) return '- - -';
@@ -197,7 +201,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(`Are you sure you want to delete "${task.task_name}"?`)) {
+                  if (window.confirm(`Are you sure you want to delete "${cleanTaskTitle}"?`)) {
                     onDeleteTask(task.id);
                     onClose();
                   }
@@ -228,7 +232,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
           {/* Title Row: Quotation + Photo Icon */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              {task.task_name}
+              {cleanTaskTitle}
             </h1>
             <button
               type="button"
@@ -535,7 +539,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Task Scope:</span>
-                  <span className="font-bold text-slate-800">{task.task_name}</span>
+                  <span className="font-bold text-slate-800">{cleanTaskTitle}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Tag / Category:</span>
@@ -716,7 +720,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-5 py-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-white text-xs">
-              <span className="font-semibold">{task.task_name} - Inspection Proof</span>
+              <span className="font-semibold">{cleanTaskTitle} - Inspection Proof</span>
               <button
                 type="button"
                 onClick={() => setLightboxOpen(false)}
@@ -728,7 +732,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
             <div className="p-4 flex items-center justify-center bg-black min-h-[350px] max-h-[70vh] overflow-hidden">
               <img
                 src={samplePhotoUrl}
-                alt={task.task_name}
+                alt={cleanTaskTitle}
                 className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-lg"
               />
             </div>

@@ -862,6 +862,10 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         ? 'ring-blue-200' 
                         : 'ring-red-200';
 
+                      const cleanTaskTitle = (task.task_name && (task.task_name.toLowerCase().includes('scope') || task.task_name.toLowerCase().includes('quotation & scope')))
+                        ? 'Quotation'
+                        : (task.task_name || 'Quotation');
+
                       return (
                         <tr 
                           key={task.id}
@@ -878,7 +882,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             className="px-3 py-2.5 border-r border-slate-200 cursor-pointer hover:bg-red-50/40 transition-colors max-w-[190px]"
                           >
                             <div className="font-bold text-slate-900 leading-tight flex items-center justify-between">
-                              <span className="truncate hover:text-red-600 transition-colors block">{task.task_name}</span>
+                              <span className="truncate hover:text-red-600 transition-colors block">{cleanTaskTitle}</span>
                               {!placement.isCurrentYear && (
                                 <span 
                                   onClick={(e) => {
@@ -972,7 +976,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                             </span>
                                           </div>
                                           <div className="font-bold text-xs text-slate-900 mt-0.5">
-                                            {task.stage_label || task.task_name}
+                                            {task.stage_label || cleanTaskTitle}
                                           </div>
                                           <div className="text-[10px] text-slate-500 truncate">
                                             {task.project_name}

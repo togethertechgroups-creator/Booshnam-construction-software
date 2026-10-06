@@ -198,34 +198,38 @@ export function App() {
               t.project_name !== 'Guindy Industrial Shed' &&
               t.project_name !== 'Chromepet IT Complex'
             ).map((t: any) => {
-              if (t.project_id) {
+              let updatedTask = { ...t };
+              if (updatedTask.task_name && (updatedTask.task_name.toLowerCase().includes('scope') || updatedTask.task_name.toLowerCase().includes('quotation & scope'))) {
+                updatedTask.task_name = 'Quotation';
+              }
+              if (updatedTask.project_id) {
                 try {
-                  const rawWbs = localStorage.getItem(`booshnam_wbs_tasks_v2_${t.project_id}`) || localStorage.getItem(`booshnam_wbs_tasks_v10_${t.project_id}`);
+                  const rawWbs = localStorage.getItem(`booshnam_wbs_tasks_v2_${updatedTask.project_id}`) || localStorage.getItem(`booshnam_wbs_tasks_v10_${updatedTask.project_id}`);
                   if (rawWbs) {
                     const wbsList = JSON.parse(rawWbs);
                     if (Array.isArray(wbsList)) {
                       const matched = wbsList.find((w: any) => 
-                        w.id === t.wbs_task_id || 
-                        w.id === t.id?.replace('proj-task-', '') ||
-                        w.title === t.task_name ||
+                        w.id === updatedTask.wbs_task_id || 
+                        w.id === updatedTask.id?.replace('proj-task-', '') ||
+                        w.title === updatedTask.task_name ||
                         (w.title && w.title.toLowerCase().includes('quot'))
                       );
                       if (matched) {
                         const isDone = matched.status === 'COMPLETED' || (matched.progress_percentage !== undefined && matched.progress_percentage >= 100);
                         const isOngoing = !isDone && (matched.status === 'IN_PROGRESS' || (matched.progress_percentage !== undefined && matched.progress_percentage > 0));
                         if (isDone) {
-                          return { ...t, status: 'COMPLETED', progress_percentage: 100, stage_label: 'Completed', color_theme: 'green' };
+                          return { ...updatedTask, status: 'COMPLETED', progress_percentage: 100, stage_label: 'Completed', color_theme: 'green' };
                         } else if (isOngoing) {
-                          return { ...t, status: 'IN_PROGRESS', progress_percentage: matched.progress_percentage || 50, stage_label: 'Ongoing', color_theme: 'blue' };
+                          return { ...updatedTask, status: 'IN_PROGRESS', progress_percentage: matched.progress_percentage || 50, stage_label: 'Ongoing', color_theme: 'blue' };
                         } else {
-                          return { ...t, status: 'PENDING', progress_percentage: 0, stage_label: 'Not Started Yet', color_theme: 'red' };
+                          return { ...updatedTask, status: 'PENDING', progress_percentage: 0, stage_label: 'Not Started Yet', color_theme: 'red' };
                         }
                       }
                     }
                   }
                 } catch (e) {}
               }
-              return t;
+              return updatedTask;
             });
             localStorage.setItem('booshnam_quotation_schedule_tasks_v3', JSON.stringify(cleaned));
             window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: cleaned }));
@@ -245,6 +249,7 @@ export function App() {
       // Sanitize any existing project task lists in localStorage:
       // 1. Reset any auto-completed mock tasks without user completion proof to TODO (Start) with 0% progress
       // 2. Clear auto-subtask flag on Site Visit if it has no parent
+      // 3. Rename 'Quotation & Scope Verification' to 'Quotation'
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const k = localStorage.key(i);
@@ -256,6 +261,11 @@ export function App() {
                 let changed = false;
                 const cleanedTasks = parsedTasks.map((t: any) => {
                   let next = { ...t };
+                  if (next.title && (next.title.toLowerCase().includes('scope') || next.title.toLowerCase().includes('quotation & scope'))) {
+                    next.title = 'Quotation';
+                    if (next.name) next.name = 'Quotation';
+                    changed = true;
+                  }
                   if (next.title === 'Site Visit' && !next.parent_id && next.is_subtask) {
                     next.is_subtask = false;
                     changed = true;

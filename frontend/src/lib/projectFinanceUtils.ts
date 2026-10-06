@@ -31,19 +31,25 @@ export interface ProjectFinancialSummary {
 }
 
 /**
- * Robustly load all transactions for a project from all potential storage keys & sync sources
+ * Robustly load all transactions for a project strictly scoped to this project
  */
 export function getProjectTransactions(project: { id?: string; code?: string; name?: string }): ProjectTransaction[] {
   const txMap = new Map<string, ProjectTransaction>();
 
-  const primaryKeys = [
-    project.id ? `siteops_project_transactions_${project.id}` : null,
-    project.code ? `siteops_project_transactions_${project.code}` : null,
-    project.name ? `siteops_project_transactions_${project.name}` : null,
-    'siteops_project_transactions_default'
-  ].filter(Boolean) as string[];
+  const pId = (project.id || '').trim();
+  const pCode = (project.code || '').trim();
+  const pName = (project.name || '').trim().toLowerCase();
 
-  // 1. Check primary keys
+  // 1. Only query storage keys that explicitly belong to this project
+  const primaryKeys: string[] = [];
+  if (pId) primaryKeys.push(`siteops_project_transactions_${pId}`);
+  if (pCode && pCode !== pId) primaryKeys.push(`siteops_project_transactions_${pCode}`);
+  
+  // Only use default key if project has neither id nor code (e.g. temporary sandbox)
+  if (!pId && !pCode) {
+    primaryKeys.push('siteops_project_transactions_default');
+  }
+
   for (const k of primaryKeys) {
     try {
       const raw = localStorage.getItem(k);
@@ -60,28 +66,31 @@ export function getProjectTransactions(project: { id?: string; code?: string; na
     } catch (e) {}
   }
 
-  // 2. Scan any other localStorage keys starting with siteops_project_transactions_
+  // 2. Scan other localStorage keys with strict project matching (never bleed default into known projects)
   try {
-    const pName = (project.name || '').trim().toLowerCase();
-    const pId = (project.id || '').trim().toLowerCase();
-    const pCode = (project.code || '').trim().toLowerCase();
-
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k && k.startsWith('siteops_project_transactions_') && !primaryKeys.includes(k)) {
+        // Skip default storage key if we are dealing with a real project that has id/code
+        if (k === 'siteops_project_transactions_default' && (pId || pCode)) continue;
+        
         const raw = localStorage.getItem(k);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             for (const tx of parsed) {
               if (!tx || !tx.id || txMap.has(tx.id)) continue;
-              // Check if transaction belongs to this project
-              const keyMatches = (pId && k.includes(pId)) || (pCode && k.includes(pCode)) || (pName && k.toLowerCase().includes(pName));
-              const txMatches = 
-                (tx.project && (tx.project === project.id || tx.project === project.code)) ||
-                (tx.projectName && pName && tx.projectName.trim().toLowerCase() === pName);
+              
+              const txProj = tx.project || (tx as any).projectId || (tx as any).project_id;
+              const txProjCode = (tx as any).projectCode || (tx as any).project_code;
+              const txProjName = (tx.projectName || (tx as any).project_name || '').trim().toLowerCase();
 
-              if (keyMatches || txMatches) {
+              const matchesId = pId && txProj && (txProj === pId || txProj === pCode);
+              const matchesCode = pCode && (txProjCode === pCode || txProj === pCode);
+              const matchesName = pName && txProjName && txProjName === pName;
+
+              // Only include if positively matched to this project
+              if (matchesId || matchesCode || (matchesName && (!txProj || txProj === pId || txProj === pCode))) {
                 txMap.set(tx.id, tx);
               }
             }
@@ -91,27 +100,34 @@ export function getProjectTransactions(project: { id?: string; code?: string; na
     }
   } catch (e) {}
 
-  // 3. Scan booshnam_finance_transactions from Accounts & Finance sync
-  if (project.name) {
+  // 3. Scan booshnam_finance_transactions from Accounts & Finance sync with strict project match
+  if (pName || pId || pCode) {
     try {
       const raw = localStorage.getItem('booshnam_finance_transactions');
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const pName = project.name.trim().toLowerCase();
           for (const ft of parsed) {
-            if (!ft || !ft.projectName) continue;
-            if (ft.projectName.trim().toLowerCase() === pName) {
+            if (!ft) continue;
+            const ftProjId = (ft.projectId || ft.project_id || '').trim();
+            const ftProjCode = (ft.projectCode || ft.project_code || '').trim();
+            const ftProjName = (ft.projectName || ft.project_name || '').trim().toLowerCase();
+
+            const matchesId = pId && ftProjId && ftProjId === pId;
+            const matchesCode = pCode && (ftProjCode === pCode || ftProjId === pCode);
+            const matchesName = pName && ftProjName && ftProjName === pName && (!ftProjId || ftProjId === pId || ftProjId === pCode);
+
+            if (matchesId || matchesCode || matchesName) {
               const mappedId = `ft-${ft.id}`;
               const origId = ft.id;
               if (!txMap.has(origId) && !txMap.has(mappedId)) {
                 txMap.set(mappedId, {
                   id: mappedId,
                   transaction_number: ft.txnCode || ft.referenceNo || `#FT-${ft.id}`,
-                  date: ft.date,
+                  date: ft.date || new Date().toISOString().split('T')[0],
                   time: '12:00 PM',
                   type: ft.type === 'INCOME' ? 'IN' : 'OUT',
-                  party_name: ft.partyName || 'Party',
+                  party_name: ft.partyName || ft.party || 'Party',
                   category: ft.category || 'Finance Sync',
                   transaction_sub_type: ft.transactionType || (ft.type === 'INCOME' ? 'Payment In' : 'Payment Out'),
                   amount: Number(ft.amount) || 0,
@@ -142,12 +158,13 @@ export function getProjectTransactions(project: { id?: string; code?: string; na
  */
 export function getProjectPaymentRequests(project: { id?: string; code?: string; name?: string }): PaymentRequest[] {
   const prMap = new Map<string, PaymentRequest>();
-  const keysToTry = [
-    project.id ? `siteops_payment_requests_${project.id}` : null,
-    project.code ? `siteops_payment_requests_${project.code}` : null,
-    project.name ? `siteops_payment_requests_${project.name}` : null,
-    'siteops_payment_requests_default'
-  ].filter(Boolean) as string[];
+  const pId = (project.id || '').trim();
+  const pCode = (project.code || '').trim();
+
+  const keysToTry: string[] = [];
+  if (pId) keysToTry.push(`siteops_payment_requests_${pId}`);
+  if (pCode && pCode !== pId) keysToTry.push(`siteops_payment_requests_${pCode}`);
+  if (!pId && !pCode) keysToTry.push('siteops_payment_requests_default');
 
   for (const k of keysToTry) {
     try {
@@ -190,6 +207,7 @@ export function calculateProjectFinancialSummary(
   const totalExpense = cashOut;
 
   // 2. Sales Invoicing
+  // Explicit sales invoices recorded for this project
   const explicitSales = transactions
     .filter(t => 
       t.transaction_sub_type === 'Sales Invoice' || 
@@ -198,10 +216,8 @@ export function calculateProjectFinancialSummary(
     )
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  // If explicit sales invoices exist, use them. If not, use client cash in (payment in) or stored sales_invoice
-  const totalSalesInvoice = explicitSales > 0 
-    ? explicitSales 
-    : (project.sales_invoice && project.sales_invoice > 0 ? project.sales_invoice : cashIn);
+  // If explicit sales invoices exist, use them. Only fall back to project.sales_invoice if positive, otherwise 0
+  const totalSalesInvoice = explicitSales > 0 ? explicitSales : Number(project.sales_invoice || 0);
 
   // 3. Estimated Budget & BOQ Value
   let estimatedBudget = Number(project.estimated_budget || (project as any).project_value || 0);
@@ -231,18 +247,33 @@ export function calculateProjectFinancialSummary(
     } catch (e) {}
   }
 
-  // If still 0, deduce from sales or transactions
-  if (boqValue === 0) {
-    boqValue = totalSalesInvoice > 0 ? totalSalesInvoice : (estimatedBudget > 0 ? estimatedBudget : cashIn);
+  // Align BOQ and Budget if one was set and the other is 0
+  if (boqValue === 0 && estimatedBudget > 0) {
+    boqValue = estimatedBudget;
   }
-  if (estimatedBudget === 0) {
-    estimatedBudget = boqValue > 0 ? boqValue : (cashIn > 0 ? cashIn : 0);
+  if (estimatedBudget === 0 && boqValue > 0) {
+    estimatedBudget = boqValue;
   }
 
   // 4. Work Done Value
+  // Work done represents the value of work completed so far, based on task completion % or explicit work_done
+  let progressPct = Number(project.progress_percentage || 0);
+  if (project.id) {
+    try {
+      const rawTasks = localStorage.getItem(`booshnam_wbs_tasks_v2_${project.id}`);
+      if (rawTasks) {
+        const parsed = JSON.parse(rawTasks);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const done = parsed.filter((t: any) => t.status === 'COMPLETED').length;
+          progressPct = Math.round((done / parsed.length) * 100);
+        }
+      }
+    } catch (e) {}
+  }
+
   const workDoneValue = Number(project.work_done || 0) > 0
     ? Number(project.work_done)
-    : (totalSalesInvoice > 0 ? totalSalesInvoice : (boqValue > 0 ? Math.min(boqValue, cashIn) : cashIn));
+    : Math.round((progressPct / 100) * boqValue);
 
   // 5. Estimated Margin
   const estimatedMargin = project.estimated_margin !== undefined && project.estimated_margin > 0
@@ -250,10 +281,10 @@ export function calculateProjectFinancialSummary(
     : Math.max(0, boqValue - (estimatedBudget || cashOut));
 
   // 6. Receivables & Payables
-  // Receivables = client balance to receive: BOQ or Billed minus Received (cashIn)
+  // Receivables = billed amount not yet collected (totalSalesInvoice - cashIn)
   let receivables = project.receivables !== undefined && project.receivables > 0
     ? project.receivables
-    : Math.max(0, boqValue - cashIn);
+    : Math.max(0, totalSalesInvoice - cashIn);
 
   // Payables = pending payment requests + subcontractor balance
   let subconBalance = 0;
@@ -301,7 +332,7 @@ export function calculateProjectFinancialSummary(
       }
     });
 
-  // 8. Cost Code & Category Breakdown
+  // 8. Cost Code & Category Breakdown (only if transactions exist)
   const costCodeMap = new Map<string, number>();
   transactions
     .filter(t => t.type === 'OUT')
@@ -312,7 +343,6 @@ export function calculateProjectFinancialSummary(
 
   const costCodeBreakdown: ProjectCostCodeExpense[] = [];
   costCodeMap.forEach((expense, code) => {
-    // If estimated budget exists, assign a proportional benchmark or compare
     const benchmarkBudget = estimatedBudget > 0 ? Math.round(estimatedBudget / Math.max(1, costCodeMap.size)) : expense;
     const variance = benchmarkBudget > 0 ? Math.round(((expense - benchmarkBudget) / benchmarkBudget) * 100) : 0;
     const isOverBudget = expense > benchmarkBudget && benchmarkBudget > 0;
@@ -382,7 +412,7 @@ export function syncProjectFinancialsToStorage(
     // Update financial fields directly on target project
     targetProject.cash_in = summary.cashIn;
     targetProject.cash_out = summary.cashOut;
-    targetProject.actual_cost = summary.cashOut;
+    targetProject.actual_cost = summary.totalExpense;
     targetProject.sales_invoice = summary.totalSalesInvoice;
     targetProject.receivables = summary.receivables;
     targetProject.payables = summary.payables;
@@ -435,21 +465,30 @@ export function syncAllProjectsFinancials(): Project[] {
       const summary = calculateProjectFinancialSummary(p);
       const prevIn = p.cash_in || 0;
       const prevOut = p.cash_out || 0;
+      const prevActual = p.actual_cost || 0;
+      const prevSales = p.sales_invoice || 0;
+      const prevWorkDone = p.work_done || 0;
 
-      if (summary.cashIn !== prevIn || summary.cashOut !== prevOut || !p.sales_invoice) {
+      if (
+        summary.cashIn !== prevIn || 
+        summary.cashOut !== prevOut || 
+        summary.totalExpense !== prevActual ||
+        summary.totalSalesInvoice !== prevSales ||
+        summary.workDoneValue !== prevWorkDone
+      ) {
         hasChanges = true;
         return {
           ...p,
           cash_in: summary.cashIn,
           cash_out: summary.cashOut,
-          actual_cost: summary.cashOut,
+          actual_cost: summary.totalExpense,
           sales_invoice: summary.totalSalesInvoice,
           receivables: summary.receivables,
           payables: summary.payables,
           work_done: summary.workDoneValue,
           site_staff_expense: summary.siteStaffExpense,
-          labourContractorExpense: summary.labourContractorExpense,
-          officeStaffExpense: summary.officeStaffExpense,
+          labour_contractor_expense: summary.labourContractorExpense,
+          office_staff_expense: summary.officeStaffExpense,
           estimated_budget: p.estimated_budget || summary.estimatedBudget,
           boq_value: p.boq_value || summary.boqValue
         };

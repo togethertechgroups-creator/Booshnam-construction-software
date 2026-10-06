@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { MOCK_USER } from '../lib/mockData';
-import { logoutUser, getCurrentUserAccount } from '../lib/authService';
+import { logoutUser, getCurrentUserAccount, saveUserAccount, setCurrentUserAccount, UserAccount } from '../lib/authService';
+import { getStaffMembers, saveStaffMember } from '../lib/staffService';
 import { confirmSignOut } from '../lib/dialogService';
 import { 
   getNotifications, markAllNotificationsRead, markNotificationRead, AppNotification 
@@ -28,8 +29,18 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   const resolveActiveUser = (): User => {
     try {
       const active = getCurrentUserAccount();
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('siteops_user') : null;
+      const parsedStored = stored ? JSON.parse(stored) : null;
+      const cachedAvatar = typeof window !== 'undefined' ? localStorage.getItem('siteops_user_avatar') || '' : '';
+      const resolvedAvatar = (active as any)?.avatar_url || parsedStored?.avatar_url || cachedAvatar || '';
+
       if (active) {
         const parts = (active.staff_name || active.username || 'Staff').split(' ');
+        const rawDigits = (active.phone || '').replace(/\D/g, '');
+        const phoneFormatted = rawDigits.length >= 10 
+          ? `+91 ${rawDigits.slice(-10, -5)} ${rawDigits.slice(-5)}` 
+          : (active.phone || '+91 94440 06047');
+
         return {
           id: active.id,
           first_name: parts[0] || 'Staff',
@@ -38,7 +49,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           email: `${active.username.toLowerCase()}@booshnam.com`,
           role_name: active.role_name,
           role_code: active.role_code,
-          phone: '+91 94440 06047',
+          phone: phoneFormatted,
+          avatar_url: resolvedAvatar,
           is_org_admin: active.role_code === 'SUPER_ADMIN' || active.role_code === 'ADMIN',
           is_site_worker: active.role_code === 'SITE_ENGINEER' || active.role_code === 'SUPERVISOR',
           active_role: {
@@ -49,8 +61,12 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }
         };
       }
-      const stored = localStorage.getItem('siteops_user');
-      if (stored) return JSON.parse(stored);
+      if (parsedStored) {
+        return {
+          ...parsedStored,
+          avatar_url: resolvedAvatar,
+        };
+      }
     } catch (e) {
       console.warn('Failed to parse active user from localStorage', e);
     }
@@ -132,10 +148,12 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   const openProfileModal = () => {
     setShowProfileDropdown(false);
     setShowNotificationDropdown(false);
-    setEditName(currentUser.first_name || 'Priya');
-    setEditPhone(currentUser.phone || '9047549682');
+    setEditName(currentUser.first_name || 'Staff');
+    const digitsOnly = (currentUser.phone || '').replace(/\D/g, '').slice(-10);
+    setEditPhone(digitsOnly || '9444006047');
     setEditDesignation(currentUser.role_name || 'Owner / Director');
-    setEditAvatar(currentUser.avatar_url || '');
+    const avatar = currentUser.avatar_url || localStorage.getItem('siteops_user_avatar') || '';
+    setEditAvatar(avatar);
     setShowProfileModal(true);
     // Tell parent to close the hamburger / sidebar
     window.dispatchEvent(new CustomEvent('siteops_profile_modal_open'));
@@ -199,16 +217,50 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanPhone10 = editPhone.replace(/\D/g, '').slice(-10);
+    if (!cleanPhone10 || cleanPhone10.length !== 10) {
+      triggerToast('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    const formattedPhone = `+91 ${cleanPhone10.slice(0, 5)} ${cleanPhone10.slice(5)}`;
     const updated: User = {
       ...currentUser,
       first_name: editName,
-      phone: editPhone,
+      username: editName,
+      phone: formattedPhone,
       role_name: editDesignation,
       avatar_url: editAvatar,
     };
     setCurrentUser(updated);
     try {
       localStorage.setItem('siteops_user', JSON.stringify(updated));
+      if (editAvatar) {
+        localStorage.setItem('siteops_user_avatar', editAvatar);
+      }
+      const activeAcc = getCurrentUserAccount();
+      if (activeAcc) {
+        const updatedAcc: UserAccount = {
+          ...activeAcc,
+          staff_name: editName,
+          phone: cleanPhone10,
+          role_name: editDesignation,
+          avatar_url: editAvatar,
+        };
+        saveUserAccount(updatedAcc);
+        setCurrentUserAccount(updatedAcc);
+      }
+      const allStaff = getStaffMembers();
+      const matchedStaff = allStaff.find(s => 
+        (activeAcc?.staff_id && s.id === activeAcc.staff_id) || 
+        (s.phone && s.phone.replace(/\D/g, '').endsWith(cleanPhone10))
+      );
+      if (matchedStaff) {
+        saveStaffMember({
+          ...matchedStaff,
+          name: editName,
+          designation: editDesignation,
+        });
+      }
     } catch (err) {
       console.warn('Failed to save user to localStorage', err);
     }
@@ -539,6 +591,23 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             </div>
           </div>
 
+          {/* Left-side Booshnam Associates Brand Logo inside the white curve */}
+          <div className="absolute left-6 sm:left-10 md:left-14 lg:left-20 top-1/2 -translate-y-1/2 z-10 hidden sm:flex flex-col items-center max-w-[240px] md:max-w-[280px] pointer-events-none select-none text-center">
+            <img
+              src="/logo@2x.png"
+              alt="Booshnam Associates"
+              className="h-14 sm:h-16 md:h-20 w-auto object-contain drop-shadow-sm"
+            />
+            <div className="mt-4 px-3 py-1 bg-red-50 border border-red-200 rounded-full shadow-2xs">
+              <span className="text-[10px] font-black text-red-700 tracking-wider uppercase">
+                Booshnam Associates
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] font-medium text-slate-500 leading-snug">
+              User Profile & Role Settings
+            </p>
+          </div>
+
           {/* Top-Right Cancel/Close Button */}
           <button
             type="button"
@@ -558,8 +627,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             className="hidden"
           />
 
-          {/* Centered White Card */}
-          <div className="relative z-10 w-full max-w-[340px] mx-4 animate-in fade-in zoom-in-95 duration-200">
+          {/* Centered White Card with Balanced Right-Leaning Alignment */}
+          <div className="relative z-10 w-full max-w-[350px] mx-4 sm:ml-auto sm:mr-[8vw] md:mr-[12vw] lg:mr-[18vw] animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
 
               {/* Title & Red Underline */}
@@ -633,17 +702,18 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                       <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                         PHONE NUMBER (10 DIGITS)
                       </label>
-                      {editPhone && (
-                        <span className={`text-[9px] tracking-tight font-bold ${editPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
-                          {editPhone.length}/10
-                        </span>
-                      )}
+                      <span className={`text-[9px] tracking-tight font-bold ${editPhone.length === 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                        {editPhone.length}/10
+                      </span>
                     </div>
-                    <div className="border border-slate-200 rounded-lg px-3.5 py-2.5 bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-400 transition-all">
+                    <div className="flex items-center border border-slate-200 rounded-lg bg-white focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-400 transition-all overflow-hidden">
+                      <span className="px-3 py-2.5 bg-slate-50 border-r border-slate-200 text-xs font-bold text-slate-600 select-none">
+                        +91
+                      </span>
                       <input
                         type="tel"
                         inputMode="numeric"
-                        pattern="[0-9]*"
+                        pattern="[0-9]{10}"
                         maxLength={10}
                         required
                         value={editPhone}
@@ -655,11 +725,11 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                         }}
                         onPaste={(e) => {
                           e.preventDefault();
-                          const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 10);
+                          const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(-10);
                           setEditPhone(paste);
                         }}
-                        className="w-full text-xs text-slate-800 font-medium bg-transparent focus:outline-none placeholder:text-slate-300"
-                        placeholder="10-digit mobile number"
+                        className="w-full px-3 py-2.5 text-xs text-slate-800 font-medium bg-transparent focus:outline-none placeholder:text-slate-300"
+                        placeholder="9444006047"
                       />
                     </div>
                   </div>

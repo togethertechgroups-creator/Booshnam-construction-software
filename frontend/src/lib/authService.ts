@@ -22,6 +22,7 @@ export interface UserAccount {
   role_name: string;
   allowedPages: string[];
   created_at: string;
+  avatar_url?: string;
 }
 
 const DEFAULT_ACCOUNTS: UserAccount[] = [
@@ -494,6 +495,10 @@ export function setCurrentUserAccount(account: UserAccount | null): void {
   try {
     if (account) {
       localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify(account));
+      const rawDigits = (account.phone || '').replace(/\D/g, '');
+      const formattedPhone = rawDigits.length >= 10 
+        ? `+91 ${rawDigits.slice(-10, -5)} ${rawDigits.slice(-5)}` 
+        : (account.phone || '+91 94440 06047');
       const nameParts = (account.staff_name || account.username || 'Staff').split(' ');
       const userObj = {
         id: account.id,
@@ -502,7 +507,8 @@ export function setCurrentUserAccount(account: UserAccount | null): void {
         username: account.username,
         role_name: account.role_name,
         role_code: account.role_code,
-        phone: '+91 94440 06047',
+        phone: formattedPhone,
+        avatar_url: account.avatar_url || '',
         is_org_admin: account.role_code === 'SUPER_ADMIN' || account.role_code === 'ADMIN',
         is_site_worker: account.role_code === 'SITE_ENGINEER' || account.role_code === 'SUPERVISOR',
         active_role: {

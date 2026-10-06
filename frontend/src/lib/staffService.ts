@@ -211,11 +211,17 @@ export function saveStaffMember(staff: StaffMember): StaffMember[] {
                           (cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)));
           if (isMatch) {
             hasAccChange = true;
+            const existingDepts = Array.isArray(a.departments) && a.departments.length > 0 
+              ? a.departments 
+              : (a.department ? [a.department] : []);
+            const mergedDepts = Array.from(new Set([...existingDepts, staff.department].filter(Boolean)));
             return {
               ...a,
               role_code: staff.role_code,
               role_name: staff.role_name || staff.designation,
-              staff_name: staff.name
+              staff_name: staff.name,
+              department: a.department || staff.department,
+              departments: mergedDepts
             };
           }
           return a;
@@ -245,14 +251,44 @@ export function deleteStaffMember(id: string): StaffMember[] {
         const accRaw = localStorage.getItem('booshnam_user_accounts_v2');
         if (accRaw) {
           const accounts = JSON.parse(accRaw);
-          const filteredAccs = accounts.filter((a: any) => 
-            a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super' || (
-              a.staff_id !== id && 
-              a.username !== target.phone && 
-              a.phone !== target.phone
-            )
-          );
-          localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(filteredAccs));
+          const cleanTargetPhone = target.phone.replace(/\D/g, '');
+          const remainingStaffForPhone = updated.filter(s => {
+            const sPhone = (s.phone || '').replace(/\D/g, '');
+            return sPhone && cleanTargetPhone && (sPhone.endsWith(cleanTargetPhone) || cleanTargetPhone.endsWith(sPhone));
+          });
+
+          let updatedAccounts: any[];
+          if (remainingStaffForPhone.length > 0) {
+            // Staff still exists in other departments! Do not delete account, just remove deleted staff's department
+            const remainingDepts = Array.from(new Set(remainingStaffForPhone.map(s => s.department).filter(Boolean)));
+            const primaryRemaining = remainingStaffForPhone[0];
+            updatedAccounts = accounts.map((a: any) => {
+              if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') return a;
+              const aPhone = (a.phone || '').replace(/\D/g, '');
+              const aUser = a.username.replace(/\D/g, '');
+              const isMatch = (a.staff_id === id) || (cleanTargetPhone && (aPhone.endsWith(cleanTargetPhone) || aUser.endsWith(cleanTargetPhone)));
+              if (isMatch) {
+                return {
+                  ...a,
+                  staff_id: primaryRemaining.id,
+                  department: remainingDepts[0] || primaryRemaining.department,
+                  departments: remainingDepts
+                };
+              }
+              return a;
+            });
+          } else {
+            // No other staff exist for this phone, remove non-admin account
+            updatedAccounts = accounts.filter((a: any) => 
+              a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super' || (
+                a.staff_id !== id && 
+                a.username !== target.phone && 
+                a.phone !== target.phone
+              )
+            );
+          }
+          localStorage.setItem('booshnam_user_accounts_v2', JSON.stringify(updatedAccounts));
+          window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updatedAccounts }));
         }
       } catch (err) {}
     }

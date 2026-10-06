@@ -1,6 +1,11 @@
 import { ALL_SYSTEM_MODULES, getStoredRolePermissions } from './roleAccess';
 import { getStaffMembers } from './staffService';
-import { setActiveDepartmentId, normalizeDepartmentId } from './departmentService';
+import { 
+  setActiveDepartmentId, 
+  normalizeDepartmentId,
+  getUserAllowedDepartmentIds,
+  isUserCompanyWideSuperAdmin 
+} from './departmentService';
 
 export interface UserAccount {
   id: string;
@@ -8,7 +13,9 @@ export interface UserAccount {
   password: string;
   phone?: string;
   department?: string;
+  departments?: string[];
   staff_id?: string;
+  staff_ids?: string[];
   staff_name: string;
   staff_code?: string;
   role_code: string;
@@ -29,6 +36,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     role_code: 'SUPER_ADMIN',
     role_name: 'Super Admin',
     department: 'Executive Management',
+    departments: ['Executive Management'],
     allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
     created_at: '2024-01-01'
   },
@@ -43,6 +51,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     role_code: 'ADMIN',
     role_name: 'Admin',
     department: 'Executive Management',
+    departments: ['Executive Management'],
     allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
     created_at: '2024-01-01'
   },
@@ -57,6 +66,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     role_code: 'MARKETING',
     role_name: 'Marketing',
     department: 'Marketing',
+    departments: ['Marketing'],
     allowedPages: ['dashboard', 'quotation', 'setting'],
     created_at: '2024-01-01'
   }
@@ -99,29 +109,40 @@ export function getUserAccounts(): UserAccount[] {
         return a;
       }
 
-      // Find linked staff member
+      // Find all linked staff members
       const aPhone = (a.phone || '').replace(/\D/g, '');
       const aUser = a.username.replace(/\D/g, '');
-      const linkedStaff = allStaff.find(s => 
+      const matchingStaff = allStaff.filter(s => 
         (a.staff_id && s.id === a.staff_id) || 
+        (a.staff_ids && a.staff_ids.includes(s.id)) ||
         (aPhone && aPhone.length >= 7 && (s.phone || '').replace(/\D/g, '').endsWith(aPhone)) ||
         (aUser && aUser.length >= 7 && (s.phone || '').replace(/\D/g, '').endsWith(aUser))
       );
 
-      if (linkedStaff) {
-        if (a.role_code !== linkedStaff.role_code) {
+      if (matchingStaff.length > 0) {
+        const primaryStaff = matchingStaff[0];
+        if (a.role_code !== primaryStaff.role_code) {
           hasChanges = true;
           a = {
             ...a,
-            role_code: linkedStaff.role_code,
-            role_name: linkedStaff.role_name || linkedStaff.designation
+            role_code: primaryStaff.role_code,
+            role_name: primaryStaff.role_name || primaryStaff.designation
           };
         }
-        if (linkedStaff.department && a.department !== linkedStaff.department) {
+
+        // Merge departments from all matching staff records
+        const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
+        const existingDepts = Array.isArray(a.departments) && a.departments.length > 0 
+          ? a.departments 
+          : (a.department ? [a.department] : []);
+        const mergedDepts = Array.from(new Set([...existingDepts, ...staffDepts]));
+
+        if (mergedDepts.length > 0 && JSON.stringify(a.departments) !== JSON.stringify(mergedDepts)) {
           hasChanges = true;
           a = {
             ...a,
-            department: linkedStaff.department
+            departments: mergedDepts,
+            department: a.department && mergedDepts.includes(a.department) ? a.department : mergedDepts[0]
           };
         }
       } else if (a.username === 'admin' && a.role_code !== 'ADMIN') {
@@ -152,17 +173,64 @@ export function getUserAccounts(): UserAccount[] {
 
 export function saveUserAccount(account: UserAccount): void {
   const current = getUserAccounts();
-  const existingIdx = current.findIndex(a => 
-    a.username.toLowerCase() === account.username.toLowerCase() || 
-    (account.phone && a.phone === account.phone) ||
-    (account.staff_id && a.staff_id === account.staff_id)
-  );
+  const cleanPhone = (account.phone || '').replace(/\D/g, '');
+  const cleanUser = account.username.trim().toLowerCase();
+
+  const existingIdx = current.findIndex(a => {
+    if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
+      return account.role_code === 'SUPER_ADMIN' || account.username === 'superadmin' || account.id === 'usr-super';
+    }
+    const aUser = a.username.trim().toLowerCase();
+    const aPhone = (a.phone || '').replace(/\D/g, '');
+    const isUserMatch = aUser === cleanUser;
+    const isPhoneMatch = Boolean(cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone)));
+    const isStaffMatch = Boolean(account.staff_id && (a.staff_id === account.staff_id || a.staff_ids?.includes(account.staff_id)));
+    return isUserMatch || isPhoneMatch || isStaffMatch;
+  });
+
   let updated: UserAccount[];
   if (existingIdx >= 0) {
+    const existing = current[existingIdx];
+
+    // Merge departments
+    const existingDepts = Array.isArray(existing.departments) && existing.departments.length > 0
+      ? existing.departments
+      : (existing.department ? [existing.department] : []);
+    const incomingDepts = Array.isArray(account.departments) && account.departments.length > 0
+      ? account.departments
+      : (account.department ? [account.department] : []);
+
+    const combinedDepts = Array.from(new Set([...existingDepts, ...incomingDepts].filter(Boolean)));
+
+    // Merge staff IDs
+    const existingStaffIds = existing.staff_ids || (existing.staff_id ? [existing.staff_id] : []);
+    const incomingStaffIds = account.staff_ids || (account.staff_id ? [account.staff_id] : []);
+    const combinedStaffIds = Array.from(new Set([...existingStaffIds, ...incomingStaffIds].filter(Boolean)));
+
+    const mergedAccount: UserAccount = {
+      ...existing,
+      ...account,
+      id: existing.id,
+      department: account.department || existing.department || combinedDepts[0],
+      departments: combinedDepts.length > 0 ? combinedDepts : (account.department ? [account.department] : []),
+      staff_ids: combinedStaffIds,
+      staff_id: account.staff_id || existing.staff_id,
+      password: (account.password && account.password !== account.phone) ? account.password : (existing.password || account.password),
+      allowedPages: (account.allowedPages && account.allowedPages.length > 0) ? account.allowedPages : existing.allowedPages
+    };
+
     updated = [...current];
-    updated[existingIdx] = account;
+    updated[existingIdx] = mergedAccount;
   } else {
-    updated = [account, ...current];
+    const initDepts = Array.isArray(account.departments) && account.departments.length > 0
+      ? account.departments
+      : (account.department ? [account.department] : []);
+    const newAcc: UserAccount = {
+      ...account,
+      departments: initDepts,
+      staff_ids: account.staff_id ? [account.staff_id] : []
+    };
+    updated = [newAcc, ...current];
   }
   try {
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
@@ -263,36 +331,48 @@ export function authenticateUser(usernameOrPhone: string, password: string): Use
   });
   
   if (match) {
-    // Check if associated staff member is INACTIVE and synchronize role
+    // Check if associated staff member is INACTIVE and synchronize role and departments
     const allStaff = getStaffMembers();
-    const staff = allStaff.find(s => 
+    const matchingStaff = allStaff.filter(s => 
       s.id === match.staff_id || 
+      (match.staff_ids && match.staff_ids.includes(s.id)) ||
       (match.phone && (s.phone || '').replace(/\D/g, '') === (match.phone || '').replace(/\D/g, '')) || 
       (cleanPhoneDigits && (s.phone || '').replace(/\D/g, '') === cleanPhoneDigits) ||
       s.phone === match.username
     );
     
-    if (staff) {
-      if (staff.status === 'INACTIVE') {
+    if (matchingStaff.length > 0) {
+      if (matchingStaff.every(s => s.status === 'INACTIVE')) {
         throw new Error('Your account is currently inactive. Contact Admin to restore access.');
       }
-      match.role_code = staff.role_code;
-      match.role_name = staff.role_name || staff.designation;
-      match.staff_name = staff.name;
-      if (staff.department) {
-        match.department = staff.department;
+      const activeStaff = matchingStaff.find(s => s.status !== 'INACTIVE') || matchingStaff[0];
+      match.role_code = activeStaff.role_code;
+      match.role_name = activeStaff.role_name || activeStaff.designation;
+      match.staff_name = activeStaff.name;
+
+      const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
+      const existingDepts = Array.isArray(match.departments) && match.departments.length > 0 
+        ? match.departments 
+        : (match.department ? [match.department] : []);
+      const mergedDepts = Array.from(new Set([...existingDepts, ...staffDepts]));
+      match.departments = mergedDepts;
+      if (!match.department || !mergedDepts.includes(match.department)) {
+        match.department = mergedDepts[0];
       }
+
       const storedPerms = getStoredRolePermissions();
-      if (storedPerms[staff.role_code]?.allowedPages) {
-        match.allowedPages = storedPerms[staff.role_code].allowedPages;
+      if (storedPerms[activeStaff.role_code]?.allowedPages) {
+        match.allowedPages = storedPerms[activeStaff.role_code].allowedPages;
       }
     }
 
     // Automatically set the active department to the user's assigned department
-    if (match.department && match.role_code !== 'SUPER_ADMIN') {
+    if (!isUserCompanyWideSuperAdmin(match)) {
       try {
-        const deptId = normalizeDepartmentId(match.department);
-        setActiveDepartmentId(deptId);
+        const allowed = getUserAllowedDepartmentIds(match);
+        const saved = localStorage.getItem('booshnam_active_department') as any;
+        const targetDept = (saved && allowed.includes(saved)) ? saved : (allowed[0] || 'SOIL_INVESTIGATION');
+        setActiveDepartmentId(targetDept);
       } catch (e) {}
     }
 
@@ -319,22 +399,35 @@ export function getCurrentUserAccount(): UserAccount | null {
     const allStaff = getStaffMembers();
     const aPhone = (acc.phone || '').replace(/\D/g, '');
     const aUser = acc.username.replace(/\D/g, '');
-    const staff = allStaff.find(s => 
+    const matchingStaff = allStaff.filter(s => 
       (acc.staff_id && s.id === acc.staff_id) || 
+      (acc.staff_ids && acc.staff_ids.includes(s.id)) ||
       (aPhone && aPhone.length >= 7 && (s.phone || '').replace(/\D/g, '').endsWith(aPhone)) ||
       (aUser && aUser.length >= 7 && (s.phone || '').replace(/\D/g, '').endsWith(aUser))
     );
 
     let changed = false;
-    if (staff) {
-      if (acc.role_code !== staff.role_code) {
-        acc.role_code = staff.role_code;
-        acc.role_name = staff.role_name || staff.designation;
-        acc.staff_name = staff.name;
+    if (matchingStaff.length > 0) {
+      const primaryStaff = matchingStaff[0];
+      if (acc.role_code !== primaryStaff.role_code) {
+        acc.role_code = primaryStaff.role_code;
+        acc.role_name = primaryStaff.role_name || primaryStaff.designation;
+        acc.staff_name = primaryStaff.name;
         changed = true;
       }
-      if (staff.department && acc.department !== staff.department) {
-        acc.department = staff.department;
+      
+      const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
+      const existingDepts = Array.isArray(acc.departments) && acc.departments.length > 0
+        ? acc.departments
+        : (acc.department ? [acc.department] : []);
+      const mergedDepts = Array.from(new Set([...existingDepts, ...staffDepts]));
+
+      if (mergedDepts.length > 0 && JSON.stringify(acc.departments) !== JSON.stringify(mergedDepts)) {
+        acc.departments = mergedDepts;
+        changed = true;
+      }
+      if (!acc.department || (mergedDepts.length > 0 && !mergedDepts.includes(acc.department))) {
+        acc.department = mergedDepts[0];
         changed = true;
       }
     }
@@ -446,57 +539,123 @@ export function authenticateByPhone(phone: string, _dialCode: string = '+91'): U
   const accounts = getUserAccounts();
   const allStaff = getStaffMembers();
 
-  // 1. Check if linked to any known staff member
-  const staff = allStaff.find(s => {
+  // 1. Check if linked to any known staff member(s)
+  const matchingStaff = allStaff.filter(s => {
     const sPhone = (s.phone || '').replace(/\D/g, '');
     return sPhone && (sPhone.endsWith(cleanPhone) || cleanPhone.endsWith(sPhone));
   });
 
-  if (staff) {
-    const matched = accounts.find(a => 
-      (staff.id && a.staff_id === staff.id) || 
-      (staff.username && a.username.toLowerCase() === staff.username.toLowerCase()) ||
-      (a.phone && a.phone.replace(/\D/g, '') === cleanPhone)
+  if (matchingStaff.length > 0) {
+    const primaryStaff = matchingStaff[0];
+    const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
+
+    let matched = accounts.find(a => 
+      (a.staff_id && matchingStaff.some(s => s.id === a.staff_id)) ||
+      (a.staff_ids && matchingStaff.some(s => a.staff_ids?.includes(s.id))) ||
+      (a.phone && a.phone.replace(/\D/g, '') === cleanPhone) ||
+      (a.username && a.username.replace(/\D/g, '') === cleanPhone)
     );
+
     if (matched) {
-      matched.role_code = staff.role_code;
-      matched.role_name = staff.role_name || staff.designation;
-      matched.staff_name = staff.name;
+      matched.role_code = primaryStaff.role_code;
+      matched.role_name = primaryStaff.role_name || primaryStaff.designation;
+      matched.staff_name = primaryStaff.name;
+
+      const mergedDepts = Array.from(new Set([
+        ...(matched.departments || []),
+        ...(matched.department ? [matched.department] : []),
+        ...staffDepts
+      ]));
+      matched.departments = mergedDepts;
+      if (!matched.department || !mergedDepts.includes(matched.department)) {
+        matched.department = mergedDepts[0];
+      }
+
       const storedPerms = getStoredRolePermissions();
-      if (storedPerms[staff.role_code]?.allowedPages) {
-        matched.allowedPages = storedPerms[staff.role_code].allowedPages;
+      if (storedPerms[primaryStaff.role_code]?.allowedPages) {
+        matched.allowedPages = storedPerms[primaryStaff.role_code].allowedPages;
+      }
+      saveUserAccount(matched);
+
+      // Set active department to first allowed department
+      if (!isUserCompanyWideSuperAdmin(matched)) {
+        const allowedDepts = getUserAllowedDepartmentIds(matched);
+        if (allowedDepts.length > 0) {
+          setActiveDepartmentId(allowedDepts[0]);
+        }
       }
       setCurrentUserAccount(matched);
       return matched;
+    } else {
+      // Auto-create verified account for staff with their assigned departments
+      const storedPerms = getStoredRolePermissions();
+      const newAcc: UserAccount = {
+        id: `usr-mob-${Date.now()}`,
+        username: cleanPhone,
+        password: cleanPhone,
+        phone: cleanPhone,
+        staff_id: primaryStaff.id,
+        staff_ids: matchingStaff.map(s => s.id),
+        staff_name: primaryStaff.name,
+        staff_code: primaryStaff.employee_code,
+        role_code: primaryStaff.role_code,
+        role_name: primaryStaff.role_name || primaryStaff.designation,
+        department: primaryStaff.department,
+        departments: staffDepts.length > 0 ? staffDepts : [primaryStaff.department],
+        allowedPages: storedPerms[primaryStaff.role_code]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id),
+        created_at: new Date().toISOString()
+      };
+      saveUserAccount(newAcc);
+      if (!isUserCompanyWideSuperAdmin(newAcc)) {
+        const allowedDepts = getUserAllowedDepartmentIds(newAcc);
+        if (allowedDepts.length > 0) {
+          setActiveDepartmentId(allowedDepts[0]);
+        }
+      }
+      setCurrentUserAccount(newAcc);
+      return newAcc;
     }
   }
 
-  // 2. Check if username matches phone
-  const accountByUsername = accounts.find(a => a.username.replace(/\D/g, '') === cleanPhone);
+  // 2. Check if username matches phone in existing accounts
+  const accountByUsername = accounts.find(a => 
+    (a.username && a.username.replace(/\D/g, '') === cleanPhone) ||
+    (a.phone && a.phone.replace(/\D/g, '') === cleanPhone)
+  );
   if (accountByUsername) {
+    if (!isUserCompanyWideSuperAdmin(accountByUsername)) {
+      const allowedDepts = getUserAllowedDepartmentIds(accountByUsername);
+      if (allowedDepts.length > 0) {
+        setActiveDepartmentId(allowedDepts[0]);
+      }
+    }
     setCurrentUserAccount(accountByUsername);
     return accountByUsername;
   }
 
-  // 3. Fall back to primary Super Admin or first available account
+  // 3. Fall back to primary Super Admin only if testing/demo and no accounts exist
   const primaryAccount = accounts.find(a => a.role_code === 'SUPER_ADMIN') || accounts[0];
-  if (primaryAccount) {
+  if (primaryAccount && cleanPhone === '9840123456') {
     setCurrentUserAccount(primaryAccount);
     return primaryAccount;
   }
 
-  // 4. Default verified user account
+  // 4. Default verified user account assigned to Soil Investigation
   const fallbackAccount: UserAccount = {
     id: 'usr-mob-' + Date.now(),
     username: cleanPhone || 'mobile_user',
-    password: '',
+    password: cleanPhone || '',
+    phone: cleanPhone,
     staff_name: 'Verified Staff',
-    role_code: 'SUPER_ADMIN',
-    role_name: 'Super Admin',
+    role_code: 'SITE_ENGINEER',
+    role_name: 'Site Engineer',
+    department: 'Soil Investigation (Chennai)',
+    departments: ['Soil Investigation (Chennai)'],
     allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
     created_at: new Date().toISOString()
   };
   saveUserAccount(fallbackAccount);
+  setActiveDepartmentId('SOIL_INVESTIGATION');
   setCurrentUserAccount(fallbackAccount);
   return fallbackAccount;
 }

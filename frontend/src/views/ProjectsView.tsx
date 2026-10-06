@@ -41,7 +41,9 @@ import {
   setActiveDepartmentId, 
   normalizeDepartmentId, 
   getIndividualDepartments,
-  getOrInitializeProjects
+  getOrInitializeProjects,
+  isUserCompanyWideSuperAdmin,
+  getUserAllowedDepartmentIds
 } from '../lib/departmentService';
 import { getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { DepartmentLogo } from '../components/DepartmentLogo';
@@ -330,21 +332,31 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   }, []);
 
   const userDept = activeAccount?.department;
-  const isCompanyWideSuperAdmin = (currentUser.role_code === 'SUPER_ADMIN' || activeAccount?.role_code === 'SUPER_ADMIN') && 
-    (!userDept || userDept === 'Executive Management' || userDept === 'Booshnam Associates' || userDept.toLowerCase().includes('all') || userDept.toLowerCase().includes('director'));
-  const isRestrictedDeptUser = !isCompanyWideSuperAdmin && Boolean(userDept);
+  const isCompanyWideSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
+  const allowedDeptIds = useMemo(() => getUserAllowedDepartmentIds(activeAccount), [activeAccount]);
+  const isRestrictedDeptUser = !isCompanyWideSuperAdmin && allowedDeptIds !== null && allowedDeptIds.length > 0;
+
+  // Auto-sync active department if restricted user has activeDeptId outside their permitted list
+  useEffect(() => {
+    if (isRestrictedDeptUser && allowedDeptIds && allowedDeptIds.length > 0) {
+      if (!allowedDeptIds.includes(activeDeptId as any)) {
+        const fallback = allowedDeptIds[0];
+        setActiveDepartmentId(fallback);
+        setActiveDeptId(fallback);
+      }
+    }
+  }, [isRestrictedDeptUser, allowedDeptIds, activeDeptId]);
 
   const departmentFilterOptions = useMemo(() => {
-    if (isRestrictedDeptUser && userDept) {
-      const normId = normalizeDepartmentId(userDept);
-      const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === normId) || ORGANIZATION_DEPARTMENTS[1];
-      const count = allProjects.filter(p => normalizeDepartmentId(p.department as string) === deptObj.id).length;
-      return [
-        {
+    if (isRestrictedDeptUser && allowedDeptIds) {
+      return allowedDeptIds.map(id => {
+        const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === id) || ORGANIZATION_DEPARTMENTS[1];
+        const count = allProjects.filter(p => normalizeDepartmentId(p.department as string) === deptObj.id).length;
+        return {
           label: `${deptObj.shortName} (${count})`,
           value: deptObj.id,
-        }
-      ];
+        };
+      });
     }
     return [
       { label: `All Departments (${allProjects.length})`, value: 'booshnam_associates' },
@@ -353,7 +365,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         value: d.id,
       }))
     ];
-  }, [isRestrictedDeptUser, userDept, allProjects]);
+  }, [isRestrictedDeptUser, allowedDeptIds, allProjects]);
 
   const projectDepartmentFilterItems = useMemo(() => {
     return ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => ({
@@ -614,10 +626,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       }
 
       // Active Department Filter (When specific department is selected or user is restricted)
-      if (isRestrictedDeptUser && userDept) {
-        const userNormDept = normalizeDepartmentId(userDept);
+      if (isRestrictedDeptUser && allowedDeptIds) {
         const pDept = normalizeDepartmentId(p.department as string);
-        if (pDept !== userNormDept) return false;
+        if (!allowedDeptIds.includes(pDept as any)) return false;
+        if (allowedDeptIds.includes(activeDeptId as any)) {
+          if (pDept !== activeDeptId) return false;
+        }
       } else if (activeDeptId === 'booshnam_associates') {
         if (!overviewDeptIds.includes('ALL') && overviewDeptIds.length > 0) {
           const normSelected = new Set(overviewDeptIds.map(id => normalizeDepartmentId(id)));
@@ -637,7 +651,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId, overviewDeptIds, isRestrictedDeptUser, userDept]);
+  }, [allProjects, searchQuery, statusFilter, stageFilter, categoryFilter, pinnedIds, isSuperOrAdmin, currentStaffName, tasks, activeDeptId, overviewDeptIds, isRestrictedDeptUser, allowedDeptIds, userDept]);
 
   const filteredProjectIds = useMemo(() => new Set(filteredProjects.map(p => p.id)), [filteredProjects]);
   const deptPendingApprovals = useMemo(() => {
@@ -781,8 +795,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
     clearFormDirty();
 
-    const targetDeptId = (isRestrictedDeptUser && userDept)
-      ? normalizeDepartmentId(userDept)
+    const targetDeptId = (isRestrictedDeptUser && allowedDeptIds)
+      ? (allowedDeptIds.includes(activeDeptId as any) ? activeDeptId : allowedDeptIds[0])
       : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
 
     const deptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === targetDeptId) || ORGANIZATION_DEPARTMENTS.find(d => !d.isMainOverview) || ORGANIZATION_DEPARTMENTS[0];
@@ -980,8 +994,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // ==========================================
   if (viewMode === 'create') {
     const activeTasksCount = wizardTasks.filter(t => selectedTaskIds.includes(t.id)).length;
-    const effectiveDeptId = (isRestrictedDeptUser && userDept)
-      ? normalizeDepartmentId(userDept)
+    const effectiveDeptId = (isRestrictedDeptUser && allowedDeptIds)
+      ? (allowedDeptIds.includes(activeDeptId as any) ? activeDeptId : allowedDeptIds[0])
       : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
     const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === effectiveDeptId || d.name === effectiveDeptId) || ORGANIZATION_DEPARTMENTS[1];
     const displayedWizardTasks = taskDeptFilter === 'ALL'
@@ -2475,14 +2489,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           ) : (
             <div className="w-56">
               <CustomSelect
-                value={isRestrictedDeptUser && userDept ? normalizeDepartmentId(userDept) : activeDeptId}
+                value={activeDeptId}
                 onChange={(val) => {
-                  if (!isRestrictedDeptUser) {
-                    setActiveDepartmentId(val as any);
-                    setActiveDeptId(val);
-                  }
+                  setActiveDepartmentId(val as any);
+                  setActiveDeptId(val);
                 }}
-                disabled={isRestrictedDeptUser}
+                disabled={isRestrictedDeptUser ? (allowedDeptIds ? allowedDeptIds.length <= 1 : true) : false}
                 options={departmentFilterOptions}
                 prefix="Dept: "
                 size="sm"

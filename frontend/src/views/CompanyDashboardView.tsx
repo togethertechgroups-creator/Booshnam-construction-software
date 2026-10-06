@@ -73,8 +73,11 @@ import { CustomSelect } from '../components/CustomSelect';
 import { 
   getActiveDepartmentId, 
   normalizeDepartmentId,
-  ORGANIZATION_DEPARTMENTS
+  ORGANIZATION_DEPARTMENTS,
+  isUserCompanyWideSuperAdmin,
+  getUserAllowedDepartmentIds
 } from '../lib/departmentService';
+import { getCurrentUserAccount } from '../lib/authService';
 
 export interface UnderlyingAttendanceRecord {
   id: string;
@@ -368,9 +371,22 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
       !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || (p as any).title || p.client_name || '').includes(t))
     );
 
-    const rawList = activeDeptId === 'booshnam_associates'
-      ? validProjects
-      : validProjects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+    const userAcc = getCurrentUserAccount();
+    const isSuperAdminCompanyWide = isUserCompanyWideSuperAdmin(userAcc);
+    const allowedDeptIds = getUserAllowedDepartmentIds(userAcc);
+    const isRestricted = !isSuperAdminCompanyWide && allowedDeptIds !== null && allowedDeptIds.length > 0;
+
+    let rawList = validProjects;
+    if (isRestricted && allowedDeptIds) {
+      rawList = validProjects.filter(p => allowedDeptIds.includes(normalizeDepartmentId(p.department as string) as any));
+      if (allowedDeptIds.includes(activeDeptId as any)) {
+        rawList = rawList.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+      }
+    } else if (activeDeptId === 'booshnam_associates') {
+      rawList = validProjects;
+    } else {
+      rawList = validProjects.filter(p => normalizeDepartmentId(p.department as string) === activeDeptId);
+    }
 
     if (rawList && rawList.length > 0) {
       return rawList.map((p, idx) => {

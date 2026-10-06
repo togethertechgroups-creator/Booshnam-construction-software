@@ -20,7 +20,13 @@ import {
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
 import { getCurrentUserAccount } from '../lib/authService';
-import { normalizeDepartmentId } from '../lib/departmentService';
+import { 
+  normalizeDepartmentId, 
+  getUserAllowedDepartmentIds, 
+  isUserCompanyWideSuperAdmin, 
+  setActiveDepartmentId,
+  getActiveDepartmentId
+} from '../lib/departmentService';
 
 interface DepartmentsViewProps {
   initialDepartment?: Department;
@@ -40,28 +46,32 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   onDepartmentChange
 }) => {
   const userAccount = useMemo(() => getCurrentUserAccount(), []);
-  const userDept = userAccount?.department;
-  const isCompanyWideSuperAdmin = userAccount?.role_code === 'SUPER_ADMIN' && 
-    (!userDept || userDept === 'Executive Management' || userDept === 'Booshnam Associates' || userDept.toLowerCase().includes('all') || userDept.toLowerCase().includes('director'));
-  const isRestrictedDept = !isCompanyWideSuperAdmin && Boolean(userDept);
-  const restrictedDeptId = isRestrictedDept && userDept ? (normalizeDepartmentId(userDept) as Department) : null;
+  const isCompanyWideSuperAdmin = isUserCompanyWideSuperAdmin(userAccount);
+  const allowedDeptIds = useMemo(() => getUserAllowedDepartmentIds(userAccount), [userAccount]);
 
   const [activeDept, setActiveDept] = useState<Department>(() => {
-    if (restrictedDeptId) return restrictedDeptId;
-    return initialDepartment;
+    const curActive = getActiveDepartmentId();
+    if (!isCompanyWideSuperAdmin) {
+      if (allowedDeptIds && allowedDeptIds.includes(curActive)) return curActive as Department;
+      return ((allowedDeptIds && allowedDeptIds[0]) || 'SOIL_INVESTIGATION') as Department;
+    }
+    return (curActive !== 'booshnam_associates' ? curActive : initialDepartment) as Department;
   });
   const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
   const deptDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (restrictedDeptId) {
-      setActiveDept(restrictedDeptId);
-      return;
-    }
-    if (initialDepartment) {
-      setActiveDept(initialDepartment);
-    }
-  }, [initialDepartment, restrictedDeptId]);
+    const handleGlobalDeptChange = (e: any) => {
+      const newDeptId = e.detail || getActiveDepartmentId();
+      if (newDeptId && newDeptId !== 'booshnam_associates') {
+        if (isCompanyWideSuperAdmin || (allowedDeptIds && allowedDeptIds.includes(newDeptId))) {
+          setActiveDept(newDeptId as Department);
+        }
+      }
+    };
+    window.addEventListener('booshnam_active_dept_changed', handleGlobalDeptChange);
+    return () => window.removeEventListener('booshnam_active_dept_changed', handleGlobalDeptChange);
+  }, [isCompanyWideSuperAdmin, allowedDeptIds]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -76,6 +86,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
   const handleSelectDepartment = (dept: Department) => {
     setActiveDept(dept);
     setIsDeptDropdownOpen(false);
+    setActiveDepartmentId(normalizeDepartmentId(dept));
     onDepartmentChange?.(dept);
   };
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projects[0]?.id || '');
@@ -304,9 +315,15 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     },
   ];
 
-  const effectiveDepartmentOptions = isRestrictedDept && restrictedDeptId
-    ? departmentOptions.filter(d => d.id === restrictedDeptId)
-    : departmentOptions;
+  const effectiveDepartmentOptions = isCompanyWideSuperAdmin
+    ? departmentOptions
+    : departmentOptions.filter(d => {
+        return (allowedDeptIds && allowedDeptIds.includes(d.id as any)) ||
+               (d.id === 'ARCHITECTURE' && allowedDeptIds?.includes('ARCHITECTURAL')) ||
+               (d.id === 'CONSTRUCTION' && allowedDeptIds?.includes('PRIVATE_CONSTRUCTION')) ||
+               (d.id === 'SURVEY' && allowedDeptIds?.includes('SURVEYING')) ||
+               (d.id === 'ART_SCULPTURE' && allowedDeptIds?.includes('SCULPTURE'));
+      });
 
   const currentDeptObj = effectiveDepartmentOptions.find(d => 
     d.id === activeDept || 
@@ -317,7 +334,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
     (activeDept === 'ART_SCULPTURE' && d.id === 'SCULPTURE')
   ) || effectiveDepartmentOptions[0] || departmentOptions[0];
   const CurrentIcon = currentDeptObj.icon;
-  const canSwitchDept = !isRestrictedDept && effectiveDepartmentOptions.length > 1;
+  const canSwitchDept = effectiveDepartmentOptions.length > 1;
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white">
@@ -351,7 +368,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
               </div>
               <div className="text-left">
                 <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">
-                  {isRestrictedDept ? 'Assigned Division' : 'Selected Division'}
+                  {effectiveDepartmentOptions.length > 1 ? 'Selected Division' : 'Assigned Division'}
                 </div>
                 <div className="font-heading text-xs text-slate-900 font-bold leading-tight mt-0.5 flex items-center gap-1.5">
                   <span>{currentDeptObj.shortLabel}</span>

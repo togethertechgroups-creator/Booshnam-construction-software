@@ -29,6 +29,7 @@ export interface RoleAccessPermission {
   allowedPages: string[];
   department?: string;
   isSystemRole?: boolean;
+  isCompanyWide?: boolean;
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
@@ -171,6 +172,20 @@ export function saveStoredRolePermission(permission: RoleAccessPermission): void
     window.dispatchEvent(new CustomEvent('siteops_role_access_updated', { detail: permission }));
   } catch (e) {
     console.error('Failed to save role permission', e);
+  }
+}
+
+export function deleteStoredRolePermission(roleCode: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getStoredRolePermissions();
+    if (current[roleCode] && !current[roleCode].isSystemRole) {
+      delete current[roleCode];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+      window.dispatchEvent(new CustomEvent('siteops_role_access_updated', { detail: { roleCode, deleted: true } }));
+    }
+  } catch (e) {
+    console.error('Failed to delete role permission', e);
   }
 }
 

@@ -22,7 +22,7 @@ export const MOCK_USER: User = {
   id: 'u-1',
   username: 'priya',
   email: 'priya@siteops.io',
-  phone: '9047549682',
+  phone: '9840123456',
   first_name: 'Priya',
   last_name: '',
   role_name: 'Super Admin',

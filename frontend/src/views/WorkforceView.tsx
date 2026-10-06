@@ -24,13 +24,15 @@ import {
   getActiveDepartment,
   normalizeDepartmentId,
   getIndividualDepartments,
-  DepartmentEntity
+  DepartmentEntity,
+  isUserCompanyWideSuperAdmin,
+  getUserAllowedDepartmentIds
 } from '../lib/departmentService';
 import { confirmAction, setFormDirty, clearFormDirty } from '../lib/dialogService';
 import { MOCK_ROLES } from '../lib/mockData';
 import { StaffOverviewView } from '../components/StaffOverviewView';
 import { getStoredRolePermissions, ALL_SYSTEM_MODULES } from '../lib/roleAccess';
-import { saveUserAccount, UserAccount } from '../lib/authService';
+import { saveUserAccount, UserAccount, getCurrentUserAccount } from '../lib/authService';
 import { LivePhotoViewModal } from '../components/LivePhotoViewModal';
 import {
   getAllStaffAttendanceRecords,
@@ -202,7 +204,14 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   }, [activeDept.id]);
 
   const departmentFilterItems = useMemo(() => {
-    const depts = getIndividualDepartments();
+    const activeAccount = getCurrentUserAccount();
+    const isSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
+    const allowedDepts = getUserAllowedDepartmentIds(activeAccount);
+
+    let depts = getIndividualDepartments();
+    if (!isSuperAdmin && allowedDepts && allowedDepts.length > 0) {
+      depts = depts.filter(d => allowedDepts.includes(d.id));
+    }
     return depts.map(d => ({
       id: d.id,
       name: d.name,
@@ -213,18 +222,27 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
   // Filtered by department: If overview (Booshnam Associates), show all or multi-filter by selectedDepartmentIds. Otherwise filter strictly to active department.
   const departmentStaffList = useMemo(() => {
+    const activeAccount = getCurrentUserAccount();
+    const isSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
+    const allowedDepts = getUserAllowedDepartmentIds(activeAccount);
+
+    let baseList = staffList;
+    if (!isSuperAdmin && allowedDepts && allowedDepts.length > 0) {
+      baseList = staffList.filter(s => allowedDepts.includes(normalizeDepartmentId(s.department) as any));
+    }
+
     if (!isOverview) {
       const normActive = normalizeDepartmentId(activeDept.id);
-      return staffList.filter(s => {
+      return baseList.filter(s => {
         const normStaffDept = normalizeDepartmentId(s.department);
         return normStaffDept === normActive;
       });
     }
     if (selectedDepartmentIds.includes('ALL') || selectedDepartmentIds.length === 0) {
-      return staffList;
+      return baseList;
     }
     const normSelected = new Set(selectedDepartmentIds.map(id => normalizeDepartmentId(id)));
-    return staffList.filter(s => {
+    return baseList.filter(s => {
       const normStaffDept = normalizeDepartmentId(s.department);
       return normSelected.has(normStaffDept);
     });
@@ -364,13 +382,13 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       salary_type: newStaffForm.salary_type,
       status: 'ACTIVE',
       staff_type: newStaffForm.staff_type,
-      has_login_account: true, // we are creating one now
+      has_login_account: false, // Role and login account are manually assigned by admin in Settings > Roles & Access
       created_at: new Date().toISOString().split('T')[0]
     };
 
     const confirmed = await confirmAction({
       title: `Create ${isSite ? 'Site Staff' : 'Office Staff'}`,
-      message: `Add "${newStaff.name}" to ${newStaff.department}?\nThey will log in using phone: ${newStaff.phone}`,
+      message: `Add "${newStaff.name}" to ${newStaff.department}?`,
       confirmText: 'Save Staff',
       cancelText: 'Cancel',
       variant: 'primary',
@@ -380,27 +398,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
     saveStaffMember(newStaff);
 
-    // Create user account
-    const newAccount: UserAccount = {
-      id: `usr-${Date.now()}`,
-      username: newStaff.phone, // Login using phone number
-      phone: newStaff.phone,
-      password: newStaff.phone, // Default password is phone number
-      staff_id: newStaff.id,
-      staff_name: newStaff.name,
-      staff_code: newStaff.employee_code,
-      role_code: newStaff.role_code,
-      role_name: newStaff.role_name,
-      department: newStaff.department,
-      allowedPages: roleObj.allowedPages || [],
-      created_at: new Date().toISOString().split('T')[0]
-    };
-    saveUserAccount(newAccount);
-
     clearFormDirty();
     setStaffList(getStaffMembers());
     setShowAddStaffModal(false);
-    triggerToast(`Staff "${newStaff.name}" added to ${newStaff.department}!`);
+    triggerToast(`Staff "${newStaff.name}" added to ${newStaff.department}! Role & login access can be assigned from Settings > Roles & Access.`);
   };
 
   const handleDeleteStaff = async (id: string, name: string) => {
@@ -1310,35 +1311,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                     </div>
                   </div>
 
-                  {/* 2. Department Assignment */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Department Assignment *
-                    </label>
-                    {!isOverview ? (
-                      <div className="h-11 px-3.5 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-between text-xs font-semibold text-slate-800">
-                        <span className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-red-600" />
-                          <span>{activeDept.name}</span>
-                        </span>
-                        <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-medium">
-                          Assigned to active department
-                        </span>
-                      </div>
-                    ) : (
-                      <div>
-                        <CustomSelect
-                          value={newStaffForm.department}
-                          onChange={(val) => setNewStaffForm({ ...newStaffForm, department: val })}
-                          options={getIndividualDepartments().map(d => ({ label: d.name, value: d.name }))}
-                          triggerClassName="h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800"
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          Select which department this staff member belongs to.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">

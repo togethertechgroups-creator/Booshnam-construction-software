@@ -168,24 +168,112 @@ export const ORGANIZATION_DEPARTMENTS: DepartmentEntity[] = [
 const ACTIVE_DEPT_STORAGE_KEY = 'booshnam_active_department';
 
 /**
- * Returns current active department ID. If user session is tied to a specific department, returns that department.
+ * Check if the account has company-wide super admin access (Executive Management or all departments)
+ */
+export const isUserCompanyWideSuperAdmin = (account?: { role_code?: string; department?: string; departments?: string[] } | null): boolean => {
+  let targetAcc = account;
+  if (!targetAcc && typeof window !== 'undefined') {
+    try {
+      const rawSession = localStorage.getItem('booshnam_active_session_v2');
+      if (rawSession) {
+        targetAcc = JSON.parse(rawSession);
+      }
+    } catch (e) {}
+  }
+  if (!targetAcc) return false;
+  const isSuper = targetAcc.role_code === 'SUPER_ADMIN';
+  const dept = (targetAcc.department || '').trim();
+  const isAllDepts = !dept || 
+    dept === 'Executive Management' || 
+    dept === 'Booshnam Associates' || 
+    dept.toLowerCase().includes('all') ||
+    dept.toLowerCase().includes('director');
+  return isSuper && isAllDepts;
+};
+
+/**
+ * Returns allowed DepartmentId(s) for the user.
+ * If company-wide superadmin: returns all departments including 'booshnam_associates'.
+ * Otherwise: returns strictly the normalized IDs of the departments assigned to the user.
+ */
+export const getUserAllowedDepartmentIds = (account?: { role_code?: string; department?: string; departments?: string[] } | null): DepartmentId[] => {
+  let targetAcc = account;
+  if (!targetAcc && typeof window !== 'undefined') {
+    try {
+      const rawSession = localStorage.getItem('booshnam_active_session_v2');
+      if (rawSession) {
+        targetAcc = JSON.parse(rawSession);
+      }
+    } catch (e) {}
+  }
+
+  if (targetAcc && isUserCompanyWideSuperAdmin(targetAcc)) {
+    return ORGANIZATION_DEPARTMENTS.map(d => d.id);
+  }
+
+  const rawList: string[] = [];
+  if (targetAcc) {
+    if (Array.isArray(targetAcc.departments) && targetAcc.departments.length > 0) {
+      rawList.push(...targetAcc.departments);
+    }
+    if (targetAcc.department) {
+      rawList.push(targetAcc.department);
+    }
+  }
+
+  if (rawList.length === 0) {
+    return ['SOIL_INVESTIGATION'];
+  }
+
+  const normalizedSet = new Set<DepartmentId>();
+  rawList.forEach(raw => {
+    if (!raw) return;
+    const norm = normalizeDepartmentId(raw);
+    if (norm !== 'booshnam_associates') {
+      normalizedSet.add(norm);
+    }
+  });
+
+  const result = Array.from(normalizedSet);
+  return result.length > 0 ? result : ['SOIL_INVESTIGATION'];
+};
+
+/**
+ * Returns allowed DepartmentEntity list for the user.
+ */
+export const getUserAllowedDepartmentEntities = (account?: { role_code?: string; department?: string; departments?: string[] } | null): DepartmentEntity[] => {
+  if (isUserCompanyWideSuperAdmin(account)) {
+    return ORGANIZATION_DEPARTMENTS;
+  }
+  const allowedIds = new Set(getUserAllowedDepartmentIds(account));
+  return ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && allowedIds.has(d.id));
+};
+
+/**
+ * Returns current active department ID. If user session is tied to specific department(s), enforces allowed access.
  */
 export const getActiveDepartmentId = (): DepartmentId => {
   try {
     const rawSession = localStorage.getItem('booshnam_active_session_v2');
     if (rawSession) {
       const acc = JSON.parse(rawSession);
-      const isSuper = acc.role_code === 'SUPER_ADMIN';
-      const isAllDepts = !acc.department || 
-        acc.department === 'Executive Management' || 
-        acc.department === 'Booshnam Associates' || 
-        acc.department.toLowerCase().includes('all');
-      
-      // If user is restricted to a specific department, enforce it
-      if (!isSuper || !isAllDepts) {
-        if (acc.department) {
-          return normalizeDepartmentId(acc.department);
+      if (isUserCompanyWideSuperAdmin(acc)) {
+        const saved = localStorage.getItem(ACTIVE_DEPT_STORAGE_KEY);
+        if (saved && ORGANIZATION_DEPARTMENTS.some(d => d.id === saved)) {
+          return saved as DepartmentId;
         }
+        return 'booshnam_associates';
+      }
+
+      // User has specific assigned department(s)
+      const allowed = getUserAllowedDepartmentIds(acc);
+      const saved = localStorage.getItem(ACTIVE_DEPT_STORAGE_KEY) as DepartmentId | null;
+      if (saved && allowed.includes(saved)) {
+        return saved;
+      }
+      if (allowed.length > 0) {
+        localStorage.setItem(ACTIVE_DEPT_STORAGE_KEY, allowed[0]);
+        return allowed[0];
       }
     }
     const saved = localStorage.getItem(ACTIVE_DEPT_STORAGE_KEY);
@@ -197,29 +285,24 @@ export const getActiveDepartmentId = (): DepartmentId => {
       return saved as DepartmentId;
     }
   } catch (e) {}
-  return 'booshnam_associates';
+  return 'SOIL_INVESTIGATION';
 };
 
 /**
  * Sets active department ID and broadcasts change event to entire application.
- * If user session is locked to a specific department, protects against unauthorized switching.
+ * If user session is locked to specific department(s), ensures user can only switch within their allowed departments.
  */
 export const setActiveDepartmentId = (deptId: DepartmentId): void => {
   try {
     const rawSession = localStorage.getItem('booshnam_active_session_v2');
     if (rawSession) {
       const acc = JSON.parse(rawSession);
-      const isSuper = acc.role_code === 'SUPER_ADMIN';
-      const isAllDepts = !acc.department || 
-        acc.department === 'Executive Management' || 
-        acc.department === 'Booshnam Associates' || 
-        acc.department.toLowerCase().includes('all');
-      
-      if (!isSuper || !isAllDepts) {
-        if (acc.department) {
-          const lockedId = normalizeDepartmentId(acc.department);
-          localStorage.setItem(ACTIVE_DEPT_STORAGE_KEY, lockedId);
-          window.dispatchEvent(new CustomEvent('booshnam_active_dept_changed', { detail: lockedId }));
+      if (!isUserCompanyWideSuperAdmin(acc)) {
+        const allowed = getUserAllowedDepartmentIds(acc);
+        if (!allowed.includes(deptId)) {
+          const fallback = allowed[0] || 'SOIL_INVESTIGATION';
+          localStorage.setItem(ACTIVE_DEPT_STORAGE_KEY, fallback);
+          window.dispatchEvent(new CustomEvent('booshnam_active_dept_changed', { detail: fallback }));
           return;
         }
       }
@@ -252,7 +335,7 @@ export const normalizeDepartmentId = (raw?: string | null): DepartmentId => {
   const clean = raw.trim().toUpperCase();
 
   // 1. Direct exact ID matches first
-  if (clean === 'BOOSHNAM_ASSOCIATES') return 'booshnam_associates';
+  if (clean === 'BOOSHNAM_ASSOCIATES' || clean === 'BOOSHNAM ASSOCIATES' || clean === 'ALL' || clean === 'ALL DEPARTMENTS' || clean === 'ALL_DEPARTMENTS' || clean.includes('ALL DEPT')) return 'booshnam_associates';
   if (clean === 'SOIL_INVESTIGATION') return 'SOIL_INVESTIGATION';
   if (clean === 'MATERIAL_TESTING') return 'MATERIAL_TESTING';
   if (clean === 'SURVEYING' || clean === 'SURVEY') return 'SURVEYING';

@@ -273,11 +273,15 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       id: existingAccountId || `usr-${Date.now()}`,
       username: cleanUsername,
       password: password.trim(),
+      phone: staff.phone,
       staff_id: staff.id,
       staff_name: staff.name,
       staff_code: staff.employee_code,
       role_code: staff.role_code,
       role_name: roleObj.name,
+      department: staff.department,
+      departments: staff.department ? [staff.department] : [],
+      staff_ids: [staff.id],
       allowedPages: allowedPages,
       created_at: new Date().toISOString().split('T')[0]
     };

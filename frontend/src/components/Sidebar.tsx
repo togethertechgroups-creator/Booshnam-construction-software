@@ -21,7 +21,15 @@ import { MOCK_ROLES } from '../lib/mockData';
 import { isPageAllowedForRole, getStoredRolePermissions } from '../lib/roleAccess';
 import { isPageAllowedForActiveUser, logoutUser, getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { confirmSignOut } from '../lib/dialogService';
-import { ORGANIZATION_DEPARTMENTS, getActiveDepartment, setActiveDepartmentId, normalizeDepartmentId, DepartmentEntity } from '../lib/departmentService';
+import { 
+  ORGANIZATION_DEPARTMENTS, 
+  getActiveDepartment, 
+  setActiveDepartmentId, 
+  normalizeDepartmentId, 
+  DepartmentEntity,
+  isUserCompanyWideSuperAdmin,
+  getUserAllowedDepartmentIds 
+} from '../lib/departmentService';
 import { getDueFollowUpsCount } from '../lib/leadsNotificationService';
 import { getUnacknowledgedLowStockItems } from '../lib/stockNotificationService';
 
@@ -77,15 +85,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [activeAccount, setActiveAccount] = useState<UserAccount | null>(() => getCurrentUserAccount());
 
   const [activeDeptEntity, setActiveDeptEntity] = useState<DepartmentEntity>(() => {
-    const acc = getCurrentUserAccount();
-    if (acc && acc.department) {
-      const isSuper = acc.role_code === 'SUPER_ADMIN';
-      const isAll = acc.department === 'Executive Management' || acc.department === 'Booshnam Associates' || acc.department.toLowerCase().includes('all') || acc.department.toLowerCase().includes('director');
-      if (!isSuper || !isAll) {
-        const norm = normalizeDepartmentId(acc.department);
-        return ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || ORGANIZATION_DEPARTMENTS[1];
-      }
-    }
     return getActiveDepartment();
   });
 
@@ -93,19 +92,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const syncDept = () => {
       const acc = getCurrentUserAccount();
       setActiveAccount(acc);
-      if (acc && acc.department) {
-        const isSuper = acc.role_code === 'SUPER_ADMIN';
-        const isAll = acc.department === 'Executive Management' || acc.department === 'Booshnam Associates' || acc.department.toLowerCase().includes('all') || acc.department.toLowerCase().includes('director');
-        if (!isSuper || !isAll) {
-          const norm = normalizeDepartmentId(acc.department);
-          const found = ORGANIZATION_DEPARTMENTS.find(d => d.id === norm) || ORGANIZATION_DEPARTMENTS[1];
-          setActiveDeptEntity(found);
-          try {
-            setActiveDepartmentId(norm);
-          } catch (e) {}
-          return;
-        }
-      }
       setActiveDeptEntity(getActiveDepartment());
     };
     syncDept();
@@ -389,23 +375,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* ── Brand Header (Interactive Workspace & Department Switcher) ── */}
         {(() => {
-          const userDept = activeAccount?.department;
-          const isSuper = resolvedUser.roleCode === 'SUPER_ADMIN';
-          const isAllDepts = !userDept || 
-            userDept === 'Executive Management' || 
-            userDept === 'Booshnam Associates' || 
-            userDept.toLowerCase().includes('all') ||
-            userDept.toLowerCase().includes('director');
+          const isCompanyWideSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
+          const allowedDeptIds = getUserAllowedDepartmentIds(activeAccount);
 
-          const isCompanyWideSuperAdmin = isSuper && isAllDepts;
-
-          const targetDeptId = normalizeDepartmentId(userDept);
           const availableDepts = isCompanyWideSuperAdmin
             ? ORGANIZATION_DEPARTMENTS
-            : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && d.id === targetDeptId);
+            : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && allowedDeptIds.includes(d.id));
 
           const finalAvailableDepts = availableDepts.length > 0 ? availableDepts : [ORGANIZATION_DEPARTMENTS[1]];
-          const canSwitchDepartment = isCompanyWideSuperAdmin && finalAvailableDepts.length > 1;
+          const canSwitchDepartment = finalAvailableDepts.length > 1;
 
           return (
             <div className="px-3.5 pt-3 pb-2.5 border-b border-slate-100 relative bg-white" ref={headerDropdownRef}>

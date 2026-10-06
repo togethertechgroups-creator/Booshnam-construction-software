@@ -16,6 +16,7 @@ import {
   ALL_SYSTEM_MODULES, 
   getStoredRolePermissions, 
   saveStoredRolePermission, 
+  deleteStoredRolePermission,
   resetRolePermissions,
   RoleAccessPermission,
   SystemModule
@@ -33,7 +34,12 @@ import {
   clearAllStaffMembers
 } from '../lib/staffService';
 import { getUserAccounts, saveUserAccount, deleteUserAccount, UserAccount, syncStaffRoleToAccount } from '../lib/authService';
-import { ORGANIZATION_DEPARTMENTS } from '../lib/departmentService';
+import { 
+  ORGANIZATION_DEPARTMENTS, 
+  getActiveDepartmentId, 
+  normalizeDepartmentId, 
+  DepartmentId 
+} from '../lib/departmentService';
 import { confirmAction } from '../lib/dialogService';
 import { 
   getTermsConditions, 
@@ -70,6 +76,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [activeNav, setActiveNav] = useState<string>('company');
   const [activeCompanyTab, setActiveCompanyTab] = useState<'details' | 'branches'>('details');
 
+  // Active Department State & Listener
+  const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
+
+  useEffect(() => {
+    const handleDeptChange = (e: any) => {
+      setActiveDeptId(e.detail || getActiveDepartmentId());
+    };
+    window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
+    return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
+  }, []);
+
+  const activeDeptEntity = useMemo(() => {
+    return ORGANIZATION_DEPARTMENTS.find(d => d.id === activeDeptId) || ORGANIZATION_DEPARTMENTS[0];
+  }, [activeDeptId]);
+
   // Roles & Access subtab: 'team_access' | 'roles'
   const [rolesAccessSubTab, setRolesAccessSubTab] = useState<'team_access' | 'roles'>('team_access');
   const [searchTeamQuery, setSearchTeamQuery] = useState<string>('');
@@ -84,7 +105,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     email: '',
     role_code: 'SITE_ENGINEER',
     role_name: 'Site Engineer',
-    department: 'Civil Engineering',
+    department: 'Soil Investigation (Chennai)',
     password: '',
   });
   const [showMemberPassword, setShowMemberPassword] = useState<boolean>(false);
@@ -244,16 +265,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return [];
   }, [staffList]);
 
+  // Only include staff who have an assigned role & login account, AND belong to current active department
+  const activeTeamMembers = useMemo(() => {
+    const accounts = getUserAccounts();
+    const accountStaffIds = new Set(accounts.map(a => a.staff_id).filter(Boolean));
+    const accountPhones = new Set(accounts.map(a => a.phone).filter(Boolean));
+
+    return staffList.filter(s => {
+      // Must have an active login account / role assigned by admin
+      const hasAccount = Boolean(s.has_login_account) || accountStaffIds.has(s.id) || accountPhones.has(s.phone);
+      if (!hasAccount) return false;
+
+      // Filter by active department
+      if (activeDeptId !== 'booshnam_associates') {
+        const staffDeptNorm = normalizeDepartmentId(s.department);
+        if (staffDeptNorm !== activeDeptId) {
+          const userAcc = accounts.find(a => (a.staff_id && a.staff_id === s.id) || (a.phone && a.phone === s.phone));
+          const matchesAccount = userAcc?.departments?.some(d => normalizeDepartmentId(d) === activeDeptId);
+          if (!matchesAccount) return false;
+        }
+      }
+      return true;
+    });
+  }, [staffList, activeDeptId]);
+
   const filteredTeamMembers = useMemo(() => {
-    if (!searchTeamQuery.trim()) return staffList;
+    if (!searchTeamQuery.trim()) return activeTeamMembers;
     const q = searchTeamQuery.toLowerCase().trim();
-    return staffList.filter(s => 
+    return activeTeamMembers.filter(s => 
       s.name.toLowerCase().includes(q) ||
       s.phone.toLowerCase().includes(q) ||
       s.role_name.toLowerCase().includes(q) ||
       s.employee_code.toLowerCase().includes(q)
     );
-  }, [staffList, searchTeamQuery]);
+  }, [activeTeamMembers, searchTeamQuery]);
 
   // Toast Notification
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -526,11 +571,68 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [rolePermissions, setRolePermissions] = useState<Record<string, RoleAccessPermission>>(() => getStoredRolePermissions());
   const [searchRoleQuery, setSearchRoleQuery] = useState('');
 
+  // Department-isolated roles for Roles subtab and role dropdowns
+  const filteredRoles = useMemo(() => {
+    const allRoles = Object.values(rolePermissions);
+    const q = searchRoleQuery.toLowerCase().trim();
+
+    return allRoles.filter(role => {
+      // If we are in Booshnam Associates (super admin consolidated view), show all roles
+      // Otherwise, only show common system roles + custom roles belonging to this department OR company-wide
+      if (activeDeptId !== 'booshnam_associates') {
+        const isCompanyWideRole = role.isCompanyWide || role.department === 'All Departments' || (role.department && normalizeDepartmentId(role.department) === 'booshnam_associates');
+        if (!isCompanyWideRole) {
+          if (role.department) {
+            const roleDeptNorm = normalizeDepartmentId(role.department);
+            if (roleDeptNorm !== activeDeptId) {
+              return false;
+            }
+          } else if (!role.isSystemRole) {
+            return false;
+          }
+        }
+      }
+
+      if (q) {
+        return (
+          role.roleName.toLowerCase().includes(q) ||
+          role.roleCode.toLowerCase().includes(q) ||
+          role.description.toLowerCase().includes(q) ||
+          (role.department && role.department.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [rolePermissions, activeDeptId, searchRoleQuery]);
+
+  const departmentAvailableRoles = useMemo(() => {
+    const customRoles = Object.values(rolePermissions).filter(r => {
+      if (r.isSystemRole) return false;
+      if (activeDeptId === 'booshnam_associates') return true;
+      if (r.isCompanyWide || r.department === 'All Departments' || (r.department && normalizeDepartmentId(r.department) === 'booshnam_associates')) return true;
+      return r.department && normalizeDepartmentId(r.department) === activeDeptId;
+    }).map(r => ({
+      id: r.roleCode,
+      name: r.roleName,
+      code: r.roleCode,
+      description: r.description
+    }));
+
+    const base = [...MOCK_ROLES];
+    customRoles.forEach(cr => {
+      if (!base.some(b => b.code === cr.code)) {
+        base.push(cr);
+      }
+    });
+    return base;
+  }, [rolePermissions, activeDeptId]);
+
   // Create / Configure Access Modal State
   const [showAccessModal, setShowAccessModal] = useState(false);
   const [modalStep, setModalStep] = useState<1 | 2>(1);
   const [modalRoleCode, setModalRoleCode] = useState<string>('ADMIN');
-  const [modalDepartment, setModalDepartment] = useState<string>('Soil Investigation');
+  const [modalDepartment, setModalDepartment] = useState<string>('Soil Investigation (Chennai)');
+  const [modalRoleDeptScope, setModalRoleDeptScope] = useState<'all' | 'specific'>('all');
   const [isCreatingNewRole, setIsCreatingNewRole] = useState(false);
   const [customRoleName, setCustomRoleName] = useState('');
   const [customRoleDesc, setCustomRoleDesc] = useState('');
@@ -551,21 +653,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const latestStaff = getStaffMembers();
     setStaffMembers(latestStaff);
 
+    const isBooshnam = activeDeptId === 'booshnam_associates';
+    const defaultDept = isBooshnam ? 'All Departments' : activeDeptEntity.name;
+
     if (targetStaffId) {
       const foundStaff = latestStaff.find(s => s.id === targetStaffId);
       if (foundStaff) {
         setSelectedStaffId(foundStaff.id);
         setModalRoleCode(foundStaff.role_code);
         setStaffUsername(foundStaff.username || foundStaff.name.toLowerCase().replace(/[^a-z0-9]/g, '.'));
-        setModalDepartment(foundStaff.department || 'Soil Investigation');
+        setModalDepartment(foundStaff.department || (isBooshnam ? 'Soil Investigation (Chennai)' : activeDeptEntity.name));
+        setModalRoleDeptScope('specific');
       }
     } else {
       setSelectedStaffId('ALL_STAFF');
       setStaffUsername('');
-      if (targetCode && (rolePermissions[targetCode] as any)?.department) {
-        setModalDepartment((rolePermissions[targetCode] as any).department);
+      if (targetCode && rolePermissions[targetCode]) {
+        const perm = rolePermissions[targetCode];
+        if (perm.isCompanyWide || perm.department === 'All Departments' || (perm.department && normalizeDepartmentId(perm.department) === 'booshnam_associates')) {
+          setModalRoleDeptScope('all');
+          setModalDepartment('All Departments');
+        } else {
+          setModalRoleDeptScope('specific');
+          setModalDepartment(perm.department || defaultDept);
+        }
       } else {
-        setModalDepartment('Soil Investigation');
+        if (isBooshnam) {
+          setModalRoleDeptScope('all');
+          setModalDepartment('All Departments');
+        } else {
+          setModalRoleDeptScope('specific');
+          setModalDepartment(activeDeptEntity.name);
+        }
       }
     }
 
@@ -573,17 +692,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setIsCreatingNewRole(false);
       setModalRoleCode(targetCode);
       setModalSelectedPages(rolePermissions[targetCode].allowedPages || []);
-      if ((rolePermissions[targetCode] as any).department) {
-        setModalDepartment((rolePermissions[targetCode] as any).department);
-      }
     } else {
       const target = targetCode || 'ADMIN';
       setIsCreatingNewRole(false);
       setModalRoleCode(target);
       setModalSelectedPages(rolePermissions[target]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id));
-      if ((rolePermissions[target] as any)?.department) {
-        setModalDepartment((rolePermissions[target] as any).department);
-      }
     }
     setStaffPassword('password123');
     setStaffConfirmPassword('password123');
@@ -705,6 +818,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       role_code: modalRoleCode,
       role_name: roleObj.name,
       department: modalDepartment,
+      departments: modalDepartment ? [modalDepartment] : [],
+      staff_ids: targetStaff?.id ? [targetStaff.id] : [],
       allowedPages: modalSelectedPages,
       created_at: new Date().toISOString().split('T')[0]
     };
@@ -738,6 +853,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleSaveRoleAccess = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    const isCompanyWide = activeDeptId === 'booshnam_associates' && modalRoleDeptScope === 'all';
+    const targetDept = isCompanyWide
+      ? 'All Departments'
+      : (modalDepartment || (activeDeptEntity.isMainOverview ? 'Soil Investigation (Chennai)' : activeDeptEntity.name));
+
     if (isCreatingNewRole) {
       if (!customRoleName.trim()) {
         showToast('Please enter a role name');
@@ -747,27 +867,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const newPerm: RoleAccessPermission = {
         roleCode: generatedCode,
         roleName: customRoleName.trim(),
-        description: customRoleDesc.trim() || 'Custom operational role',
+        description: customRoleDesc.trim() || (isCompanyWide ? 'Company-wide operational role' : `Department operational role for ${targetDept}`),
         allowedPages: modalSelectedPages,
-        department: modalDepartment,
+        department: targetDept,
+        isCompanyWide,
         isSystemRole: false
       };
       saveStoredRolePermission(newPerm);
       setRolePermissions(getStoredRolePermissions());
       setShowAccessModal(false);
-      showToast(`Role "${newPerm.roleName}" access created for ${modalDepartment}`);
+      showToast(isCompanyWide 
+        ? `Role "${newPerm.roleName}" created across All Departments` 
+        : `Role "${newPerm.roleName}" access created specifically for ${targetDept}`);
     } else {
       const existing = rolePermissions[modalRoleCode];
       if (!existing) return;
       const updated: RoleAccessPermission = {
         ...existing,
         allowedPages: modalSelectedPages,
-        department: modalDepartment
+        department: targetDept,
+        isCompanyWide
       };
       saveStoredRolePermission(updated);
       setRolePermissions(getStoredRolePermissions());
       setShowAccessModal(false);
-      showToast(`Access permissions saved for "${updated.roleName}" (${modalDepartment})`);
+      showToast(isCompanyWide
+        ? `Role "${updated.roleName}" updated for All Departments`
+        : `Access permissions saved for "${updated.roleName}" (${targetDept})`);
     }
   };
 
@@ -1766,29 +1892,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {/* Title & Subtitle + Add Member Button */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className="text-base font-bold text-slate-900">Manage your Team Roles and Accessibility</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base font-bold text-slate-900">Manage your Team Roles and Accessibility</h2>
+                        {activeDeptId !== 'booshnam_associates' && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                            {activeDeptEntity.name}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
-                        <span>You have used {staffList.length} out of 30 team member slots.</span>
+                        <span>You have used {activeTeamMembers.length} out of 30 team member slots.</span>
                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 text-slate-400 inline-flex items-center justify-center text-[9px] font-bold cursor-help" title="Maximum team member allocation limit">ⓘ</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      {staffList.length > 0 && (
+                      {activeTeamMembers.length > 0 && (
                         <button
                           type="button"
                           onClick={async () => {
                             const confirmed = await confirmAction({
-                              title: 'Remove All Team Members',
-                              message: 'Are you sure you want to remove all team members and revoke their access? You can add new members anytime.',
-                              confirmText: 'Clear All Members',
+                              title: 'Clear Team Access',
+                              message: `Are you sure you want to remove role & login access for all ${activeTeamMembers.length} team members in ${activeDeptEntity.name}? They will remain in Workforce as staff records.`,
+                              confirmText: 'Clear All Access',
                               cancelText: 'Cancel',
                               variant: 'danger',
                               icon: 'trash',
                             });
                             if (confirmed) {
-                              clearAllStaffMembers();
-                              setStaffList([]);
-                              showToast('All team members removed successfully');
+                              activeTeamMembers.forEach(staff => {
+                                deleteUserAccount(staff.id);
+                                deleteUserAccount(staff.phone);
+                                saveStaffMember({
+                                  ...staff,
+                                  has_login_account: false,
+                                });
+                                removeAllStaffProjectAllocations(staff.name);
+                              });
+                              setStaffList(getStaffMembers());
+                              showToast('All team member roles & access removed for this department');
                             }
                           }}
                           className="px-3 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5"
@@ -1799,7 +1940,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       )}
                       <button
                         type="button"
-                        onClick={() => setShowAddTeamMemberModal(true)}
+                        onClick={() => {
+                          setNewTeamMemberForm({
+                            is_existing_staff: true,
+                            staff_id: '',
+                            name: '',
+                            phone: '',
+                            email: '',
+                            role_code: 'SITE_ENGINEER',
+                            role_name: 'Site Engineer',
+                            department: activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name,
+                            password: '',
+                          });
+                          setShowAddTeamMemberModal(true);
+                        }}
                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
                       >
                         <Plus className="w-4 h-4" />
@@ -1838,9 +1992,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               <td colSpan={4} className="py-10 text-center text-slate-500 text-xs">
                                 <div className="max-w-xs mx-auto space-y-2">
                                   <Users className="w-8 h-8 text-slate-300 mx-auto" />
-                                  <p className="font-semibold text-slate-700">No team members added yet</p>
+                                  <p className="font-semibold text-slate-700">No active team members in {activeDeptEntity.name}</p>
                                   <p className="text-[11px] text-slate-400">
-                                    Click &quot;Add Member&quot; to configure staff with their mobile number, assigned department, and login password.
+                                    Click &quot;Add Member&quot; to assign a role and login password to a staff member for this department.
                                   </p>
                                 </div>
                               </td>
@@ -1884,7 +2038,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                       value={staff.role_code}
                                       onChange={(e) => {
                                         const newCode = e.target.value;
-                                        const roleObj = MOCK_ROLES.find((r) => r.code === newCode);
+                                        const roleObj = departmentAvailableRoles.find((r) => r.code === newCode);
                                         const updatedStaff: StaffMember = {
                                           ...staff,
                                           role_code: newCode,
@@ -1899,7 +2053,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                       }}
                                       className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:border-slate-300 focus:outline-hidden focus:border-red-500 cursor-pointer shadow-2xs"
                                     >
-                                      {MOCK_ROLES.map((r) => (
+                                      {departmentAvailableRoles.map((r) => (
                                         <option key={r.code} value={r.code}>
                                           {r.name}
                                         </option>
@@ -1930,17 +2084,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         type="button"
                                         onClick={async () => {
                                           const confirmed = await confirmAction({
-                                            title: 'Remove Project Access',
-                                            message: `Are you sure you want to remove all project access for ${staff.name}?\nThey will be unassigned from all active projects.`,
+                                            title: 'Remove Role & Login Access',
+                                            message: `Are you sure you want to revoke role and login access for ${staff.name}?\nThey will remain listed in Workforce as an employee, but will no longer be able to log in.`,
                                             confirmText: 'Remove Access',
                                             cancelText: 'Cancel',
                                             variant: 'danger',
                                             icon: 'trash',
                                           });
                                           if (confirmed) {
+                                            deleteUserAccount(staff.id);
+                                            deleteUserAccount(staff.phone);
+                                            saveStaffMember({
+                                              ...staff,
+                                              has_login_account: false,
+                                            });
                                             removeAllStaffProjectAllocations(staff.name);
                                             setStaffList(getStaffMembers());
-                                            showToast(`Removed all project access for ${staff.name}`);
+                                            showToast(`Role & login access removed for ${staff.name}`);
                                           }
                                         }}
                                         className="px-2.5 py-1.5 border border-red-300 hover:bg-red-50 text-red-600 rounded-md text-xs font-semibold transition cursor-pointer shadow-2xs"
@@ -1990,9 +2150,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {/* Header with Title and 'Create Access' button */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     <div>
-                      <h2 className="text-base font-bold text-slate-900">Roles & Granular Permissions</h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base font-bold text-slate-900">Roles & Granular Permissions</h2>
+                        {activeDeptId !== 'booshnam_associates' && (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
+                            {activeDeptEntity.name}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Assign and customize page-level access across Dashboard, Projects, Financials, and Settings for each role.
+                        Assign and customize page-level access across Dashboard, Projects, Financials, and Settings for roles in {activeDeptEntity.name}.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -2053,23 +2220,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <span>Reset Defaults</span>
                       </button>
                       <span className="px-2.5 py-1.5 bg-red-50 text-red-700 font-semibold text-xs rounded-lg border border-red-200">
-                        {Object.values(rolePermissions).filter(r => 
-                          r.roleName.toLowerCase().includes(searchRoleQuery.toLowerCase()) ||
-                          r.roleCode.toLowerCase().includes(searchRoleQuery.toLowerCase())
-                        ).length} Roles
+                        {filteredRoles.length} Roles
                       </span>
                     </div>
                   </div>
 
                   {/* Roles Cards List */}
                   <div className="grid grid-cols-1 gap-3.5">
-                    {Object.values(rolePermissions)
-                      .filter(r => 
-                        r.roleName.toLowerCase().includes(searchRoleQuery.toLowerCase()) ||
-                        r.roleCode.toLowerCase().includes(searchRoleQuery.toLowerCase()) ||
-                        r.description.toLowerCase().includes(searchRoleQuery.toLowerCase())
-                      )
-                      .map((role) => {
+                    {filteredRoles.length === 0 ? (
+                      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center space-y-2">
+                        <Shield className="w-8 h-8 text-slate-300 mx-auto" />
+                        <p className="font-semibold text-slate-700 text-sm">No roles found for {activeDeptEntity.name}</p>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                          Click &quot;Create Access&quot; above to create a custom operational role specifically for this department.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredRoles.map((role) => {
                         const isSuper = role.roleCode === 'SUPER_ADMIN';
                         const allowedCount = role.allowedPages ? role.allowedPages.length : 0;
                         const totalModules = ALL_SYSTEM_MODULES.length;
@@ -2106,8 +2273,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                     </span>
                                   )}
                                   {role.department && (
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                                      {role.department}
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                      role.isCompanyWide || role.department === 'All Departments'
+                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                        : 'bg-teal-50 text-teal-700 border-teal-200'
+                                    }`}>
+                                      {role.isCompanyWide || role.department === 'All Departments' ? '🌐 All Departments' : role.department}
                                     </span>
                                   )}
                                 </div>
@@ -2117,7 +2288,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               </div>
                             </div>
 
-                            {/* Right Info: Permissions Summary + Configure Access Button */}
+                            {/* Right Info: Permissions Summary + Configure Access Button + Delete (if custom) */}
                             <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
                               <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
                                 isAllAllowed
@@ -2137,10 +2308,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <SlidersHorizontal className="w-3.5 h-3.5" />
                                 <span>Configure Access</span>
                               </button>
+
+                              {!role.isSystemRole && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    const confirmed = await confirmAction({
+                                      title: 'Delete Custom Role',
+                                      message: `Are you sure you want to delete the custom role "${role.roleName}" for ${role.department || activeDeptEntity.name}?`,
+                                      confirmText: 'Delete Role',
+                                      cancelText: 'Cancel',
+                                      variant: 'danger',
+                                      icon: 'trash'
+                                    });
+                                    if (confirmed) {
+                                      deleteStoredRolePermission(role.roleCode);
+                                      setRolePermissions(getStoredRolePermissions());
+                                      showToast(`Role "${role.roleName}" deleted`);
+                                    }
+                                  }}
+                                  className="p-2 border border-slate-200 hover:border-red-400 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg transition cursor-pointer"
+                                  title={`Delete role ${role.roleName}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
-                      })}
+                      })
+                    )}
                   </div>
                 </div>
               )}
@@ -2481,10 +2678,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           {Object.values(rolePermissions).some(r => !r.isSystemRole) && (
                             <optgroup label="Custom Roles">
                               {Object.values(rolePermissions)
-                                .filter(r => !r.isSystemRole)
+                                .filter(r => !r.isSystemRole && (activeDeptId === 'booshnam_associates' || r.isCompanyWide || r.department === 'All Departments' || (r.department && normalizeDepartmentId(r.department) === activeDeptId)))
                                 .map(r => (
                                   <option key={r.roleCode} value={r.roleCode}>
-                                    {r.roleName} ({r.roleCode})
+                                    {r.roleName} ({r.roleCode}){r.isCompanyWide || r.department === 'All Departments' ? ' [All Depts]' : ''}
                                   </option>
                                 ))}
                             </optgroup>
@@ -2511,11 +2708,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         >
                           <option value="ALL_STAFF">Global Role Default (Apply to all staff with this role)</option>
                           <optgroup label="Registered Staff Members">
-                            {staffMembers.map(staff => (
-                              <option key={staff.id} value={staff.id}>
-                                {staff.name} — {staff.employee_code} ({staff.role_name})
-                              </option>
-                            ))}
+                            {staffMembers
+                              .filter(staff => {
+                                if (activeDeptId !== 'booshnam_associates') {
+                                  if (normalizeDepartmentId(staff.department) !== activeDeptId) return false;
+                                }
+                                return true;
+                              })
+                              .map(staff => (
+                                <option key={staff.id} value={staff.id}>
+                                  {staff.name} — {staff.employee_code} ({staff.role_name})
+                                </option>
+                              ))}
                           </optgroup>
                         </select>
                         <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
@@ -2523,44 +2727,176 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Assigned Department / Service Selection (Strict Isolation) */}
-                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5 text-red-600" />
-                        <span>Assigned Department / Service *</span>
-                      </label>
-                      <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
-                        Strict Department Isolation
-                      </span>
+                  {/* If creating new role, render title and description up front */}
+                  {isCreatingNewRole && (
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">New Role Title *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Quality Control Inspector"
+                          value={customRoleName}
+                          onChange={(e) => setCustomRoleName(e.target.value)}
+                          className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-900 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">Description</label>
+                        <input
+                          type="text"
+                          placeholder="Role scope & responsibilities"
+                          value={customRoleDesc}
+                          onChange={(e) => setCustomRoleDesc(e.target.value)}
+                          className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                        />
+                      </div>
                     </div>
-                    <div className="relative">
-                      <select
-                        value={modalDepartment}
-                        onChange={(e) => setModalDepartment(e.target.value)}
-                        className="w-full h-10 px-3 pr-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-900 bg-white appearance-none cursor-pointer focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                      >
-                        {modalRoleCode === 'SUPER_ADMIN' && (
-                          <option value="Booshnam Associates">Booshnam Associates (All Departments / Company-wide Overview)</option>
+                  )}
+
+                  {/* Department Scope / Assignment Selection */}
+                  {selectedStaffId === 'ALL_STAFF' ? (
+                    // Role Scope Selection: In Booshnam Associates, give choice between All Departments vs Specific Department
+                    activeDeptId === 'booshnam_associates' ? (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-red-600" />
+                            <span>Department Scope for Role *</span>
+                          </label>
+                          <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                            Booshnam Associates Super Admin
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <label className={`p-3 rounded-lg border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                            modalRoleDeptScope === 'all'
+                              ? 'border-red-500 bg-red-50/50 text-red-900'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="modal_role_dept_scope"
+                              checked={modalRoleDeptScope === 'all'}
+                              onChange={() => {
+                                setModalRoleDeptScope('all');
+                                setModalDepartment('All Departments');
+                              }}
+                              className="mt-0.5 text-red-600 focus:ring-red-500 cursor-pointer"
+                            />
+                            <div>
+                              <div className="text-xs font-bold flex items-center gap-1.5">
+                                <span>🌐 All Departments</span>
+                                <span className="text-[9px] font-semibold text-red-700 bg-red-100/70 px-1.5 py-0.2 rounded">Company-wide</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                Role will be active and available across all company departments.
+                              </p>
+                            </div>
+                          </label>
+
+                          <label className={`p-3 rounded-lg border flex items-start gap-2.5 cursor-pointer transition-colors ${
+                            modalRoleDeptScope === 'specific'
+                              ? 'border-red-500 bg-red-50/50 text-red-900'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="modal_role_dept_scope"
+                              checked={modalRoleDeptScope === 'specific'}
+                              onChange={() => {
+                                setModalRoleDeptScope('specific');
+                                if (modalDepartment === 'All Departments' || modalDepartment === 'Booshnam Associates') {
+                                  setModalDepartment('Soil Investigation (Chennai)');
+                                }
+                              }}
+                              className="mt-0.5 text-red-600 focus:ring-red-500 cursor-pointer"
+                            />
+                            <div>
+                              <div className="text-xs font-bold flex items-center gap-1.5">
+                                <span>🏢 Specific Department</span>
+                                <span className="text-[9px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">Department Only</span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                                Restrict this role exclusively to one selected department.
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+
+                        {modalRoleDeptScope === 'specific' && (
+                          <div className="pt-1">
+                            <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                              Select Target Department *
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={modalDepartment === 'All Departments' ? 'Soil Investigation (Chennai)' : modalDepartment}
+                                onChange={(e) => setModalDepartment(e.target.value)}
+                                className="w-full h-10 px-3 pr-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-900 bg-white appearance-none cursor-pointer focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                              >
+                                {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => (
+                                  <option key={d.id} value={d.name}>{d.name}</option>
+                                ))}
+                              </select>
+                              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
+                            </div>
+                          </div>
                         )}
-                        <option value="Soil Investigation (Chennai)">Soil Investigation (Chennai)</option>
-                        <option value="Soil Investigation (Coimbatore)">Soil Investigation (Coimbatore)</option>
-                        <option value="Material Testing (Chennai)">Material Testing (Chennai)</option>
-                        <option value="Material Testing (Coimbatore)">Material Testing (Coimbatore)</option>
-                        <option value="Surveying">Surveying</option>
-                        <option value="Structural">Structural</option>
-                        <option value="Architectural">Architectural</option>
-                        <option value="Sculpture">Sculpture</option>
-                        <option value="Private Construction">Private Construction</option>
-                        <option value="Government Projects">Government Projects</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
+                      </div>
+                    ) : (
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-red-600" />
+                            <span>Assigned Department *</span>
+                          </label>
+                          <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                            Strict Department Isolation
+                          </span>
+                        </div>
+                        <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800">
+                          {activeDeptEntity.name}
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    // Individual Staff Member Selected
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-red-600" />
+                          <span>Staff Assigned Department *</span>
+                        </label>
+                        <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200">
+                          Strict Department Isolation
+                        </span>
+                      </div>
+                      {activeDeptId === 'booshnam_associates' ? (
+                        <div className="relative">
+                          <select
+                            value={modalDepartment}
+                            onChange={(e) => setModalDepartment(e.target.value)}
+                            className="w-full h-10 px-3 pr-8 rounded-lg border border-slate-200 text-xs font-semibold text-slate-900 bg-white appearance-none cursor-pointer focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                          >
+                            {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => (
+                              <option key={d.id} value={d.name}>{d.name}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-3 pointer-events-none" />
+                        </div>
+                      ) : (
+                        <div className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800">
+                          {activeDeptEntity.name}
+                        </div>
+                      )}
+                      <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5 leading-snug">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>When this user logs in, only this selected department will be accessible.</span>
+                      </p>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5 leading-snug">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>When this user logs in, <strong>only this selected department</strong> will be visible in the sidebar switcher, dashboard, and projects. All other departments will remain strictly hidden.</span>
-                    </p>
-                  </div>
+                  )}
 
                   {/* Selected Staff Details Pill */}
                   {selectedStaffId !== 'ALL_STAFF' && (
@@ -2586,31 +2922,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           </>
                         );
                       })()}
-                    </div>
-                  )}
-
-                  {isCreatingNewRole && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                      <div>
-                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">New Role Title *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Site Quality Auditor"
-                          value={customRoleName}
-                          onChange={(e) => setCustomRoleName(e.target.value)}
-                          className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[11px] font-semibold text-slate-700 block mb-1">Description</label>
-                        <input
-                          type="text"
-                          placeholder="Role scope & responsibilities"
-                          value={customRoleDesc}
-                          onChange={(e) => setCustomRoleDesc(e.target.value)}
-                          className="w-full h-10 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 bg-white"
-                        />
-                      </div>
                     </div>
                   )}
                 </div>
@@ -3019,7 +3330,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showToast('Please create a login password for the member');
                   return;
                 }
+                if (activeDeptId === 'booshnam_associates' && !newTeamMemberForm.department) {
+                  showToast('Please select which department to add this staff member to');
+                  return;
+                }
                 const todayStr = new Date().toISOString().split('T')[0];
+                const targetDept = activeDeptId === 'booshnam_associates' 
+                  ? newTeamMemberForm.department 
+                  : activeDeptEntity.name;
                 
                 let finalStaffMember: StaffMember;
                 if (newTeamMemberForm.is_existing_staff && newTeamMemberForm.staff_id) {
@@ -3029,6 +3347,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ...existingStaff,
                       role_code: newTeamMemberForm.role_code,
                       role_name: newTeamMemberForm.role_name,
+                      department: targetDept,
                       has_login_account: true,
                     };
                     saveStaffMember(finalStaffMember);
@@ -3048,7 +3367,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       `${newTeamMemberForm.name.toLowerCase().replace(/\s+/g, '')}@booshnam.com`,
                     role_code: newTeamMemberForm.role_code,
                     role_name: newTeamMemberForm.role_name,
-                    department: newTeamMemberForm.department,
+                    department: targetDept,
                     designation: newTeamMemberForm.role_name,
                     dob: '1995-01-01',
                     doj: todayStr,
@@ -3076,6 +3395,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   role_code: finalStaffMember.role_code,
                   role_name: finalStaffMember.role_name,
                   department: finalStaffMember.department,
+                  departments: [finalStaffMember.department],
                   allowedPages,
                   created_at: todayStr,
                 };
@@ -3091,10 +3411,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   email: '',
                   role_code: 'SITE_ENGINEER',
                   role_name: 'Site Engineer',
-                  department: 'Construction Department',
+                  department: activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name,
                   password: '',
                 });
-                showToast(`Role assigned to "${finalStaffMember.name}" with login credentials`);
+                showToast(`Role "${finalStaffMember.role_name}" assigned to ${finalStaffMember.name} (${targetDept})`);
               }}
               className="p-6 space-y-4"
             >
@@ -3138,16 +3458,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         name: staff?.name || '',
                         phone: staff?.phone || '',
                         email: staff?.email || '',
+                        role_code: staff?.role_code || 'SITE_ENGINEER',
+                        role_name: staff?.role_name || 'Site Engineer',
+                        department: staff?.department || (activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name),
                       });
                     }}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   >
-                    <option value="">-- Choose Staff --</option>
-                    {staffList.map((staff) => (
-                      <option key={staff.id} value={staff.id}>
-                        {staff.name} ({staff.employee_code})
-                      </option>
-                    ))}
+                    <option value="">-- Choose Staff from Workforce --</option>
+                    {staffList
+                      .filter(staff => {
+                        if (activeDeptId !== 'booshnam_associates') {
+                          if (normalizeDepartmentId(staff.department) !== activeDeptId) return false;
+                        }
+                        return true;
+                      })
+                      .map((staff) => (
+                        <option key={staff.id} value={staff.id}>
+                          {staff.name} ({staff.employee_code}) {staff.has_login_account ? '— [Active Access]' : '— [No Role / Access]'}
+                        </option>
+                      ))}
                   </select>
                 </div>
               ) : (
@@ -3183,6 +3513,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </>
               )}
 
+              {/* Department Assignment - In Booshnam Associates, ask which department to add staff to */}
+              {activeDeptId === 'booshnam_associates' ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-red-600" />
+                      <span>Select Department for Staff *</span>
+                    </span>
+                    <span className="text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                      Required
+                    </span>
+                  </label>
+                  <select
+                    required
+                    value={newTeamMemberForm.department}
+                    onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  >
+                    <option value="">-- Choose Department --</option>
+                    {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    This staff member will be assigned to this department and will strictly see only this department on login.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+                  <span className="text-slate-500 font-medium">Department:</span>
+                  <span className="font-bold text-slate-800">{activeDeptEntity.name}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Role & Designation *
@@ -3191,7 +3555,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   value={newTeamMemberForm.role_code}
                   onChange={(e) => {
                     const code = e.target.value;
-                    const r = MOCK_ROLES.find((item) => item.code === code);
+                    const r = departmentAvailableRoles.find((item) => item.code === code);
                     setNewTeamMemberForm({
                       ...newTeamMemberForm,
                       role_code: code,
@@ -3200,7 +3564,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 >
-                  {MOCK_ROLES.map((r) => (
+                  {departmentAvailableRoles.map((r) => (
                     <option key={r.code} value={r.code}>
                       {r.name}
                     </option>

@@ -1066,7 +1066,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               {/* STEP 1: Project Details */}
               {wizardStep === 1 && (
-                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 animate-in fade-in duration-200">
+                <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 min-h-[700px] flex flex-col justify-between animate-in fade-in duration-200">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -1154,7 +1154,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   </div>
 
                   {/* Continue Button */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
                     <button
                       type="button"
                       onClick={handleCancelWizard}
@@ -1176,7 +1176,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               {/* STEP 2: Team Assignment */}
               {wizardStep === 2 && (
-                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 animate-in fade-in duration-200">
+                <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-7 min-h-[700px] flex flex-col justify-between animate-in fade-in duration-200">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -1414,7 +1414,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               {/* STEP 3: Predefined Tasks */}
               {wizardStep === 3 && (
-                <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
+                <div className="bg-white rounded-[32px] border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 min-h-[700px] flex flex-col justify-between animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight">
@@ -1709,7 +1709,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
                     <button
                       type="button"
                       onClick={() => setWizardStep(2)}
@@ -1733,10 +1733,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
             {/* ── RIGHT (5 COLUMNS): WIZARD SHOWCASE BANNER CARD (MATCHING DESIGN) ── */}
             <div className="lg:col-span-5 sticky top-20">
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between p-6 sm:p-7 min-h-[580px]">
+              <div className="bg-white rounded-[32px] border border-slate-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between p-6 sm:p-8 min-h-[700px]">
                 
                 {/* ── TOP-RIGHT CONSTRUCTION ILLUSTRATION HERO ── */}
-                <div className="absolute top-0 right-0 w-[190px] sm:w-[210px] h-[185px] pointer-events-none select-none z-0">
+                <div className="absolute top-0 right-0 w-[195px] sm:w-[215px] h-[190px] pointer-events-none select-none z-0">
                   <img
                     src="/construction-hero.png"
                     alt="Construction"
@@ -1745,7 +1745,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 </div>
 
                 {/* ── BOTTOM PINK WAVY GRADIENT RIBBON ── */}
-                <div className="absolute bottom-0 left-0 right-0 h-[105px] pointer-events-none select-none z-0 overflow-hidden opacity-85">
+                <div className="absolute bottom-0 left-0 right-0 h-[110px] pointer-events-none select-none z-0 overflow-hidden opacity-85">
                   <img
                     src="/construction-wave.png"
                     alt=""
@@ -1760,54 +1760,71 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     Let's Build Your<br />
                     <span className="text-red-600">Project</span>
                   </h2>
-                  <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[190px] font-medium">
+                  <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[210px] font-medium">
                     Add the key details to create a new project. Next, you can assign your team and setup departments.
                   </p>
                 </div>
 
-                {/* ── MIDDLE: 3-STEP VERTICAL TIMELINE ── */}
-                <div className="relative z-10 my-6">
-                  {/* Vertical connecting line between circle centers */}
-                  <div className="absolute left-[11px] top-[28px] bottom-[28px] w-0.5 bg-slate-200/90 z-0" />
+                {/* ── MIDDLE: 3-STEP VERTICAL TIMELINE (MATHEMATICALLY CENTERED & CURVED) ── */}
+                <div className="relative z-10 my-auto py-3">
+                  {/* Vertical connecting line through circle centers:
+                      Circle width is w-8 (32px), center is at 16px.
+                      Line is w-0.5 (2px) at left-[15px] -> perfectly centered at 16px! */}
+                  <div className="absolute left-[15px] top-[24px] bottom-[24px] w-0.5 bg-slate-200/90 z-0" />
 
                   <div className="space-y-3.5 relative z-10">
                     {/* Step 1: Project Details */}
                     <div
                       onClick={() => setWizardStep(1)}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
-                        wizardStep === 1
-                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
-                          : 'hover:bg-slate-50/70 border border-transparent'
-                      }`}
+                      className="flex items-center gap-3.5 group cursor-pointer"
                     >
                       {/* Step Number Circle */}
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all z-10 ${
                         wizardStep === 1 
-                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/30 ring-4 ring-white' 
                           : wizardStep > 1
                           ? 'bg-red-600 text-white shadow-xs ring-4 ring-white'
-                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                          : 'bg-white border-2 border-slate-300 text-slate-500 ring-4 ring-white'
                       }`}>
-                        {wizardStep > 1 ? <Check className="w-3 h-3 stroke-[2.5]" /> : '1'}
+                        {wizardStep > 1 ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : '1'}
                       </div>
 
-                      {/* Icon Box */}
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                      {/* Step Card */}
+                      <div className={`flex-1 flex items-center gap-3 p-3.5 rounded-2xl transition-all border ${
                         wizardStep === 1
-                          ? 'bg-red-100/80 text-red-600'
-                          : 'bg-slate-100/80 text-slate-500'
+                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
+                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
                       }`}>
-                        <FileText className="w-5 h-5" />
-                      </div>
+                        {/* Icon Box */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          wizardStep === 1
+                            ? 'bg-red-100/90 text-red-600'
+                            : 'bg-white text-slate-500 border border-slate-200/60 shadow-2xs'
+                        }`}>
+                          <FileText className="w-5 h-5" />
+                        </div>
 
-                      {/* Text Details */}
-                      <div className="min-w-0 flex-1">
-                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 1 ? 'text-slate-900' : 'text-slate-700'}`}>
-                          Project Details
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                          Enter project name, client, and site location details.
-                        </p>
+                        {/* Text Details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className={`text-xs font-bold leading-tight ${wizardStep === 1 ? 'text-slate-900' : 'text-slate-700'}`}>
+                              Project Details
+                            </h4>
+                            {wizardStep === 1 && (
+                              <span className="text-[10px] font-bold text-red-600 bg-red-100/60 px-2 py-0.5 rounded-full border border-red-200/50">
+                                Active
+                              </span>
+                            )}
+                            {wizardStep > 1 && (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                Done
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Enter project name, client, and site location details.
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1817,40 +1834,55 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         if (newProjectName.trim()) setWizardStep(2);
                         else setWizardError('Please enter a Project Name');
                       }}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
-                        wizardStep === 2
-                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
-                          : 'hover:bg-slate-50/70 border border-transparent'
-                      }`}
+                      className="flex items-center gap-3.5 group cursor-pointer"
                     >
                       {/* Step Number Circle */}
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all z-10 ${
                         wizardStep === 2 
-                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/30 ring-4 ring-white' 
                           : wizardStep > 2
                           ? 'bg-red-600 text-white shadow-xs ring-4 ring-white'
-                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                          : 'bg-white border-2 border-slate-300 text-slate-500 ring-4 ring-white'
                       }`}>
-                        {wizardStep > 2 ? <Check className="w-3 h-3 stroke-[2.5]" /> : '2'}
+                        {wizardStep > 2 ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : '2'}
                       </div>
 
-                      {/* Icon Box */}
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                      {/* Step Card */}
+                      <div className={`flex-1 flex items-center gap-3 p-3.5 rounded-2xl transition-all border ${
                         wizardStep === 2
-                          ? 'bg-red-100/80 text-red-600'
-                          : 'bg-slate-100/80 text-slate-500'
+                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
+                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
                       }`}>
-                        <Users className="w-5 h-5" />
-                      </div>
+                        {/* Icon Box */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          wizardStep === 2
+                            ? 'bg-red-100/90 text-red-600'
+                            : 'bg-white text-slate-500 border border-slate-200/60 shadow-2xs'
+                        }`}>
+                          <Users className="w-5 h-5" />
+                        </div>
 
-                      {/* Text Details */}
-                      <div className="min-w-0 flex-1">
-                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 2 ? 'text-slate-900' : 'text-slate-700'}`}>
-                          Team Assignment
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                          Assign PM, Engineers, Supervisors and Accounts team.
-                        </p>
+                        {/* Text Details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className={`text-xs font-bold leading-tight ${wizardStep === 2 ? 'text-slate-900' : 'text-slate-700'}`}>
+                              Team Assignment
+                            </h4>
+                            {wizardStep === 2 && (
+                              <span className="text-[10px] font-bold text-red-600 bg-red-100/60 px-2 py-0.5 rounded-full border border-red-200/50">
+                                Active
+                              </span>
+                            )}
+                            {wizardStep > 2 && (
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                Done
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Assign PM, Engineers, Supervisors and Accounts team.
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1860,45 +1892,55 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         if (newProjectName.trim()) setWizardStep(3);
                         else setWizardError('Please enter a Project Name');
                       }}
-                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
-                        wizardStep === 3
-                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
-                          : 'hover:bg-slate-50/70 border border-transparent'
-                      }`}
+                      className="flex items-center gap-3.5 group cursor-pointer"
                     >
                       {/* Step Number Circle */}
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all z-10 ${
                         wizardStep === 3 
-                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
-                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                          ? 'bg-red-600 text-white shadow-md shadow-red-600/30 ring-4 ring-white' 
+                          : 'bg-white border-2 border-slate-300 text-slate-500 ring-4 ring-white'
                       }`}>
                         3
                       </div>
 
-                      {/* Icon Box */}
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                      {/* Step Card */}
+                      <div className={`flex-1 flex items-center gap-3 p-3.5 rounded-2xl transition-all border ${
                         wizardStep === 3
-                          ? 'bg-red-100/80 text-red-600'
-                          : 'bg-slate-100/80 text-slate-500'
+                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
+                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
                       }`}>
-                        <Settings className="w-5 h-5" />
-                      </div>
+                        {/* Icon Box */}
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                          wizardStep === 3
+                            ? 'bg-red-100/90 text-red-600'
+                            : 'bg-white text-slate-500 border border-slate-200/60 shadow-2xs'
+                        }`}>
+                          <Settings className="w-5 h-5" />
+                        </div>
 
-                      {/* Text Details */}
-                      <div className="min-w-0 flex-1">
-                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 3 ? 'text-slate-900' : 'text-slate-700'}`}>
-                          Setup Project
-                        </h4>
-                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
-                          Configure departments, site details and start managing your project.
-                        </p>
+                        {/* Text Details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
+                            <h4 className={`text-xs font-bold leading-tight ${wizardStep === 3 ? 'text-slate-900' : 'text-slate-700'}`}>
+                              Setup Project
+                            </h4>
+                            {wizardStep === 3 && (
+                              <span className="text-[10px] font-bold text-red-600 bg-red-100/60 px-2 py-0.5 rounded-full border border-red-200/50">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            Configure departments, site details and start managing your project.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* ── BOTTOM: 3 FEATURE BENEFIT PILLARS ── */}
-                <div className="relative z-10 pt-4 border-t border-slate-100/80">
+                <div className="relative z-10 pt-5 border-t border-slate-100/90">
                   <div className="grid grid-cols-3 items-center divide-x divide-slate-200/80 text-center">
                     {/* Track Progress */}
                     <div className="flex flex-col items-center gap-1.5 px-2">

@@ -101,6 +101,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     }
   }, [activeProject, workspaceTab]);
 
+  // Sync propSelectedProject changes into activeProject & details view
+  useEffect(() => {
+    if (propSelectedProject) {
+      setActiveProject(propSelectedProject);
+      setViewMode('details');
+    }
+  }, [propSelectedProject]);
+
   // Filter & Search states for Projects list
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -967,6 +975,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       start_date: new Date().toISOString().split('T')[0],
       expected_end_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
       estimated_budget: budgetNum,
+      boq_value: budgetNum,
       actual_cost: 0,
       cash_in: 0,
       cash_out: 0,
@@ -1184,6 +1193,62 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           onChange={(e) => setNewCity(e.target.value)}
                           className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
                         />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section C: Project Budget & Commercials */}
+                  <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
+                      Budget & Estimated Cost
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Estimated Budget / Project Cost (₹)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            placeholder="e.g. 2500000"
+                            value={newEstimatedBudget}
+                            onChange={(e) => setNewEstimatedBudget(e.target.value)}
+                            className="w-full pl-8 pr-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
+                          />
+                        </div>
+                        {newEstimatedBudget && Number(newEstimatedBudget) > 0 ? (
+                          <p className="text-[11px] font-bold text-emerald-600 mt-1">
+                            {formatINR(newEstimatedBudget)} {getLakhsCroresText(newEstimatedBudget)}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 mt-1">
+                            Sets the project's financial budget baseline & BOQ contract value
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                          Estimated BOQ / Contract Value (₹)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                          <input
+                            type="text"
+                            placeholder="Auto-linked with Estimated Budget"
+                            value={newEstimatedBudget && Number(newEstimatedBudget) > 0 ? formatINR(newEstimatedBudget) : ''}
+                            readOnly
+                            className="w-full pl-8 pr-4 py-2.5 bg-slate-100/70 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 cursor-not-allowed select-none"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Initial BOQ value defaults to project budget
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2716,6 +2781,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                                 <span className="text-[11px] text-slate-400">
                                   {p.location || p.city}
                                 </span>
+                              )}
+                              {(Number(p.estimated_budget || 0) > 0 || Number(p.boq_value || 0) > 0) && (
+                                <>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-[11px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    Budget: ₹ {Number(p.estimated_budget || p.boq_value).toLocaleString('en-IN')}
+                                  </span>
+                                </>
                               )}
                             </div>
                           </div>

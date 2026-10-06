@@ -207,7 +207,31 @@ export function calculateProjectFinancialSummary(
   let estimatedBudget = Number(project.estimated_budget || (project as any).project_value || 0);
   let boqValue = Number(project.boq_value || 0);
 
-  // If both budget and BOQ are 0, deduce from sales or transactions
+  // If budget or BOQ are 0, check if this project originated from or has a matching quotation in booshnam_quotations_v2
+  if (estimatedBudget === 0 || boqValue === 0) {
+    try {
+      const rawQuotes = localStorage.getItem('booshnam_quotations_v2');
+      if (rawQuotes) {
+        const quotes = JSON.parse(rawQuotes);
+        if (Array.isArray(quotes)) {
+          const pName = project.name ? project.name.trim().toLowerCase() : '';
+          const cName = project.client_name ? project.client_name.trim().toLowerCase() : '';
+          const matched = quotes.find((q: any) => 
+            (q.project_id && (q.project_id === project.id || q.project_id === project.code)) ||
+            (q.project_title && pName && q.project_title.trim().toLowerCase() === pName) ||
+            (q.client_name && cName && q.client_name.trim().toLowerCase() === cName)
+          );
+          if (matched && Number(matched.total_amount || matched.subtotal) > 0) {
+            const quoteRate = Number(matched.total_amount || matched.subtotal);
+            if (estimatedBudget === 0) estimatedBudget = quoteRate;
+            if (boqValue === 0) boqValue = quoteRate;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // If still 0, deduce from sales or transactions
   if (boqValue === 0) {
     boqValue = totalSalesInvoice > 0 ? totalSalesInvoice : (estimatedBudget > 0 ? estimatedBudget : cashIn);
   }

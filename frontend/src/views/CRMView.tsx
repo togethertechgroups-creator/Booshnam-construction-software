@@ -4,13 +4,13 @@ import {
   Phone, Mail, Building, DollarSign,
   Maximize2, Minimize2
 } from 'lucide-react';
-import { Lead } from '../types';
+import { Lead, Project } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface CRMViewProps {
   leads: Lead[];
-  onConvertSuccess: (projectName: string) => void;
+  onConvertSuccess: (projectName: string, projectData?: Partial<Project>) => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
 }
@@ -28,7 +28,12 @@ export const CRMView: React.FC<CRMViewProps> = ({
     if (!lead) return;
 
     setLeadsList(prev => prev.map(l => l.id === leadId ? { ...l, stage: 'WON' as const, probability: 100 } : l));
-    onConvertSuccess(lead.project_title);
+    onConvertSuccess(lead.project_title, {
+      client_name: lead.client_name,
+      estimated_budget: lead.estimated_value || 0,
+      boq_value: lead.estimated_value || 0,
+      location: lead.address || 'Chennai'
+    });
   };
 
   const stages = ['NEW', 'CONTACTED', 'PROPOSAL', 'NEGOTIATION', 'WON'];

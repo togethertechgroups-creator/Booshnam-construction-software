@@ -134,10 +134,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="mt-3">
               <div className="text-2xl font-black text-slate-900 tracking-tight">
-                ₹{(totalPortfolioBudget / 10000000).toFixed(2)} Cr
+                {formatCompactCost(totalPortfolioBudget)}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
-                <span>Spent: <strong>₹{(totalPortfolioActual / 10000000).toFixed(2)} Cr</strong></span>
+                <span>Spent: <strong>{formatCompactCost(totalPortfolioActual)}</strong></span>
                 <span className="text-brand font-bold">({portfolioBurnRate}%)</span>
               </div>
             </div>

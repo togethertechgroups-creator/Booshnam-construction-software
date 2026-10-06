@@ -22,7 +22,7 @@ import { getStaffMembers, StaffMember } from '../lib/staffService';
 
 interface QuotationViewProps {
   projects?: Project[];
-  onConvertSuccess?: (projectName: string) => void;
+  onConvertSuccess?: (projectName: string, projectData?: Partial<Project>) => void;
   onShowToast?: (msg: string) => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -780,8 +780,144 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     markRemindersAsViewed([lead.id]);
     setActiveRowMenuId(null);
     setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, stage: 'WON', status_label: 'Client Confirmed', probability: 100 } : l));
-    onConvertSuccess?.(lead.project_title || `${lead.client_name} Project`);
-    onShowToast?.(`Lead marked as Confirmed & Project Launched!`);
+    const budgetVal = lead.estimated_value || 0;
+    const cleanTitle = lead.project_title?.trim() || `${lead.client_name} Project`;
+    const newProjId = `p-${Date.now()}`;
+    const nextNum = 2484 + Math.floor(Math.random() * 50);
+    const nextCode = `PRJ-${nextNum}`;
+
+    const newProject: Project = {
+      id: newProjId,
+      code: nextCode,
+      name: cleanTitle,
+      client_name: lead.client_name,
+      project_type: 'Private Construction',
+      location: lead.address || 'Chennai',
+      address: lead.address || 'Chennai',
+      city: 'Chennai',
+      latitude: 13.0827,
+      longitude: 80.2707,
+      geofence_radius_meters: 200,
+      start_date: new Date().toISOString().split('T')[0],
+      expected_end_date: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+      estimated_budget: budgetVal,
+      boq_value: budgetVal,
+      actual_cost: 0,
+      cash_in: 0,
+      cash_out: 0,
+      progress_percentage: 0,
+      status: 'ACTIVE',
+      stage: 'Planning & Mobilization',
+      category: 'Private Construction',
+      department: lead.category || 'SOIL_INVESTIGATION',
+      description: `Converted from Lead (${lead.client_name}). Estimated Value: ₹ ${budgetVal.toLocaleString('en-IN')}`,
+      todo_count: 0,
+      material_pending_count: 0,
+      approval_pending_count: 0,
+      initials: cleanTitle.slice(0, 2).toUpperCase() || 'PR',
+      avatar_color: 'bg-red-600'
+    };
+
+    try {
+      const raw = localStorage.getItem('booshnam_projects_v2');
+      const projs: Project[] = raw ? JSON.parse(raw) : [];
+      const updated = [newProject, ...projs.filter(p => p.id !== newProject.id && p.code !== newProject.code)];
+      localStorage.setItem('booshnam_projects_v2', JSON.stringify(updated));
+    } catch (e) {}
+
+    window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: newProject }));
+    onConvertSuccess?.(newProject.name, newProject);
+    onShowToast?.(`Lead marked as Confirmed & Project Launched with budget ₹ ${budgetVal.toLocaleString('en-IN')}!`);
+  };
+
+  // Convert Quotation to Project with Quotation Rate as Budget
+  const handleConvertQuotationToProject = async (quote: Quotation) => {
+    setActiveQuoteRowMenuId(null);
+    setActiveQuoteStatusDropdownId(null);
+    setPreviewQuotation(null);
+
+    const quoteRate = Number(quote.total_amount || quote.subtotal || 0);
+    const cleanTitle = quote.project_title?.trim() || `${quote.client_name} Project`;
+
+    const confirmed = await confirmAction({
+      title: 'Convert Quotation to Project',
+      message: `Do you want to launch a new project for "${quote.client_name}" with the quotation rate of ₹ ${quoteRate.toLocaleString('en-IN')} as the project budget?`,
+      confirmText: 'Convert & Launch Project',
+      cancelText: 'Cancel',
+      variant: 'primary',
+      icon: 'info'
+    });
+    if (!confirmed) return;
+
+    const newProjId = `p-${Date.now()}`;
+    const nextNum = 2484 + Math.floor(Math.random() * 50);
+    const nextCode = `PRJ-${nextNum}`;
+
+    const newProject: Project = {
+      id: newProjId,
+      code: nextCode,
+      name: cleanTitle,
+      client_name: quote.client_name,
+      project_type: 'Private Construction',
+      location: quote.client_address || 'Chennai',
+      address: quote.client_address || 'Chennai',
+      city: 'Chennai',
+      latitude: 13.0827,
+      longitude: 80.2707,
+      geofence_radius_meters: 200,
+      start_date: new Date().toISOString().split('T')[0],
+      expected_end_date: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+      estimated_budget: quoteRate,
+      boq_value: quoteRate,
+      actual_cost: 0,
+      cash_in: 0,
+      cash_out: 0,
+      progress_percentage: 0,
+      status: 'ACTIVE',
+      stage: 'Planning & Mobilization',
+      category: 'Private Construction',
+      department: quote.department || 'SOIL_INVESTIGATION',
+      description: `Converted from Quotation ${quote.quotation_number}. Value: ₹ ${quoteRate.toLocaleString('en-IN')}`,
+      todo_count: 0,
+      material_pending_count: 0,
+      approval_pending_count: 0,
+      initials: cleanTitle.slice(0, 2).toUpperCase() || 'PR',
+      avatar_color: 'bg-red-600'
+    };
+
+    // Store BOQ items if quotation has items
+    if (quote.items && quote.items.length > 0) {
+      const boqItems = quote.items.map((it, idx) => ({
+        id: `boq-${Date.now()}-${idx}`,
+        item_code: it.item_code || `BOQ-${idx + 1}`,
+        description: it.description,
+        unit: it.unit || 'Nos',
+        quantity: it.quantity || 1,
+        rate: it.unit_rate || 0,
+        amount: it.amount || 0,
+        category: it.category || 'Civil'
+      }));
+      try {
+        localStorage.setItem(`siteops_boq_items_${newProjId}`, JSON.stringify(boqItems));
+        localStorage.setItem(`siteops_boq_items_${nextCode}`, JSON.stringify(boqItems));
+      } catch (e) {}
+    }
+
+    // Persist to booshnam_projects_v2
+    try {
+      const raw = localStorage.getItem('booshnam_projects_v2');
+      const projs: Project[] = raw ? JSON.parse(raw) : [];
+      const updated = [newProject, ...projs.filter(p => p.id !== newProject.id && p.code !== newProject.code)];
+      localStorage.setItem('booshnam_projects_v2', JSON.stringify(updated));
+    } catch (e) {}
+
+    // Update quotation status and project link
+    setQuotations(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'Client Confirmed', project_id: newProjId } : q));
+
+    // Notify listeners & App
+    window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: newProject }));
+    onConvertSuccess?.(newProject.name, newProject);
+    onShowToast?.(`Quotation ${quote.quotation_number} converted to Project with budget ₹ ${quoteRate.toLocaleString('en-IN')}!`);
   };
 
   // =========================================================================
@@ -873,6 +1009,13 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     setQuotations(prev => prev.map(q => q.id === id ? { ...q, status: newStatus } : q));
     setActiveQuoteStatusDropdownId(null);
     onShowToast?.(`Status updated to ${newStatus}`);
+
+    if (newStatus === 'Client Confirmed' || newStatus === 'APPROVED') {
+      const targetQuote = quotations.find(q => q.id === id);
+      if (targetQuote) {
+        handleConvertQuotationToProject(targetQuote);
+      }
+    }
   };
 
   const handleDeleteQuotation = async (id: string, num: string) => {
@@ -1556,17 +1699,35 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                         {/* Status Dropdown Pill with Menu (matching Image 3) */}
                         <td className="py-3.5 px-4 relative dropdown-trigger-container">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveQuoteStatusDropdownId(activeQuoteStatusDropdownId === quote.id ? null : quote.id);
-                            }}
-                            className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-all ${getQuoteStatusBadge(quote.status)}`}
-                          >
-                            <span>{quote.status === 'APPROVED' ? 'Client Confirmed' : quote.status}</span>
-                            <ChevronDown className="w-3.5 h-3.5 opacity-70" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveQuoteStatusDropdownId(activeQuoteStatusDropdownId === quote.id ? null : quote.id);
+                              }}
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-all ${getQuoteStatusBadge(quote.status)}`}
+                            >
+                              <span>{quote.status === 'APPROVED' ? 'Client Confirmed' : quote.status}</span>
+                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                            </button>
+
+                            {/* Direct Convert to Project Button when Confirmed */}
+                            {(quote.status === 'Client Confirmed' || quote.status === 'APPROVED') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleConvertQuotationToProject(quote);
+                                }}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer whitespace-nowrap active:scale-95"
+                                title={`Convert to Project with budget ₹ ${quote.total_amount.toLocaleString('en-IN')}`}
+                              >
+                                <Briefcase className="w-3 h-3" />
+                                <span>Convert to Project</span>
+                              </button>
+                            )}
+                          </div>
 
                           {/* Floating Status Dropdown Menu (Image 3) */}
                           {activeQuoteStatusDropdownId === quote.id && (
@@ -1607,6 +1768,17 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                           {activeQuoteRowMenuId === quote.id && (
                             <div className="absolute right-4 top-10 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveQuoteRowMenuId(null);
+                                  handleConvertQuotationToProject(quote);
+                                }}
+                                className="w-full px-3 py-2 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2 cursor-pointer font-bold"
+                              >
+                                <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Convert to Project</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -2587,6 +2759,16 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Convert to Project Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleConvertQuotationToProject(previewQuotation)}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors active:scale-95"
+                    title={`Launch Project with this proposal value (₹ ${previewQuotation.total_amount.toLocaleString('en-IN')})`}
+                  >
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Convert to Project</span>
+                  </button>
                   {/* Download Button (opens download modal for PDF/Word) */}
                   <button
                     type="button"

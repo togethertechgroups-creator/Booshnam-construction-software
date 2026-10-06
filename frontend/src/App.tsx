@@ -476,28 +476,67 @@ export function App() {
     // Corner toast notifications listener disabled per user request
   }, []);
 
-  const handleConvertLeadSuccess = (projectTitle: string) => {
+  const handleConvertLeadSuccess = (projectTitle: string, customData?: Partial<Project>) => {
+    // If full project object was already generated
+    if (customData && customData.id && customData.code) {
+      const fullProj = customData as Project;
+      setProjects(prev => [fullProj, ...prev.filter(p => p.id !== fullProj.id && p.code !== fullProj.code)]);
+      setSelectedProject(fullProj);
+      setCurrentView('projects');
+      showToast(`Project ${fullProj.code} (${fullProj.name}) launched with budget ₹ ${(fullProj.estimated_budget || 0).toLocaleString('en-IN')}!`);
+      return;
+    }
+
+    const budget = customData?.estimated_budget ?? 0;
+    const newProjId = customData?.id || `p-${Date.now()}`;
+    const nextNum = 2484 + Math.floor(Math.random() * 50);
+    const newProjCode = customData?.code || `PRJ-${nextNum}`;
+    const cleanName = projectTitle || customData?.name || 'New Project';
+
     const newProj: Project = {
-      id: `p-${projects.length + 1}`,
-      code: `PRJ-${String(projects.length + 1).padStart(3, '0')}`,
-      name: projectTitle,
-      client_name: 'Converted from Lead',
-      project_type: 'Commercial Complex',
-      location: 'Site Location Pending',
-      latitude: 12.9716,
-      longitude: 77.5946,
-      geofence_radius_meters: 300,
-      start_date: new Date().toISOString().split('T')[0],
-      expected_end_date: new Date(Date.now() + 365*86400000).toISOString().split('T')[0],
-      estimated_budget: 142000000,
+      id: newProjId,
+      code: newProjCode,
+      name: cleanName,
+      client_name: customData?.client_name || 'Client',
+      project_type: customData?.project_type || 'Private Construction',
+      location: customData?.location || customData?.address || 'Site Location',
+      address: customData?.address || customData?.location || 'Site Location',
+      city: customData?.city || 'Chennai',
+      latitude: customData?.latitude ?? 13.0827,
+      longitude: customData?.longitude ?? 80.2707,
+      geofence_radius_meters: 200,
+      start_date: customData?.start_date || new Date().toISOString().split('T')[0],
+      expected_end_date: customData?.expected_end_date || new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+      estimated_budget: budget,
+      boq_value: customData?.boq_value ?? budget,
       actual_cost: 0,
+      cash_in: 0,
+      cash_out: 0,
       progress_percentage: 0,
-      status: 'PLANNING',
-      description: 'Newly converted project from winning CRM tender.'
+      status: 'ACTIVE',
+      stage: 'Planning & Mobilization',
+      category: customData?.category || 'Private Construction',
+      department: customData?.department || 'SOIL_INVESTIGATION',
+      description: customData?.description || `Project launched with budget ₹ ${budget.toLocaleString('en-IN')}.`,
+      todo_count: 0,
+      material_pending_count: 0,
+      approval_pending_count: 0,
+      initials: cleanName.slice(0, 2).toUpperCase() || 'PR',
+      avatar_color: 'bg-red-600',
+      ...customData
     };
-    setProjects(prev => [newProj, ...prev]);
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('booshnam_projects_v2') || '[]');
+      const filtered = Array.isArray(stored) ? stored.filter((p: Project) => p.id !== newProj.id && p.code !== newProj.code) : [];
+      localStorage.setItem('booshnam_projects_v2', JSON.stringify([newProj, ...filtered]));
+    } catch (e) {}
+
+    setProjects(prev => [newProj, ...prev.filter(p => p.id !== newProj.id && p.code !== newProj.code)]);
     setSelectedProject(newProj);
-    showToast(`Project ${newProj.code} (${newProj.name}) launched!`);
+    setCurrentView('projects');
+    window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: newProj }));
+    showToast(`Project ${newProj.code} (${newProj.name}) launched with budget ₹ ${budget.toLocaleString('en-IN')}!`);
   };
 
   const handleLoginSuccess = (account: UserAccount) => {

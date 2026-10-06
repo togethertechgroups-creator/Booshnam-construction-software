@@ -657,17 +657,15 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   </div>
                 </div>
 
-                {/* NOTE: "In Progress" KPI Card is REMOVED as explicitly requested in voice audio: "இன் ப்ரோக்ரஸ் வந்து வேண்டாம்" */}
-
-                {/* KPI 3: Pending (Red Theme) */}
+                {/* KPI 3: Ongoing (Amber Theme) */}
                 <div className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-2xl shadow-2xs min-w-[125px]">
-                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                     <Clock className="w-5 h-5 stroke-[2.2]" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Ongoing</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {filteredQuotationTasks.filter(t => t.status !== 'COMPLETED' && (t.progress_percentage === undefined || t.progress_percentage < 100) && t.status !== 'IN_PROGRESS' && (t.progress_percentage === undefined || t.progress_percentage === 0)).length}
+                      {filteredQuotationTasks.filter(t => (t.status === 'IN_PROGRESS' || (t.progress_percentage !== undefined && t.progress_percentage > 0)) && t.status !== 'COMPLETED' && (t.progress_percentage === undefined || t.progress_percentage < 100)).length}
                     </span>
                   </div>
                 </div>

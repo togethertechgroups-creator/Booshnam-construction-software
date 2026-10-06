@@ -1308,17 +1308,48 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               <h3 className="text-[13px] font-bold text-slate-900 mb-6">Payables vs Receivables</h3>
               
               <div className="flex items-center justify-center my-8">
-                <div className="relative w-36 h-36 rounded-full border-[12px] border-slate-100 flex items-center justify-center">
-                   {/* Simplified Donut Chart matching screenshot (full green ring since Payable is 0) */}
-                   <svg className="absolute inset-0 w-full h-full -rotate-90 -m-[12px]" viewBox="0 0 36 36">
-                    <path
-                      className="text-[#3baf57] transition-all duration-500"
-                      strokeDasharray="100, 100"
-                      strokeWidth="3.5"
-                      stroke="currentColor"
+                <div className="relative w-36 h-36 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    {/* Background Track Circle (Concentric Light Gray Ring) */}
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.9155"
                       fill="none"
-                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      className="text-slate-100"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
                     />
+                    {/* Receivable Segment (Green) */}
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.9155"
+                      fill="none"
+                      className="text-[#3baf57] transition-all duration-500"
+                      stroke="currentColor"
+                      strokeWidth="3.5"
+                      strokeDasharray={
+                        (payables + receivables > 0)
+                          ? `${(receivables / (payables + receivables)) * 100}, 100`
+                          : "100, 100"
+                      }
+                      strokeDashoffset="0"
+                    />
+                    {/* Payable Segment (Red) if payables > 0 */}
+                    {payables + receivables > 0 && payables > 0 && (
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                        fill="none"
+                        className="text-red-500 transition-all duration-500"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                        strokeDasharray={`${(payables / (payables + receivables)) * 100}, 100`}
+                        strokeDashoffset={String(-((receivables / (payables + receivables)) * 100))}
+                      />
+                    )}
                   </svg>
                 </div>
               </div>

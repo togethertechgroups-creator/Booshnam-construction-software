@@ -6184,7 +6184,6 @@ const toIsoDate = (displayStr: string) => {
                     options={parties.map(p => ({
                       label: p.name,
                       value: p.name,
-                      badge: p.type,
                       description: `${p.phone ? `${p.phone} • ` : ''}Balance: ₹${p.balanceDue.toLocaleString('en-IN')}`
                     }))}
                     placeholder="Select registered party..."

@@ -1363,15 +1363,6 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                         {selectedPartyRecord.avatarText || selectedPartyRecord.name.slice(0, 1).toUpperCase()}
                       </div>
                       <span className="font-semibold text-slate-700 truncate">{selectedPartyRecord.name}</span>
-                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                        selectedPartyRecord.type === 'Client' ? 'bg-blue-100 text-blue-700' :
-                        selectedPartyRecord.type === 'Staff' ? 'bg-purple-100 text-purple-700' :
-                        selectedPartyRecord.type === 'Vendor' ? 'bg-amber-100 text-amber-700' :
-                        selectedPartyRecord.type === 'Subcontractor' ? 'bg-indigo-100 text-indigo-700' :
-                        'bg-teal-100 text-teal-700'
-                      }`}>
-                        {selectedPartyRecord.type}
-                      </span>
                     </div>
                     <span className="font-medium text-slate-500 text-[10px] shrink-0">
                       Balance: ₹ {(selectedPartyRecord.balanceDue || 0).toLocaleString('en-IN')} ({selectedPartyRecord.status})
@@ -1437,19 +1428,8 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             </div>
 
                             <div className="text-right shrink-0 flex items-center gap-2">
-                              <div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  p.type === 'Client' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                  p.type === 'Staff' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                                  p.type === 'Vendor' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                                  p.type === 'Subcontractor' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
-                                  'bg-teal-50 text-teal-700 border border-teal-200'
-                                }`}>
-                                  {p.type}
-                                </span>
-                                <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-                                  ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
-                                </div>
+                              <div className="text-[10px] font-semibold text-slate-600 font-mono">
+                                ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
                               </div>
                               {isSelected && <Check className="w-4 h-4 text-red-600 stroke-[3]" />}
                             </div>
@@ -2258,15 +2238,6 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                         {selectedPrPartyRecord.avatarText || selectedPrPartyRecord.name.slice(0, 1).toUpperCase()}
                       </div>
                       <span className="font-semibold text-slate-700 truncate">{selectedPrPartyRecord.name}</span>
-                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                        selectedPrPartyRecord.type === 'Client' ? 'bg-blue-100 text-blue-700' :
-                        selectedPrPartyRecord.type === 'Staff' ? 'bg-purple-100 text-purple-700' :
-                        selectedPrPartyRecord.type === 'Vendor' ? 'bg-amber-100 text-amber-700' :
-                        selectedPrPartyRecord.type === 'Subcontractor' ? 'bg-indigo-100 text-indigo-700' :
-                        'bg-teal-100 text-teal-700'
-                      }`}>
-                        {selectedPrPartyRecord.type}
-                      </span>
                     </div>
                     <span className="font-medium text-slate-500 text-[10px] shrink-0">
                       Balance: ₹ {(selectedPrPartyRecord.balanceDue || 0).toLocaleString('en-IN')} ({selectedPrPartyRecord.status})
@@ -2332,19 +2303,8 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             </div>
 
                             <div className="text-right shrink-0 flex items-center gap-2">
-                              <div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  p.type === 'Client' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                  p.type === 'Staff' ? 'bg-purple-50 text-purple-700 border border-purple-200' :
-                                  p.type === 'Vendor' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                                  p.type === 'Subcontractor' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
-                                  'bg-teal-50 text-teal-700 border border-teal-200'
-                                }`}>
-                                  {p.type}
-                                </span>
-                                <div className="text-[9px] text-slate-400 font-mono mt-0.5">
-                                  ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
-                                </div>
+                              <div className="text-[10px] font-semibold text-slate-600 font-mono">
+                                ₹ {(p.balanceDue || 0).toLocaleString('en-IN')}
                               </div>
                               {isSelected && <Check className="w-4 h-4 text-red-600 stroke-[3]" />}
                             </div>

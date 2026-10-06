@@ -48,6 +48,7 @@ import {
 import { getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { DepartmentLogo } from '../components/DepartmentLogo';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
+import { syncAllProjectsFinancials } from '../lib/projectFinanceUtils';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -298,18 +299,52 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     );
   }, [propProjects, localProjects]);
 
-  // Listen for project updates from other tabs or components
+  // Synchronize all project financial totals on mount & listen for updates
   useEffect(() => {
+    try {
+      syncAllProjectsFinancials();
+    } catch (e) {}
+
     const handleProjectsUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
         const clean = e.detail.filter((p: any) => 
           !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
         );
         setLocalProjects(clean);
+        setActiveProject((prev) => {
+          if (!prev) return prev;
+          const fresh = clean.find((cp: any) => cp.id === prev.id || cp.code === prev.code || cp.name === prev.name);
+          return fresh || prev;
+        });
       }
     };
+
+    const handleTransactionsUpdated = () => {
+      try {
+        const raw = localStorage.getItem('booshnam_projects_v2');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter((p: any) => 
+              !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+            );
+            setLocalProjects(clean);
+            setActiveProject((prev) => {
+              if (!prev) return prev;
+              const fresh = clean.find((cp: any) => cp.id === prev.id || cp.code === prev.code || cp.name === prev.name);
+              return fresh || prev;
+            });
+          }
+        }
+      } catch (e) {}
+    };
+
     window.addEventListener('booshnam_projects_updated', handleProjectsUpdated);
-    return () => window.removeEventListener('booshnam_projects_updated', handleProjectsUpdated);
+    window.addEventListener('siteops_project_transactions_updated', handleTransactionsUpdated);
+    return () => {
+      window.removeEventListener('booshnam_projects_updated', handleProjectsUpdated);
+      window.removeEventListener('siteops_project_transactions_updated', handleTransactionsUpdated);
+    };
   }, []);
 
   const [currentUser, setCurrentUser] = useState(() => {

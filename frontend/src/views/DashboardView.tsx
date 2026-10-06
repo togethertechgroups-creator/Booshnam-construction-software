@@ -31,9 +31,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const activeProj = selectedProject || projects[0];
 
-  const totalPortfolioBudget = projects.reduce((acc, p) => acc + (p.estimated_budget || 0), 0);
-  const totalPortfolioActual = projects.reduce((acc, p) => acc + (p.actual_cost || 0), 0);
+  const totalPortfolioBudget = projects.reduce((acc, p) => {
+    const b = Number(p.estimated_budget || (p as any).project_value || 0);
+    const inVal = Number(p.cash_in || 0);
+    return acc + (b > 0 ? b : inVal);
+  }, 0);
+  const totalPortfolioActual = projects.reduce((acc, p) => acc + Number(p.actual_cost || p.cash_out || 0), 0);
   const portfolioBurnRate = totalPortfolioBudget > 0 ? (totalPortfolioActual / totalPortfolioBudget * 100).toFixed(1) : '0';
+
+  const formatCompactCost = (amt: number = 0) => {
+    if (amt >= 10000000) return `₹${(amt / 10000000).toFixed(2)} Cr`;
+    if (amt >= 100000) return `₹${(amt / 100000).toFixed(2)} L`;
+    return `₹${amt.toLocaleString('en-IN')}`;
+  };
 
   // Fullscreen State & Toggle
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -287,16 +297,22 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-slate-50 p-2.5 rounded-lg">
                     <div className="text-slate-400 text-[10px] uppercase">Budget</div>
-                    <div className="font-bold text-slate-800 mt-0.5">₹{(activeProj.estimated_budget! / 10000000).toFixed(2)} Cr</div>
+                    <div className="font-bold text-slate-800 mt-0.5">
+                      {formatCompactCost(activeProj.estimated_budget || (activeProj as any).project_value || activeProj.cash_in || 0)}
+                    </div>
                   </div>
                   <div className="bg-slate-50 p-2.5 rounded-lg">
                     <div className="text-slate-400 text-[10px] uppercase">Actual Cost</div>
-                    <div className="font-bold text-slate-800 mt-0.5">₹{(activeProj.actual_cost! / 10000000).toFixed(2)} Cr</div>
+                    <div className="font-bold text-slate-800 mt-0.5">
+                      {formatCompactCost(activeProj.actual_cost || activeProj.cash_out || 0)}
+                    </div>
                   </div>
                 </div>
                 <div className="text-[11px] text-emerald-700 font-medium flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  <span>Variance: ₹{((activeProj.estimated_budget! - activeProj.actual_cost!) / 10000000).toFixed(2)} Cr remaining</span>
+                  <span>
+                    Variance: {formatCompactCost(Math.max(0, (activeProj.estimated_budget || activeProj.cash_in || 0) - (activeProj.actual_cost || activeProj.cash_out || 0)))} remaining
+                  </span>
                 </div>
               </div>
             )}

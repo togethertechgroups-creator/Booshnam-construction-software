@@ -14,6 +14,7 @@ import {
   syncProjectPaymentRequestToFinance, 
   PartyRecord 
 } from '../../../lib/financeSyncService';
+import { syncProjectFinancialsToStorage } from '../../../lib/projectFinanceUtils';
 
 interface TransactionTabProps {
   project: Project;
@@ -235,13 +236,15 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`siteops_project_transactions_${projectIdKey}`);
-      setTransactions(saved ? JSON.parse(saved) : DEFAULT_TRANSACTIONS);
+      const txs = saved ? JSON.parse(saved) : DEFAULT_TRANSACTIONS;
+      setTransactions(txs);
+      syncProjectFinancialsToStorage(project.id, project.code, project.name);
     } catch (e) {}
     try {
       const savedPR = localStorage.getItem(`siteops_payment_requests_${projectIdKey}`);
       setPaymentRequests(savedPR ? JSON.parse(savedPR) : []);
     } catch (e) {}
-  }, [projectIdKey]);
+  }, [projectIdKey, project.id, project.code, project.name]);
 
   useEffect(() => {
     const refreshFinanceParties = () => {
@@ -260,6 +263,13 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
     setTransactions(newTxList);
     try {
       localStorage.setItem(storageKey, JSON.stringify(newTxList));
+      if (project.id && project.id !== projectIdKey) {
+        localStorage.setItem(`siteops_project_transactions_${project.id}`, JSON.stringify(newTxList));
+      }
+      if (project.code && project.code !== projectIdKey) {
+        localStorage.setItem(`siteops_project_transactions_${project.code}`, JSON.stringify(newTxList));
+      }
+      syncProjectFinancialsToStorage(project.id, project.code, project.name);
     } catch (e) {}
   };
 
@@ -268,6 +278,13 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
     setPaymentRequests(newList);
     try {
       localStorage.setItem(prStorageKey, JSON.stringify(newList));
+      if (project.id && project.id !== projectIdKey) {
+        localStorage.setItem(`siteops_payment_requests_${project.id}`, JSON.stringify(newList));
+      }
+      if (project.code && project.code !== projectIdKey) {
+        localStorage.setItem(`siteops_payment_requests_${project.code}`, JSON.stringify(newList));
+      }
+      syncProjectFinancialsToStorage(project.id, project.code, project.name);
     } catch (e) {}
   };
 

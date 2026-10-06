@@ -49,6 +49,7 @@ import {
 } from './lib/authService';
 import { syncProjectAssignmentNotifications, getNotifications } from './lib/notificationService';
 import { getOrInitializeProjects } from './lib/departmentService';
+import { syncAllProjectsFinancials } from './lib/projectFinanceUtils';
 
 
 const KNOWN_VIEWS = new Set([
@@ -322,13 +323,15 @@ export function App() {
 
       // Ensure all 10 departments have at least one project
       const allDeptsProjs = getOrInitializeProjects();
-      setProjects(allDeptsProjs);
-      if (allDeptsProjs.length > 0) {
-        setSelectedProject(prev => prev || allDeptsProjs[0]);
+      const synchronizedProjs = syncAllProjectsFinancials();
+      const finalProjs = synchronizedProjs && synchronizedProjs.length > 0 ? synchronizedProjs : allDeptsProjs;
+      setProjects(finalProjs);
+      if (finalProjs.length > 0) {
+        setSelectedProject(prev => prev || finalProjs[0]);
       } else {
         setSelectedProject(null);
       }
-      window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: allDeptsProjs }));
+      window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: finalProjs }));
     } catch (e) {}
   }, []);
   const [activeRole, setActiveRole] = useState<Role>(() => {

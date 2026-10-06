@@ -12,6 +12,11 @@ import { WorkspaceTabId, isSoilDepartmentProject } from '../ProjectTopNav';
 import { ProjectPhoto, getProjectPhotos, addProjectPhoto, removeProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { confirmAction } from '../../../lib/dialogService';
 import { CustomSelect } from '../../CustomSelect';
+import { 
+  calculateProjectFinancialSummary, 
+  syncProjectFinancialsToStorage, 
+  ProjectFinancialSummary 
+} from '../../../lib/projectFinanceUtils';
 
 interface DashboardTabProps {
   project: Project;
@@ -76,7 +81,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   }, [project.id, project.code]);
 
   const projProgress = project.progress_percentage || 0;
-  const projectValue = project.estimated_budget || 0;
   const projTeam: ProjectTeamMember[] = project.assigned_team || [];
 
   // Project MOMs (Requirement 4)
@@ -199,19 +203,49 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   // Attendance 7-day data
   const attendanceDays: Array<{ date: string; target: number; actual: number }> = [];
 
+  // Live Dynamic Financial Calculations synced with Transactions & Accounts
+  const [finSummary, setFinSummary] = useState<ProjectFinancialSummary>(() => {
+    return calculateProjectFinancialSummary(project);
+  });
+
+  useEffect(() => {
+    const refreshFinancials = () => {
+      setFinSummary(calculateProjectFinancialSummary(project));
+    };
+
+    // On mount and project change, ensure storage is updated and state is fresh
+    syncProjectFinancialsToStorage(project.id, project.code, project.name);
+    refreshFinancials();
+
+    window.addEventListener('siteops_project_transactions_updated', refreshFinancials);
+    window.addEventListener('booshnam_projects_updated', refreshFinancials);
+    window.addEventListener('booshnam_finance_updated', refreshFinancials);
+    window.addEventListener('storage', refreshFinancials);
+
+    return () => {
+      window.removeEventListener('siteops_project_transactions_updated', refreshFinancials);
+      window.removeEventListener('booshnam_projects_updated', refreshFinancials);
+      window.removeEventListener('booshnam_finance_updated', refreshFinancials);
+      window.removeEventListener('storage', refreshFinancials);
+    };
+  }, [project.id, project.code, project.name, project]);
+
   // Financial stats
-  const cashIn = project.cash_in || 0;
-  const cashOut = project.cash_out || 0;
-  const netWorkingCap = cashIn - cashOut;
-  const boqValue = project.boq_value || 0;
-  const estimatedMargin = project.estimated_margin || 0;
-  const salesInvoice = project.sales_invoice || 0;
-  const workDone = project.work_done || 0;
-  const payables = project.payables || 0;
-  const receivables = project.receivables || 0;
-  const siteStaffExpense = project.site_staff_expense || 0;
-  const labourContractorExpense = project.labour_contractor_expense || 0;
-  const officeStaffExpense = project.office_staff_expense || 0;
+  const cashIn = finSummary.cashIn;
+  const cashOut = finSummary.cashOut;
+  const netWorkingCap = finSummary.netCashPosition;
+  const boqValue = finSummary.boqValue;
+  const estimatedMargin = finSummary.estimatedMargin;
+  const salesInvoice = finSummary.totalSalesInvoice;
+  const workDone = finSummary.workDoneValue;
+  const payables = finSummary.payables;
+  const receivables = finSummary.receivables;
+  const siteStaffExpense = finSummary.siteStaffExpense;
+  const labourContractorExpense = finSummary.labourContractorExpense;
+  const officeStaffExpense = finSummary.officeStaffExpense;
+  const projectValue = finSummary.estimatedBudget;
+
+  const [costCodeFilter, setCostCodeFilter] = useState<'all' | 'over' | 'under'>('all');
 
 
   // Handle image file selection
@@ -1281,33 +1315,108 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           {/* Budget vs Expense by Cost Code */}
           <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[13px] font-bold text-slate-900">Budget Vs Expense by Cost Code</h3>
-              <button type="button" className="text-[11px] text-slate-500 hover:text-slate-800">
-                View Breakup
+              <div>
+                <h3 className="text-[13px] font-bold text-slate-900">Budget Vs Expense by Cost Code</h3>
+                <div className="text-[11px] text-slate-500 mt-0.5">
+                  Cost codes where expense exceeds budget. % shown as variance.
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => onNavigateTab('transaction')}
+                className="text-[11px] text-red-600 font-bold hover:underline cursor-pointer"
+              >
+                + Add Transaction
               </button>
             </div>
+
+            {/* Filter Pills */}
             <div className="flex items-center gap-2 mb-4">
-              <div className="px-3 py-1 bg-slate-900 text-white text-[11px] rounded-full font-medium">
-                Over Budget (0)
+              <button
+                type="button"
+                onClick={() => setCostCodeFilter('all')}
+                className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  costCodeFilter === 'all' 
+                    ? 'bg-slate-900 text-white' 
+                    : 'border border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                }`}
+              >
+                All ({finSummary.costCodeBreakdown.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCostCodeFilter('over')}
+                className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  costCodeFilter === 'over' 
+                    ? 'bg-rose-600 text-white' 
+                    : 'border border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                }`}
+              >
+                Over Budget ({finSummary.overBudgetCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCostCodeFilter('under')}
+                className={`px-3 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer ${
+                  costCodeFilter === 'under' 
+                    ? 'bg-emerald-700 text-white' 
+                    : 'border border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                }`}
+              >
+                Under Budget ({finSummary.underBudgetCount})
+              </button>
+            </div>
+
+            {/* Cost Code Rows or Empty State */}
+            {finSummary.costCodeBreakdown.length === 0 ? (
+              <div className="text-center text-[12px] text-slate-400 py-6 border border-dashed border-slate-200 rounded-xl my-2">
+                No expense cost codes logged for this project yet. Expenses recorded in the Transaction tab will appear here automatically.
               </div>
-              <div className="px-3 py-1 border border-slate-200 text-slate-400 text-[11px] rounded-full font-medium bg-white">
-                Under Budget (0)
+            ) : (
+              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                {finSummary.costCodeBreakdown
+                  .filter(c => {
+                    if (costCodeFilter === 'over') return c.isOverBudget;
+                    if (costCodeFilter === 'under') return !c.isOverBudget;
+                    return true;
+                  })
+                  .map((c, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50/80 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-slate-900">{c.code}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          Budget benchmark: ₹ {c.budget.toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-slate-900">
+                          ₹ {c.expense.toLocaleString('en-IN')}
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                          c.isOverBudget 
+                            ? 'bg-rose-100 text-rose-700' 
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                          {c.isOverBudget ? `+${c.variance}% Over` : `${c.variance}% Used`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
               </div>
-            </div>
-            <div className="text-[11px] text-slate-500 mb-10">
-              Cost codes where expense exceeds budget. % shown as variance.
-            </div>
-            <div className="text-center text-[12px] text-slate-500 py-4 mb-4">
-              No cost codes over budget.
-            </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Payables vs Receivables */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
-              <h3 className="text-[13px] font-bold text-slate-900 mb-6">Payables vs Receivables</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-bold text-slate-900">Payables vs Receivables</h3>
+                <span className="text-[11px] font-medium text-slate-400">
+                  Total: ₹ {(payables + receivables).toLocaleString('en-IN')}
+                </span>
+              </div>
               
-              <div className="flex items-center justify-center my-8">
+              <div className="flex items-center justify-center my-6">
                 <div className="relative w-36 h-36 flex items-center justify-center">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                     {/* Background Track Circle (Concentric Light Gray Ring) */}
@@ -1351,68 +1460,216 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       />
                     )}
                   </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Net Cash</span>
+                    <span className="text-xs font-black text-slate-800">
+                      ₹ {netWorkingCap >= 100000 ? `${(netWorkingCap / 100000).toFixed(1)}L` : netWorkingCap.toLocaleString('en-IN')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3 mt-10">
+              <div className="space-y-3 mt-6">
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="text-slate-600">Payable</span>
+                    <span className="text-slate-600">Payable (Vendors/Subcons)</span>
                   </div>
-                  <span className="font-bold text-slate-900">₹ {payables.toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">₹ {payables.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      ({(payables + receivables) > 0 ? Math.round((payables / (payables + receivables)) * 100) : 0}%)
+                    </span>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#3baf57]" />
-                    <span className="text-slate-600">Receivable</span>
+                    <span className="text-slate-600">Receivable (Client Balance)</span>
                   </div>
-                  <span className="font-bold text-slate-900">₹ {receivables.toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">₹ {receivables.toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      ({(payables + receivables) > 0 ? Math.round((receivables / (payables + receivables)) * 100) : 100}%)
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Salary Expense */}
             <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs">
-              <h3 className="text-[13px] font-bold text-slate-900 mb-4">Salary Expense</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-bold text-slate-900">Salary Expense</h3>
+                <span className="text-[11px] font-medium text-slate-500">
+                  Total: ₹ {(siteStaffExpense + labourContractorExpense + officeStaffExpense).toLocaleString('en-IN')}
+                </span>
+              </div>
               
-              <div className="h-44"></div> {/* Placeholder for chart area */}
+              {/* Dynamic Visual Salary Distribution Bar */}
+              {(() => {
+                const totalSal = siteStaffExpense + labourContractorExpense + officeStaffExpense;
+                const sitePct = totalSal > 0 ? Math.round((siteStaffExpense / totalSal) * 100) : 0;
+                const labourPct = totalSal > 0 ? Math.round((labourContractorExpense / totalSal) * 100) : 0;
+                const officePct = totalSal > 0 ? Math.max(0, 100 - sitePct - labourPct) : 0;
+
+                return (
+                  <div className="py-6 space-y-4">
+                    <div className="w-full bg-slate-100 h-4 rounded-xl overflow-hidden flex shadow-inner">
+                      {sitePct > 0 && (
+                        <div 
+                          className="bg-[#6a4c9c] h-full transition-all duration-300" 
+                          style={{ width: `${sitePct}%` }}
+                          title={`Site Staff: ${sitePct}%`}
+                        />
+                      )}
+                      {labourPct > 0 && (
+                        <div 
+                          className="bg-[#f39c12] h-full transition-all duration-300" 
+                          style={{ width: `${labourPct}%` }}
+                          title={`Labour: ${labourPct}%`}
+                        />
+                      )}
+                      {officePct > 0 && (
+                        <div 
+                          className="bg-[#3498db] h-full transition-all duration-300" 
+                          style={{ width: `${officePct}%` }}
+                          title={`Office Staff: ${officePct}%`}
+                        />
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                      <div className="p-2 rounded-lg bg-[#6a4c9c]/10 border border-[#6a4c9c]/20">
+                        <div className="text-[10px] font-bold text-[#6a4c9c] uppercase">Site Staff</div>
+                        <div className="text-xs font-bold text-slate-900 mt-0.5">{sitePct}%</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#f39c12]/10 border border-[#f39c12]/20">
+                        <div className="text-[10px] font-bold text-[#f39c12] uppercase">Labour</div>
+                        <div className="text-xs font-bold text-slate-900 mt-0.5">{labourPct}%</div>
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#3498db]/10 border border-[#3498db]/20">
+                        <div className="text-[10px] font-bold text-[#3498db] uppercase">Office</div>
+                        <div className="text-xs font-bold text-slate-900 mt-0.5">{officePct}%</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
               
-              <div className="space-y-4 mt-6">
-                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+              <div className="space-y-3 mt-2 border-t border-slate-100 pt-3">
+                <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#6a4c9c]" />
                     <span className="text-slate-600">Site Staff</span>
                   </div>
-                  <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ {siteStaffExpense.toLocaleString()}</span>
-                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  <div className="flex gap-4 w-28 justify-end">
+                    <span className="font-bold text-slate-900">₹ {siteStaffExpense.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-400 w-8 text-right">
+                      {(siteStaffExpense + labourContractorExpense + officeStaffExpense) > 0 
+                        ? Math.round((siteStaffExpense / (siteStaffExpense + labourContractorExpense + officeStaffExpense)) * 100) 
+                        : 0}%
+                    </span>
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+                <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#f39c12]" />
                     <span className="text-slate-600">Labour Contractor</span>
                   </div>
-                  <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ {labourContractorExpense.toLocaleString()}</span>
-                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  <div className="flex gap-4 w-28 justify-end">
+                    <span className="font-bold text-slate-900">₹ {labourContractorExpense.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-400 w-8 text-right">
+                      {(siteStaffExpense + labourContractorExpense + officeStaffExpense) > 0 
+                        ? Math.round((labourContractorExpense / (siteStaffExpense + labourContractorExpense + officeStaffExpense)) * 100) 
+                        : 0}%
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center text-xs border-b border-slate-100 pb-2">
+                <div className="flex justify-between items-center text-xs">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#3498db]" />
                     <span className="text-slate-600">Office Staff</span>
                   </div>
-                  <div className="flex gap-4 w-20 justify-end">
-                    <span className="font-bold text-slate-900">₹ {officeStaffExpense.toLocaleString()}</span>
-                    <span className="text-slate-400 w-6 text-right">0%</span>
+                  <div className="flex gap-4 w-28 justify-end">
+                    <span className="font-bold text-slate-900">₹ {officeStaffExpense.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-400 w-8 text-right">
+                      {(siteStaffExpense + labourContractorExpense + officeStaffExpense) > 0 
+                        ? Math.round((officeStaffExpense / (siteStaffExpense + labourContractorExpense + officeStaffExpense)) * 100) 
+                        : 0}%
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* ── LIVE TRANSACTIONS SUMMARY LOG (CONNECTED TO TRANSACTIONS TAB) ── */}
+          <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-[13px] font-bold text-slate-900">Live Project Transactions Sync</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Synchronized live with Transaction tab and Accounts &amp; Finance ledger
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('transaction')}
+                className="text-xs font-bold text-red-600 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span>View All ({finSummary.transactionsCount})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {finSummary.recentTransactions.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                No transactions recorded for this project yet. Go to the Transaction tab to record a Payment In or Out.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="text-[10px] uppercase font-bold text-slate-400 bg-slate-50/70 select-none">
+                    <tr>
+                      <th className="py-2.5 px-3">Date</th>
+                      <th className="py-2.5 px-3">Party Name</th>
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3">Mode</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {finSummary.recentTransactions.slice(0, 5).map((tx) => (
+                      <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{tx.date}</td>
+                        <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">
+                          {tx.party_name}
+                          <span className="text-[10px] text-slate-400 font-normal block">{tx.transaction_number}</span>
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            tx.type === 'IN' 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {tx.transaction_sub_type || (tx.type === 'IN' ? 'Payment In' : 'Payment Out')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{tx.payment_mode || 'Cash'}</td>
+                        <td className={`py-3 px-3 text-right font-bold whitespace-nowrap ${
+                          tx.type === 'IN' ? 'text-emerald-700' : 'text-slate-900'
+                        }`}>
+                          {tx.type === 'IN' ? '+' : '-'} ₹ {Number(tx.amount).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
         </div>

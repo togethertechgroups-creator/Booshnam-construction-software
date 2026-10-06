@@ -1,4 +1,5 @@
 import { Project } from '../types';
+import { getProjectTransactions } from './projectFinanceUtils';
 
 export type DepartmentId = 
   | 'booshnam_associates'
@@ -405,11 +406,23 @@ export const calculateDepartmentStats = (
     else if (status === 'PLANNING' || status === 'NOT_STARTED') notStartedProjects++;
     else activeProjects++;
 
-    const cashIn = Number(p.cash_in || 0);
+    let cashIn = Number(p.cash_in || 0);
+    let cashOut = Number(p.cash_out || 0);
+
+    // If project cash_in / cash_out are not pre-populated, pull directly from stored transactions
+    if (cashIn === 0 && cashOut === 0) {
+      try {
+        const txs = getProjectTransactions(p);
+        if (txs.length > 0) {
+          cashIn = txs.filter(t => t.type === 'IN').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+          cashOut = txs.filter(t => t.type === 'OUT').reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        }
+      } catch (e) {}
+    }
+
     const estBudget = Number(p.estimated_budget || 0);
     totalRevenue += cashIn > 0 ? cashIn : estBudget;
 
-    const cashOut = Number(p.cash_out || 0);
     const actCost = Number(p.actual_cost || 0);
     totalExpenses += cashOut > 0 ? cashOut : actCost;
   });

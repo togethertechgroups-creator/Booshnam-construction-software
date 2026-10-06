@@ -33,7 +33,9 @@ import {
   removeAllStaffProjectAllocations,
   saveStaffMember,
   deleteStaffMember,
-  clearAllStaffMembers
+  clearAllStaffMembers,
+  isStaffInDepartment,
+  getStaffDepartmentNames
 } from '../lib/staffService';
 import { getUserAccounts, saveUserAccount, deleteUserAccount, UserAccount, syncStaffRoleToAccount } from '../lib/authService';
 import { 
@@ -99,7 +101,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [selectedStaffForProjects, setSelectedStaffForProjects] = useState<StaffMember | null>(null);
   const [showAddTeamMemberModal, setShowAddTeamMemberModal] = useState<boolean>(false);
-  const [newTeamMemberForm, setNewTeamMemberForm] = useState({
+  const [newTeamMemberForm, setNewTeamMemberForm] = useState<{
+    is_existing_staff: boolean;
+    staff_id: string;
+    name: string;
+    phone: string;
+    email: string;
+    role_code: string;
+    role_name: string;
+    department: string;
+    departments: string[];
+    password: string;
+  }>({
     is_existing_staff: true,
     staff_id: '',
     name: '',
@@ -108,6 +121,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     role_code: 'SITE_ENGINEER',
     role_name: 'Site Engineer',
     department: 'Soil Investigation (Chennai)',
+    departments: ['Soil Investigation (Chennai)'],
     password: '',
   });
   const [showMemberPassword, setShowMemberPassword] = useState<boolean>(false);
@@ -275,8 +289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       // Filter strictly by active department
       if (activeDeptId !== 'booshnam_associates') {
-        const staffDeptNorm = normalizeDepartmentId(s.department);
-        if (staffDeptNorm !== activeDeptId) return false;
+        if (!isStaffInDepartment(s, activeDeptId)) return false;
       }
       return true;
     });
@@ -1970,6 +1983,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             role_code: 'SITE_ENGINEER',
                             role_name: 'Site Engineer',
                             department: activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name,
+                            departments: activeDeptId === 'booshnam_associates' ? [] : [activeDeptEntity.name],
                             password: '',
                           });
                           setShowAddTeamMemberModal(true);
@@ -2042,11 +2056,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <div className="font-bold text-slate-900 text-xs truncate">{staff.name}</div>
                                         <div className="text-[11px] text-slate-500 font-normal truncate flex items-center gap-1.5">
                                           <span>{staff.phone}</span>
-                                          {staff.department && (
+                                          {getStaffDepartmentNames(staff).length > 1 ? (
+                                            <div className="flex flex-wrap gap-1 mt-0.5">
+                                              {getStaffDepartmentNames(staff).map(dep => (
+                                                <span key={dep} className="text-[9.5px] bg-slate-100 text-slate-700 px-1.5 py-0.2 rounded font-semibold border border-slate-200">
+                                                  {dep}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          ) : staff.department ? (
                                             <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-medium">
                                               {staff.department}
                                             </span>
-                                          )}
+                                          ) : null}
                                         </div>
                                       </div>
                                     </div>
@@ -2731,7 +2753,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             {staffMembers
                               .filter(staff => {
                                 if (activeDeptId !== 'booshnam_associates') {
-                                  if (normalizeDepartmentId(staff.department) !== activeDeptId) return false;
+                                  if (!isStaffInDepartment(staff, activeDeptId)) return false;
                                 }
                                 return true;
                               })
@@ -3354,14 +3376,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showToast('Maximum 46 team member slots limit reached for this department.');
                   return;
                 }
-                if (activeDeptId === 'booshnam_associates' && !newTeamMemberForm.department) {
-                  showToast('Please select which department to assign this staff member to');
+                const chosenDepts = activeDeptId === 'booshnam_associates'
+                  ? (newTeamMemberForm.departments && newTeamMemberForm.departments.length > 0 
+                      ? newTeamMemberForm.departments 
+                      : (newTeamMemberForm.department ? [newTeamMemberForm.department] : []))
+                  : [activeDeptEntity.name];
+
+                if (activeDeptId === 'booshnam_associates' && chosenDepts.length === 0) {
+                  showToast('Please select at least one department to assign');
                   return;
                 }
                 const todayStr = new Date().toISOString().split('T')[0];
-                const targetDept = activeDeptId === 'booshnam_associates'
-                  ? newTeamMemberForm.department
-                  : activeDeptEntity.name;
+                const targetDeptStr = chosenDepts.join(', ');
                 let finalStaffMember: StaffMember;
                 if (newTeamMemberForm.is_existing_staff && newTeamMemberForm.staff_id) {
                   const existingStaff = staffList.find(s => s.id === newTeamMemberForm.staff_id);
@@ -3370,7 +3396,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ...existingStaff,
                       role_code: newTeamMemberForm.role_code,
                       role_name: newTeamMemberForm.role_name,
-                      department: targetDept,
+                      department: targetDeptStr,
+                      departments: chosenDepts,
                       has_login_account: true,
                     };
                     saveStaffMember(finalStaffMember);
@@ -3390,7 +3417,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       `${newTeamMemberForm.name.toLowerCase().replace(/\s+/g, '')}@booshnam.com`,
                     role_code: newTeamMemberForm.role_code,
                     role_name: newTeamMemberForm.role_name,
-                    department: targetDept,
+                    department: targetDeptStr,
+                    departments: chosenDepts,
                     designation: newTeamMemberForm.role_name,
                     dob: '1995-01-01',
                     doj: todayStr,
@@ -3417,8 +3445,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   staff_code: finalStaffMember.employee_code,
                   role_code: finalStaffMember.role_code,
                   role_name: finalStaffMember.role_name,
-                  department: finalStaffMember.department,
-                  departments: [finalStaffMember.department],
+                  department: targetDeptStr,
+                  departments: chosenDepts,
                   allowedPages,
                   created_at: todayStr,
                 };
@@ -3435,9 +3463,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   role_code: 'SITE_ENGINEER',
                   role_name: 'Site Engineer',
                   department: activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name,
+                  departments: activeDeptId === 'booshnam_associates' ? [] : [activeDeptEntity.name],
                   password: '',
                 });
-                showToast(`Role "${finalStaffMember.role_name}" assigned to ${finalStaffMember.name} (${finalStaffMember.department})`);
+                showToast(`Role "${finalStaffMember.role_name}" assigned to ${finalStaffMember.name} (${targetDeptStr})`);
               }}
               className="p-6 space-y-4"
             >
@@ -3475,6 +3504,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     onChange={(e) => {
                       const staffId = e.target.value;
                       const staff = staffList.find((s) => s.id === staffId);
+                      const staffDepts = staff ? getStaffDepartmentNames(staff) : [];
+                      const fallbackDepts = staffDepts.length > 0
+                        ? staffDepts
+                        : (activeDeptId === 'booshnam_associates' ? [] : [activeDeptEntity.name]);
                       setNewTeamMemberForm({
                         ...newTeamMemberForm,
                         staff_id: staffId,
@@ -3483,7 +3516,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         email: staff?.email || '',
                         role_code: staff?.role_code || 'SITE_ENGINEER',
                         role_name: staff?.role_name || 'Site Engineer',
-                        department: staff?.department || (activeDeptId === 'booshnam_associates' ? '' : activeDeptEntity.name),
+                        department: fallbackDepts.join(', '),
+                        departments: fallbackDepts,
                       });
                     }}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
@@ -3492,7 +3526,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {staffList
                       .filter(staff => {
                         if (activeDeptId !== 'booshnam_associates') {
-                          if (normalizeDepartmentId(staff.department) !== activeDeptId) return false;
+                          if (!isStaffInDepartment(staff, activeDeptId)) return false;
                         }
                         return true;
                       })
@@ -3536,32 +3570,85 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </>
               )}
 
-              {/* Department Selection ONLY in Booshnam Associates (Super Admin Overview) */}
+              {/* Department Selection (Multi-select Checkboxes) ONLY in Booshnam Associates */}
               {activeDeptId === 'booshnam_associates' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-red-600" />
-                      <span>Select Department for Staff *</span>
-                    </span>
-                    <span className="text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
-                      Required
-                    </span>
-                  </label>
-                  <select
-                    required
-                    value={newTeamMemberForm.department}
-                    onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                  >
-                    <option value="">-- Choose Department --</option>
-                    {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => (
-                      <option key={d.id} value={d.name}>{d.name}</option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    This staff member will be assigned to this department and will strictly see only this department on login.
+                      <span>Select Department(s) for Staff *</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allDepts = ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => d.name);
+                          setNewTeamMemberForm(prev => {
+                            const isAll = (prev.departments || []).length === allDepts.length;
+                            const next = isAll ? [] : allDepts;
+                            return {
+                              ...prev,
+                              departments: next,
+                              department: next.join(', ')
+                            };
+                          });
+                        }}
+                        className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                      >
+                        {(newTeamMemberForm.departments || []).length === ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).length ? 'Deselect All' : 'Select All'}
+                      </button>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        (newTeamMemberForm.departments || []).length > 0
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {(newTeamMemberForm.departments || []).length} selected
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Tick the department(s) to give this member access to. Ticking multiple departments will grant access to all of them:
                   </p>
+                  <div className="grid grid-cols-1 gap-2 p-3 bg-slate-50/70 border border-slate-200 rounded-xl max-h-48 overflow-y-auto">
+                    {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(dept => {
+                      const isChecked = (newTeamMemberForm.departments || []).includes(dept.name);
+                      return (
+                        <label
+                          key={dept.id}
+                          className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-red-50/80 border-red-300 text-red-950 shadow-2xs ring-1 ring-red-400/30'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setNewTeamMemberForm(prev => {
+                                const curr = prev.departments || [];
+                                const next = isChecked
+                                  ? curr.filter(d => d !== dept.name)
+                                  : [...curr, dept.name];
+                                return {
+                                  ...prev,
+                                  departments: next,
+                                  department: next.join(', ')
+                                };
+                              });
+                            }}
+                            className="w-4 h-4 rounded text-red-600 border-slate-300 focus:ring-red-500 accent-red-600 cursor-pointer"
+                          />
+                          <span className="truncate flex-1 text-xs">{dept.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {(newTeamMemberForm.departments || []).length === 0 && (
+                    <p className="text-[10px] font-semibold text-red-600">
+                      * Please tick at least one department to assign access.
+                    </p>
+                  )}
                 </div>
               )}
 

@@ -214,10 +214,20 @@ export const getUserAllowedDepartmentIds = (account?: { role_code?: string; depa
   const rawList: string[] = [];
   if (targetAcc) {
     if (Array.isArray(targetAcc.departments) && targetAcc.departments.length > 0) {
-      rawList.push(...targetAcc.departments);
+      targetAcc.departments.forEach(dept => {
+        if (typeof dept === 'string' && dept.includes(',')) {
+          rawList.push(...dept.split(',').map(s => s.trim()));
+        } else if (dept) {
+          rawList.push(dept);
+        }
+      });
     }
     if (targetAcc.department) {
-      rawList.push(targetAcc.department);
+      if (targetAcc.department.includes(',')) {
+        rawList.push(...targetAcc.department.split(',').map(s => s.trim()));
+      } else {
+        rawList.push(targetAcc.department);
+      }
     }
   }
 

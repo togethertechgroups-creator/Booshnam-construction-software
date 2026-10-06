@@ -1,3 +1,5 @@
+import { normalizeDepartmentId } from './departmentService';
+
 export interface StaffMember {
   id: string;
   employee_code: string;
@@ -5,6 +7,7 @@ export interface StaffMember {
   role_code: string;
   role_name: string;
   department: string;
+  departments?: string[];
   designation: string;
   dob: string; // Date of Birth YYYY-MM-DD
   doj: string; // Date of Joining YYYY-MM-DD
@@ -18,6 +21,28 @@ export interface StaffMember {
   username?: string;
   created_at: string;
   staff_type?: 'OFFICE' | 'SITE';
+}
+
+export function getStaffDepartmentNames(staff: StaffMember): string[] {
+  const depts: string[] = [];
+  if (Array.isArray(staff.departments) && staff.departments.length > 0) {
+    staff.departments.forEach(d => {
+      if (d && d.includes(',')) depts.push(...d.split(',').map(x => x.trim()));
+      else if (d) depts.push(d.trim());
+    });
+  } else if (staff.department) {
+    if (staff.department.includes(',')) depts.push(...staff.department.split(',').map(x => x.trim()));
+    else depts.push(staff.department.trim());
+  }
+  return Array.from(new Set(depts.filter(Boolean)));
+}
+
+export function isStaffInDepartment(staff: StaffMember, targetDeptIdOrName: string): boolean {
+  const targetNorm = normalizeDepartmentId(targetDeptIdOrName);
+  if (targetNorm === 'booshnam_associates') return true;
+  const depts = getStaffDepartmentNames(staff);
+  if (depts.length === 0) return true;
+  return depts.some(d => normalizeDepartmentId(d) === targetNorm);
 }
 
 export function getStaffCategory(s: StaffMember): 'OFFICE' | 'SITE' {

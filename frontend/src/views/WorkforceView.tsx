@@ -5,7 +5,7 @@ import {
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
   Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
   Camera, Eye, HardHat, Smartphone,
-  Maximize2, Minimize2
+  Maximize2, Minimize2, Layers
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
@@ -20,7 +20,9 @@ import {
   StaffMember,
   getStaffAllocatedProjects,
   toggleStaffProjectAllocation,
-  getStaffCategory
+  getStaffCategory,
+  isStaffInDepartment,
+  getStaffDepartmentNames
 } from '../lib/staffService';
 import {
   getActiveDepartment,
@@ -218,7 +220,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       id: d.id,
       name: d.name,
       shortName: d.shortName,
-      count: staffList.filter(s => normalizeDepartmentId(s.department) === d.id).length
+      count: staffList.filter(s => isStaffInDepartment(s, d.id)).length
     }));
   }, [staffList]);
 
@@ -230,23 +232,20 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
     let baseList = staffList;
     if (!isSuperAdmin && allowedDepts && allowedDepts.length > 0) {
-      baseList = staffList.filter(s => allowedDepts.includes(normalizeDepartmentId(s.department) as any));
+      baseList = staffList.filter(s => allowedDepts.some(dId => isStaffInDepartment(s, dId)));
     }
 
     if (!isOverview) {
       const normActive = normalizeDepartmentId(activeDept.id);
-      return baseList.filter(s => {
-        const normStaffDept = normalizeDepartmentId(s.department);
-        return normStaffDept === normActive;
-      });
+      return baseList.filter(s => isStaffInDepartment(s, normActive));
     }
     if (selectedDepartmentIds.includes('ALL') || selectedDepartmentIds.length === 0) {
       return baseList;
     }
     const normSelected = new Set(selectedDepartmentIds.map(id => normalizeDepartmentId(id)));
     return baseList.filter(s => {
-      const normStaffDept = normalizeDepartmentId(s.department);
-      return normSelected.has(normStaffDept);
+      const sDepts = getStaffDepartmentNames(s);
+      return sDepts.some(d => normSelected.has(normalizeDepartmentId(d)));
     });
   }, [staffList, isOverview, activeDept.id, selectedDepartmentIds]);
 
@@ -260,6 +259,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     name: string;
     role_code: string;
     department: string;
+    departments: string[];
     designation: string;
     dob: string;
     doj: string;
@@ -273,6 +273,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     name: '',
     role_code: 'SITE_ENGINEER',
     department: 'Soil Investigation (Chennai)',
+    departments: ['Soil Investigation (Chennai)'],
     designation: 'Site Engineer',
     dob: '1995-05-15',
     doj: new Date().toISOString().split('T')[0],
@@ -294,6 +295,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       name: '',
       role_code: chosenType === 'SITE' ? 'SITE_ENGINEER' : 'ADMIN',
       department: defaultDeptName,
+      departments: [defaultDeptName],
       designation: chosenType === 'SITE' ? 'Site Engineer' : 'Office Administrator',
       dob: '1995-05-15',
       doj: new Date().toISOString().split('T')[0],
@@ -357,15 +359,20 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     if (newStaffForm.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(newStaffForm.email.trim())) {
       return triggerToast('Invalid email format');
     }
+    const selectedDepts = newStaffForm.departments && newStaffForm.departments.length > 0
+      ? newStaffForm.departments
+      : (newStaffForm.department ? [newStaffForm.department] : []);
+
+    if (selectedDepts.length === 0) {
+      return triggerToast('Please select at least one department for the staff member');
+    }
 
     const rolesMap = getStoredRolePermissions();
     const isSite = newStaffForm.staff_type === 'SITE';
     const computedRoleCode = isSite ? 'SITE_ENGINEER' : 'ADMIN';
     const roleObj = rolesMap[computedRoleCode] || { roleName: isSite ? 'Site Engineer' : 'Office Staff' };
     const generatedCode = `EMP-0${100 + staffList.length + 1}`;
-    const targetDept = !isOverview 
-      ? activeDept.name 
-      : (newStaffForm.department || getIndividualDepartments()[0]?.name || 'Soil Investigation (Chennai)');
+    const targetDept = selectedDepts.join(', ');
 
     const newStaff: StaffMember = {
       id: `emp-${Date.now()}`,
@@ -374,6 +381,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       role_code: computedRoleCode,
       role_name: roleObj.roleName || (isSite ? 'Site Engineer' : 'Office Staff'),
       department: targetDept,
+      departments: selectedDepts,
       designation: newStaffForm.designation || (isSite ? 'Site Engineer' : 'Office Administrator'),
       dob: newStaffForm.dob,
       doj: newStaffForm.doj,
@@ -388,9 +396,13 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
       created_at: new Date().toISOString().split('T')[0]
     };
 
+    const deptSummary = selectedDepts.length > 1
+      ? `${selectedDepts.length} departments (${targetDept})`
+      : targetDept;
+
     const confirmed = await confirmAction({
       title: `Create ${isSite ? 'Site Staff' : 'Office Staff'}`,
-      message: `Add "${newStaff.name}" to ${newStaff.department}?`,
+      message: `Add "${newStaff.name}" to ${deptSummary}?`,
       confirmText: 'Save Staff',
       cancelText: 'Cancel',
       variant: 'primary',
@@ -403,7 +415,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     clearFormDirty();
     setStaffList(getStaffMembers());
     setShowAddStaffModal(false);
-    triggerToast(`Staff "${newStaff.name}" added to ${newStaff.department}! Role & login access can be assigned from Settings > Roles & Access.`);
+    triggerToast(`Staff "${newStaff.name}" added to ${deptSummary}! Role & login access can be assigned from Settings > Roles & Access.`);
   };
 
   const handleDeleteStaff = async (id: string, name: string) => {
@@ -788,7 +800,17 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                             {/* Department & Designation */}
                             <td className="py-4 px-6 align-middle">
                               <div className="font-semibold text-slate-800 leading-tight">{staff.designation}</div>
-                              <div className="text-[11px] text-slate-400 leading-tight mt-0.5">{staff.department}</div>
+                              {getStaffDepartmentNames(staff).length > 1 ? (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {getStaffDepartmentNames(staff).map(dep => (
+                                    <span key={dep} className="px-1.5 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-semibold rounded border border-slate-200">
+                                      {dep}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-[11px] text-slate-400 leading-tight mt-0.5">{staff.department}</div>
+                              )}
                             </td>
 
                             {/* Contact */}
@@ -1370,6 +1392,85 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                         className="w-full h-11 px-3.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 focus:border-red-500"
                       />
                     </div>
+                  </div>
+
+                  {/* ── DEPARTMENT SELECTION (CHECKBOXES) ── */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-red-600" />
+                        <span>Select Department(s) for Staff *</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const allDepts = getIndividualDepartments().map(d => d.name);
+                            setNewStaffForm(prev => {
+                              const isAllSelected = prev.departments.length === allDepts.length;
+                              const next = isAllSelected ? [] : allDepts;
+                              return {
+                                ...prev,
+                                departments: next,
+                                department: next.join(', ')
+                              };
+                            });
+                          }}
+                          className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer"
+                        >
+                          {newStaffForm.departments.length === getIndividualDepartments().length ? 'Deselect All' : 'Select All'}
+                        </button>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          newStaffForm.departments.length > 0
+                            ? 'bg-red-50 text-red-700 border border-red-200'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {newStaffForm.departments.length} selected
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Tick the department(s) to assign this staff member. You can select multiple departments:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 bg-slate-50/70 border border-slate-200 rounded-xl max-h-48 overflow-y-auto">
+                      {getIndividualDepartments().map(dept => {
+                        const isChecked = newStaffForm.departments.includes(dept.name);
+                        return (
+                          <label
+                            key={dept.id}
+                            className={`flex items-center gap-2.5 p-2 rounded-lg border text-xs font-semibold cursor-pointer transition-all ${
+                              isChecked
+                                ? 'bg-red-50/80 border-red-300 text-red-950 shadow-2xs ring-1 ring-red-400/30'
+                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setNewStaffForm(prev => {
+                                  const next = isChecked
+                                    ? prev.departments.filter(d => d !== dept.name)
+                                    : [...prev.departments, dept.name];
+                                  return {
+                                    ...prev,
+                                    departments: next,
+                                    department: next.join(', ')
+                                  };
+                                });
+                              }}
+                              className="w-4 h-4 rounded text-red-600 border-slate-300 focus:ring-red-500 accent-red-600 cursor-pointer"
+                            />
+                            <span className="truncate flex-1 text-xs">{dept.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {newStaffForm.departments.length === 0 && (
+                      <p className="text-[10px] font-semibold text-red-600">
+                        * Please tick at least one department for the staff member.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

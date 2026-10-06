@@ -3,6 +3,28 @@ import { QuotationScheduleTask } from './timesheetService';
 export type { QuotationScheduleTask };
 
 const QUOTATION_SCHEDULE_STORAGE_KEY = 'booshnam_quotation_schedule_tasks_v3';
+export const DELETED_QUOTATION_TASKS_KEY = 'booshnam_deleted_quotation_tasks_v2';
+
+export function getDeletedQuotationTaskIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_QUOTATION_TASKS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch (e) {}
+  return new Set();
+}
+
+export function markQuotationTaskDeleted(taskIdentifiers: string[]): void {
+  try {
+    const current = getDeletedQuotationTaskIds();
+    taskIdentifiers.forEach(id => {
+      if (id) current.add(id);
+    });
+    localStorage.setItem(DELETED_QUOTATION_TASKS_KEY, JSON.stringify([...current]));
+  } catch (e) {}
+}
 
 // Default quotation tasks: clean empty state, no dummy data
 export const DEFAULT_QUOTATION_SCHEDULE_TASKS: QuotationScheduleTask[] = [];
@@ -43,14 +65,21 @@ export function isDummyQuotationTask(t: { task_name?: string; title?: string; pr
 
 // Load quotation tasks, merging with any live project tasks matching "Quotation"
 export function getQuotationScheduleTasks(projects: Project[] = []): QuotationScheduleTask[] {
+  const deletedIds = getDeletedQuotationTaskIds();
+  const isDeleted = (id?: string, wbsId?: string) => {
+    if (id && (deletedIds.has(id) || deletedIds.has(`proj-task-${id}`) || deletedIds.has(id.replace('proj-task-', '')))) return true;
+    if (wbsId && (deletedIds.has(wbsId) || deletedIds.has(`proj-task-${wbsId}`) || deletedIds.has(wbsId.replace('proj-task-', '')))) return true;
+    return false;
+  };
+
   let stored: QuotationScheduleTask[] = [];
   try {
     const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Strip out any legacy dummy/mock tasks
-        stored = parsed.filter(t => !isDummyQuotationTask(t));
+        // Strip out any legacy dummy/mock tasks and deleted tasks
+        stored = parsed.filter(t => !isDummyQuotationTask(t) && !isDeleted(t.id, t.wbs_task_id));
         if (stored.length !== parsed.length) {
           localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(stored));
         }
@@ -129,7 +158,7 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
           titleLower.includes('scope') ||
           t.department === 'MARKETING';
 
-        if (isQuotation && !isDummyQuotationTask({ ...t, task_name: t.title, project_id: pid, project_name: pName })) {
+        if (isQuotation && !isDummyQuotationTask({ ...t, task_name: t.title, project_id: pid, project_name: pName }) && !isDeleted(t.id)) {
           const meta = taskMetaMap[t.id] || {};
           
           // Image resolution: priority is completion_proof_url, then meta progress proof_url, then fallback
@@ -267,7 +296,7 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     }
   });
 
-  const finalFiltered = combined.filter(t => !isDummyQuotationTask(t));
+  const finalFiltered = combined.filter(t => !isDummyQuotationTask(t) && !isDeleted(t.id, t.wbs_task_id));
   try {
     localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(finalFiltered));
   } catch (e) {}
@@ -275,30 +304,66 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
   return finalFiltered;
 }
 
-// Delete a quotation task permanently from storage and WBS tasks
+// Delete a quotation task permanently from storage, WBS tasks, and blacklist
 export function deleteQuotationScheduleTask(taskId: string): QuotationScheduleTask[] {
-  // 1. Remove from QUOTATION_SCHEDULE_STORAGE_KEY
+  // 1. Gather all variations of identifiers for this task
+  const rawList = getQuotationScheduleTasks();
+  const target = rawList.find(t => 
+    t.id === taskId || 
+    t.wbs_task_id === taskId || 
+    `proj-task-${t.id}` === taskId ||
+    (t.wbs_task_id && `proj-task-${t.wbs_task_id}` === taskId)
+  );
+
+  const idsToBlacklist: string[] = [taskId];
+  if (taskId.startsWith('proj-task-')) {
+    idsToBlacklist.push(taskId.replace('proj-task-', ''));
+  } else {
+    idsToBlacklist.push(`proj-task-${taskId}`);
+  }
+  if (target) {
+    if (target.id) idsToBlacklist.push(target.id);
+    if (target.wbs_task_id) {
+      idsToBlacklist.push(target.wbs_task_id);
+      idsToBlacklist.push(`proj-task-${target.wbs_task_id}`);
+    }
+  }
+
+  // 2. Mark permanently blacklisted so it will never re-derive
+  markQuotationTaskDeleted(idsToBlacklist);
+
+  // 3. Remove from QUOTATION_SCHEDULE_STORAGE_KEY
   try {
     const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
     if (raw) {
       const parsed: QuotationScheduleTask[] = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const cleaned = parsed.filter(t => t.id !== taskId);
+        const cleaned = parsed.filter(t => 
+          !idsToBlacklist.includes(t.id) && 
+          (!t.wbs_task_id || !idsToBlacklist.includes(t.wbs_task_id))
+        );
         localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(cleaned));
       }
     }
   } catch (e) {}
 
-  // 2. Also clean from any project WBS tasks
+  // 4. Safely clean from all WBS tasks in localStorage (both v2 and v10)
   try {
+    const allStorageKeys: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('booshnam_wbs_tasks_v2_')) {
+      if (k) allStorageKeys.push(k);
+    }
+    for (const k of allStorageKeys) {
+      if (k.startsWith('booshnam_wbs_tasks_v2_') || k.startsWith('booshnam_wbs_tasks_v10_')) {
         const rawWbs = localStorage.getItem(k);
         if (rawWbs) {
           const wbsTasks: WBSTask[] = JSON.parse(rawWbs);
           if (Array.isArray(wbsTasks)) {
-            const cleanWbs = wbsTasks.filter(t => `proj-task-${t.id}` !== taskId && t.id !== taskId);
+            const cleanWbs = wbsTasks.filter(t => 
+              !idsToBlacklist.includes(t.id) && 
+              !idsToBlacklist.includes(`proj-task-${t.id}`)
+            );
             if (cleanWbs.length !== wbsTasks.length) {
               localStorage.setItem(k, JSON.stringify(cleanWbs));
             }
@@ -306,6 +371,11 @@ export function deleteQuotationScheduleTask(taskId: string): QuotationScheduleTa
         }
       }
     }
+  } catch (e) {}
+
+  // 5. Notify the rest of the application
+  try {
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
   } catch (e) {}
 
   const updated = getQuotationScheduleTasks();

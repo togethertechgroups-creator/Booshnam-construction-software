@@ -201,10 +201,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm(`Are you sure you want to delete "${cleanTaskTitle}"?`)) {
-                    onDeleteTask(task.id);
-                    onClose();
-                  }
+                  onDeleteTask(task.id);
                 }}
                 className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                 title="Delete Task"

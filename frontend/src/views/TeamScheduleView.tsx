@@ -27,6 +27,7 @@ import { CustomDatePicker } from '../components/CustomDatePicker';
 import { TimeLogDetailView } from './TimeLogDetailView';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
+import { confirmAction } from '../lib/dialogService';
 
 interface TeamScheduleViewProps {
   projects?: Project[];
@@ -107,16 +108,24 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   const [newTaskStage, setNewTaskStage] = useState('Prepare Quotation');
   const [newTaskStatus, setNewTaskStatus] = useState<'NOT_STARTED' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>('NOT_STARTED');
 
-  const handleDeleteQuotationTask = (taskId: string, e?: React.MouseEvent) => {
+  const handleDeleteQuotationTask = async (taskId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this quotation task from the schedule?')) {
-      const updated = deleteQuotationScheduleTask(taskId);
-      setQuotationTasks(updated);
-      if (selectedQuotationDrawerTask?.id === taskId) {
-        setSelectedQuotationDrawerTask(null);
-      }
-      onShowToast?.('Quotation task deleted successfully.');
+    const confirmed = await confirmAction({
+      title: 'Delete Quotation Task',
+      message: 'Are you sure you want to delete this quotation task from the schedule? This action cannot be undone.',
+      confirmText: 'Delete Task',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      icon: 'trash'
+    });
+    if (!confirmed) return;
+
+    const updated = deleteQuotationScheduleTask(taskId);
+    setQuotationTasks(updated);
+    if (selectedQuotationDrawerTask?.id === taskId) {
+      setSelectedQuotationDrawerTask(null);
     }
+    onShowToast?.('Quotation task deleted successfully.');
   };
 
   // Single active dropdown tracker: ensures opening any dropdown closes all others

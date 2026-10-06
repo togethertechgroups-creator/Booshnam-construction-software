@@ -4709,7 +4709,7 @@ const toIsoDate = (displayStr: string) => {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ New Transfer</span>
+                    <span>New Transfer</span>
                   </button>
                 </div>
               </div>
@@ -7275,10 +7275,10 @@ const toIsoDate = (displayStr: string) => {
           MODAL: NEW ACCOUNT TO ACCOUNT TRANSFER
       ───────────────────────────────────────────────────────────── */}
       {isNewTransferModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/20">
+            <div className="shrink-0 px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/20">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-red-600/10 text-red-600 flex items-center justify-center">
                   <ArrowLeftRight className="w-5 h-5" />
@@ -7298,271 +7298,278 @@ const toIsoDate = (displayStr: string) => {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleSaveTransfer} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
-              
-              {/* Account Selection Flow (From ➔ To) */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                  
-                  {/* From Account */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      From Account (Source / Debit) <span className="text-red-500">*</span>
-                    </label>
-                    <CustomSelect
-                      value={newTrfFromAccountId}
-                      onChange={(val) => setNewTrfFromAccountId(val)}
-                      options={bankAccounts.map(b => ({
-                        label: b.accountName,
-                        value: b.id,
-                        description: `Available: ₹${b.balance.toLocaleString('en-IN')}`,
-                        badge: `₹${b.balance.toLocaleString('en-IN')}`,
-                      }))}
-                      placeholder="Select Source Account..."
-                      size="md"
-                      variant="brand"
+            <form onSubmit={handleSaveTransfer} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1 min-h-0">
+                {/* Account Selection Flow (From ➔ To) */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                    
+                    {/* From Account */}
+                    <div>
+                      <label className="flex items-center gap-1 text-[10.5px] font-bold text-slate-700 uppercase tracking-wide mb-1.5 whitespace-nowrap h-4">
+                        <span>From Account (Source / Debit)</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <CustomSelect
+                        value={newTrfFromAccountId}
+                        onChange={(val) => setNewTrfFromAccountId(val)}
+                        options={bankAccounts.map(b => ({
+                          label: b.accountName,
+                          value: b.id,
+                          description: `Available: ₹${b.balance.toLocaleString('en-IN')}`,
+                          badge: `₹${b.balance.toLocaleString('en-IN')}`,
+                        }))}
+                        placeholder="Select Source Account..."
+                        size="md"
+                        triggerClassName="!h-10"
+                        variant="brand"
+                      />
+                      <div className="h-5 mt-1.5 flex items-center">
+                        {(() => {
+                          const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                          return src ? (
+                            <p className="text-[10px] text-slate-500">
+                              Available Balance: <strong className="text-slate-800 tracking-tight">₹{src.balance.toLocaleString('en-IN')}</strong>
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* To Account */}
+                    <div>
+                      <label className="flex items-center gap-1 text-[10.5px] font-bold text-slate-700 uppercase tracking-wide mb-1.5 whitespace-nowrap h-4">
+                        <span>To Account (Destination / Credit)</span>
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <CustomSelect
+                        value={newTrfToAccountId}
+                        onChange={(val) => setNewTrfToAccountId(val)}
+                        options={bankAccounts.map(b => ({
+                          label: b.accountName,
+                          value: b.id,
+                          description: `Current: ₹${b.balance.toLocaleString('en-IN')}`,
+                          badge: `₹${b.balance.toLocaleString('en-IN')}`,
+                        }))}
+                        placeholder="Select Destination Account..."
+                        size="md"
+                        triggerClassName="!h-10"
+                        variant="brand"
+                      />
+                      <div className="h-5 mt-1.5 flex items-center">
+                        {(() => {
+                          const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
+                          return dst ? (
+                            <p className="text-[10px] text-slate-500">
+                              Current Balance: <strong className="text-slate-800 tracking-tight">₹{dst.balance.toLocaleString('en-IN')}</strong>
+                            </p>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {newTrfFromAccountId === newTrfToAccountId && (
+                    <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] flex items-center gap-1.5 font-medium">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>Source and destination cannot be the same account!</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Amount Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Transfer Amount (₹) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-slate-400">₹</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      value={newTrfAmount}
+                      onChange={(e) => setNewTrfAmount(e.target.value)}
+                      placeholder="Enter amount, e.g. 50000"
+                      required
+                      className="w-full h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                     />
-                    <div className="min-h-[18px] mt-1.5 flex items-center">
+                  </div>
+
+                  {/* Quick Preset Buttons */}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] text-slate-400 font-medium">Quick Add:</span>
+                    {[10000, 25000, 50000, 100000].map(val => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setNewTrfAmount(String(val))}
+                        className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 tracking-tight text-[11px] font-semibold cursor-pointer transition-colors"
+                      >
+                        +₹{val.toLocaleString('en-IN')}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Balance validation alert */}
+                  {(() => {
+                    const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
+                    const amt = parseFloat(newTrfAmount) || 0;
+                    if (src && amt > src.balance) {
+                      return (
+                        <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Warning: Amount exceeds source account balance (₹{src.balance.toLocaleString('en-IN')})</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+
+                {/* Real-Time Balance Simulation Preview */}
+                {parseFloat(newTrfAmount) > 0 && newTrfFromAccountId !== newTrfToAccountId && (
+                  <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1.5">
+                    <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-red-600" />
+                      <span>Projected Balances After Transfer</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
                       {(() => {
                         const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
-                        return src ? (
-                          <p className="text-[10px] text-slate-500">
-                            Available Balance: <strong className="text-slate-800 tracking-tight">₹{src.balance.toLocaleString('en-IN')}</strong>
-                          </p>
-                        ) : null;
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* To Account */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                      To Account (Destination / Credit) <span className="text-red-500">*</span>
-                    </label>
-                    <CustomSelect
-                      value={newTrfToAccountId}
-                      onChange={(val) => setNewTrfToAccountId(val)}
-                      options={bankAccounts.map(b => ({
-                        label: b.accountName,
-                        value: b.id,
-                        description: `Current: ₹${b.balance.toLocaleString('en-IN')}`,
-                        badge: `₹${b.balance.toLocaleString('en-IN')}`,
-                      }))}
-                      placeholder="Select Destination Account..."
-                      size="md"
-                      variant="brand"
-                    />
-                    <div className="min-h-[18px] mt-1.5 flex items-center">
-                      {(() => {
                         const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
-                        return dst ? (
-                          <p className="text-[10px] text-slate-500">
-                            Current Balance: <strong className="text-slate-800 tracking-tight">₹{dst.balance.toLocaleString('en-IN')}</strong>
-                          </p>
-                        ) : null;
+                        const amt = parseFloat(newTrfAmount) || 0;
+                        return (
+                          <>
+                            <div className="p-2 bg-white rounded border border-indigo-100">
+                              <span className="text-slate-500 block truncate">{src?.accountName}</span>
+                              <span className="font-bold text-red-600 tracking-tight">
+                                ₹{((src?.balance || 0) - amt).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[9px] text-slate-400 block">(-₹{amt.toLocaleString('en-IN')})</span>
+                            </div>
+                            <div className="p-2 bg-white rounded border border-indigo-100">
+                              <span className="text-slate-500 block truncate">{dst?.accountName}</span>
+                              <span className="font-bold text-emerald-600 tracking-tight">
+                                ₹{((dst?.balance || 0) + amt).toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-[9px] text-slate-400 block">(+₹{amt.toLocaleString('en-IN')})</span>
+                            </div>
+                          </>
+                        );
                       })()}
                     </div>
-                  </div>
-                </div>
-
-                {newTrfFromAccountId === newTrfToAccountId && (
-                  <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] flex items-center gap-1.5 font-medium">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>Source and destination cannot be the same account!</span>
                   </div>
                 )}
-              </div>
 
-              {/* Amount Input */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Transfer Amount (₹) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-base font-bold text-slate-400">₹</span>
+                {/* Row: Mode and Date */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Transfer Mode</label>
+                    <CustomSelect
+                      value={newTrfMode}
+                      onChange={(val) => setNewTrfMode(val as any)}
+                      options={[
+                        { label: 'Cash Withdrawal (Site Imprest)', value: 'Cash Withdrawal' },
+                        { label: 'IMPS / Bank Transfer', value: 'IMPS / Bank Transfer' },
+                        { label: 'NEFT / RTGS', value: 'NEFT / RTGS' },
+                        { label: 'Cash Deposit', value: 'Cash Deposit' },
+                        { label: 'Internal Ledger Contra', value: 'Internal Ledger Contra' },
+                        { label: 'Cheque Transfer', value: 'Cheque' },
+                      ]}
+                      size="md"
+                      triggerClassName="!h-10"
+                      variant="brand"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Transfer Date</label>
+                    <input
+                      type="text"
+                      value={newTrfDate}
+                      onChange={(e) => setNewTrfDate(e.target.value)}
+                      placeholder="e.g. 26 Sept 2026"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Row: Reference & Project */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Reference / UTR / Cheque #</label>
+                    <input
+                      type="text"
+                      value={newTrfRef}
+                      onChange={(e) => setNewTrfRef(e.target.value)}
+                      placeholder="e.g. UTR-998821 or CHQ-7782"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Related Project (Optional)</label>
+                    <CustomSelect
+                      value={newTrfProject}
+                      onChange={(val) => setNewTrfProject(val)}
+                      options={[
+                        { label: 'General Company Accounts', value: '' },
+                        ...projects.map(p => ({ label: p.name, value: p.name })),
+                      ]}
+                      size="md"
+                      triggerClassName="!h-10"
+                      variant="brand"
+                    />
+                  </div>
+                </div>
+
+                {/* Purpose / Narration */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Purpose / Narration <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="number"
-                    min="1"
-                    step="any"
-                    value={newTrfAmount}
-                    onChange={(e) => setNewTrfAmount(e.target.value)}
-                    placeholder="Enter amount, e.g. 50000"
+                    type="text"
+                    value={newTrfPurpose}
+                    onChange={(e) => setNewTrfPurpose(e.target.value)}
+                    placeholder="e.g. Replenish site petty cash vault for masonry wages & fuel"
                     required
-                    className="w-full h-11 pl-8 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
                   />
                 </div>
 
-                {/* Quick Preset Buttons */}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[10px] text-slate-400 font-medium">Quick Add:</span>
-                  {[10000, 25000, 50000, 100000].map(val => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setNewTrfAmount(String(val))}
-                      className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 tracking-tight text-[11px] font-semibold cursor-pointer transition-colors"
-                    >
-                      +₹{val.toLocaleString('en-IN')}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Balance validation alert */}
-                {(() => {
-                  const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
-                  const amt = parseFloat(newTrfAmount) || 0;
-                  if (src && amt > src.balance) {
-                    return (
-                      <div className="mt-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-1.5">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Warning: Amount exceeds source account balance (₹{src.balance.toLocaleString('en-IN')})</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-
-              {/* Real-Time Balance Simulation Preview */}
-              {parseFloat(newTrfAmount) > 0 && newTrfFromAccountId !== newTrfToAccountId && (
-                <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1.5">
-                  <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-red-600" />
-                    <span>Projected Balances After Transfer</span>
+                {/* Initiated By & Notes */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Initiated By</label>
+                    <input
+                      type="text"
+                      value={newTrfInitiatedBy}
+                      onChange={(e) => setNewTrfInitiatedBy(e.target.value)}
+                      placeholder="e.g. Finance Incharge"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[11px]">
-                    {(() => {
-                      const src = bankAccounts.find(b => b.id === newTrfFromAccountId);
-                      const dst = bankAccounts.find(b => b.id === newTrfToAccountId);
-                      const amt = parseFloat(newTrfAmount) || 0;
-                      return (
-                        <>
-                          <div className="p-2 bg-white rounded border border-indigo-100">
-                            <span className="text-slate-500 block truncate">{src?.accountName}</span>
-                            <span className="font-bold text-red-600 tracking-tight">
-                              ₹{((src?.balance || 0) - amt).toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[9px] text-slate-400 block">(-₹{amt.toLocaleString('en-IN')})</span>
-                          </div>
-                          <div className="p-2 bg-white rounded border border-indigo-100">
-                            <span className="text-slate-500 block truncate">{dst?.accountName}</span>
-                            <span className="font-bold text-emerald-600 tracking-tight">
-                              ₹{((dst?.balance || 0) + amt).toLocaleString('en-IN')}
-                            </span>
-                            <span className="text-[9px] text-slate-400 block">(+₹{amt.toLocaleString('en-IN')})</span>
-                          </div>
-                        </>
-                      );
-                    })()}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5 h-4 flex items-center">Internal Notes (Optional)</label>
+                    <input
+                      type="text"
+                      value={newTrfNotes}
+                      onChange={(e) => setNewTrfNotes(e.target.value)}
+                      placeholder="e.g. Approved by Managing Director"
+                      className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                    />
                   </div>
                 </div>
-              )}
-
-              {/* Row: Mode and Date */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Transfer Mode</label>
-                  <CustomSelect
-                    value={newTrfMode}
-                    onChange={(val) => setNewTrfMode(val as any)}
-                    options={[
-                      { label: 'Cash Withdrawal (Site Imprest)', value: 'Cash Withdrawal' },
-                      { label: 'IMPS / Bank Transfer', value: 'IMPS / Bank Transfer' },
-                      { label: 'NEFT / RTGS', value: 'NEFT / RTGS' },
-                      { label: 'Cash Deposit', value: 'Cash Deposit' },
-                      { label: 'Internal Ledger Contra', value: 'Internal Ledger Contra' },
-                      { label: 'Cheque Transfer', value: 'Cheque' },
-                    ]}
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Transfer Date</label>
-                  <input
-                    type="text"
-                    value={newTrfDate}
-                    onChange={(e) => setNewTrfDate(e.target.value)}
-                    placeholder="e.g. 26 Sept 2026"
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
               </div>
 
-              {/* Row: Reference & Project */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Reference / UTR / Cheque #</label>
-                  <input
-                    type="text"
-                    value={newTrfRef}
-                    onChange={(e) => setNewTrfRef(e.target.value)}
-                    placeholder="e.g. UTR-998821 or CHQ-7782"
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Related Project (Optional)</label>
-                  <CustomSelect
-                    value={newTrfProject}
-                    onChange={(val) => setNewTrfProject(val)}
-                    options={[
-                      { label: 'General Company Accounts', value: '' },
-                      ...projects.map(p => ({ label: p.name, value: p.name })),
-                    ]}
-                    size="md"
-                    variant="brand"
-                  />
-                </div>
-              </div>
-
-              {/* Purpose / Narration */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                  Purpose / Narration <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newTrfPurpose}
-                  onChange={(e) => setNewTrfPurpose(e.target.value)}
-                  placeholder="e.g. Replenish site petty cash vault for masonry wages & fuel"
-                  required
-                  className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                />
-              </div>
-
-              {/* Initiated By & Notes */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Initiated By</label>
-                  <input
-                    type="text"
-                    value={newTrfInitiatedBy}
-                    onChange={(e) => setNewTrfInitiatedBy(e.target.value)}
-                    placeholder="e.g. Finance Incharge"
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Internal Notes (Optional)</label>
-                  <input
-                    type="text"
-                    value={newTrfNotes}
-                    onChange={(e) => setNewTrfNotes(e.target.value)}
-                    placeholder="e.g. Approved by Managing Director"
-                    className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Footer Actions */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              {/* Modal Footer Actions - Pinned at bottom, always visible! */}
+              <div className="shrink-0 px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsNewTransferModalOpen(false)}
-                  className="px-5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition-colors"
+                  className="px-5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
@@ -7578,7 +7585,6 @@ const toIsoDate = (displayStr: string) => {
                   Post Contra Transfer
                 </button>
               </div>
-
             </form>
           </div>
         </div>

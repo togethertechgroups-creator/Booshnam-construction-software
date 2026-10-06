@@ -352,7 +352,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       const isStatusCompleted = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
       const activeMarkerDate = (isStatusCompleted && (task.actual_end || task.completed_at))
         ? (task.actual_end || task.completed_at || task.end_date)
-        : (task.start_date || task.end_date);
+        : (task.actual_start || task.start_date || task.end_date);
       parseAndAdd(activeMarkerDate);
 
       // If no valid dates found, keep task by default
@@ -850,7 +850,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                       const isStatusPending = !isStatusCompleted && !isStatusInProgress;
                       const activeMarkerDate = (isStatusCompleted && (task.actual_end || task.completed_at))
                         ? (task.actual_end || task.completed_at || task.end_date)
-                        : (task.start_date || task.end_date);
+                        : (task.actual_start || task.start_date || task.end_date);
                       const placement = getTimelinePlacement(activeMarkerDate, task.end_date);
                       const isHovered = hoveredMarkerTaskId === task.id;
                       const openUpwards = idx >= (filteredQuotationTasks.length <= 3 ? Math.max(1, filteredQuotationTasks.length - 1) : 3);

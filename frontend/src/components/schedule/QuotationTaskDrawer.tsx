@@ -78,11 +78,14 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
     }
   };
 
-  const startDateFormatted = formatDisplayDate(task.start_date);
-  const endDateFormatted = formatDisplayDate(task.end_date);
-  const actualStart = task.actual_start ? formatDisplayDate(task.actual_start) : startDateFormatted;
-  const actualEnd = task.actual_end ? formatDisplayDate(task.actual_end) : (task.status === 'COMPLETED' ? endDateFormatted : '- - -');
-  const forecastEnd = task.forecast_end ? formatDisplayDate(task.forecast_end) : endDateFormatted;
+  const startDateFormatted = formatDisplayDate(task.actual_start || task.start_date);
+  const actualStart = formatDisplayDate(task.actual_start || task.start_date);
+  const actualEnd = (task.status === 'COMPLETED' || task.actual_end)
+    ? formatDisplayDate(task.actual_end || task.completed_at || task.end_date)
+    : '- - -';
+  const endDateFormatted = task.status === 'COMPLETED'
+    ? actualEnd
+    : (task.end_date ? formatDisplayDate(task.end_date) : actualEnd);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -419,13 +422,9 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                   <span className="text-slate-500">Actual start</span>
                   <span className="font-bold text-slate-900">{actualStart}</span>
                 </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                <div className="flex items-center justify-between py-1">
                   <span className="text-slate-500">Actual end</span>
                   <span className="font-bold text-slate-900">{actualEnd}</span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-500">Forecast end</span>
-                  <span className="font-bold text-red-600">{forecastEnd}</span>
                 </div>
               </div>
             )}
@@ -612,10 +611,6 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                 <div className="flex justify-between text-slate-700">
                   <span>Logged Duration:</span>
                   <span>{task.duration_days || 1} working day(s)</span>
-                </div>
-                <div className="flex justify-between text-red-600 font-semibold">
-                  <span>Forecast End:</span>
-                  <span>{forecastEnd}</span>
                 </div>
               </div>
 

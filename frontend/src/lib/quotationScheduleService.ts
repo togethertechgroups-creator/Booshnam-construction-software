@@ -186,6 +186,13 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             ? 'Quotation'
             : (rawTaskTitle || 'Quotation');
 
+          const qStartDate = t.actual_start || t.start_date || p?.start_date || (p as any)?.created_at || new Date().toISOString().split('T')[0];
+          const rawEnd = t.actual_end || t.completed_at || (isDone ? (t.end_date || new Date().toISOString().split('T')[0]) : undefined);
+          const qEndDate = isDone
+            ? (rawEnd ? rawEnd.substring(0, 10) : new Date().toISOString().split('T')[0])
+            : (t.end_date || qStartDate);
+          const qActualEnd = isDone ? qEndDate : undefined;
+
           const extractedTask: QuotationScheduleTask = {
             id: `proj-task-${t.id}`,
             wbs_task_id: t.id,
@@ -194,17 +201,14 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             project_name: pName,
             assignee: t.assigned_to_name || t.assigned_to || (t.assigned_team && t.assigned_team[0]?.name) || 'Staff',
             status: isDone ? 'COMPLETED' : isOngoing ? 'IN_PROGRESS' : 'PENDING',
-            start_date: t.start_date || p?.start_date || new Date().toISOString().split('T')[0],
-            end_date: (isDone && t.actual_end) ? t.actual_end.substring(0, 10) : (t.end_date || new Date().toISOString().split('T')[0]),
-            actual_start: t.actual_start || t.start_date,
-            actual_end: t.actual_end || (isDone ? (t.end_date || 'Completed') : undefined),
-            forecast_end: t.forecast_end || t.end_date,
-            completed_at: isDone ? (t.completed_at || (t.actual_end ? `${t.actual_end}, 05:00 PM` : 'Completed')) : undefined,
-            milestone_date: (isDone && (t.actual_end || t.completed_at))
-              ? new Date(t.actual_end || t.completed_at || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-              : (t.start_date || p?.start_date)
-              ? new Date(t.start_date || p?.start_date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-              : '05 Oct',
+            start_date: qStartDate,
+            end_date: qEndDate,
+            actual_start: qStartDate,
+            actual_end: qActualEnd,
+            completed_at: isDone ? (t.completed_at || `${qEndDate}, 05:00 PM`) : undefined,
+            milestone_date: isDone
+              ? new Date(qEndDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              : (qStartDate ? new Date(qStartDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '05 Oct'),
             stage_label: isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Not Started Yet',
             color_theme: isDone ? 'green' : isOngoing ? 'blue' : 'red',
             duration_days: t.duration_days || 1,
@@ -273,22 +277,41 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             if (matched) {
               const isDone = matched.status === 'COMPLETED' || (matched.progress_percentage !== undefined && matched.progress_percentage >= 100);
               const isOngoing = !isDone && (matched.status === 'IN_PROGRESS' || (matched.progress_percentage !== undefined && matched.progress_percentage > 0));
+
+              const qStartDate = matched.actual_start || matched.start_date || t.actual_start || t.start_date;
+              if (qStartDate) {
+                t.start_date = qStartDate;
+                t.actual_start = qStartDate;
+              }
+
               if (isDone) {
                 t.status = 'COMPLETED';
                 t.progress_percentage = 100;
                 t.stage_label = 'Completed';
                 t.color_theme = 'green';
+                const compDateRaw = matched.actual_end || matched.completed_at || t.actual_end || t.completed_at || matched.end_date || new Date().toISOString().split('T')[0];
+                const cleanComp = compDateRaw.substring(0, 10);
+                t.actual_end = cleanComp;
+                t.end_date = cleanComp;
+                try {
+                  t.milestone_date = new Date(cleanComp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                } catch {
+                  t.milestone_date = cleanComp;
+                }
               } else if (isOngoing) {
                 t.status = 'IN_PROGRESS';
                 t.progress_percentage = matched.progress_percentage || 50;
                 t.stage_label = 'Ongoing';
                 t.color_theme = 'blue';
+                t.actual_end = undefined;
               } else {
                 t.status = 'PENDING';
                 t.progress_percentage = 0;
                 t.stage_label = 'Not Started Yet';
                 t.color_theme = 'red';
+                t.actual_end = undefined;
               }
+              delete (t as any).forecast_end;
             }
           }
         }

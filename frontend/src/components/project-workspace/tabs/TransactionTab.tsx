@@ -1638,7 +1638,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             className="w-full py-2 px-3 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
                           >
                             <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                            <span>+ Add New Bank Account</span>
+                            <span>Add New Bank Account</span>
                           </button>
                         </div>
                       </div>

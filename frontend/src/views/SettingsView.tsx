@@ -3354,12 +3354,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showToast('Maximum 46 team member slots limit reached for this department.');
                   return;
                 }
+                if (activeDeptId === 'booshnam_associates' && !newTeamMemberForm.department) {
+                  showToast('Please select which department to assign this staff member to');
+                  return;
+                }
                 const todayStr = new Date().toISOString().split('T')[0];
+                const targetDept = activeDeptId === 'booshnam_associates'
+                  ? newTeamMemberForm.department
+                  : activeDeptEntity.name;
                 let finalStaffMember: StaffMember;
                 if (newTeamMemberForm.is_existing_staff && newTeamMemberForm.staff_id) {
                   const existingStaff = staffList.find(s => s.id === newTeamMemberForm.staff_id);
                   if (existingStaff) {
-                    const targetDept = !activeDeptEntity.isMainOverview ? activeDeptEntity.name : (existingStaff.department || 'Soil Investigation (Chennai)');
                     finalStaffMember = {
                       ...existingStaff,
                       role_code: newTeamMemberForm.role_code,
@@ -3373,7 +3379,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     return;
                   }
                 } else {
-                  const targetDept = !activeDeptEntity.isMainOverview ? activeDeptEntity.name : 'Soil Investigation (Chennai)';
                   const newMemberId = `mem-${Date.now()}`;
                   finalStaffMember = {
                     id: newMemberId,
@@ -3529,6 +3534,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <p className="text-[10px] text-slate-400 mt-1">This number will be used by the member to log in.</p>
                   </div>
                 </>
+              )}
+
+              {/* Department Selection ONLY in Booshnam Associates (Super Admin Overview) */}
+              {activeDeptId === 'booshnam_associates' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-red-600" />
+                      <span>Select Department for Staff *</span>
+                    </span>
+                    <span className="text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                      Required
+                    </span>
+                  </label>
+                  <select
+                    required
+                    value={newTeamMemberForm.department}
+                    onChange={(e) => setNewTeamMemberForm({ ...newTeamMemberForm, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 bg-white focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                  >
+                    <option value="">-- Choose Department --</option>
+                    {ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview).map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    This staff member will be assigned to this department and will strictly see only this department on login.
+                  </p>
+                </div>
               )}
 
 

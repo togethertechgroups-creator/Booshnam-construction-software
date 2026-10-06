@@ -197,7 +197,36 @@ export function App() {
               t.project_name !== 'Velachery Tech Park Extension' &&
               t.project_name !== 'Guindy Industrial Shed' &&
               t.project_name !== 'Chromepet IT Complex'
-            );
+            ).map((t: any) => {
+              if (t.project_id) {
+                try {
+                  const rawWbs = localStorage.getItem(`booshnam_wbs_tasks_v2_${t.project_id}`) || localStorage.getItem(`booshnam_wbs_tasks_v10_${t.project_id}`);
+                  if (rawWbs) {
+                    const wbsList = JSON.parse(rawWbs);
+                    if (Array.isArray(wbsList)) {
+                      const matched = wbsList.find((w: any) => 
+                        w.id === t.wbs_task_id || 
+                        w.id === t.id?.replace('proj-task-', '') ||
+                        w.title === t.task_name ||
+                        (w.title && w.title.toLowerCase().includes('quot'))
+                      );
+                      if (matched) {
+                        const isDone = matched.status === 'COMPLETED' || (matched.progress_percentage !== undefined && matched.progress_percentage >= 100);
+                        const isOngoing = !isDone && (matched.status === 'IN_PROGRESS' || (matched.progress_percentage !== undefined && matched.progress_percentage > 0));
+                        if (isDone) {
+                          return { ...t, status: 'COMPLETED', progress_percentage: 100, stage_label: 'Completed', color_theme: 'green' };
+                        } else if (isOngoing) {
+                          return { ...t, status: 'IN_PROGRESS', progress_percentage: matched.progress_percentage || 50, stage_label: 'Ongoing', color_theme: 'blue' };
+                        } else {
+                          return { ...t, status: 'PENDING', progress_percentage: 0, stage_label: 'Not Started Yet', color_theme: 'red' };
+                        }
+                      }
+                    }
+                  }
+                } catch (e) {}
+              }
+              return t;
+            });
             localStorage.setItem('booshnam_quotation_schedule_tasks_v3', JSON.stringify(cleaned));
             window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: cleaned }));
           }

@@ -652,7 +652,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Completed</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {filteredQuotationTasks.filter(t => t.status === 'COMPLETED').length}
+                      {filteredQuotationTasks.filter(t => t.status === 'COMPLETED' || (t.progress_percentage !== undefined && t.progress_percentage >= 100)).length}
                     </span>
                   </div>
                 </div>
@@ -667,7 +667,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending</span>
                     <span className="text-lg font-black text-slate-900 leading-tight">
-                      {filteredQuotationTasks.filter(t => t.status === 'PENDING' || t.status === 'NOT_STARTED').length}
+                      {filteredQuotationTasks.filter(t => t.status !== 'COMPLETED' && (t.progress_percentage === undefined || t.progress_percentage < 100) && t.status !== 'IN_PROGRESS' && (t.progress_percentage === undefined || t.progress_percentage === 0)).length}
                     </span>
                   </div>
                 </div>
@@ -840,7 +840,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {isUnassignedExpanded && filteredQuotationTasks.map((task, idx) => {
                       const isStatusCompleted = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
                       const isStatusInProgress = !isStatusCompleted && (task.status === 'IN_PROGRESS' || (task.progress_percentage !== undefined && task.progress_percentage > 0));
-                      const isStatusPending = !isStatusCompleted && !isStatusInProgress && task.status === 'PENDING';
+                      const isStatusPending = !isStatusCompleted && !isStatusInProgress;
                       const activeMarkerDate = (isStatusCompleted && (task.actual_end || task.completed_at))
                         ? (task.actual_end || task.completed_at || task.end_date)
                         : (task.start_date || task.end_date);
@@ -854,21 +854,13 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                         ? 'bg-emerald-500' 
                         : isStatusInProgress 
                         ? 'bg-blue-500' 
-                        : isStatusPending 
-                        ? 'bg-red-500' 
-                        : task.color_theme === 'green' ? 'bg-emerald-500' 
-                        : task.color_theme === 'blue' ? 'bg-blue-500'
-                        : task.color_theme === 'orange' ? 'bg-amber-500'
-                        : task.color_theme === 'purple' ? 'bg-purple-500'
                         : 'bg-red-500';
 
                       const markerRingColor = isStatusCompleted 
                         ? 'ring-emerald-200' 
                         : isStatusInProgress 
                         ? 'ring-blue-200' 
-                        : isStatusPending 
-                        ? 'ring-red-200' 
-                        : 'ring-slate-200';
+                        : 'ring-red-200';
 
                       return (
                         <tr 
@@ -905,29 +897,30 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             </div>
                           </td>
 
-                          {/* Progress Column: Pure text (100% Completed / 50% Ongoing) above progress bar with NO box/border/bg/fading */}
+                          {/* Progress Column: Pure text (100% Completed / 50% Ongoing / Not Started Yet) above progress bar with NO box/border/bg/fading */}
                           <td className="px-2.5 py-2.5 border-r border-slate-200">
-                            <div className="w-20">
-                              <div className="flex items-center gap-1 mb-1 leading-none">
-                                <span className="text-[10px] font-bold text-slate-700">
-                                  {task.progress_percentage || (isStatusCompleted ? 100 : 0)}%
-                                </span>
+                            <div className="w-24">
+                              <div className="flex items-center gap-1.5 mb-1 leading-none">
                                 {isStatusCompleted ? (
-                                  <span className="text-[10px] font-semibold text-emerald-600">
-                                    Done
-                                  </span>
+                                  <>
+                                    <span className="text-[10px] font-bold text-slate-700">100%</span>
+                                    <span className="text-[10px] font-semibold text-emerald-600">Completed</span>
+                                  </>
                                 ) : isStatusInProgress ? (
-                                  <span className="text-[10px] font-semibold text-amber-600">
-                                    Ongoing
-                                  </span>
-                                ) : null}
+                                  <>
+                                    <span className="text-[10px] font-bold text-slate-700">{task.progress_percentage || 50}%</span>
+                                    <span className="text-[10px] font-semibold text-amber-600">Ongoing</span>
+                                  </>
+                                ) : (
+                                  <span className="text-[10px] font-semibold text-slate-400">Not Started Yet</span>
+                                )}
                               </div>
                               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                 <div 
                                   className={`h-full transition-all duration-300 ${
                                     isStatusCompleted ? 'bg-emerald-500' : isStatusInProgress ? 'bg-amber-500' : 'bg-slate-300'
                                   }`}
-                                  style={{ width: `${task.progress_percentage || (isStatusCompleted ? 100 : 0)}%` }}
+                                  style={{ width: `${isStatusCompleted ? 100 : isStatusInProgress ? (task.progress_percentage || 50) : 0}%` }}
                                 />
                               </div>
                             </div>

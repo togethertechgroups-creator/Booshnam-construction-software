@@ -105,7 +105,10 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
       const pName = p?.name || 'Project';
       if (pName === 'Project') return;
       const key = `booshnam_wbs_tasks_v2_${pid}`;
-      const raw = localStorage.getItem(key);
+      let raw = localStorage.getItem(key);
+      if (!raw) {
+        raw = localStorage.getItem(`booshnam_wbs_tasks_v10_${pid}`);
+      }
       if (!raw) return;
       const tasks: WBSTask[] = JSON.parse(raw);
       if (!Array.isArray(tasks)) return;
@@ -146,6 +149,9 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             }
           ] : []);
 
+          const isDone = t.status === 'COMPLETED' || (t.progress_percentage !== undefined && t.progress_percentage >= 100);
+          const isOngoing = !isDone && (t.status === 'IN_PROGRESS' || (t.progress_percentage !== undefined && t.progress_percentage > 0));
+
           const extractedTask: QuotationScheduleTask = {
             id: `proj-task-${t.id}`,
             wbs_task_id: t.id,
@@ -153,22 +159,22 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
             project_id: pid,
             project_name: pName,
             assignee: t.assigned_to_name || t.assigned_to || (t.assigned_team && t.assigned_team[0]?.name) || 'Staff',
-            status: t.status === 'COMPLETED' ? 'COMPLETED' : t.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PENDING',
+            status: isDone ? 'COMPLETED' : isOngoing ? 'IN_PROGRESS' : 'PENDING',
             start_date: t.start_date || p?.start_date || new Date().toISOString().split('T')[0],
-            end_date: (t.status === 'COMPLETED' && t.actual_end) ? t.actual_end.substring(0, 10) : (t.end_date || new Date().toISOString().split('T')[0]),
+            end_date: (isDone && t.actual_end) ? t.actual_end.substring(0, 10) : (t.end_date || new Date().toISOString().split('T')[0]),
             actual_start: t.actual_start || t.start_date,
-            actual_end: t.actual_end || (t.status === 'COMPLETED' ? (t.end_date || 'Completed') : undefined),
+            actual_end: t.actual_end || (isDone ? (t.end_date || 'Completed') : undefined),
             forecast_end: t.forecast_end || t.end_date,
-            completed_at: t.status === 'COMPLETED' ? (t.completed_at || (t.actual_end ? `${t.actual_end}, 05:00 PM` : 'Completed')) : undefined,
-            milestone_date: (t.status === 'COMPLETED' && (t.actual_end || t.completed_at))
+            completed_at: isDone ? (t.completed_at || (t.actual_end ? `${t.actual_end}, 05:00 PM` : 'Completed')) : undefined,
+            milestone_date: (isDone && (t.actual_end || t.completed_at))
               ? new Date(t.actual_end || t.completed_at || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               : (t.start_date || p?.start_date)
               ? new Date(t.start_date || p?.start_date || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               : '05 Oct',
-            stage_label: t.status === 'COMPLETED' ? 'Completed' : t.status === 'IN_PROGRESS' ? 'Ongoing' : 'Prepare Quotation',
-            color_theme: t.status === 'COMPLETED' ? 'green' : t.status === 'IN_PROGRESS' ? 'blue' : 'red',
+            stage_label: isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Not Started Yet',
+            color_theme: isDone ? 'green' : isOngoing ? 'blue' : 'red',
             duration_days: t.duration_days || 1,
-            progress_percentage: t.progress_percentage !== undefined ? t.progress_percentage : (t.status === 'COMPLETED' ? 100 : 0),
+            progress_percentage: isDone ? 100 : isOngoing ? (t.progress_percentage || 50) : 0,
             remarks: t.completion_remarks || t.description || 'Project quotation milestone.',
             tag: t.tag || '--',
             group_name: pName || 'Unassigned',
@@ -203,35 +209,59 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     const isAlreadyCovered = combined.some(c => 
       c.id === st.id || 
       (c.wbs_task_id && st.wbs_task_id && c.wbs_task_id === st.wbs_task_id) ||
-      (c.project_id === st.project_id && c.task_name === st.task_name)
+      (c.project_id && st.project_id && c.project_id === st.project_id && (c.task_name === st.task_name || c.task_name.toLowerCase().includes('quot')))
     );
     if (!isAlreadyCovered) {
       combined.push(st);
     }
   });
 
-  // 5. Sync each task's progress and status directly with its live project state
+  // 5. Strictly synchronize each task's progress and status with its actual live WBS task
   combined.forEach(t => {
-    if (t.project_id && allProjectsMap.has(t.project_id)) {
-      const p = allProjectsMap.get(t.project_id)!;
-      if (p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100)) {
-        t.status = 'COMPLETED';
-        t.progress_percentage = 100;
-        t.color_theme = 'green';
-        t.stage_label = 'Completed';
-      } else if (p.status === 'ACTIVE' || (p.progress_percentage !== undefined && p.progress_percentage > 0)) {
-        if (t.status !== 'COMPLETED') {
-          t.status = 'IN_PROGRESS';
-          t.progress_percentage = t.progress_percentage || p.progress_percentage || 50;
-          t.color_theme = 'blue';
-          t.stage_label = 'Ongoing';
+    if (t.project_id) {
+      try {
+        const rawWbs = localStorage.getItem(`booshnam_wbs_tasks_v2_${t.project_id}`) || localStorage.getItem(`booshnam_wbs_tasks_v10_${t.project_id}`);
+        if (rawWbs) {
+          const wbsList: WBSTask[] = JSON.parse(rawWbs);
+          if (Array.isArray(wbsList)) {
+            const matched = wbsList.find(w => 
+              w.id === t.wbs_task_id || 
+              w.id === t.id.replace('proj-task-', '') ||
+              w.title === t.task_name ||
+              (w.title && w.title.toLowerCase().includes('quot'))
+            );
+            if (matched) {
+              const isDone = matched.status === 'COMPLETED' || (matched.progress_percentage !== undefined && matched.progress_percentage >= 100);
+              const isOngoing = !isDone && (matched.status === 'IN_PROGRESS' || (matched.progress_percentage !== undefined && matched.progress_percentage > 0));
+              if (isDone) {
+                t.status = 'COMPLETED';
+                t.progress_percentage = 100;
+                t.stage_label = 'Completed';
+                t.color_theme = 'green';
+              } else if (isOngoing) {
+                t.status = 'IN_PROGRESS';
+                t.progress_percentage = matched.progress_percentage || 50;
+                t.stage_label = 'Ongoing';
+                t.color_theme = 'blue';
+              } else {
+                t.status = 'PENDING';
+                t.progress_percentage = 0;
+                t.stage_label = 'Not Started Yet';
+                t.color_theme = 'red';
+              }
+            }
+          }
         }
-      }
+      } catch (e) {}
     }
   });
 
-  // Final purge filter ensuring NO dummy tasks slip into the returned list
-  return combined.filter(t => !isDummyQuotationTask(t));
+  const finalFiltered = combined.filter(t => !isDummyQuotationTask(t));
+  try {
+    localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(finalFiltered));
+  } catch (e) {}
+
+  return finalFiltered;
 }
 
 // Delete a quotation task permanently from storage and WBS tasks
@@ -331,10 +361,10 @@ export function addQuotationScheduleTask(taskData: Partial<QuotationScheduleTask
     start_date: taskData.start_date || today,
     end_date: taskData.end_date || today,
     milestone_date: taskData.milestone_date || milestoneStr,
-    stage_label: taskData.stage_label || 'Prepare Quotation',
-    color_theme: taskData.color_theme || 'blue',
+    stage_label: taskData.stage_label || (taskData.status === 'COMPLETED' ? 'Completed' : taskData.status === 'IN_PROGRESS' ? 'Ongoing' : 'Not Started Yet'),
+    color_theme: taskData.color_theme || (taskData.status === 'COMPLETED' ? 'green' : taskData.status === 'IN_PROGRESS' ? 'blue' : 'red'),
     duration_days: taskData.duration_days || 1,
-    progress_percentage: taskData.status === 'COMPLETED' ? 100 : 0,
+    progress_percentage: taskData.status === 'COMPLETED' ? 100 : taskData.status === 'IN_PROGRESS' ? 50 : 0,
     remarks: taskData.remarks || '',
     group_name: 'Unassigned'
   };
@@ -358,7 +388,8 @@ export function syncQuotationTaskToProject(task: QuotationScheduleTask): void {
   if (task.project_id) {
     try {
       const taskStorageKey = `booshnam_wbs_tasks_v2_${task.project_id}`;
-      const rawTasks = localStorage.getItem(taskStorageKey);
+      const legacyStorageKey = `booshnam_wbs_tasks_v10_${task.project_id}`;
+      const rawTasks = localStorage.getItem(taskStorageKey) || localStorage.getItem(legacyStorageKey);
       if (rawTasks) {
         const tasks: WBSTask[] = JSON.parse(rawTasks);
         if (Array.isArray(tasks)) {
@@ -391,6 +422,7 @@ export function syncQuotationTaskToProject(task: QuotationScheduleTask): void {
 
           if (taskFound) {
             localStorage.setItem(taskStorageKey, JSON.stringify(updatedTasks));
+            localStorage.setItem(legacyStorageKey, JSON.stringify(updatedTasks));
           }
         }
       }

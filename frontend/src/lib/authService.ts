@@ -120,30 +120,31 @@ export function getUserAccounts(): UserAccount[] {
       );
 
       if (matchingStaff.length > 0) {
-        const primaryStaff = matchingStaff[0];
-        if (a.role_code !== primaryStaff.role_code) {
-          hasChanges = true;
-          a = {
-            ...a,
-            role_code: primaryStaff.role_code,
-            role_name: primaryStaff.role_name || primaryStaff.designation
-          };
-        }
+        // Only include staff members who have explicit has_login_account === true
+        const activeMatchingStaff = matchingStaff.filter(s => s.has_login_account === true && s.status !== 'INACTIVE');
+        if (activeMatchingStaff.length > 0) {
+          const primaryStaff = activeMatchingStaff[0];
+          if (a.role_code !== primaryStaff.role_code) {
+            hasChanges = true;
+            a = {
+              ...a,
+              role_code: primaryStaff.role_code,
+              role_name: primaryStaff.role_name || primaryStaff.designation
+            };
+          }
 
-        // Merge departments from all matching staff records
-        const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
-        const existingDepts = Array.isArray(a.departments) && a.departments.length > 0 
-          ? a.departments 
-          : (a.department ? [a.department] : []);
-        const mergedDepts = Array.from(new Set([...existingDepts, ...staffDepts]));
+          // Departments strictly from staff records that have active login access
+          const staffDepts = activeMatchingStaff.map(s => s.department).filter(Boolean);
+          const mergedDepts = Array.from(new Set(staffDepts.length > 0 ? staffDepts : (a.department ? [a.department] : [])));
 
-        if (mergedDepts.length > 0 && JSON.stringify(a.departments) !== JSON.stringify(mergedDepts)) {
-          hasChanges = true;
-          a = {
-            ...a,
-            departments: mergedDepts,
-            department: a.department && mergedDepts.includes(a.department) ? a.department : mergedDepts[0]
-          };
+          if (mergedDepts.length > 0 && JSON.stringify(a.departments) !== JSON.stringify(mergedDepts)) {
+            hasChanges = true;
+            a = {
+              ...a,
+              departments: mergedDepts,
+              department: a.department && mergedDepts.includes(a.department) ? a.department : mergedDepts[0]
+            };
+          }
         }
       } else if (a.username === 'admin' && a.role_code !== 'ADMIN') {
         hasChanges = true;
@@ -244,19 +245,51 @@ export function deleteUserAccount(identifier: string): void {
   const current = getUserAccounts();
   const clean = identifier.trim().toLowerCase();
   const cleanDigits = identifier.replace(/\D/g, '');
-  const updated = current.filter(a => {
+  const allStaff = getStaffMembers();
+
+  const updated: UserAccount[] = [];
+
+  for (const a of current) {
     // Only preserve the primary root master superadmin accounts
     if (a.id === 'usr-super' || a.username === 'superadmin') {
-      return true;
+      updated.push(a);
+      continue;
     }
+
     const aCleanDigits = (a.phone || '').replace(/\D/g, '');
     const isTarget = 
       a.id === identifier || 
       a.staff_id === identifier || 
       a.username.toLowerCase() === clean || 
       (cleanDigits && cleanDigits.length >= 7 && (aCleanDigits.endsWith(cleanDigits) || cleanDigits.endsWith(aCleanDigits)));
-    return !isTarget;
-  });
+
+    if (!isTarget) {
+      updated.push(a);
+      continue;
+    }
+
+    // It is a target. Check if other active staff records still exist with this phone
+    const remainingActiveStaff = allStaff.filter(s => {
+      if (s.id === identifier || s.has_login_account !== true || s.status === 'INACTIVE') return false;
+      const sDigits = (s.phone || '').replace(/\D/g, '');
+      return cleanDigits && cleanDigits.length >= 7 && (sDigits.endsWith(cleanDigits) || cleanDigits.endsWith(sDigits));
+    });
+
+    if (remainingActiveStaff.length > 0) {
+      // Keep account for the remaining active departments
+      const remainingDepts = Array.from(new Set(remainingActiveStaff.map(s => s.department).filter(Boolean)));
+      updated.push({
+        ...a,
+        staff_id: remainingActiveStaff[0].id,
+        staff_ids: remainingActiveStaff.map(s => s.id),
+        role_code: remainingActiveStaff[0].role_code,
+        role_name: remainingActiveStaff[0].role_name,
+        department: remainingDepts[0] || '',
+        departments: remainingDepts,
+      });
+    }
+  }
+
   try {
     localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updated }));
@@ -350,16 +383,17 @@ export function authenticateUser(usernameOrPhone: string, password: string): Use
       if (matchingStaff.every(s => s.status === 'INACTIVE')) {
         throw new Error('Your account is currently inactive. Contact Admin to restore access.');
       }
-      const activeStaff = matchingStaff.find(s => s.status !== 'INACTIVE') || matchingStaff[0];
+      const activeStaffMembers = matchingStaff.filter(s => s.has_login_account === true && s.status !== 'INACTIVE');
+      if (activeStaffMembers.length === 0 && match.role_code !== 'SUPER_ADMIN' && match.role_code !== 'ADMIN') {
+        throw new Error('Your account does not have active role access. Contact Admin.');
+      }
+      const activeStaff = activeStaffMembers[0] || matchingStaff[0];
       match.role_code = activeStaff.role_code;
       match.role_name = activeStaff.role_name || activeStaff.designation;
       match.staff_name = activeStaff.name;
 
-      const staffDepts = matchingStaff.map(s => s.department).filter(Boolean);
-      const existingDepts = Array.isArray(match.departments) && match.departments.length > 0 
-        ? match.departments 
-        : (match.department ? [match.department] : []);
-      const mergedDepts = Array.from(new Set([...existingDepts, ...staffDepts]));
+      const staffDepts = activeStaffMembers.map(s => s.department).filter(Boolean);
+      const mergedDepts = Array.from(new Set(staffDepts.length > 0 ? staffDepts : (match.department ? [match.department] : [])));
       match.departments = mergedDepts;
       if (!match.department || !mergedDepts.includes(match.department)) {
         match.department = mergedDepts[0];

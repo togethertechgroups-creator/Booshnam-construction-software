@@ -267,20 +267,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Only include staff who have an assigned role & login account, AND belong to current active department
   const activeTeamMembers = useMemo(() => {
-    const accounts = getUserAccounts();
-
     return staffList.filter(s => {
       // Must have an explicit active login account / role assigned by admin via Add Member
       if (!s.has_login_account) return false;
 
-      // Filter by active department
+      // Filter strictly by active department
       if (activeDeptId !== 'booshnam_associates') {
         const staffDeptNorm = normalizeDepartmentId(s.department);
-        if (staffDeptNorm !== activeDeptId) {
-          const userAcc = accounts.find(a => (a.staff_id && a.staff_id === s.id) || (a.phone && a.phone === s.phone));
-          const matchesAccount = userAcc?.departments?.some(d => normalizeDepartmentId(d) === activeDeptId);
-          if (!matchesAccount) return false;
-        }
+        if (staffDeptNorm !== activeDeptId) return false;
       }
       return true;
     });
@@ -1891,14 +1885,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className="text-base font-bold text-slate-900">Manage your Team Roles and Accessibility</h2>
-                        {activeDeptId !== 'booshnam_associates' && (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-800 border border-teal-200">
-                            {activeDeptEntity.name}
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
-                        <span>You have used {activeTeamMembers.length} out of 30 team member slots.</span>
+                        <span>You have used {activeTeamMembers.length} out of 46 team member slots.</span>
                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 text-slate-400 inline-flex items-center justify-center text-[9px] font-bold cursor-help" title="Maximum team member allocation limit">ⓘ</span>
                       </p>
                     </div>
@@ -1938,6 +1927,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <button
                         type="button"
                         onClick={() => {
+                          if (activeTeamMembers.length >= 46) {
+                            showToast('Maximum 46 team member slots limit reached for this department.');
+                            return;
+                          }
                           setNewTeamMemberForm({
                             is_existing_staff: true,
                             staff_id: '',
@@ -3327,12 +3320,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showToast('Please create a login password for the member');
                   return;
                 }
+                if (activeTeamMembers.length >= 46) {
+                  showToast('Maximum 46 team member slots limit reached for this department.');
+                  return;
+                }
                 const todayStr = new Date().toISOString().split('T')[0];
                 let finalStaffMember: StaffMember;
                 if (newTeamMemberForm.is_existing_staff && newTeamMemberForm.staff_id) {
                   const existingStaff = staffList.find(s => s.id === newTeamMemberForm.staff_id);
                   if (existingStaff) {
-                    const targetDept = existingStaff.department || (!activeDeptEntity.isMainOverview ? activeDeptEntity.name : 'Soil Investigation (Chennai)');
+                    const targetDept = !activeDeptEntity.isMainOverview ? activeDeptEntity.name : (existingStaff.department || 'Soil Investigation (Chennai)');
                     finalStaffMember = {
                       ...existingStaff,
                       role_code: newTeamMemberForm.role_code,

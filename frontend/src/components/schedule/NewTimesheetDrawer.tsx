@@ -58,26 +58,23 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     return today.toISOString().split('T')[0];
   });
   
-  const [partyName, setPartyName] = useState<string>('Site Supervisor - 1 - Sunil Kumar');
+  const [partyName, setPartyName] = useState<string>('');
   const [partyDropdownOpen, setPartyDropdownOpen] = useState(false);
   const [partySearchQuery, setPartySearchQuery] = useState('');
 
-  const [startTime, setStartTime] = useState<string>('04:00 PM');
-  const [stopTime, setStopTime] = useState<string>('04:25 PM');
-  const [duration, setDuration] = useState<string>('25 Min');
+  const [startTime, setStartTime] = useState<string>('');
+  const [stopTime, setStopTime] = useState<string>('');
+  const [duration, setDuration] = useState<string>('');
 
-  const [projectName, setProjectName] = useState<string>('OVER HEADS');
+  const [projectName, setProjectName] = useState<string>('');
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
 
-  const [taskName, setTaskName] = useState<string>('--');
+  const [taskName, setTaskName] = useState<string>('');
   const [taskDropdownOpen, setTaskDropdownOpen] = useState(false);
 
-  const [remarks, setRemarks] = useState<string>('Jd Rajendran sembakkkam client site sembakkkam purpose site visit');
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size?: string; url?: string }>>([
-    { name: 'sembakkam_site_inspection_01.jpg', size: '240 KB', url: '/crane-construction.png' },
-    { name: 'sembakkam_site_inspection_02.jpg', size: '180 KB', url: '/engineer-silhouette.jpg' }
-  ]);
+  const [remarks, setRemarks] = useState<string>('');
+  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size?: string; url?: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const partyRef = useRef<HTMLDivElement>(null);
@@ -89,32 +86,26 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     if (editEntry && isOpen) {
       setDate(editEntry.date || new Date().toISOString().split('T')[0]);
       setPartyName(editEntry.party_name || '');
-      setStartTime(editEntry.start_time || '09:00 AM');
-      setStopTime(editEntry.end_time || '05:00 PM');
+      setStartTime(editEntry.start_time || '');
+      setStopTime(editEntry.end_time || '');
       setDuration(editEntry.duration || '');
       setProjectName(editEntry.project_name || '');
-      setTaskName(editEntry.task_name || '--');
+      setTaskName(editEntry.task_name || '');
       setRemarks(editEntry.remarks || '');
-      setUploadedFiles(editEntry.files && editEntry.files.length > 0 ? editEntry.files : [
-        { name: 'sembakkam_site_inspection_01.jpg', size: '240 KB', url: '/crane-construction.png' },
-        { name: 'sembakkam_site_inspection_02.jpg', size: '180 KB', url: '/engineer-silhouette.jpg' }
-      ]);
+      setUploadedFiles(editEntry.files || []);
     } else if (!editEntry && isOpen) {
-      // Reset to defaults matching screenshot
+      // Clean empty state for new entry
       setDate(new Date().toISOString().split('T')[0]);
-      setPartyName('Site Supervisor - 1 - Sunil Kumar');
-      setStartTime('04:00 PM');
-      setStopTime('04:25 PM');
-      setDuration('25 Min');
-      setProjectName('OVER HEADS');
-      setTaskName('--');
-      setRemarks('Jd Rajendran sembakkkam client site sembakkkam purpose site visit');
-      setUploadedFiles([
-        { name: 'sembakkam_site_inspection_01.jpg', size: '240 KB', url: '/crane-construction.png' },
-        { name: 'sembakkam_site_inspection_02.jpg', size: '180 KB', url: '/engineer-silhouette.jpg' }
-      ]);
+      setPartyName('');
+      setStartTime('');
+      setStopTime('');
+      setDuration('');
+      setProjectName(projects[0]?.name || '');
+      setTaskName('');
+      setRemarks('');
+      setUploadedFiles([]);
     }
-  }, [editEntry, isOpen]);
+  }, [editEntry, isOpen, projects]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -144,8 +135,8 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
   // Registered staff combined with defaults
   const availableParties = (() => {
     const fromStaff = getStaffMembers().map((s: StaffMember) => s.designation ? `${s.designation} - ${s.name}` : s.name);
-    const combined = [...COMMON_PARTIES];
-    fromStaff.forEach((p: string) => {
+    const combined = [...fromStaff];
+    COMMON_PARTIES.forEach((p: string) => {
       if (!combined.includes(p)) combined.push(p);
     });
     return combined;
@@ -156,7 +147,7 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
   );
 
   const availableProjectOptions = (() => {
-    const list = ['OVER HEADS'];
+    const list: string[] = [];
     projects.forEach(p => {
       if (p.name && !list.includes(p.name)) list.push(p.name);
     });

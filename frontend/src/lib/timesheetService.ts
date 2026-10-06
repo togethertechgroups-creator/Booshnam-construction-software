@@ -50,180 +50,40 @@ export interface QuotationScheduleTask {
 
 const TIMESHEET_STORAGE_KEY = 'booshnam_team_timesheets_v1';
 
-// Initial default entries matching user Image 2 and Time Log View
-export const INITIAL_TIMESHEETS: TimesheetEntry[] = [
-  {
-    id: 'ts-01',
-    date: '2026-10-03',
-    display_date: '3 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '4:00 PM',
-    end_time: '4:25 PM',
-    duration: '25 Min',
-    project_name: 'OVER HEADS',
-    task_name: '--',
-    remarks: 'Jd Rajendran sembakkkam client site sembakkkam purpose site visit',
-    files: [
-      { name: 'sembakkam_site_inspection_01.jpg', size: '240 KB', url: '/crane-construction.png' },
-      { name: 'sembakkam_site_inspection_02.jpg', size: '180 KB', url: '/engineer-silhouette.jpg' }
-    ],
-    created_at: Date.now() - 86400000
-  },
-  {
-    id: 'ts-02',
-    date: '2026-10-03',
-    display_date: '03 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '11:50 AM',
-    end_time: '3:30 PM',
-    duration: '3 Hr 40 Min',
-    project_name: '- Jahir Hussain Murugan Ls Ref-Navalur-1Pt-f',
-    task_name: 'Site Topographical & Soil Inspection',
-    remarks: 'Field site reconnaissance, borehole demarcations.',
-    created_at: Date.now() - 90000000
-  },
-  {
-    id: 'ts-03',
-    date: '2026-10-03',
-    display_date: '03 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '10:10 AM',
-    end_time: '10:55 AM',
-    duration: '45 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Project Schedule Coordination',
-    remarks: 'Weekly resource scheduling and labour allocation.',
-    created_at: Date.now() - 95000000
-  },
-  {
-    id: 'ts-04',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '5:40 PM',
-    end_time: '6:25 PM',
-    duration: '45 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Quotation Commercial Review',
-    remarks: 'Vetted material quantity rate sheet for client quotation.',
-    created_at: Date.now() - 250000000
-  },
-  {
-    id: 'ts-05',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '4:55 PM',
-    end_time: '5:10 PM',
-    duration: '15 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Quotation Client Query Log',
-    remarks: 'Clarified structural SBC assumptions with client team.',
-    created_at: Date.now() - 255000000
-  },
-  {
-    id: 'ts-06',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '4:10 PM',
-    end_time: '4:30 PM',
-    duration: '20 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Quotation Scope Sign-off',
-    remarks: 'Internal team scope validation.',
-    created_at: Date.now() - 258000000
-  },
-  {
-    id: 'ts-07',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '3:40 PM',
-    end_time: '4:00 PM',
-    duration: '20 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Quotation Document Export',
-    remarks: 'Prepared official Booshnam stamped PDF quotation.',
-    created_at: Date.now() - 260000000
-  },
-  {
-    id: 'ts-08',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '2:45 PM',
-    end_time: '3:10 PM',
-    duration: '25 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Site Log Briefing',
-    remarks: 'Labour attendance and safety gear briefing.',
-    created_at: Date.now() - 263000000
-  },
-  {
-    id: 'ts-09',
-    date: '2026-10-01',
-    display_date: '01 Oct, 2026',
-    party_name: 'Site Supervisor - 1 - Sunil Kumar',
-    start_time: '1:15 PM',
-    end_time: '1:40 PM',
-    duration: '25 Min',
-    project_name: 'OVER HEADS',
-    task_name: 'Daily Timesheet Entry',
-    remarks: 'Logged machinery fuel hours and site equipment usage.',
-    created_at: Date.now() - 268000000
-  }
-];
+// Initial entries: clean empty state, no dummy data
+export const INITIAL_TIMESHEETS: TimesheetEntry[] = [];
 
-export const DEFAULT_TIMESHEET_FILES = [
-  { name: 'sembakkam_site_inspection_01.jpg', size: '240 KB', url: '/crane-construction.png' },
-  { name: 'sembakkam_site_inspection_02.jpg', size: '180 KB', url: '/engineer-silhouette.jpg' }
-];
+export const DEFAULT_TIMESHEET_FILES: Array<{ name: string; size?: string; url?: string }> = [];
 
 export function getStoredTimesheets(): TimesheetEntry[] {
   try {
     const raw = localStorage.getItem(TIMESHEET_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        let modified = false;
-        parsed.forEach((t: any) => {
-          if (!t.files || t.files.length === 0 || !t.files[0]?.url) {
-            t.files = [...DEFAULT_TIMESHEET_FILES];
-            modified = true;
-          }
-          if (t.id === 'ts-01') {
-            t.remarks = 'Jd Rajendran sembakkkam client site sembakkkam purpose site visit';
-            t.task_name = '--';
-            t.project_name = 'OVER HEADS';
-            t.display_date = '3 Oct, 2026';
-            t.start_time = '4:00 PM';
-            t.end_time = '4:25 PM';
-            t.duration = '25 Min';
-            modified = true;
-          }
-        });
-        if (modified) {
-          localStorage.setItem(TIMESHEET_STORAGE_KEY, JSON.stringify(parsed));
+      if (Array.isArray(parsed)) {
+        // Strip out any legacy dummy/mock entries
+        const cleaned = parsed.filter((t: any) => 
+          !t.id?.match(/^ts-0[1-9]$/) &&
+          t.project_name !== 'OVER HEADS' &&
+          !(t.remarks && t.remarks.includes('sembakkkam'))
+        );
+        if (cleaned.length !== parsed.length) {
+          localStorage.setItem(TIMESHEET_STORAGE_KEY, JSON.stringify(cleaned));
         }
-        return parsed;
+        return cleaned;
       }
     }
   } catch (e) {
     console.error('Failed to load timesheets', e);
   }
-  // Initialize with defaults if empty
-  try {
-    localStorage.setItem(TIMESHEET_STORAGE_KEY, JSON.stringify(INITIAL_TIMESHEETS));
-  } catch (e) {}
-  return INITIAL_TIMESHEETS;
+  return [];
 }
 
 export function saveTimesheet(entry: Omit<TimesheetEntry, 'id' | 'created_at'>): TimesheetEntry {
   const current = getStoredTimesheets();
   const newEntry: TimesheetEntry = {
     ...entry,
-    files: entry.files && entry.files.length > 0 ? entry.files : [...DEFAULT_TIMESHEET_FILES],
+    files: entry.files && entry.files.length > 0 ? entry.files : [],
     id: `ts-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     created_at: Date.now()
   };

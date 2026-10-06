@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Briefcase, Plus, ArrowRight, CheckCircle2, 
-  Phone, Mail, Building, DollarSign
+  Phone, Mail, Building, DollarSign,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Lead } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface CRMViewProps {
   leads: Lead[];
@@ -31,21 +33,30 @@ export const CRMView: React.FC<CRMViewProps> = ({
 
   const stages = ['NEW', 'CONTACTED', 'PROPOSAL', 'NEGOTIATION', 'WON'];
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Edge-to-edge Header */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-brand text-white text-[10px] font-bold rounded">
-                BUSINESS PIPELINE
-              </span>
-              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">CRM & Construction Leads Pipeline</h1>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Track prospective tenders and inquiries from prospect discovery to contract award and project spin-up.
-            </p>
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">CRM & Construction Leads Pipeline</h1>
           </div>
         </div>
 
@@ -55,6 +66,17 @@ export const CRMView: React.FC<CRMViewProps> = ({
             <span>New Lead Inquiry</span>
           </button>
           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown showBell={true} />
         </div>
       </div>

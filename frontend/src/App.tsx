@@ -160,18 +160,122 @@ export function App() {
         localStorage.removeItem('booshnam_finance_transfers_v1');
       }
 
-      // Purge dummy projects explicitly
+      // Purge dummy timesheets and quotation schedule tasks explicitly
+      const timesheets = localStorage.getItem('booshnam_team_timesheets_v1');
+      if (timesheets && (timesheets.includes('"id":"ts-01"') || timesheets.includes('OVER HEADS') || timesheets.includes('sembakkkam'))) {
+        try {
+          const parsed = JSON.parse(timesheets);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((t: any) => 
+              !t.id?.match(/^ts-0[1-9]$/) &&
+              t.project_name !== 'OVER HEADS' &&
+              !(t.remarks && t.remarks.includes('sembakkkam'))
+            );
+            localStorage.setItem('booshnam_team_timesheets_v1', JSON.stringify(cleaned));
+            window.dispatchEvent(new CustomEvent('booshnam_timesheets_updated', { detail: cleaned }));
+          }
+        } catch (e) {
+          localStorage.removeItem('booshnam_team_timesheets_v1');
+        }
+      }
+
+      const qTasks = localStorage.getItem('booshnam_quotation_schedule_tasks_v3');
+      if (qTasks) {
+        try {
+          const parsed = JSON.parse(qTasks);
+          if (Array.isArray(parsed)) {
+            const cleaned = parsed.filter((t: any) => 
+              t.task_name !== 'Collect Client Details' &&
+              t.project_name !== 'Project' &&
+              t.project_id !== 'proj-01' &&
+              t.project_id !== 'proj-02' &&
+              !t.id?.match(/^q-task-0?[1-9]$|^q-task-1[0-9]$/) && 
+              !t.id?.startsWith('proj-quotation-') &&
+              t.project_name !== 'Navalur Residential Enclave' &&
+              t.project_name !== 'Tambaram Commercial Hub' &&
+              t.project_name !== 'Medavakkam Villa Plots' &&
+              t.project_name !== 'Velachery Tech Park Extension' &&
+              t.project_name !== 'Guindy Industrial Shed' &&
+              t.project_name !== 'Chromepet IT Complex'
+            );
+            localStorage.setItem('booshnam_quotation_schedule_tasks_v3', JSON.stringify(cleaned));
+            window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: cleaned }));
+          }
+        } catch (e) {
+          localStorage.removeItem('booshnam_quotation_schedule_tasks_v3');
+        }
+      }
+      try {
+        localStorage.removeItem('booshnam_quotation_schedule_tasks_v1');
+        localStorage.removeItem('booshnam_quotation_schedule_tasks_v2');
+        localStorage.removeItem('booshnam_wbs_tasks_v2_proj-01');
+        localStorage.removeItem('booshnam_wbs_tasks_v2_proj-02');
+        localStorage.removeItem('booshnam_wbs_tasks_v2_default');
+      } catch (e) {}
+
+      // Sanitize any existing project task lists in localStorage:
+      // 1. Reset any auto-completed mock tasks without user completion proof to TODO (Start) with 0% progress
+      // 2. Clear auto-subtask flag on Site Visit if it has no parent
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('booshnam_wbs_tasks_v2_') || k.startsWith('booshnam_wbs_tasks_v10_'))) {
+            const raw = localStorage.getItem(k);
+            if (raw) {
+              const parsedTasks = JSON.parse(raw);
+              if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
+                let changed = false;
+                const cleanedTasks = parsedTasks.map((t: any) => {
+                  let next = { ...t };
+                  if (next.title === 'Site Visit' && !next.parent_id && next.is_subtask) {
+                    next.is_subtask = false;
+                    changed = true;
+                  }
+                  const hasUserCompletion = Boolean(next.completion_remarks || next.completion_proof_url);
+                  if (next.status === 'COMPLETED' && !hasUserCompletion) {
+                    next.status = 'TODO';
+                    next.progress_percentage = 0;
+                    next.progress_label = '0/1 lumpsum';
+                    next.delay_status = 'On Time';
+                    next.actual_start = '';
+                    next.actual_end = '';
+                    next.forecast_end = 'On schedule';
+                    changed = true;
+                  }
+                  return next;
+                });
+                if (changed) {
+                  localStorage.setItem(k, JSON.stringify(cleanedTasks));
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      // Purge dummy projects explicitly & clean project names
       const savedProjs = localStorage.getItem('booshnam_projects_v2');
-      if (savedProjs && (savedProjs.includes('"bn-') || savedProjs.includes('"proj-') || savedProjs.includes('Prestige Boulevard'))) {
+      if (savedProjs) {
          // Read it, filter it, rewrite it
          try {
            const parsed = JSON.parse(savedProjs);
            if (Array.isArray(parsed)) {
-             const cleaned = parsed.filter((p: any) => 
-               !p.id?.startsWith('proj-') && 
-               !p.id?.startsWith('bn-') &&
-               !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-             );
+             const cleaned = parsed
+               .filter((p: any) => 
+                 !p.id?.startsWith('proj-') && 
+                 !p.id?.startsWith('bn-') &&
+                 !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+               )
+               .map((p: any) => {
+                 if (p && p.name && p.client_name) {
+                   const escapedClient = p.client_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                   const stripped = p.name.replace(new RegExp(`\\s*\\(${escapedClient}\\)\\s*$`, 'i'), '').trim();
+                   if (stripped && stripped !== p.name) {
+                     return { ...p, name: stripped };
+                   }
+                 }
+                 return p;
+               });
              localStorage.setItem('booshnam_projects_v2', JSON.stringify(cleaned));
            }
          } catch(e) {}

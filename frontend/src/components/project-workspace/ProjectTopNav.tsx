@@ -5,7 +5,8 @@ import {
   Share2, Shield, CircleDot, ArrowLeft,
   MapPin, CheckSquare, UserCheck, Package,
   Menu, X, LayoutDashboard, Wrench, FileText,
-  Users, Layers, DollarSign, Briefcase
+  Users, Layers, DollarSign, Briefcase,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project } from '../../types';
 import { UserProfileDropdown } from '../UserProfileDropdown';
@@ -153,6 +154,8 @@ interface ProjectTopNavProps {
   onBack?: () => void;
   userRole?: string;
   userRoleName?: string;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
@@ -170,6 +173,8 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
   onBack,
   userRole,
   userRoleName,
+  isFullscreen,
+  onToggleFullscreen,
 }) => {
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -299,7 +304,7 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                   title="Switch Project"
                 >
                   <span className="truncate text-slate-900 font-bold tracking-tight">
-                    {project.name || displayTitle}
+                    {displayTitle}
                   </span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform shrink-0" />
                 </button>
@@ -453,6 +458,23 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
               <span className="leading-none">M</span>
               <span className="text-[9px] font-black leading-none ml-0.5">+</span>
             </button>
+
+            {/* Fullscreen Expand/Minimize Button */}
+            {onToggleFullscreen && (
+              <button
+                type="button"
+                onClick={onToggleFullscreen}
+                className={`p-1.5 rounded-full transition-colors cursor-pointer border ${
+                  isFullscreen 
+                    ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
+                    : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                }`}
+                title={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+                aria-label={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            )}
 
             {/* User Profile & Notifications */}
             <UserProfileDropdown showBell={true} avatarSizeClass="w-7 h-7" />

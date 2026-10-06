@@ -1,14 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   CheckCircle2, Clock, AlertCircle, Plus, Search, Filter, 
   Calendar, Layers, Flag, Check, X, ChevronRight, User, 
   Building2, Sparkles, MessageSquare, Paperclip, Upload, Eye,
-  Compass, HardHat, DollarSign, BarChart3, ShieldCheck
+  Compass, HardHat, DollarSign, BarChart3, ShieldCheck,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { WBSTask, Project, Department } from '../types';
 import { MOCK_TASKS, MOCK_PROJECTS, PREDEFINED_TASKS_TEMPLATE } from '../lib/mockData';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomDatePicker } from '../components/CustomDatePicker';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { CustomSelect } from '../components/CustomSelect';
 import { getStaffMembers } from '../lib/staffService';
 
@@ -126,23 +128,32 @@ export const TasksView: React.FC<TasksViewProps> = ({
   const completedCount = tasks.filter(t => t.status === 'COMPLETED').length;
   const pendingCount = tasks.filter(t => t.status === 'TODO' || t.status === 'BLOCKED' || t.status === 'NOT_STARTED').length;
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Edge-to-edge Header */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
-                Task Management Hub
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-                11 Predefined Workflows
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Comprehensive task execution, borehole sampling, drawings, and field tracking across all 5 departments
-            </p>
+            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+              Task Management Hub
+            </h1>
           </div>
         </div>
 
@@ -155,6 +166,17 @@ export const TasksView: React.FC<TasksViewProps> = ({
           >
             <Plus className="w-4 h-4" />
             <span>Create Task</span>
+          </button>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
           </button>
           <UserProfileDropdown showBell={true} onShowToast={onShowToast} />
         </div>

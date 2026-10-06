@@ -429,9 +429,20 @@ export const getOrInitializeProjects = (): Project[] => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        projs = parsed.filter((p: any) => 
-          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-        );
+        projs = parsed
+          .filter((p: any) => 
+            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
+          )
+          .map((p: any) => {
+            if (p && p.name && p.client_name) {
+              const escapedClient = p.client_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const stripped = p.name.replace(new RegExp(`\\s*\\(${escapedClient}\\)\\s*$`, 'i'), '').trim();
+              if (stripped && stripped !== p.name) {
+                return { ...p, name: stripped };
+              }
+            }
+            return p;
+          });
       }
     }
 

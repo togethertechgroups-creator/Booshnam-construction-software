@@ -4,10 +4,12 @@ import {
   Clock, DollarSign, Plus, Check, Search, Calendar,
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
   Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
-  Camera, Eye, HardHat, Smartphone
+  Camera, Eye, HardHat, Smartphone,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { CustomDatePicker } from '../components/CustomDatePicker';
 import { CustomSelect } from '../components/CustomSelect';
 import { DepartmentMultiSelectFilter } from '../components/DepartmentMultiSelectFilter';
@@ -477,8 +479,25 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const totalPresent = attendance.filter(a => a.status !== 'ABSENT').length;
   const insideGeofenceCount = attendance.filter(a => a.is_inside_geofence).length;
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-slate-50/50 pb-16">
+    <div className={`flex-1 flex flex-col min-w-0 bg-slate-50/50 pb-16 transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Top Header Bar */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10 shadow-2xs">
         <div className="flex items-center gap-3">
@@ -526,6 +545,17 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
           )}
           <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown showBell={true} onShowToast={triggerToast} />
         </div>
       </div>

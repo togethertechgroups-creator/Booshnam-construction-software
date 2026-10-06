@@ -8,10 +8,12 @@ import {
   LayoutGrid, ShoppingCart, Truck, ClipboardCheck, Calculator,
   UserCheck, Search, RefreshCw, ShieldCheck, ListTodo, Settings as SettingsIcon,
   SlidersHorizontal, Home, Edit2, Lock, Eye, EyeOff, User as UserIcon, KeyRound, UserPlus,
-  Image as ImageIcon, PenTool, Info, CheckCircle, Landmark
+  Image as ImageIcon, PenTool, Info, CheckCircle, Landmark,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { Role } from '../types';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { 
   ALL_SYSTEM_MODULES, 
   getStoredRolePermissions, 
@@ -934,8 +936,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const primaryBranch = branches.find(b => b.isPrimary) || branches[0];
   const otherBranchesCount = branches.filter(b => !b.isPrimary).length;
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen pb-16">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white min-h-screen pb-16 transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Top Header Bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
@@ -947,6 +966,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* Right Action Icons & Profile */}
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+              aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
             <UserProfileDropdown showBell={true} onShowToast={showToast} />
           </div>
         </div>

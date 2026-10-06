@@ -13,6 +13,7 @@ interface QuotationTaskDrawerProps {
   task: QuotationScheduleTask | null;
   onShowToast?: (msg: string) => void;
   onUpdateTask?: (updated: QuotationScheduleTask) => void;
+  onDeleteTask?: (id: string) => void;
 }
 
 export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
@@ -20,7 +21,8 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
   onClose,
   task,
   onShowToast,
-  onUpdateTask
+  onUpdateTask,
+  onDeleteTask
 }) => {
   const [drawerTab, setDrawerTab] = useState<'progress' | 'resources' | 'logs'>('progress');
   const [isDatesExpanded, setIsDatesExpanded] = useState(true);
@@ -38,9 +40,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
     if (task?.todos && task.todos.length > 0) {
       return task.todos;
     }
-    return [
-      { id: '1', text: 'Quotation preliminary draft verification', done: true }
-    ];
+    return [];
   });
   const [newToDoInput, setNewToDoInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,6 +191,23 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
             }`}>
               {task.status === 'COMPLETED' ? 'Completed' : task.status === 'IN_PROGRESS' ? 'In Progress' : 'Pending'}
             </span>
+
+            {/* Delete Task Button */}
+            {onDeleteTask && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to delete "${task.task_name}"?`)) {
+                    onDeleteTask(task.id);
+                    onClose();
+                  }
+                }}
+                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                title="Delete Task"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Three Dots Menu */}
             <button

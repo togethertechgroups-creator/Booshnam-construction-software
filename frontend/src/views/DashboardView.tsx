@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, AlertTriangle, Users, CheckCircle2, 
   Clock, DollarSign, ArrowUpRight, ArrowDownRight, 
-  Layers, HardHat, Calendar, ShieldCheck
+  Layers, HardHat, Calendar, ShieldCheck,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project, Role } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface DashboardViewProps {
   projects: Project[];
@@ -33,21 +35,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalPortfolioActual = projects.reduce((acc, p) => acc + (p.actual_cost || 0), 0);
   const portfolioBurnRate = totalPortfolioBudget > 0 ? (totalPortfolioActual / totalPortfolioBudget * 100).toFixed(1) : '0';
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => {
+      setIsFullscreen(fs);
+    });
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unsub();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const nextState = !isFullscreen;
+    setIsFullscreen(nextState);
+    try {
+      await toggleBrowserFullscreen();
+    } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Edge-to-edge Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white px-6 py-4 border-b border-slate-200 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Executive Site Overview
-              <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-700 font-semibold rounded-full border border-emerald-200">
-                ● All Systems Live
-              </span>
             </h1>
-            <p className="text-xs text-slate-500 mt-1">
-              Real-time synchronization across Office & Field operations for <span className="font-semibold text-slate-700">Apex Builders & Infrastructure</span>.
-            </p>
           </div>
         </div>
 
@@ -67,6 +92,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>Pending Approvals (2)</span>
           </button>
           <div className="h-6 w-px bg-slate-200 ml-1 mr-1 hidden sm:block" />
+          {/* Expand / Fullscreen Button */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen
+                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown showBell={true} />
         </div>
       </div>

@@ -9,10 +9,12 @@ import {
   ArrowRight, Shield, Layers, HelpCircle, CheckCheck, Eye,
   ArrowUp, ArrowDown, MapPin, ArrowLeft, ChevronRight,
   Tag, HardHat, Truck, Fuel, Paperclip, Upload, ArrowLeftRight,
-  Copy, Trash2, MoreVertical, Pencil
+  Copy, Trash2, MoreVertical, Pencil,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project } from '../types';
 import { CustomSelect } from '../components/CustomSelect';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { AddPartyDrawer, PartyFormData } from '../components/finance/AddPartyDrawer';
 import { AddAccountDrawer, AccountFormData } from '../components/finance/AddAccountDrawer';
 import { CreateTransactionModalFlow } from '../components/finance/CreateTransactionModalFlow';
@@ -2735,8 +2737,25 @@ const toIsoDate = (displayStr: string) => {
     };
   }, [liveActiveParty, transactions, paymentRequests, expenses, partyTransactions]);
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-800 flex flex-col font-sans">
+    <div className={`min-h-screen bg-white text-slate-800 flex flex-col font-sans transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       
       {/* ─────────────────────────────────────────────────────────────
           1. TOP BRAND / UTILITY HEADER (as in reference image)
@@ -2745,9 +2764,6 @@ const toIsoDate = (displayStr: string) => {
         {/* Title */}
         <div className="flex items-center gap-3">
           <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Finance</h1>
-          <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 hidden sm:inline-block">
-            Accounts & Finance
-          </span>
         </div>
 
         {/* Right utilities */}
@@ -2800,6 +2816,19 @@ const toIsoDate = (displayStr: string) => {
               </div>
             )}
           </div>
+
+          {/* Expand / Fullscreen Button */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
 
           {/* User Profile Avatar */}
           <div className="w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-red-100 select-none cursor-pointer">

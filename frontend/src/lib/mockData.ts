@@ -42,31 +42,33 @@ export const MOCK_USER: User = {
 
 /**
  * Formats a project's display title to: Project Name (Client Name)
- * E.g. "home (qwertyuiop)" or "Insta Ebinesar"
  */
 export const formatProjectTitle = (p?: Partial<Project> | null): string => {
   if (!p) return 'Project';
-  const rawName = (p.name || p.client_name || 'Project').trim();
+  let rawName = (p.name || p.client_name || 'Project').trim();
 
   // Check if it's a compound code string like "RG33-BAGJ-2486-(2026-2027)-home-wertyuiop-qwertyuiop"
   const compoundMatch = rawName.match(/^[A-Z0-9_-]+-\(\d{4}-\d{4}\)-([^-]+)/i);
   if (compoundMatch) {
-    const base = compoundMatch[1].trim();
-    const client = (p.client_name || '').trim();
-    return client && client.toLowerCase() !== base.toLowerCase() ? `${base} (${client})` : base;
+    return compoundMatch[1].trim();
   }
 
-  // If already formatted like "home (qwertyuiop)"
-  if (rawName.includes('(') && rawName.includes(')')) {
-    return rawName;
-  }
-
+  // If client name is present, strip `(Client Name)` from the end of the project name
   const client = (p.client_name || '').trim();
-  if (client && client.toLowerCase() !== rawName.toLowerCase()) {
-    return `${rawName} (${client})`;
+  if (client) {
+    const escapedClient = client.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    rawName = rawName.replace(new RegExp(`\\s*\\(${escapedClient}\\)\\s*$`, 'i'), '').trim();
   }
 
-  return rawName;
+  // Also strip any trailing parenthesized suffix if it exists (e.g. "Project Name (Client)")
+  if (rawName.includes('(') && rawName.endsWith(')')) {
+    const stripped = rawName.replace(/\s*\([^)]*\)$/, '').trim();
+    if (stripped) {
+      rawName = stripped;
+    }
+  }
+
+  return rawName || 'Project';
 };
 
 // All mock operational data cleared as requested

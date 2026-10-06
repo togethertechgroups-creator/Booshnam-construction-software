@@ -5,11 +5,13 @@ import {
   ArrowRight, Briefcase, Building2, Phone, Mail, FileText, 
   Sparkles, ShieldCheck, MapPin, Calendar, Check,
   ChevronDown, RotateCcw, Award, Layers, MoreVertical, Edit2,
-  Gift, HelpCircle, Info, Bell, BellRing, Globe
+  Gift, HelpCircle, Info, Bell, BellRing, Globe,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project, Department, Lead, Quotation, QuotationItem, Role } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { CustomDatePicker } from '../components/CustomDatePicker';
 import { confirmAction } from '../lib/dialogService';
 import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
@@ -927,8 +929,25 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     }
   };
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#ffffff] h-full max-h-screen overflow-hidden font-sans">
+    <div className={`flex-1 flex flex-col min-w-0 bg-[#ffffff] h-full max-h-screen overflow-hidden font-sans transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* ── FIXED TOP HEADER BAR (Stays pinned in position, never moves or overlaps) ── */}
       <header className="px-6 pt-3.5 pb-0 bg-white border-b border-slate-200 shrink-0 z-30 shadow-2xs">
         <div className="flex items-center justify-between">
@@ -941,6 +960,17 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
           {/* Right Header: Profile & Notifications */}
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+              }`}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+              aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
             <UserProfileDropdown showBell={true} />
           </div>
         </div>

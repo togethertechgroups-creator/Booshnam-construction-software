@@ -6,11 +6,12 @@ import {
   Building2, User, Truck, Upload, Eye, RefreshCw, ChevronRight,
   TrendingDown, TrendingUp, Package, AlertCircle, Sparkles,
   FileCheck, Download, Trash2, ArrowUpRight, ArrowDownRight,
-  ClipboardCheck, CheckCircle, HelpCircle, Camera, Image as LucideImage, Maximize2
+  ClipboardCheck, CheckCircle, HelpCircle, Camera, Image as LucideImage, Maximize2, Minimize2
 } from 'lucide-react';
 import { MaterialRequest, PurchaseOrder, GoodsReceiptNote, Invoice, StockItem, Project } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { getOrInitializeProjects } from '../lib/departmentService';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { 
   getLowStockItems, 
   getUnacknowledgedLowStockItems, 
@@ -882,25 +883,45 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
   const lowStockCount = stockList.filter(s => s.current_quantity <= s.minimum_threshold).length;
   const totalStockValuation = stockList.reduce((acc, s) => acc + (s.current_quantity * s.unit_price), 0);
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white min-h-screen transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* ── TOP HEADER BAR ── */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-20">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 bg-red-600 text-white text-[10px] font-black rounded tracking-wider uppercase">
-              SUPPLY CHAIN
-            </span>
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
-              Procurement & Material Operations
-            </h1>
-          </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Site Material Requests • Warehouse Stock Management & Deduction • Vendor Purchase • Quality Inspection & Bill Upload
-          </p>
+          <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            Procurement & Material Operations
+          </h1>
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown showBell={true} />
         </div>
       </div>
@@ -921,8 +942,8 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             <ShoppingCart className="w-3.5 h-3.5" />
             <span>Material Requests</span>
             {pendingRequestsCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-red-600 text-white text-[10px] font-bold rounded-full">
-                {pendingRequestsCount}
+              <span className="text-[11px] font-bold text-red-600">
+                ({pendingRequestsCount})
               </span>
             )}
           </button>
@@ -931,7 +952,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('stock')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 border ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
               activeTab === 'stock'
                 ? 'bg-red-50 text-red-600 font-bold border-red-200 shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-medium'
@@ -939,13 +960,12 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           >
             <Package className="w-3.5 h-3.5" />
             <span>Warehouse Stock</span>
-            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-full">
-              {stockList.length}
+            <span className="text-[11px] font-semibold text-slate-500">
+              ({stockList.length})
             </span>
             {lowStockItems.length > 0 && (
-              <span className="px-1.5 py-0.2 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center gap-1 shadow-2xs">
-                <AlertTriangle className="w-2.5 h-2.5" />
-                <span>{lowStockItems.length} Low</span>
+              <span className="text-[11px] font-bold text-amber-600">
+                · {lowStockItems.length} Low
               </span>
             )}
           </button>
@@ -954,7 +974,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 border ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
               activeTab === 'orders'
                 ? 'bg-red-50 text-red-600 font-bold border-red-200 shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-medium'
@@ -962,8 +982,8 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           >
             <FileText className="w-3.5 h-3.5" />
             <span>Vendor Purchase (PO)</span>
-            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-full">
-              {poList.length}
+            <span className="text-[11px] font-semibold text-slate-500">
+              ({poList.length})
             </span>
           </button>
 
@@ -971,7 +991,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('grn')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-2 border ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 border ${
               activeTab === 'grn'
                 ? 'bg-red-50 text-red-600 font-bold border-red-200 shadow-2xs'
                 : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent font-medium'
@@ -979,8 +999,8 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
           >
             <ClipboardCheck className="w-3.5 h-3.5" />
             <span>Site Receipt & Quality (GRN)</span>
-            <span className="px-1.5 py-0.2 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-full">
-              {grnList.length}
+            <span className="text-[11px] font-semibold text-slate-500">
+              ({grnList.length})
             </span>
           </button>
         </div>
@@ -1017,31 +1037,37 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             </div>
 
             {/* Quick Filter Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="relative w-72">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative w-full sm:w-80">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Search by project, material, or MR #..."
                   value={requestSearch}
                   onChange={(e) => setRequestSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 shadow-2xs"
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 shadow-2xs transition"
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-2 text-xs flex-wrap">
                 <span className="text-slate-500 font-medium">Filter Status:</span>
-                {['ALL', 'PENDING', 'APPROVED_FROM_STOCK', 'PO_CREATED'].map((st) => (
+                {[
+                  { key: 'ALL', label: 'All Requests' },
+                  { key: 'PENDING', label: 'Pending' },
+                  { key: 'APPROVED_FROM_STOCK', label: 'Approved & Deducted' },
+                  { key: 'PO_CREATED', label: 'PO Created' }
+                ].map((st) => (
                   <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition ${
-                      statusFilter === st
-                        ? 'bg-slate-900 text-white font-bold'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    key={st.key}
+                    type="button"
+                    onClick={() => setStatusFilter(st.key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                      statusFilter === st.key
+                        ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                     }`}
                   >
-                    {st === 'ALL' ? 'All Requests' : st === 'APPROVED_FROM_STOCK' ? 'Approved & Deducted' : st}
+                    {st.label}
                   </button>
                 ))}
               </div>
@@ -1053,12 +1079,12 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4">Request # & Date</th>
-                      <th className="py-3.5 px-4">Project & Purpose / Reason</th>
-                      <th className="py-3.5 px-4">Material & Qty</th>
-                      <th className="py-3.5 px-4">Warehouse Stock Check</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4 text-right">Admin Action</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap w-[130px]">Request # & Date</th>
+                      <th className="py-3 px-3.5 min-w-[200px]">Project & Purpose / Reason</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap min-w-[160px]">Material & Qty</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap min-w-[170px]">Warehouse Stock Check</th>
+                      <th className="py-3 px-3.5 whitespace-nowrap w-[130px]">Status</th>
+                      <th className="py-3 px-3.5 text-right whitespace-nowrap w-[160px]">Admin Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -1077,29 +1103,33 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                         return (
                           <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
                             {/* Request Info */}
-                            <td className="py-3.5 px-4">
-                              <div className="tracking-tight font-bold text-slate-900">{req.request_number}</div>
-                              <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-400" />
+                            <td className="py-3 px-3.5 align-top whitespace-nowrap">
+                              <div className="tracking-tight font-bold text-slate-900 leading-snug">{req.request_number}</div>
+                              <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                                <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                                 <span>{req.request_date}</span>
                               </div>
                             </td>
 
                             {/* Project & Purpose */}
-                            <td className="py-3.5 px-4 max-w-xs">
-                              <div className="font-bold text-slate-900 truncate">{req.project_name}</div>
-                              <div className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">
+                            <td className="py-3 px-3.5 align-top max-w-xs">
+                              <div className="font-bold text-slate-900 leading-snug truncate">{req.project_name}</div>
+                              <div className="text-[11px] text-slate-600 mt-1 line-clamp-2 leading-relaxed">
                                 <span className="font-medium text-slate-400">Purpose: </span>
                                 {req.reason}
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-1">By: {req.requested_by}</div>
+                              <div className="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
+                                <span>By:</span>
+                                <span className="font-medium text-slate-500">{req.requested_by}</span>
+                              </div>
                             </td>
 
                             {/* Material & Quantity */}
-                            <td className="py-3.5 px-4">
-                              <div className="font-bold text-slate-900">{req.material_name}</div>
-                              <div className="text-sm tracking-tight font-bold text-red-600 mt-0.5">
-                                {req.quantity} <span className="text-xs font-semibold text-slate-600">{req.unit}</span>
+                            <td className="py-3 px-3.5 align-top whitespace-nowrap">
+                              <div className="font-bold text-slate-900 leading-snug">{req.material_name}</div>
+                              <div className="text-sm tracking-tight font-bold text-red-600 mt-1 flex items-baseline gap-1">
+                                <span>{req.quantity}</span>
+                                <span className="text-xs font-semibold text-slate-500">{req.unit}</span>
                               </div>
                               {req.attachment_url && (
                                 <button
@@ -1109,100 +1139,103 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                                     url: req.attachment_url!,
                                     fileName: req.attachment_name
                                   })}
-                                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-red-600 hover:text-red-700 font-semibold cursor-pointer"
+                                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-red-600 hover:text-red-700 font-semibold cursor-pointer"
                                 >
-                                  <LucideImage className="w-3 h-3" />
+                                  <LucideImage className="w-3 h-3 shrink-0" />
                                   <span>View Photo</span>
                                 </button>
                               )}
                             </td>
 
                             {/* Live Warehouse Stock Check */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3 px-3.5 align-top whitespace-nowrap">
                               {matchingStock ? (
                                 <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className={`w-2 h-2 rounded-full ${isStockSufficient ? 'bg-emerald-500' : stockQty > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                  <div className="flex items-center gap-1.5 leading-snug">
+                                    <span className={`w-2 h-2 rounded-full shrink-0 ${isStockSufficient ? 'bg-emerald-500' : stockQty > 0 ? 'bg-amber-500' : 'bg-red-500'}`} />
                                     <span className="font-bold text-slate-800">
                                       {stockQty} {matchingStock.unit} in Stock
                                     </span>
                                   </div>
-                                  <div className="text-[11px] mt-0.5">
+                                  <div className="text-[11px] mt-1 font-semibold">
                                     {isStockSufficient ? (
-                                      <span className="text-emerald-700 font-semibold">✓ Sufficient Stock Available</span>
+                                      <span className="text-emerald-700">✓ Sufficient Stock Available</span>
                                     ) : stockQty > 0 ? (
-                                      <span className="text-amber-700 font-semibold">⚠ Deficit: {req.quantity - stockQty} {req.unit}</span>
+                                      <span className="text-amber-700">⚠ Deficit: {req.quantity - stockQty} {req.unit}</span>
                                     ) : (
-                                      <span className="text-red-600 font-semibold">✕ Out of Stock (0 available)</span>
+                                      <span className="text-red-600">✕ Out of Stock (0 available)</span>
                                     )}
                                   </div>
                                 </div>
                               ) : (
                                 <div>
-                                  <span className="text-slate-400 italic">Not tracked in stock</span>
-                                  <div className="text-[11px] text-amber-600 font-medium mt-0.5">Vendor PO required</div>
+                                  <span className="text-slate-400 italic leading-snug">Not tracked in stock</span>
+                                  <div className="text-[11px] text-amber-600 font-medium mt-1">Vendor PO required</div>
                                 </div>
                               )}
                             </td>
 
                             {/* Status */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3 px-3.5 align-top whitespace-nowrap">
                               {req.status === 'PENDING' && (
-                                <span className="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold rounded-full">
-                                  Pending Review
-                                </span>
+                                <div className="flex items-center gap-1.5 text-amber-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                  <span>Pending Review</span>
+                                </div>
                               )}
                               {req.status === 'APPROVED_FROM_STOCK' && (
                                 <div>
-                                  <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-full flex items-center gap-1 w-fit">
-                                    <Check className="w-3 h-3 stroke-[2.5]" />
-                                    Approved & Deducted
-                                  </span>
-                                  <div className="text-[10px] text-slate-400 mt-1">
+                                  <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-xs">
+                                    <Check className="w-3.5 h-3.5 stroke-[2.5] text-emerald-600 shrink-0" />
+                                    <span>Approved & Deducted</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5 pl-5">
                                     Deducted: -{req.deducted_quantity} {req.unit}
                                   </div>
                                 </div>
                               )}
                               {req.status === 'PO_CREATED' && (
-                                <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold rounded-full">
-                                  Vendor PO Created
-                                </span>
+                                <div className="flex items-center gap-1.5 text-blue-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                                  <span>Vendor PO Created</span>
+                                </div>
                               )}
                               {req.status === 'DELIVERED' && (
-                                <span className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-bold rounded-full">
-                                  Delivered to Site
-                                </span>
+                                <div className="flex items-center gap-1.5 text-purple-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+                                  <span>Delivered to Site</span>
+                                </div>
                               )}
                             </td>
 
                             {/* Admin Action */}
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-3 px-3.5 align-top text-right whitespace-nowrap">
                               {req.status === 'PENDING' ? (
-                                <div className="flex items-center justify-end gap-1.5">
+                                <div className="flex items-center justify-end">
                                   {isStockSufficient ? (
                                     <button
                                       type="button"
                                       onClick={() => setApprovingRequest(req)}
-                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                                       title="Approve and automatically deduct from warehouse stock"
                                     >
-                                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                      <Check className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
                                       <span>Approve & Deduct</span>
                                     </button>
                                   ) : (
                                     <button
                                       type="button"
                                       onClick={() => handleInitiateVendorPurchase(req)}
-                                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
                                       title="Stock is insufficient - Create Vendor Purchase Order"
                                     >
-                                      <ShoppingCart className="w-3.5 h-3.5" />
+                                      <ShoppingCart className="w-3.5 h-3.5 shrink-0" />
                                       <span>Vendor Purchase (PO)</span>
                                     </button>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-slate-400">Processed</span>
+                                <div className="inline-flex items-center justify-end text-[11px] text-slate-400 py-1">Processed</div>
                               )}
                             </td>
                           </tr>
@@ -1232,21 +1265,17 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                       <h3 className="font-bold text-slate-900 text-sm">
                         Low Stock Notification: {lowStockItems.length} {lowStockItems.length === 1 ? 'item has' : 'items have'} reached minimum threshold
                       </h3>
-                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                        Attention Required
-                      </span>
                     </div>
                     <p className="text-slate-600 text-xs">
                       The items below have reached or fallen below minimum safety threshold and require restocking:
                     </p>
-                    <div className="flex flex-wrap gap-2 pt-1">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs">
                       {lowStockItems.map(item => (
-                        <span key={item.id} className="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-amber-200 text-slate-800 font-medium shadow-2xs">
-                          <span>{item.item_name}:</span>
-                          <span className="tracking-tight font-bold text-red-600">{item.current_quantity} {item.unit}</span>
-                          <span className="text-[10px] text-slate-400 font-normal">(Min: {item.minimum_threshold} {item.unit})</span>
-                        </span>
+                        <div key={item.id} className="text-slate-700">
+                          <span className="font-semibold text-slate-900">{item.item_name}:</span>{' '}
+                          <span className="font-bold text-red-600">{item.current_quantity} {item.unit}</span>{' '}
+                          <span className="text-[11px] text-slate-400">(Min: {item.minimum_threshold} {item.unit})</span>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -1322,14 +1351,14 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
             {/* Stock Inventory Table */}
             <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs overflow-hidden">
               <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="relative w-72">
+                <div className="relative w-full sm:w-80">
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Search material or location..."
                     value={stockSearch}
                     onChange={(e) => setStockSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:bg-white transition"
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 shadow-2xs transition"
                   />
                 </div>
                 <span className="text-xs text-slate-500 font-medium">
@@ -1341,13 +1370,13 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                     <tr>
-                      <th className="py-3 px-4">Material Name & Category</th>
-                      <th className="py-3 px-4">Location</th>
-                      <th className="py-3 px-4 text-right">Unit Price</th>
-                      <th className="py-3 px-4 text-center">Available Stock</th>
-                      <th className="py-3 px-4 text-center">Min Threshold</th>
-                      <th className="py-3 px-4">Stock Health</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[180px]">Material Name & Category</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[140px]">Location</th>
+                      <th className="py-3 px-3 text-right whitespace-nowrap w-[100px]">Unit Price</th>
+                      <th className="py-3 px-3 text-center whitespace-nowrap w-[110px]">Available Stock</th>
+                      <th className="py-3 px-3 text-center whitespace-nowrap w-[95px]">Min Threshold</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[110px]">Stock Health</th>
+                      <th className="py-3 px-3 text-right whitespace-nowrap w-[150px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -1360,63 +1389,66 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                         return (
                           <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                             {/* Material & Category */}
-                            <td className="py-3.5 px-4">
-                              <div className="font-bold text-slate-900">{item.item_name}</div>
+                            <td className="py-3 px-3 align-top">
+                              <div className="font-bold text-slate-900 leading-snug">{item.item_name}</div>
                               <div className="text-[11px] text-slate-400 mt-0.5">{item.category}</div>
                             </td>
 
                             {/* Location */}
-                            <td className="py-3.5 px-4 text-slate-600">
-                              {item.location}
+                            <td className="py-3 px-3 align-top text-slate-600">
+                              <div className="leading-snug">{item.location}</div>
                             </td>
 
                             {/* Unit Price */}
-                            <td className="py-3.5 px-4 text-right tracking-tight font-medium text-slate-800">
-                              ₹{item.unit_price.toLocaleString('en-IN')} <span className="text-[10px] text-slate-400">/{item.unit}</span>
+                            <td className="py-3 px-3 align-top text-right tracking-tight font-medium text-slate-800 whitespace-nowrap">
+                              <div>₹{item.unit_price.toLocaleString('en-IN')} <span className="text-[10px] text-slate-400">/{item.unit}</span></div>
                             </td>
 
                             {/* Current Available Stock */}
-                            <td className="py-3.5 px-4 text-center">
-                              <span className={`text-sm tracking-tight font-black px-3 py-1 rounded-lg ${
+                            <td className="py-3 px-3 align-top text-center whitespace-nowrap">
+                              <div className={`font-bold text-sm tracking-tight ${
                                 isOut 
-                                  ? 'bg-red-50 text-red-700 border border-red-200' 
+                                  ? 'text-red-600' 
                                   : isLow 
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200' 
-                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  ? 'text-amber-600' 
+                                  : 'text-slate-900'
                               }`}>
-                                {item.current_quantity} {item.unit}
-                              </span>
+                                {item.current_quantity} <span className="text-xs font-normal text-slate-500">{item.unit}</span>
+                              </div>
                             </td>
 
                             {/* Minimum Threshold */}
-                            <td className="py-3.5 px-4 text-center tracking-tight text-slate-500">
-                              {item.minimum_threshold} {item.unit}
+                            <td className="py-3 px-3 align-top text-center tracking-tight text-slate-500 whitespace-nowrap">
+                              <div className="pt-0.5">{item.minimum_threshold} {item.unit}</div>
                             </td>
 
                             {/* Stock Health */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-3 px-3 align-top whitespace-nowrap">
                               {isOut ? (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800 flex items-center gap-1 w-max">
-                                  <AlertCircle className="w-3 h-3" /> Out of Stock
-                                </span>
+                                <div className="flex items-center gap-1.5 text-red-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                                  <span>Out of Stock</span>
+                                </div>
                               ) : isLow ? (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 flex items-center gap-1 w-max">
-                                  <AlertTriangle className="w-3 h-3" /> Low Stock
-                                </span>
+                                <div className="flex items-center gap-1.5 text-amber-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                  <span>Low Stock</span>
+                                </div>
                               ) : (
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center gap-1 w-max">
-                                  <Check className="w-3 h-3" /> Optimal Stock
-                                </span>
+                                <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                  <span>Optimal Stock</span>
+                                </div>
                               )}
                             </td>
 
                             {/* Actions */}
-                            <td className="py-3.5 px-4 text-right">
+                            <td className="py-3 px-3 align-top text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => setViewingStockItem(item)}
-                                  className="px-2.5 py-1 text-slate-600 hover:text-slate-900 text-xs font-semibold rounded hover:bg-slate-100 transition"
+                                  className="px-2 py-1 text-slate-600 hover:text-slate-900 text-xs font-medium rounded hover:bg-slate-100 transition cursor-pointer"
                                   title="View Inward & Dispatch History"
                                 >
                                   Movement Log
@@ -1432,7 +1464,7 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                                     setNewStockLocation(item.location);
                                     setShowAddStockModal(true);
                                   }}
-                                  className="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold rounded border border-red-200 transition"
+                                  className="px-2 py-1 text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-semibold rounded transition cursor-pointer"
                                 >
                                   + Restock
                                 </button>
@@ -1482,72 +1514,81 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4">PO Number & Date</th>
-                      <th className="py-3.5 px-4">Project & Site Delivery Location</th>
-                      <th className="py-3.5 px-4">Vendor & Quotation Rate</th>
-                      <th className="py-3.5 px-4">Material & Ordered Qty</th>
-                      <th className="py-3.5 px-4 text-right">Total Amount (₹)</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4 text-right">Action</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[120px]">PO # & Date</th>
+                      <th className="py-3 px-3 min-w-[180px]">Project & Site Delivery Location</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[150px]">Vendor & Rate</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[140px]">Material & Qty</th>
+                      <th className="py-3 px-3 text-right whitespace-nowrap w-[110px]">Total Amount (₹)</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[100px]">Status</th>
+                      <th className="py-3 px-3 text-right whitespace-nowrap w-[115px]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {poList.map((po) => (
                       <tr key={po.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="tracking-tight font-bold text-slate-900">{po.po_number}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{po.order_date}</div>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="tracking-tight font-bold text-slate-900 leading-snug">{po.po_number}</div>
+                          <div className="text-[11px] text-slate-400 mt-1">{po.order_date}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-900">{po.project_name}</div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">{po.site_location}</div>
+                        <td className="py-3.5 px-3 align-top max-w-xs">
+                          <div className="font-bold text-slate-900 leading-snug">{po.project_name}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{po.site_location}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-800">{po.vendor_name}</div>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="font-semibold text-slate-800 leading-snug">{po.vendor_name}</div>
                           <div className="text-[11px] text-slate-500 mt-0.5 tracking-tight">
-                            ₹{po.quotation_rate.toLocaleString('en-IN')} /{po.unit}
+                            ₹{po.quotation_rate.toLocaleString('en-IN')} <span className="text-slate-400">/{po.unit}</span>
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-900">{po.material_name}</div>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="font-bold text-slate-900 leading-snug">{po.material_name}</div>
                           <div className="tracking-tight text-xs font-bold text-slate-700 mt-0.5">
-                            {po.ordered_quantity} {po.unit}
+                            {po.ordered_quantity} <span className="text-slate-500 font-semibold">{po.unit}</span>
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4 text-right tracking-tight font-bold text-slate-900">
-                          ₹{po.total_amount.toLocaleString('en-IN')}
+                        <td className="py-3 px-3 align-top text-right tracking-tight font-bold text-slate-900 whitespace-nowrap">
+                          <div>₹{po.total_amount.toLocaleString('en-IN')}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
                           {po.status === 'PO_ISSUED' && (
-                            <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold rounded-full">
-                              Issued & Dispatched
-                            </span>
+                            <div>
+                              <div className="flex items-center gap-1.5 text-blue-600 font-semibold text-xs">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                                <span>Issued</span>
+                              </div>
+                              <div className="text-[11px] text-slate-400 pl-3.5 mt-0.5">Dispatched</div>
+                            </div>
                           )}
                           {po.status === 'VERIFIED_AT_SITE' && (
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded-full flex items-center gap-1 w-fit">
-                              <Check className="w-3 h-3 stroke-[2.5]" />
-                              Verified at Site
-                            </span>
+                            <div>
+                              <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-xs">
+                                <Check className="w-3.5 h-3.5 stroke-[2.5] text-emerald-600 shrink-0" />
+                                <span>Verified</span>
+                              </div>
+                              <div className="text-[11px] text-slate-400 pl-4 mt-0.5">at Site</div>
+                            </div>
                           )}
                         </td>
 
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3 px-3 align-top text-right whitespace-nowrap">
                           {po.status !== 'VERIFIED_AT_SITE' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenInspectModal(po)}
-                              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition flex items-center gap-1 cursor-pointer ml-auto"
-                            >
-                              <ClipboardCheck className="w-3.5 h-3.5" />
-                              <span>Site Verify & Bill</span>
-                            </button>
+                            <div className="flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenInspectModal(po)}
+                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-lg shadow-2xs transition inline-flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                              >
+                                <ClipboardCheck className="w-3.5 h-3.5 shrink-0" />
+                                <span>Site Verify</span>
+                              </button>
+                            </div>
                           ) : (
-                            <span className="text-[11px] text-emerald-600 font-semibold">GRN Completed</span>
+                            <div className="inline-flex items-center justify-end text-[11px] text-emerald-600 font-semibold py-1">GRN Done</div>
                           )}
                         </td>
                       </tr>
@@ -1578,62 +1619,65 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
                     <tr>
-                      <th className="py-3.5 px-4">GRN # & Date</th>
-                      <th className="py-3.5 px-4">Project & Material</th>
-                      <th className="py-3.5 px-4">Vendor & Transport</th>
-                      <th className="py-3.5 px-4">Quantity Received</th>
-                      <th className="py-3.5 px-4">Quality Verification</th>
-                      <th className="py-3.5 px-4">Uploaded Bill / Invoice</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[125px]">GRN # & Date</th>
+                      <th className="py-3 px-3 min-w-[170px]">Project & Material</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[150px]">Vendor & Transport</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[130px]">Quantity Received</th>
+                      <th className="py-3 px-3 min-w-[180px]">Quality Verification</th>
+                      <th className="py-3 px-3 whitespace-nowrap w-[160px]">Uploaded Bill / Invoice</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                     {grnList.map((grn) => (
                       <tr key={grn.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="tracking-tight font-bold text-slate-900">{grn.grn_number}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5 tracking-tight">Linked {grn.po_number}</div>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="tracking-tight font-bold text-slate-900 leading-snug">{grn.grn_number}</div>
+                          <div className="text-[11px] text-slate-400 mt-1 tracking-tight">Linked {grn.po_number}</div>
                           <div className="text-[10px] text-slate-400 mt-0.5">{grn.receipt_date}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-900">{grn.project_name}</div>
+                        <td className="py-3 px-3 align-top">
+                          <div className="font-bold text-slate-900 leading-snug">{grn.project_name}</div>
                           <div className="text-slate-600 mt-0.5">{grn.material_name}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-800">{grn.vendor_name}</div>
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="font-semibold text-slate-800 leading-snug">{grn.vendor_name}</div>
                           <div className="text-[11px] text-slate-400 mt-0.5">Challan: {grn.challan_number}</div>
                           <div className="text-[10px] text-slate-400">Vehicle: {grn.vehicle_number}</div>
                         </td>
 
-                        <td className="py-3.5 px-4 tracking-tight font-bold text-slate-900">
-                          {grn.received_quantity} {grn.unit}
-                          {grn.received_quantity === grn.ordered_quantity ? (
-                            <span className="text-[10px] text-emerald-600 font-normal ml-1">(100% Full)</span>
-                          ) : (
-                            <span className="text-[10px] text-amber-600 font-normal ml-1">(Partial)</span>
-                          )}
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
+                          <div className="tracking-tight font-bold text-slate-900 leading-snug">
+                            {grn.received_quantity} {grn.unit}
+                            {grn.received_quantity === grn.ordered_quantity ? (
+                              <span className="text-[10px] text-emerald-600 font-semibold ml-1.5">(100% Full)</span>
+                            ) : (
+                              <span className="text-[10px] text-amber-600 font-semibold ml-1.5">(Partial)</span>
+                            )}
+                          </div>
                         </td>
 
-                        <td className="py-3.5 px-4 max-w-xs">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            grn.quality_status === 'PASSED'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-rose-100 text-rose-800'
+                        <td className="py-3 px-3 align-top max-w-xs">
+                          <div className={`flex items-center gap-1.5 font-semibold text-xs ${
+                            grn.quality_status === 'PASSED' ? 'text-emerald-600' : 'text-rose-600'
                           }`}>
-                            {grn.quality_status === 'PASSED' ? 'Passed Quality Check' : 'Defects Noted'}
-                          </span>
-                          <div className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${
+                              grn.quality_status === 'PASSED' ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`} />
+                            <span>{grn.quality_status === 'PASSED' ? 'Passed Quality Check' : 'Defects Noted'}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                             {grn.quality_notes}
                           </div>
                           <div className="text-[10px] text-slate-400 mt-0.5">By {grn.inspected_by}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-3 align-top whitespace-nowrap">
                           {grn.bill_number ? (
                             <div className="p-2 bg-slate-50 rounded-lg border border-slate-200/80 space-y-1">
-                              <div className="flex items-center gap-1 text-[11px] font-bold text-slate-900">
-                                <FileText className="w-3.5 h-3.5 text-red-600" />
+                              <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-900 leading-snug">
+                                <FileText className="w-3.5 h-3.5 text-red-600 shrink-0" />
                                 <span>{grn.bill_number}</span>
                               </div>
                               {grn.bill_amount && (
@@ -1653,13 +1697,13 @@ export const ProcurementView: React.FC<ProcurementViewProps> = ({
                                     showToast(`Viewing document: ${grn.bill_file_name || 'Bill_Receipt.pdf'}`);
                                   }
                                 }}
-                                className="text-[10px] text-red-600 hover:text-red-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                                className="text-[10px] text-red-600 hover:text-red-700 font-bold flex items-center gap-1 hover:underline cursor-pointer pt-0.5"
                                 title="Click to view bill"
                               >
                                 {grn.bill_file_url && grn.bill_file_url.startsWith('data:image/') ? (
-                                  <LucideImage className="w-3 h-3 text-red-600" />
+                                  <LucideImage className="w-3 h-3 text-red-600 shrink-0" />
                                 ) : (
-                                  <Eye className="w-3 h-3 text-red-600" />
+                                  <Eye className="w-3 h-3 text-red-600 shrink-0" />
                                 )}
                                 <span className="truncate max-w-[130px]">{grn.bill_file_name || 'Bill_Receipt.pdf'}</span>
                               </div>

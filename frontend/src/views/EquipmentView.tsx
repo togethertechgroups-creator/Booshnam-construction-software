@@ -3,11 +3,13 @@ import {
   Plus, Search, X, MoreVertical, Check, AlertCircle, 
   Smartphone, Laptop, Truck, Wrench, Shield, CheckCircle2, 
   Building2, User, Users, Calendar, Trash2, Edit2, RotateCcw,
-  ArrowUpDown, Filter, Download, Package
+  ArrowUpDown, Filter, Download, Package,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Asset, AssetAllocation, Project } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 export interface EquipmentViewProps {
   project?: Project | null;
@@ -543,8 +545,25 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
     onShowToast?.('Exported asset inventory to CSV!');
   };
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white min-h-screen transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       
       {/* ── TOP HEADER (Matching Reference Image Exactly) ── */}
       <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4 bg-white sticky top-0 z-20">
@@ -553,6 +572,17 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
         </h1>
 
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown showBell={true} onShowToast={onShowToast} />
         </div>
       </div>

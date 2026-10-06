@@ -10,6 +10,7 @@ import {
   ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText,
   Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users
 } from 'lucide-react';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 export function ArrowsDiagonalRotatedIcon({ size = 24, className = '', ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
   const [animKey, setAnimKey] = useState(0);
@@ -140,21 +141,27 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+    const unsub = addFullscreenChangeListener((fs) => {
+      setIsFullscreen(fs);
+    });
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
       }
-    }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unsub();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const nextState = !isFullscreen;
+    setIsFullscreen(nextState);
+    try {
+      await toggleBrowserFullscreen();
+    } catch (e) {}
   };
 
   // Header Interactive Dropdowns & Modals
@@ -1126,7 +1133,9 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-[#F4F6F9] ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : 'min-h-screen'
+    }`}>
       {/* If isUnderlyingPageView is true, render dedicated Full-Page View (Not a pop-up) */}
       {isUnderlyingPageView ? (
         <div className="space-y-5 animate-in fade-in duration-200">
@@ -1180,17 +1189,10 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           </div>
 
           {/* Page Header Banner */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-              Verified GPS Geofenced Attendance Log
-            </span>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mx-6">
             <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Attendance Roster — {attendanceData.find(d => d.date === selectedModalDate)?.fullDate || `${selectedModalDate}-2026`}
             </h1>
-            <p className="text-xs text-slate-500">
-              Detailed breakdown of daily worker attendance, employee codes, designations, payroll categories, and calculated wages.
-            </p>
           </div>
 
           {/* KPI Summary Cards */}
@@ -1540,22 +1542,10 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
           </div>
 
           {/* Page Header Banner */}
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-2 mx-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                Live Project Health & Operational Risk Registry
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                {kpiCounts.total > 0 ? ((kpiCounts.healthyCount / kpiCounts.total) * 100).toFixed(1) : '0.0'}% Healthy Rate ({kpiCounts.healthyCount} / {kpiCounts.total} Projects)
-              </span>
-            </div>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mx-6">
             <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Project Health Sheet — All Monitored Sites ({kpiCounts.total})
             </h1>
-            <p className="text-xs text-slate-500">
-              Granular inspection of project stability, milestone schedule health, responsible project engineers, and critical risk mitigation logs.
-            </p>
           </div>
 
           {/* 4 Summary Stat Cards */}
@@ -1796,7 +1786,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 aria-label={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
                 className={`p-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer ${
                   isFullscreen 
-                    ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                    ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' 
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                 }`}
               >
@@ -2906,12 +2896,15 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                     <span>CSV</span>
                   </button>
                   <button
+                    type="button"
                     onClick={toggleFullscreen}
                     title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                    className="p-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                    className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                      isFullscreen ? 'bg-red-50 text-red-600' : 'hover:bg-slate-100'
+                    }`}
                   >
                     {isFullscreen ? (
-                      <ArrowsDiagonalMinimizeIcon size={16} className="text-brand" />
+                      <ArrowsDiagonalMinimizeIcon size={16} className="text-red-600" />
                     ) : (
                       <ArrowsDiagonalRotatedIcon size={16} className="text-slate-400 hover:text-slate-700" />
                     )}

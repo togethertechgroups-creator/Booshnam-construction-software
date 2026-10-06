@@ -4,7 +4,8 @@ import {
   MoreVertical, Download, ExternalLink, HelpCircle, 
   Award, CheckCircle2, Menu, 
   FileSpreadsheet, FileText, Check, Trash2, Eye, Edit2,
-  FolderKanban, Briefcase, User, Sparkles, X, AlertCircle, CheckCircle
+  FolderKanban, Briefcase, User, Sparkles, X, AlertCircle, CheckCircle,
+  Maximize2, Minimize2
 } from 'lucide-react';
 import { Project, Role, WBSTask } from '../types';
 import { 
@@ -17,12 +18,15 @@ import {
   QuotationScheduleTask,
   syncQuotationTaskToProject,
   updateQuotationTaskStatus,
-  addQuotationScheduleTask
+  addQuotationScheduleTask,
+  deleteQuotationScheduleTask
 } from '../lib/quotationScheduleService';
 import { NewTimesheetDrawer } from '../components/schedule/NewTimesheetDrawer';
 import { QuotationTaskDrawer } from '../components/schedule/QuotationTaskDrawer';
+import { CustomDatePicker } from '../components/CustomDatePicker';
 import { TimeLogDetailView } from './TimeLogDetailView';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface TeamScheduleViewProps {
   projects?: Project[];
@@ -102,6 +106,18 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   const [newTaskDate, setNewTaskDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [newTaskStage, setNewTaskStage] = useState('Prepare Quotation');
   const [newTaskStatus, setNewTaskStatus] = useState<'NOT_STARTED' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>('NOT_STARTED');
+
+  const handleDeleteQuotationTask = (taskId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this quotation task from the schedule?')) {
+      const updated = deleteQuotationScheduleTask(taskId);
+      setQuotationTasks(updated);
+      if (selectedQuotationDrawerTask?.id === taskId) {
+        setSelectedQuotationDrawerTask(null);
+      }
+      onShowToast?.('Quotation task deleted successfully.');
+    }
+  };
 
   // Single active dropdown tracker: ensures opening any dropdown closes all others
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -190,11 +206,10 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       // Date filter
       let matchesDate = true;
       if (dateFilter === 'Today') {
-        matchesDate = item.date === '2026-10-04';
-      } else if (dateFilter === '03 Oct, 2026') {
-        matchesDate = item.display_date.includes('03 Oct');
-      } else if (dateFilter === '01 Oct, 2026') {
-        matchesDate = item.display_date.includes('01 Oct');
+        const todayIso = new Date().toISOString().split('T')[0];
+        matchesDate = item.date === todayIso;
+      } else if (dateFilter !== 'All') {
+        matchesDate = (item.display_date || '').includes(dateFilter) || item.date === dateFilter;
       }
 
       return matchesSearch && matchesParty && matchesDate;
@@ -204,7 +219,19 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   // Unique parties for party filter dropdown
   const uniqueParties = useMemo(() => {
     const set = new Set<string>();
-    timesheets.forEach(t => set.add(t.party_name));
+    timesheets.forEach(t => {
+      if (t.party_name) set.add(t.party_name);
+    });
+    return Array.from(set);
+  }, [timesheets]);
+
+  // Unique dates for date filter dropdown
+  const uniqueDates = useMemo(() => {
+    const set = new Set<string>();
+    timesheets.forEach(t => {
+      const d = t.display_date || t.date;
+      if (d) set.add(d);
+    });
     return Array.from(set);
   }, [timesheets]);
 
@@ -488,8 +515,25 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   };
 
 
+  // Fullscreen State & Toggle
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const unsub = addFullscreenChangeListener((fs) => { setIsFullscreen(fs); });
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && isFullscreen) setIsFullscreen(false); };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { unsub(); window.removeEventListener('keydown', handleKeyDown); };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    setIsFullscreen(prev => !prev);
+    try { await toggleBrowserFullscreen(); } catch (e) {}
+  };
+
   return (
-    <div className="min-h-screen bg-[#fafbfc] flex flex-col">
+    <div className={`min-h-screen bg-[#fafbfc] flex flex-col transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-[#fafbfc] ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       
       {/* ---------------------------------------------------------------- */}
       {/* TOP HEADER BAR (Clean, modern Red & White Theme) */}
@@ -504,6 +548,17 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
         {/* Right Header Navigation & Actions */}
         <div className="flex items-center gap-3 text-xs font-semibold text-slate-600">
           {/* User Profile */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <UserProfileDropdown />
         </div>
       </header>
@@ -571,9 +626,6 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                     Quotation Tasks Schedule
                   </h1>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    Plan and track quotation related tasks across projects
-                  </p>
                 </div>
               </div>
 
@@ -620,184 +672,59 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   </div>
                 </div>
 
-                {/* Filter by Project Dropdown */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveDropdown(activeDropdown === 'project' ? null : 'project');
-                    }}
-                    className="h-10 px-3.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl font-semibold text-xs text-slate-700 flex items-center gap-2 cursor-pointer shadow-2xs transition-colors"
-                  >
-                    <span className="truncate max-w-[120px]">
-                      {ganttProjectFilter === 'All' ? 'All Projects' : ganttProjectFilter}
-                    </span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  </button>
-
-                  {projectDropdownOpen && (
-                    <div 
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-52 max-h-56 overflow-y-auto text-xs animate-in fade-in zoom-in-95"
-                    >
-                      <button
-                        onClick={() => {
-                          setGanttProjectFilter('All');
-                          setActiveDropdown(null);
-                        }}
-                        className={`w-full px-3 py-2 text-left font-medium hover:bg-slate-50 cursor-pointer ${
-                          ganttProjectFilter === 'All' ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
-                        }`}
-                      >
-                        All Projects
-                      </button>
-                      {uniqueGanttProjects.map(p => (
-                        <button
-                          key={p}
-                          onClick={() => {
-                            setGanttProjectFilter(p);
-                            setActiveDropdown(null);
-                          }}
-                          className={`w-full px-3 py-2 text-left truncate font-medium hover:bg-slate-50 cursor-pointer ${
-                            ganttProjectFilter === p ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* + Add Task Button */}
-                <button
-                  type="button"
-                  onClick={() => setIsAddTaskModalOpen(true)}
-                  className="h-10 px-4 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 stroke-[2.5]" />
-                  <span>Add Task</span>
-                </button>
               </div>
             </div>
 
             {/* Main Schedule Container (Toolbar + Gantt Table) */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               
-              {/* Toolbar with Custom Date Range (From - To), and Filter Dropdown */}
-              <div className="px-5 py-3 border-b border-slate-200 flex flex-wrap items-center justify-end gap-2.5 bg-white">
-
-                {/* Right: Date-to-Date Calendar Picker (From - To) & Granularity Dropdown Filter */}
-                <div className="flex flex-wrap items-center gap-2.5">
-                  {/* From - To Calendar Date Range Filter */}
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-semibold text-slate-400">From</span>
-                      <input 
-                        type="date"
+              {/* Toolbar with Custom Date Range (From - To) */}
+              <div className="px-5 py-2.5 border-b border-slate-200 flex flex-wrap items-center justify-end gap-2.5 bg-white">
+                {/* From - To Calendar Date Range Filter with Custom Styled Calendar Picker */}
+                <div className="flex items-center gap-2 bg-slate-50/80 border border-slate-200 rounded-xl px-3 py-1 text-xs shadow-2xs">
+                  <Calendar className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-500">From</span>
+                    <div className="w-28">
+                      <CustomDatePicker
                         value={customFromDate}
-                        onChange={(e) => setCustomFromDate(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                        onChange={(d) => setCustomFromDate(d)}
+                        placeholder="dd-mm-yyyy"
+                        className="w-full"
+                        inputClassName="!h-7 !py-0.5 !px-2 !rounded-lg !text-xs !bg-white border-slate-200"
+                        align="left"
                       />
                     </div>
-                    <span className="text-slate-300">-</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-semibold text-slate-400">To</span>
-                      <input 
-                        type="date"
+                  </div>
+                  <span className="text-slate-300 font-bold">-</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-500">To</span>
+                    <div className="w-28">
+                      <CustomDatePicker
                         value={customToDate}
-                        onChange={(e) => setCustomToDate(e.target.value)}
-                        className="bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 cursor-pointer"
+                        onChange={(d) => setCustomToDate(d)}
+                        placeholder="dd-mm-yyyy"
+                        className="w-full"
+                        inputClassName="!h-7 !py-0.5 !px-2 !rounded-lg !text-xs !bg-white border-slate-200"
+                        align="right"
                       />
                     </div>
-                    {(customFromDate || customToDate) && (
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          setCustomFromDate('');
-                          setCustomToDate('');
-                          onShowToast?.('Date range filter cleared');
-                        }}
-                        className="p-1 hover:bg-slate-200 rounded-md text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                        title="Clear Date Range"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
                   </div>
-
-                  {/* Granularity Dropdown Filter (All, Year, Quarter, Month, Day) */}
-                  <div className="relative">
-                    <button
+                  {(customFromDate || customToDate) && (
+                    <button 
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveDropdown(activeDropdown === 'granularity' ? null : 'granularity');
+                      onClick={() => {
+                        setCustomFromDate('');
+                        setCustomToDate('');
+                        onShowToast?.('Date range filter cleared');
                       }}
-                      className="h-9 px-3.5 bg-red-600 text-white hover:bg-red-700 rounded-xl font-bold text-xs flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+                      className="p-1 hover:bg-red-50 hover:text-red-600 rounded-md text-slate-400 transition-colors cursor-pointer ml-0.5"
+                      title="Clear Date Range"
                     >
-                      <span>
-                        {customFromDate || customToDate 
-                          ? 'Custom Range' 
-                          : granularityFilter === 'All' ? 'All' 
-                          : granularityFilter === 'Year' ? `Year (${activeYear})` 
-                          : granularityFilter === 'Quarter' ? `Quarter (Q${activeQuarter})` 
-                          : granularityFilter === 'Month' ? `Month (${MONTH_NAMES[activeMonth]})` 
-                          : 'Day'}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
-
-                    {granularityDropdownOpen && (
-                      <div 
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 w-44 text-xs animate-in fade-in zoom-in-95"
-                      >
-                        {(['All', 'Year', 'Quarter', 'Month', 'Day'] as const).map(option => (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => {
-                              setGranularityFilter(option);
-                              if (option === 'Month') {
-                                setActiveMonth(new Date().getMonth());
-                                setActiveYear(new Date().getFullYear());
-                              } else if (option === 'Quarter') {
-                                setActiveQuarter(Math.floor(new Date().getMonth() / 3) + 1);
-                                setActiveYear(new Date().getFullYear());
-                              } else if (option === 'Year') {
-                                setActiveYear(new Date().getFullYear());
-                              } else if (option === 'Day') {
-                                setActiveDay(new Date().toISOString().split('T')[0]);
-                                setActiveYear(new Date().getFullYear());
-                              }
-                              setCustomFromDate('');
-                              setCustomToDate('');
-                              setActiveDropdown(null);
-                            }}
-                            className={`w-full px-3.5 py-2 text-left font-medium hover:bg-red-50 cursor-pointer flex items-center justify-between ${
-                              granularityFilter === option && !customFromDate && !customToDate ? 'text-red-600 font-bold bg-red-50/50' : 'text-slate-700'
-                            }`}
-                          >
-                            <span>
-                              {option === 'All' ? 'All (All Time)' 
-                                : option === 'Year' ? `Year (${activeYear})` 
-                                : option === 'Quarter' ? `Quarter (Q${activeQuarter})` 
-                                : option === 'Month' ? `Month (${MONTH_NAMES[activeMonth]})` 
-                                : 'Day'}
-                            </span>
-                            {granularityFilter === option && !customFromDate && !customToDate && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-red-600" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-
               </div>
 
               {/* Main Table Grid matching Image 1 */}
@@ -880,26 +807,30 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     {/* Empty State when no tasks match active filter */}
                     {isUnassignedExpanded && filteredQuotationTasks.length === 0 && (
                       <tr>
-                        <td colSpan={16} className="py-10 text-center bg-slate-50/40">
+                        <td colSpan={16} className="py-12 text-center bg-slate-50/40">
                           <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
-                            <Calendar className="w-8 h-8 text-slate-300" />
-                            <p className="text-xs font-semibold text-slate-600">
-                              No quotation tasks found for {displayDateRangeLabel}
+                            <Calendar className="w-9 h-9 text-slate-300" />
+                            <p className="text-sm font-bold text-slate-700">
+                              {quotationTasks.length === 0 ? 'No quotation tasks scheduled yet' : `No quotation tasks found for ${displayDateRangeLabel}`}
                             </p>
-                            <p className="text-[11px] text-slate-400">
-                              Try selecting another period, adjusting the date range, or click below to view all tasks.
+                            <p className="text-xs text-slate-400 max-w-sm">
+                              {quotationTasks.length === 0 
+                                ? 'No quotation milestones scheduled yet.' 
+                                : 'Try selecting another period, adjusting the date range, or click below to view all tasks.'}
                             </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGranularityFilter('All');
-                                setCustomFromDate('');
-                                setCustomToDate('');
-                              }}
-                              className="mt-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-red-600 text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
-                            >
-                              View All Tasks
-                            </button>
+                            {quotationTasks.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setGranularityFilter('All');
+                                  setCustomFromDate('');
+                                  setCustomToDate('');
+                                }}
+                                className="mt-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-red-600 text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors"
+                              >
+                                View All Tasks
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -1063,19 +994,29 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                             );
                           })}
 
-                          {/* Action Column: View Details Eye Button at the END (Right Side) */}
-                          <td className="w-12 px-2 py-2.5 text-center">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedQuotationDrawerTask(task);
-                              }}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-red-200"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                          {/* Action Column: View Details & Delete Buttons at the END (Right Side) */}
+                          <td className="w-16 px-2 py-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedQuotationDrawerTask(task);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-red-200"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteQuotationTask(task.id, e)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-rose-200"
+                                title="Delete Task"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1294,8 +1235,8 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                   </button>
 
                   {dateFilterOpen && (
-                    <div className="absolute left-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-44 animate-in fade-in zoom-in-95">
-                      {['All', 'Today', '03 Oct, 2026', '01 Oct, 2026'].map(d => (
+                    <div className="absolute left-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1 w-44 max-h-56 overflow-y-auto animate-in fade-in zoom-in-95">
+                      {['All', 'Today', ...uniqueDates.filter(d => d !== 'Today')].map(d => (
                         <button
                           key={d}
                           onClick={() => {
@@ -1509,6 +1450,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
         onClose={() => setSelectedQuotationDrawerTask(null)}
         task={selectedQuotationDrawerTask}
         onShowToast={onShowToast}
+        onDeleteTask={handleDeleteQuotationTask}
         onUpdateTask={(updated) => {
           setSelectedQuotationDrawerTask(updated);
           syncQuotationTaskToProject(updated);

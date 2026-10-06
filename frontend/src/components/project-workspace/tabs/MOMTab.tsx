@@ -285,9 +285,6 @@ export const MOMTab: React.FC<MOMTabProps> = ({ project, onShowToast }) => {
           <div className="p-6 sm:p-8 space-y-6">
             {/* Meeting Title Banner */}
             <div className="border-b border-slate-100 pb-5">
-              <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider block mb-1">
-                MINUTES OF MEETING
-              </span>
               <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
                 {selectedMeeting.meeting_name || selectedMeeting.title}
               </h1>

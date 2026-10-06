@@ -7,6 +7,7 @@ import {
 import { authenticateUser, authenticateByPhone, UserAccount } from '../lib/authService';
 import { PhoneAuthIllustration } from '../components/PhoneAuthIllustration';
 import booshnamLogo from '../assets/image.png';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface CountryItem {
   code: string;
@@ -71,21 +72,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    const handleFsChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    const unsub = addFullscreenChangeListener((fs) => {
+      setIsFullscreen(fs);
+    });
+    return () => unsub();
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
+  const toggleFullscreen = async () => {
+    const nextState = !isFullscreen;
+    setIsFullscreen(nextState);
+    try {
+      await toggleBrowserFullscreen();
+    } catch (e) {}
   };
 
   // Close country dropdown on outside click

@@ -4,181 +4,42 @@ export type { QuotationScheduleTask };
 
 const QUOTATION_SCHEDULE_STORAGE_KEY = 'booshnam_quotation_schedule_tasks_v3';
 
-// Default realistic sample quotation tasks matching user image exactly
-export const DEFAULT_QUOTATION_SCHEDULE_TASKS: QuotationScheduleTask[] = [
-  {
-    id: 'q-task-01',
-    task_name: 'Quotation',
-    project_id: 'proj-01',
-    project_name: 'Project',
-    assignee: 'Sunil Kumar',
-    status: 'NOT_STARTED',
-    start_date: '2026-09-10',
-    end_date: '2026-09-10',
-    milestone_date: '10 Sep',
-    stage_label: 'Send Quotation',
-    color_theme: 'red',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Send finalized commercial quotation to client.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-02',
-    task_name: 'Collect Client Details',
-    project_id: 'proj-02',
-    project_name: 'Project',
-    assignee: 'Sunil Kumar',
-    status: 'NOT_STARTED',
-    start_date: '2026-09-15',
-    end_date: '2026-09-15',
-    milestone_date: '15 Sep',
-    stage_label: 'Collect Details',
-    color_theme: 'red',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Collect site measurements and client requirements.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-03',
-    task_name: 'Quotation',
-    project_id: 'proj-03',
-    project_name: 'Navalur Residential Enclave',
-    assignee: 'Dasari Uma Sridevi',
-    status: 'NOT_STARTED',
-    start_date: '2026-06-10',
-    end_date: '2026-06-10',
-    milestone_date: '10 Jun',
-    stage_label: 'Prepare Quotation',
-    color_theme: 'blue',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Prepare BOQ quotation drafts.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-04',
-    task_name: 'Quotation',
-    project_id: 'proj-04',
-    project_name: 'Tambaram Commercial Hub',
-    assignee: 'Dasari Uma Sridevi',
-    status: 'NOT_STARTED',
-    start_date: '2026-06-18',
-    end_date: '2026-06-18',
-    milestone_date: '18 Jun',
-    stage_label: 'Client Meeting',
-    color_theme: 'green',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Client consultation & scope agreement.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-05',
-    task_name: 'Quotation',
-    project_id: 'proj-05',
-    project_name: 'Medavakkam Villa Plots',
-    assignee: 'Sunil Kumar',
-    status: 'NOT_STARTED',
-    start_date: '2026-07-12',
-    end_date: '2026-07-12',
-    milestone_date: '12 Jul',
-    stage_label: 'Follow Up',
-    color_theme: 'orange',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Commercial negotiation follow up with client.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-06',
-    task_name: 'Quotation',
-    project_id: 'proj-06',
-    project_name: 'Velachery Tech Park Extension',
-    assignee: 'Nivedhitha Arumugam',
-    status: 'NOT_STARTED',
-    start_date: '2026-05-20',
-    end_date: '2026-05-20',
-    milestone_date: '20 May',
-    stage_label: 'Review & Update',
-    color_theme: 'red',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Review site rate deviations and revision.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-07',
-    task_name: 'Quotation',
-    project_id: 'proj-07',
-    project_name: 'Guindy Industrial Shed',
-    assignee: 'Sunil Kumar',
-    status: 'NOT_STARTED',
-    start_date: '2026-05-28',
-    end_date: '2026-05-28',
-    milestone_date: '28 May',
-    stage_label: 'Client Discussion',
-    color_theme: 'blue',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Structural steel quote technical discussion.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-08',
-    task_name: 'Quotation',
-    project_id: 'proj-08',
-    project_name: 'Chromepet IT Complex',
-    assignee: 'Sunil Kumar',
-    status: 'NOT_STARTED',
-    start_date: '2026-07-26',
-    end_date: '2026-07-26',
-    milestone_date: '26 Jul',
-    stage_label: 'Final Submission',
-    color_theme: 'purple',
-    duration_days: 1,
-    progress_percentage: 0,
-    remarks: 'Final submission of quotation package.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-09',
-    task_name: 'Quotation Preparation',
-    project_id: 'proj-01',
-    project_name: 'Project',
-    assignee: 'Sunil Kumar',
-    status: 'IN_PROGRESS',
-    start_date: '2026-08-10',
-    end_date: '2026-08-18',
-    milestone_date: '18 Aug',
-    stage_label: 'Prepare Quotation',
-    color_theme: 'red',
-    duration_days: 8,
-    progress_percentage: 50,
-    remarks: 'August quotation preparation.',
-    group_name: 'Unassigned'
-  },
-  {
-    id: 'q-task-10',
-    task_name: 'Final Quotation Review',
-    project_id: 'proj-02',
-    project_name: 'Project',
-    assignee: 'Sunil Kumar',
-    status: 'COMPLETED',
-    start_date: '2026-10-01',
-    end_date: '2026-10-05',
-    actual_end: '2026-10-05',
-    completed_at: '2026-10-05',
-    milestone_date: '05 Oct',
-    stage_label: 'Send Quotation',
-    color_theme: 'green',
-    duration_days: 5,
-    progress_percentage: 100,
-    remarks: 'October final quotation approval and client submission.',
-    group_name: 'Unassigned'
+// Default quotation tasks: clean empty state, no dummy data
+export const DEFAULT_QUOTATION_SCHEDULE_TASKS: QuotationScheduleTask[] = [];
+
+// Helper to identify and eliminate all legacy mock/dummy quotation tasks
+export function isDummyQuotationTask(t: { task_name?: string; title?: string; project_name?: string; project_id?: string; id?: string }): boolean {
+  const taskName = (t.task_name || (t as any).title || '').trim().toLowerCase();
+  const projName = (t.project_name || '').trim().toLowerCase();
+  const projId = (t.project_id || '').trim().toLowerCase();
+  const id = (t.id || '').trim().toLowerCase();
+
+  // 1. Explicit dummy task names
+  if (taskName === 'collect client details') return true;
+  if (taskName === 'quotation' && (projName === 'project' || projId === 'proj-01' || projId === 'proj-02' || !projId)) return true;
+
+  // 2. Placeholder mock project names and IDs
+  if (projName === 'project' || projName === 'overhead' || projName === 'over heads') return true;
+  if (projId === 'proj-01' || projId === 'proj-02' || projId === 'default') return true;
+
+  // 3. Known dummy IDs from previous fixtures
+  if (/^q-task-0?[1-9]$|^q-task-1[0-9]$/.test(id) || id.startsWith('proj-quotation-')) {
+    return true;
   }
-];
+
+  // 4. Legacy dummy projects
+  const dummyProjects = [
+    'navalur residential enclave',
+    'tambaram commercial hub',
+    'medavakkam villa plots',
+    'velachery tech park extension',
+    'guindy industrial shed',
+    'chromepet it complex'
+  ];
+  if (dummyProjects.includes(projName)) return true;
+
+  return false;
+}
 
 // Load quotation tasks, merging with any live project tasks matching "Quotation"
 export function getQuotationScheduleTasks(projects: Project[] = []): QuotationScheduleTask[] {
@@ -187,35 +48,35 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        stored = parsed;
-        DEFAULT_QUOTATION_SCHEDULE_TASKS.forEach(def => {
-          if (!stored.some(s => s.id === def.id)) {
-            stored.push(def);
-          }
-        });
+      if (Array.isArray(parsed)) {
+        // Strip out any legacy dummy/mock tasks
+        stored = parsed.filter(t => !isDummyQuotationTask(t));
+        if (stored.length !== parsed.length) {
+          localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(stored));
+        }
       }
     }
   } catch (e) {
     console.error('Failed to load quotation schedule tasks', e);
   }
 
-  if (stored.length === 0) {
-    stored = [...DEFAULT_QUOTATION_SCHEDULE_TASKS];
-    try {
-      localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(stored));
-    } catch (e) {}
-  }
-
   // 1. Gather all projects from passed props, localStorage booshnam_projects_v2, and storage keys
   const allProjectsMap = new Map<string, Project>();
-  projects.forEach(p => { if (p?.id) allProjectsMap.set(p.id, p); });
+  projects.forEach(p => { 
+    if (p?.id && p.name !== 'Project' && p.id !== 'proj-01' && p.id !== 'proj-02') {
+      allProjectsMap.set(p.id, p); 
+    }
+  });
   try {
     const rawProjs = localStorage.getItem('booshnam_projects_v2');
     if (rawProjs) {
       const parsedProjs: Project[] = JSON.parse(rawProjs);
       if (Array.isArray(parsedProjs)) {
-        parsedProjs.forEach(p => { if (p?.id && !allProjectsMap.has(p.id)) allProjectsMap.set(p.id, p); });
+        parsedProjs.forEach(p => { 
+          if (p?.id && p.name !== 'Project' && p.id !== 'proj-01' && p.id !== 'proj-02' && !allProjectsMap.has(p.id)) {
+            allProjectsMap.set(p.id, p); 
+          }
+        });
       }
     }
   } catch (e) {}
@@ -227,7 +88,9 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
       const k = localStorage.key(i);
       if (k && k.startsWith('booshnam_wbs_tasks_v2_')) {
         const pid = k.replace('booshnam_wbs_tasks_v2_', '');
-        if (pid) projectIds.add(pid);
+        if (pid && pid !== 'proj-01' && pid !== 'proj-02' && pid !== 'default') {
+          projectIds.add(pid);
+        }
       }
     }
   } catch (e) {}
@@ -235,9 +98,12 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
   // 2. Scan live project tasks from localStorage for each project
   const projectTasks: QuotationScheduleTask[] = [];
   projectIds.forEach(pid => {
+    if (pid === 'proj-01' || pid === 'proj-02' || pid === 'default') return;
     try {
       const p = allProjectsMap.get(pid);
+      if (p?.name === 'Project') return;
       const pName = p?.name || 'Project';
+      if (pName === 'Project') return;
       const key = `booshnam_wbs_tasks_v2_${pid}`;
       const raw = localStorage.getItem(key);
       if (!raw) return;
@@ -260,7 +126,7 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
           titleLower.includes('scope') ||
           t.department === 'MARKETING';
 
-        if (isQuotation) {
+        if (isQuotation && !isDummyQuotationTask({ ...t, task_name: t.title, project_id: pid, project_name: pName })) {
           const meta = taskMetaMap[t.id] || {};
           
           // Image resolution: priority is completion_proof_url, then meta progress proof_url, then fallback
@@ -324,38 +190,6 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     } catch (e) {}
   });
 
-  // 3. Ensure every created project in allProjectsMap has a Quotation Task
-  allProjectsMap.forEach((p, pid) => {
-    const hasTaskInProject = projectTasks.some(pt => pt.project_id === pid);
-    const hasTaskInStored = stored.some(st => st.project_id === pid);
-    if (!hasTaskInProject && !hasTaskInStored) {
-      const isCompleted = p.status === 'COMPLETED' || (p.progress_percentage !== undefined && p.progress_percentage >= 100);
-      const isOngoing = p.status === 'ACTIVE' || (p.progress_percentage !== undefined && p.progress_percentage > 0);
-      const sDate = p.start_date || new Date().toISOString().split('T')[0];
-      const dateObj = new Date(sDate);
-      const milestoneStr = isNaN(dateObj.getTime()) 
-        ? '10 Oct' 
-        : dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-
-      projectTasks.push({
-        id: `proj-quotation-${pid}`,
-        task_name: 'Quotation',
-        project_id: pid,
-        project_name: p.name || 'Project',
-        assignee: (p.assigned_team && p.assigned_team[0]?.name) || 'Project Lead',
-        status: isCompleted ? 'COMPLETED' : isOngoing ? 'IN_PROGRESS' : 'PENDING',
-        start_date: sDate,
-        end_date: sDate,
-        milestone_date: milestoneStr,
-        stage_label: isCompleted ? 'Completed' : isOngoing ? 'Ongoing' : 'Prepare Quotation',
-        color_theme: isCompleted ? 'green' : isOngoing ? 'blue' : 'red',
-        progress_percentage: isCompleted ? 100 : (p.progress_percentage || 0),
-        remarks: p.description || 'Project quotation milestone.',
-        group_name: 'Unassigned'
-      });
-    }
-  });
-
   // 4. Combine: Live project tasks take precedence and update any stored tasks
   const combined: QuotationScheduleTask[] = [];
 
@@ -396,7 +230,48 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     }
   });
 
-  return combined;
+  // Final purge filter ensuring NO dummy tasks slip into the returned list
+  return combined.filter(t => !isDummyQuotationTask(t));
+}
+
+// Delete a quotation task permanently from storage and WBS tasks
+export function deleteQuotationScheduleTask(taskId: string): QuotationScheduleTask[] {
+  // 1. Remove from QUOTATION_SCHEDULE_STORAGE_KEY
+  try {
+    const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
+    if (raw) {
+      const parsed: QuotationScheduleTask[] = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(t => t.id !== taskId);
+        localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(cleaned));
+      }
+    }
+  } catch (e) {}
+
+  // 2. Also clean from any project WBS tasks
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('booshnam_wbs_tasks_v2_')) {
+        const rawWbs = localStorage.getItem(k);
+        if (rawWbs) {
+          const wbsTasks: WBSTask[] = JSON.parse(rawWbs);
+          if (Array.isArray(wbsTasks)) {
+            const cleanWbs = wbsTasks.filter(t => `proj-task-${t.id}` !== taskId && t.id !== taskId);
+            if (cleanWbs.length !== wbsTasks.length) {
+              localStorage.setItem(k, JSON.stringify(cleanWbs));
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  const updated = getQuotationScheduleTasks();
+  try {
+    window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated', { detail: updated }));
+  } catch (e) {}
+  return updated;
 }
 
 export function saveQuotationScheduleTask(task: QuotationScheduleTask): QuotationScheduleTask[] {
@@ -440,21 +315,27 @@ export function updateQuotationTaskStatus(
 
 export function addQuotationScheduleTask(taskData: Partial<QuotationScheduleTask>): QuotationScheduleTask[] {
   const current = getQuotationScheduleTasks();
+  const today = new Date().toISOString().split('T')[0];
+  const dateObj = new Date(taskData.start_date || today);
+  const milestoneStr = isNaN(dateObj.getTime())
+    ? 'Today'
+    : dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
   const newTask: QuotationScheduleTask = {
-    id: `q-task-${Date.now()}`,
+    id: `q-task-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     task_name: taskData.task_name || 'Quotation',
-    project_id: taskData.project_id || 'proj-01',
-    project_name: taskData.project_name || 'Project',
-    assignee: taskData.assignee || 'Sunil Kumar',
+    project_id: taskData.project_id || '',
+    project_name: taskData.project_name || 'General',
+    assignee: taskData.assignee || 'Staff',
     status: taskData.status || 'NOT_STARTED',
-    start_date: taskData.start_date || new Date().toISOString().split('T')[0],
-    end_date: taskData.end_date || new Date().toISOString().split('T')[0],
-    milestone_date: taskData.milestone_date || '15 Jun',
+    start_date: taskData.start_date || today,
+    end_date: taskData.end_date || today,
+    milestone_date: taskData.milestone_date || milestoneStr,
     stage_label: taskData.stage_label || 'Prepare Quotation',
     color_theme: taskData.color_theme || 'blue',
     duration_days: taskData.duration_days || 1,
     progress_percentage: taskData.status === 'COMPLETED' ? 100 : 0,
-    remarks: taskData.remarks || 'Quotation milestone',
+    remarks: taskData.remarks || '',
     group_name: 'Unassigned'
   };
   const updated = [...current, newTask];

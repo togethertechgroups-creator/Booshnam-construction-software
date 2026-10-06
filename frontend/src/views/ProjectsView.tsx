@@ -3,7 +3,7 @@ import {
   Plus, CheckCircle2, Clock, AlertCircle, FileText, 
   Calendar, Layers, Flag, Download, Check, Search, 
   ThumbsUp, ShoppingCart, ListTodo, ArrowLeft, Pin, 
-  MoreVertical, Bell, Settings,
+  MoreVertical, Bell, Settings, BarChart2,
   User, ExternalLink, ChevronRight, Filter, TrendingUp,
   CheckSquare, Sparkles, Phone, Mail, MapPin, Briefcase,
   DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2, Building2, ChevronLeft, ArrowRight, Maximize2, Minimize2, Compass,
@@ -47,6 +47,7 @@ import {
 } from '../lib/departmentService';
 import { getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { DepartmentLogo } from '../components/DepartmentLogo';
+import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -194,22 +195,30 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   });
   const [wizardError, setWizardError] = useState('');
   const [taskDeptFilter, setTaskDeptFilter] = useState<'ALL' | Department>('ALL');
-  const [isWizardFullscreen, setIsWizardFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
-    const handleFs = () => setIsWizardFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', handleFs);
-    return () => document.removeEventListener('fullscreenchange', handleFs);
-  }, []);
-
-  const toggleWizardFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+    const unsub = addFullscreenChangeListener((fs) => {
+      setIsFullscreen(fs);
+    });
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
       }
-    }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      unsub();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const nextState = !isFullscreen;
+    setIsFullscreen(nextState);
+    try {
+      await toggleBrowserFullscreen();
+    } catch (e) {}
   };
 
   const formatINR = (val: string | number) => {
@@ -893,6 +902,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     // Persist tasks in localStorage for this project
     try {
       localStorage.setItem(`booshnam_wbs_tasks_v2_${newProjId}`, JSON.stringify(generatedTasks));
+      localStorage.setItem(`booshnam_wbs_tasks_v10_${newProjId}`, JSON.stringify(generatedTasks));
     } catch (e) {}
 
     if (setTasks) {
@@ -900,9 +910,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     }
 
     const cleanClientName = (newClientName || '').trim();
-    const displayName = cleanClientName && cleanClientName.toLowerCase() !== cleanProjName.toLowerCase()
-      ? `${cleanProjName} (${cleanClientName})`
-      : cleanProjName;
+    const displayName = cleanProjName;
 
     const lowerType = (newProjectType || '').toLowerCase();
     const resolvedCategory = lowerType.includes('gov') ? 'Government Projects' : 'Private Construction';
@@ -998,12 +1006,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       ? (allowedDeptIds.includes(activeDeptId as any) ? activeDeptId : allowedDeptIds[0])
       : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
     const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === effectiveDeptId || d.name === effectiveDeptId) || ORGANIZATION_DEPARTMENTS[1];
-    const displayedWizardTasks = taskDeptFilter === 'ALL'
-      ? wizardTasks
-      : wizardTasks.filter(t => t.department === taskDeptFilter);
+    const displayedWizardTasks = wizardTasks;
 
     return (
-      <div className="min-h-screen w-full bg-slate-100/75 flex flex-col antialiased">
+      <div className={`w-full bg-slate-100 flex flex-col antialiased ${
+        isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-100 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : 'min-h-screen'
+      }`}>
         {/* ── TOP FULL-SCREEN HEADER BAR ── */}
         <header className="w-full bg-white border-b border-slate-200/90 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           {/* Left: Branding & Title */}
@@ -1021,86 +1029,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             </div>
           </div>
 
-          {/* Center: Modern Stepper */}
-          <div className="flex items-center gap-1 sm:gap-2 bg-slate-50 border border-slate-200/80 px-2 sm:px-3 py-1.5 rounded-2xl shadow-2xs">
-            {/* Step 1 Pill */}
-            <button
-              type="button"
-              onClick={() => setWizardStep(1)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                wizardStep === 1
-                  ? 'bg-red-600 text-white shadow-xs'
-                  : wizardStep > 1
-                  ? 'text-slate-700 hover:bg-slate-200/60'
-                  : 'text-slate-400'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 1 ? 'bg-white/20 text-white' : wizardStep > 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-              }`}>
-                {wizardStep > 1 ? <Check className="w-3 h-3" /> : '1'}
-              </span>
-              <span className="hidden md:inline">1. Details</span>
-            </button>
-
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-
-            {/* Step 2 Pill */}
-            <button
-              type="button"
-              onClick={() => {
-                if (newProjectName.trim()) setWizardStep(2);
-                else setWizardError('Please enter a Project Name');
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                wizardStep === 2
-                  ? 'bg-red-600 text-white shadow-xs'
-                  : wizardStep > 2
-                  ? 'text-slate-700 hover:bg-slate-200/60'
-                  : 'text-slate-400'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 2 ? 'bg-white/20 text-white' : wizardStep > 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
-              }`}>
-                {wizardStep > 2 ? <Check className="w-3 h-3" /> : '2'}
-              </span>
-              <span className="hidden md:inline">2. Team</span>
-            </button>
-
-            <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-
-            {/* Step 3 Pill */}
-            <button
-              type="button"
-              onClick={() => {
-                if (newProjectName.trim()) setWizardStep(3);
-                else setWizardError('Please enter a Project Name');
-              }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                wizardStep === 3
-                  ? 'bg-red-600 text-white shadow-xs'
-                  : 'text-slate-400'
-              }`}
-            >
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black ${
-                wizardStep === 3 ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'
-              }`}>
-                3
-              </span>
-              <span className="hidden md:inline">3. Predefined Tasks</span>
-            </button>
-          </div>
-
           {/* Right: Fullscreen Mode & Close Button */}
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={toggleWizardFullscreen}
-              className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
-              title={isWizardFullscreen ? "Exit Fullscreen" : "Fullscreen Studio Mode"}
+              onClick={toggleFullscreen}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                isFullscreen 
+                  ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
+                  : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              }`}
+              title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Studio Mode"}
             >
-              {isWizardFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+              {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
             </button>
             <button 
               type="button"
@@ -1115,11 +1056,13 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </header>
 
         {/* ── MAIN EXPANSIVE 12-COLUMN STUDIO CANVAS ── */}
-        <main className="flex-1 w-full max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <main className={`flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 ${
+          isFullscreen ? 'max-w-[1700px]' : 'max-w-[1550px]'
+        }`}>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            {/* ── LEFT/CENTER (8 COLUMNS): ACTIVE WIZARD STEP ── */}
-            <div className="lg:col-span-8 space-y-6">
+            {/* ── LEFT/CENTER (7 COLUMNS): ACTIVE WIZARD STEP ── */}
+            <div className="lg:col-span-7 space-y-6">
 
               {/* STEP 1: Project Details */}
               {wizardStep === 1 && (
@@ -1180,11 +1123,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Section B: Location & Financials */}
+                  {/* Section B: Location & Site Details */}
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
-                      Location & Financials
+                      Location & Site Details
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1205,27 +1148,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           value={newCity}
                           onChange={(e) => setNewCity(e.target.value)}
                           className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold text-slate-700">Estimated Budget (₹ INR)</label>
-                        {newEstimatedBudget && parseFloat(newEstimatedBudget) > 0 && (
-                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                            {formatINR(newEstimatedBudget)} {getLakhsCroresText(newEstimatedBudget)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-2.5 text-base font-bold text-slate-500 select-none">₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newEstimatedBudget}
-                          onChange={(e) => setNewEstimatedBudget(e.target.value)}
-                          className="w-full pl-9 pr-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
                         />
                       </div>
                     </div>
@@ -1495,9 +1417,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8 space-y-6 animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-amber-500" />
-                        Automatic Predefined Tasks & Workflow
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                        Tasks & Workflow
                       </h2>
                       <p className="text-xs text-slate-500 mt-1">
                         Tasks pre-populated for this project. Check or uncheck to include, click Edit to customize, or add new tasks.
@@ -1510,38 +1431,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Filter Tabs & Toolbar */}
+                  {/* Toolbar */}
                   <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2">
-                    {/* Department Filter Tabs */}
-                    <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl overflow-x-auto no-scrollbar">
-                      {(['ALL', 'MATERIAL_TESTING', 'STRUCTURAL', 'SOIL_INVESTIGATION', 'ARCHITECTURE', 'CONSTRUCTION', 'SURVEY', 'MARKETING', 'ACCOUNTS'] as const).map((deptKey) => {
-                        const isTabActive = taskDeptFilter === deptKey;
-                        const label = deptKey === 'ALL' ? 'All' 
-                          : deptKey === 'MATERIAL_TESTING' ? 'Material Test'
-                          : deptKey === 'STRUCTURAL' ? 'Structural'
-                          : deptKey === 'SOIL_INVESTIGATION' ? 'Soil Test' 
-                          : deptKey === 'CONSTRUCTION' ? 'Civil' 
-                          : deptKey === 'ARCHITECTURE' ? 'Architecture'
-                          : deptKey === 'SURVEY' ? 'Survey'
-                          : deptKey === 'MARKETING' ? 'Marketing'
-                          : 'Accounts';
-                        return (
-                          <button
-                            key={deptKey}
-                            type="button"
-                            onClick={() => setTaskDeptFilter(deptKey as any)}
-                            className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                              isTabActive
-                                ? 'bg-white text-red-600 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
+                    <p className="text-xs text-slate-500 font-medium">
+                      Configure the tasks for this project schedule:
+                    </p>
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2">
                       <button
@@ -1837,159 +1731,207 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               )}
             </div>
 
-            {/* ── RIGHT (4 COLUMNS): LIVE PROJECT SUMMARY PREVIEW ── */}
-            <div className="lg:col-span-4 sticky top-20 space-y-4">
-              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-5 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    Live Project Preview
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                    Step {wizardStep} of 3
-                  </span>
+            {/* ── RIGHT (5 COLUMNS): WIZARD SHOWCASE BANNER CARD (MATCHING DESIGN) ── */}
+            <div className="lg:col-span-5 sticky top-20">
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between p-6 sm:p-7 min-h-[580px]">
+                
+                {/* ── TOP-RIGHT CONSTRUCTION ILLUSTRATION HERO ── */}
+                <div className="absolute top-0 right-0 w-[190px] sm:w-[210px] h-[185px] pointer-events-none select-none z-0">
+                  <img
+                    src="/construction-hero.png"
+                    alt="Construction"
+                    className="w-full h-full object-contain object-top-right"
+                  />
                 </div>
 
-                {/* Identity Preview Card */}
-                <div className="flex items-start gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-sm shadow-red-500/25">
-                    {newProjectName.trim() ? newProjectName.slice(0, 2).toUpperCase() : 'PR'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-sm font-bold text-slate-900 truncate">
-                      {newProjectName.trim() || <span className="text-slate-400 italic font-normal">Untitled Project</span>}
-                    </h4>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      {newClientName.trim() ? `Client: ${newClientName}` : 'Client not specified'}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-100">
-                        {currentDeptObj?.shortName || currentDeptObj?.name || 'Department'}
-                      </span>
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 truncate max-w-[140px]">
-                        {newProjectType}
-                      </span>
-                    </div>
-                  </div>
+                {/* ── BOTTOM PINK WAVY GRADIENT RIBBON ── */}
+                <div className="absolute bottom-0 left-0 right-0 h-[105px] pointer-events-none select-none z-0 overflow-hidden opacity-85">
+                  <img
+                    src="/construction-wave.png"
+                    alt=""
+                    className="w-full h-full object-cover object-bottom"
+                  />
                 </div>
 
-                {/* Parameters Grid */}
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
-                  <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Site Location</div>
-                    <div className="text-xs font-bold text-slate-800 truncate mt-1">
-                      {newCity.trim() || (newAddress.trim() ? newAddress : 'Location TBD')}
-                    </div>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Est. Budget</div>
-                    <div className="text-xs font-bold text-emerald-700 truncate mt-1">
-                      {formatINR(newEstimatedBudget)}
-                    </div>
-                    {getLakhsCroresText(newEstimatedBudget) && (
-                      <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                        {getLakhsCroresText(newEstimatedBudget)}
+                {/* ── TOP: TITLE & SUBTITLE ── */}
+                <div className="relative z-10">
+                  <div className="w-8 h-1 bg-red-600 rounded-full mb-3" />
+                  <h2 className="text-2xl sm:text-[26px] font-black text-slate-900 tracking-tight leading-tight">
+                    Let's Build Your<br />
+                    <span className="text-red-600">Project</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-[190px] font-medium">
+                    Add the key details to create a new project. Next, you can assign your team and setup departments.
+                  </p>
+                </div>
+
+                {/* ── MIDDLE: 3-STEP VERTICAL TIMELINE ── */}
+                <div className="relative z-10 my-6">
+                  {/* Vertical connecting line between circle centers */}
+                  <div className="absolute left-[11px] top-[28px] bottom-[28px] w-0.5 bg-slate-200/90 z-0" />
+
+                  <div className="space-y-3.5 relative z-10">
+                    {/* Step 1: Project Details */}
+                    <div
+                      onClick={() => setWizardStep(1)}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
+                        wizardStep === 1
+                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
+                          : 'hover:bg-slate-50/70 border border-transparent'
+                      }`}
+                    >
+                      {/* Step Number Circle */}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                        wizardStep === 1 
+                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
+                          : wizardStep > 1
+                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white'
+                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                      }`}>
+                        {wizardStep > 1 ? <Check className="w-3 h-3 stroke-[2.5]" /> : '1'}
                       </div>
-                    )}
+
+                      {/* Icon Box */}
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        wizardStep === 1
+                          ? 'bg-red-100/80 text-red-600'
+                          : 'bg-slate-100/80 text-slate-500'
+                      }`}>
+                        <FileText className="w-5 h-5" />
+                      </div>
+
+                      {/* Text Details */}
+                      <div className="min-w-0 flex-1">
+                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 1 ? 'text-slate-900' : 'text-slate-700'}`}>
+                          Project Details
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Enter project name, client, and site location details.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 2: Team Assignment */}
+                    <div
+                      onClick={() => {
+                        if (newProjectName.trim()) setWizardStep(2);
+                        else setWizardError('Please enter a Project Name');
+                      }}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
+                        wizardStep === 2
+                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
+                          : 'hover:bg-slate-50/70 border border-transparent'
+                      }`}
+                    >
+                      {/* Step Number Circle */}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                        wizardStep === 2 
+                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
+                          : wizardStep > 2
+                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white'
+                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                      }`}>
+                        {wizardStep > 2 ? <Check className="w-3 h-3 stroke-[2.5]" /> : '2'}
+                      </div>
+
+                      {/* Icon Box */}
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        wizardStep === 2
+                          ? 'bg-red-100/80 text-red-600'
+                          : 'bg-slate-100/80 text-slate-500'
+                      }`}>
+                        <Users className="w-5 h-5" />
+                      </div>
+
+                      {/* Text Details */}
+                      <div className="min-w-0 flex-1">
+                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 2 ? 'text-slate-900' : 'text-slate-700'}`}>
+                          Team Assignment
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Assign PM, Engineers, Supervisors and Accounts team.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Step 3: Setup Project */}
+                    <div
+                      onClick={() => {
+                        if (newProjectName.trim()) setWizardStep(3);
+                        else setWizardError('Please enter a Project Name');
+                      }}
+                      className={`flex items-start gap-3 p-3 rounded-2xl transition-all cursor-pointer ${
+                        wizardStep === 3
+                          ? 'bg-[#fff5f5] border border-rose-100 shadow-2xs'
+                          : 'hover:bg-slate-50/70 border border-transparent'
+                      }`}
+                    >
+                      {/* Step Number Circle */}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-2 z-10 ${
+                        wizardStep === 3 
+                          ? 'bg-red-600 text-white shadow-xs ring-4 ring-white' 
+                          : 'bg-slate-100 border border-slate-200 text-slate-500 ring-4 ring-white'
+                      }`}>
+                        3
+                      </div>
+
+                      {/* Icon Box */}
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                        wizardStep === 3
+                          ? 'bg-red-100/80 text-red-600'
+                          : 'bg-slate-100/80 text-slate-500'
+                      }`}>
+                        <Settings className="w-5 h-5" />
+                      </div>
+
+                      {/* Text Details */}
+                      <div className="min-w-0 flex-1">
+                        <h4 className={`text-xs font-bold leading-tight ${wizardStep === 3 ? 'text-slate-900' : 'text-slate-700'}`}>
+                          Setup Project
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                          Configure departments, site details and start managing your project.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Team Allocation Summary */}
-                <div className="pt-2 border-t border-slate-100 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-800 flex items-center justify-between">
-                    <span>Key Leadership</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">
-                      {[selectedPM, selectedEngineer, selectedSupervisor].filter(Boolean).length} / 3 Assigned
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <Briefcase className="w-3 h-3 text-red-500" /> PM:
-                      </span>
-                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
-                        {selectedPM || <span className="text-slate-400 italic font-normal">Pending</span>}
+                {/* ── BOTTOM: 3 FEATURE BENEFIT PILLARS ── */}
+                <div className="relative z-10 pt-4 border-t border-slate-100/80">
+                  <div className="grid grid-cols-3 items-center divide-x divide-slate-200/80 text-center">
+                    {/* Track Progress */}
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <div className="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                        <BarChart2 className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+                        Track Progress
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <UserCheck className="w-3 h-3 text-sky-500" /> Engineer:
-                      </span>
-                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
-                        {selectedEngineer || <span className="text-slate-400 italic font-normal">Pending</span>}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <ShieldCheck className="w-3 h-3 text-amber-500" /> Supervisor:
-                      </span>
-                      <span className="font-semibold truncate max-w-[160px] text-slate-800">
-                        {selectedSupervisor || <span className="text-slate-400 italic font-normal">Pending</span>}
+
+                    {/* Manage Teams */}
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <Users className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+                        Manage Teams
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span className="text-slate-400 text-[11px] flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-emerald-500" /> Accounts:
+
+                    {/* Organize Documents */}
+                    <div className="flex flex-col items-center gap-1.5 px-2">
+                      <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 leading-tight">
+                        Organize Documents
                       </span>
-                      {defaultAccountsStaff ? (
-                        <span className="font-semibold truncate max-w-[160px] text-emerald-700 flex items-center gap-1">
-                          {defaultAccountsStaff.name}
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded">Default</span>
-                        </span>
-                      ) : (
-                        <span className="font-semibold truncate max-w-[160px] text-slate-800">
-                          {selectedAccounts || <span className="text-slate-400 italic font-normal">Pending</span>}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Readiness Checklist */}
-                <div className="pt-2 border-t border-slate-100 space-y-2">
-                  <div className="text-[11px] font-bold text-slate-800">Setup Readiness</div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-center gap-2">
-                      {newProjectName.trim() ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                      )}
-                      <span className={newProjectName.trim() ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                        Project Name & Identity
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {newDepartment ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                      )}
-                      <span className={newDepartment ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                        Department & Classification
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {(selectedPM || selectedEngineer) ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                      )}
-                      <span className={(selectedPM || selectedEngineer) ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                        Site Leadership Assigned
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {selectedTaskIds.length > 0 ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                      )}
-                      <span className={selectedTaskIds.length > 0 ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                        {selectedTaskIds.length} Workflow Tasks Selected
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -2010,7 +1952,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       onShowToast?.(`Project status updated to ${newStatus}`);
     };
     return (
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
+      <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+        isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+      }`}>
 
         {/* Project Top Navigation Bar */}
         <ProjectTopNav
@@ -2045,6 +1989,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           onBack={() => setViewMode('list')}
           userRole={currentUser.role_code}
           userRoleName={currentUser.role_name}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={toggleFullscreen}
         />
 
         {/* Workspace Content Router (13 Functional Pages) */}
@@ -2246,7 +2192,6 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-lg font-bold text-slate-900">My Assigned Projects</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} assigned to you</p>
             </div>
             <div className="relative w-48">
               <input
@@ -2375,16 +2320,32 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // VIEW 1: Projects List / Hub (Matching Screenshot 1)
   // ==========================================
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white">
+    <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
+      isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+    }`}>
       {/* Top Header Bar Inside Full-Bleed View */}
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div>
           <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Projects</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Centralized oversight of all construction & soil investigation initiatives</p>
         </div>
 
         {/* Right Settings, Bell & User Avatar */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Fullscreen Mode Button */}
+          <button 
+            type="button"
+            onClick={toggleFullscreen}
+            className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+              isFullscreen 
+                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
+                : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+            }`}
+            title={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+
           {/* Settings Cog */}
           <button 
             type="button"

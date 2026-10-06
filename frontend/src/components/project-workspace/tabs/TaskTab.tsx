@@ -179,10 +179,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 1,
     title: 'Quotation',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '1/1 lumpsum',
-    delay_status: '1d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -201,9 +201,9 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 2,
     title: 'Site Visit',
-    status: 'COMPLETED',
-    progress_percentage: 50,
-    progress_label: '1/2 lumpsum',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
     delay_status: 'On Time',
     assigned_to_name: 'Sk',
     assigned_team: [
@@ -217,7 +217,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     end_date: '2026-08-30',
     wbs_code: '1.2',
     is_milestone: false,
-    is_subtask: true,
+    is_subtask: false,
     dependencies: [],
   },
   {
@@ -226,7 +226,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: 'Early by 1d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -248,7 +248,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: 'Early by 1d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -270,7 +270,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '15d',
+    delay_status: 'On Time',
     assigned_to_name: '',
     assigned_team: [],
     duration_days: 2,
@@ -284,10 +284,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 6,
     title: 'Sample Collection',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '1/1 lumpsum',
-    delay_status: 'Early by 1d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -306,10 +306,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 7,
     title: 'Borelog and Sample Delivery to Lab',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '2/2 lumpsum',
-    delay_status: 'Early by 1d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -328,10 +328,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 8,
     title: 'Laboratory Testing',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '1/1 lumpsum',
-    delay_status: '1d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -350,10 +350,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 9,
     title: 'Report Preparation',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '1/1 lumpsum',
-    delay_status: '1d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -375,7 +375,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '5d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -397,7 +397,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '5d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -419,7 +419,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '30d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -441,7 +441,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '31d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -463,7 +463,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '30d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -507,7 +507,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '11d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -529,7 +529,7 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
     status: 'TODO',
     progress_percentage: 0,
     progress_label: '0/1 lumpsum',
-    delay_status: '29d',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -548,10 +548,10 @@ export const DEFAULT_WORKFLOW_TASKS: Array<{
   {
     s_no: 18,
     title: 'Payment Collection',
-    status: 'COMPLETED',
-    progress_percentage: 100,
-    progress_label: '1/1 lumpsum',
-    delay_status: '4d',
+    status: 'TODO',
+    progress_percentage: 0,
+    progress_label: '0/1 lumpsum',
+    delay_status: 'On Time',
     assigned_to_name: 'G',
     assigned_team: [
       { name: 'G', initials: 'G' },
@@ -575,15 +575,39 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   onShowToast
 }) => {
   const registeredStaff = getStaffMembers();
-  const storageKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
+  const primaryStorageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+  const legacyStorageKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
 
   const [taskList, setTaskList] = useState<WBSTask[]>(() => {
     try {
-      const saved = localStorage.getItem(storageKey);
+      const saved = localStorage.getItem(primaryStorageKey) || localStorage.getItem(legacyStorageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+          return parsed.map((t: WBSTask) => {
+            let isSub = Boolean(t.is_subtask);
+            if (t.title === 'Site Visit' && !t.parent_id) {
+              isSub = false;
+            }
+            const hasUserCompletion = Boolean(t.completion_remarks || t.completion_proof_url);
+            if (t.status === 'COMPLETED' && !hasUserCompletion) {
+              return {
+                ...t,
+                status: 'TODO' as const,
+                progress_percentage: 0,
+                progress_label: '0/1 lumpsum',
+                delay_status: 'On Time',
+                actual_start: '',
+                actual_end: '',
+                forecast_end: 'On schedule',
+                is_subtask: isSub
+              };
+            }
+            return {
+              ...t,
+              is_subtask: isSub
+            };
+          });
         }
       }
     } catch {
@@ -597,17 +621,20 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       project_id: pId,
       created_by: 'Bala',
       created_date: '31/08/2026',
-      actual_start: t.status === 'COMPLETED' ? t.start_date : '',
-      actual_end: t.status === 'COMPLETED' ? t.end_date : '',
-      forecast_end: t.status === 'COMPLETED' ? 'Completed' : 'On schedule',
-      comments_count: 0
-    }));
+      actual_start: '',
+      actual_end: '',
+      forecast_end: 'On schedule',
+      comments_count: 0,
+      is_subtask: false,
+      delay_status: 'On Time' as const
+    })) as WBSTask[];
   });
 
   // Save changes to localStorage and synchronize project progress
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(taskList));
+      localStorage.setItem(primaryStorageKey, JSON.stringify(taskList));
+      localStorage.setItem(legacyStorageKey, JSON.stringify(taskList));
       window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
 
       if (project?.id && Array.isArray(taskList) && taskList.length > 0) {
@@ -651,7 +678,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     } catch {
       // ignore
     }
-  }, [taskList, storageKey, project?.id]);
+  }, [taskList, primaryStorageKey, legacyStorageKey, project?.id]);
 
   // Top bar filters (Image 1)
   const [searchQuery, setSearchQuery] = useState('');
@@ -861,31 +888,125 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     return true;
   });
 
-  // Toggle task status (Image 1: Start -> Completed -> Reopen)
+  // Helper to sync quotation task to quotation schedule
+  const syncQuotationScheduleForTask = (updatedTask: WBSTask) => {
+    try {
+      const isQuotation = 
+        (updatedTask.title && updatedTask.title.toLowerCase().includes('quot')) || 
+        (updatedTask.tag && updatedTask.tag.toLowerCase().includes('quot')) ||
+        (updatedTask.title && updatedTask.title.toLowerCase().includes('scope')) ||
+        updatedTask.department === 'MARKETING';
+
+      if (!isQuotation) return;
+
+      const todayIso = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const todayTimeStr = `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const isDone = updatedTask.status === 'COMPLETED';
+      const isOngoing = updatedTask.status === 'IN_PROGRESS';
+
+      const scheduleTask: QuotationScheduleTask = {
+        id: `proj-task-${updatedTask.id}`,
+        wbs_task_id: updatedTask.id,
+        task_name: updatedTask.title,
+        project_id: project?.id || '',
+        project_name: project?.name || 'Project',
+        assignee: updatedTask.assigned_to_name || 'Staff',
+        status: isDone ? 'COMPLETED' : isOngoing ? 'IN_PROGRESS' : 'PENDING',
+        start_date: updatedTask.start_date || project?.start_date || todayIso,
+        end_date: isDone ? (updatedTask.actual_end || updatedTask.end_date || todayIso) : (updatedTask.end_date || todayIso),
+        actual_start: updatedTask.actual_start || updatedTask.start_date || todayIso,
+        actual_end: isDone ? (updatedTask.actual_end || todayIso) : undefined,
+        forecast_end: updatedTask.end_date || todayIso,
+        completed_at: isDone ? (updatedTask.completed_at || todayTimeStr) : undefined,
+        duration_days: updatedTask.duration_days || 1,
+        progress_percentage: isDone ? 100 : isOngoing ? (updatedTask.progress_percentage || 50) : 0,
+        milestone_date: new Date(updatedTask.start_date || todayIso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+        stage_label: isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Prepare Quotation',
+        color_theme: isDone ? 'green' : isOngoing ? 'blue' : 'red',
+        remarks: updatedTask.completion_remarks || (isOngoing ? 'Work started on site' : 'Initial quotation'),
+        tag: updatedTask.tag || '--',
+        group_name: project?.name || 'Unassigned',
+        image_url: updatedTask.completion_proof_url,
+        progress_user: updatedTask.completed_by || currentUser.first_name || 'Staff',
+        progress_date: isDone ? todayStr : undefined
+      };
+
+      syncQuotationTaskToProject(scheduleTask);
+      window.dispatchEvent(new Event('booshnam_quotation_schedule_updated'));
+    } catch (e) {
+      console.warn('Failed to sync quotation schedule', e);
+    }
+  };
+
+  // Toggle task status: Start (TODO) -> Ongoing (IN_PROGRESS) -> Completed (COMPLETED) -> Start (TODO)
   const handleToggleStatus = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setTaskList((prev) =>
-      prev.map((t) => {
-        if (t.id === id) {
-          const isDone = t.status === 'COMPLETED';
-          const nextStatus = isDone ? 'TODO' : 'COMPLETED';
-          const nextProgress = isDone ? 0 : 100;
-          const nextActual = isDone ? '' : t.end_date;
-          const nextDelay = isDone ? 'At Risk' : 'On Time';
-          onShowToast?.(isDone ? `Reopened task: "${t.title}"` : `Completed task: "${t.title}"`);
-          return {
-            ...t,
-            status: nextStatus,
-            progress_percentage: nextProgress,
-            progress_label: isDone ? '0/1 lumpsum' : '1/1 lumpsum',
-            actual_start: isDone ? '' : t.start_date,
-            actual_end: nextActual,
-            delay_status: nextDelay
-          };
-        }
-        return t;
-      })
-    );
+    const target = taskList.find(t => t.id === id);
+    if (!target) return;
+
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const todayIso = new Date().toISOString().split('T')[0];
+
+    let nextStatus: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' = 'IN_PROGRESS';
+    let nextProgress = 0;
+    let nextLabel = '0/1 lumpsum';
+    let nextActualStart = '';
+    let nextActualEnd = '';
+    let nextDelay: 'On Time' | 'On Track' | 'At Risk' | 'Delayed' | '1d' = 'On Time';
+    let completedAt: string | undefined = undefined;
+    let completedBy: string | undefined = undefined;
+
+    if (target.status === 'TODO') {
+      nextStatus = 'IN_PROGRESS';
+      nextProgress = 50;
+      nextLabel = '0.5/1 lumpsum';
+      nextActualStart = todayIso;
+      nextDelay = 'On Track';
+      onShowToast?.(`Task started: "${target.title}" is now Ongoing`);
+    } else if (target.status === 'IN_PROGRESS') {
+      nextStatus = 'COMPLETED';
+      nextProgress = 100;
+      nextLabel = '1/1 lumpsum';
+      nextActualStart = target.actual_start || todayIso;
+      nextActualEnd = todayIso;
+      nextDelay = 'On Time';
+      completedAt = todayStr;
+      completedBy = currentUser.first_name || 'Staff';
+      onShowToast?.(`Task completed: "${target.title}"`);
+    } else {
+      nextStatus = 'TODO';
+      nextProgress = 0;
+      nextLabel = '0/1 lumpsum';
+      nextActualStart = '';
+      nextActualEnd = '';
+      nextDelay = 'On Time';
+      onShowToast?.(`Task reset: "${target.title}" is now in Start status`);
+    }
+
+    const updatedTask: WBSTask = {
+      ...target,
+      status: nextStatus,
+      progress_percentage: nextProgress,
+      progress_label: nextLabel,
+      actual_start: nextActualStart,
+      actual_end: nextActualEnd,
+      delay_status: nextDelay,
+      completed_at: completedAt,
+      completed_by: completedBy
+    };
+
+    const nextList = taskList.map(t => t.id === id ? updatedTask : t);
+    setTaskList(nextList);
+
+    try {
+      localStorage.setItem(primaryStorageKey, JSON.stringify(nextList));
+      localStorage.setItem(legacyStorageKey, JSON.stringify(nextList));
+    } catch (err) {}
+
+    syncQuotationScheduleForTask(updatedTask);
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
   };
 
   // Open Drawer for Create
@@ -1029,7 +1150,17 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     };
 
     setEditingTask(updatedTask);
-    setTaskList(prev => prev.map(t => t.id === editingTask.id ? updatedTask : t));
+    const nextList = taskList.map(t => t.id === editingTask.id ? updatedTask : t);
+    setTaskList(nextList);
+
+    try {
+      localStorage.setItem(primaryStorageKey, JSON.stringify(nextList));
+      localStorage.setItem(legacyStorageKey, JSON.stringify(nextList));
+    } catch (e) {}
+
+    syncQuotationScheduleForTask(updatedTask);
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
 
     // Log the event in timeline
     saveTaskMeta(editingTask.id, prev => ({
@@ -1838,12 +1969,19 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       project_id: pId,
       created_by: 'Bala',
       created_date: '31/08/2026',
-      actual_start: t.start_date,
-      actual_end: t.end_date,
-      forecast_end: 'Completed',
-      comments_count: 0
+      actual_start: '',
+      actual_end: '',
+      forecast_end: 'On schedule',
+      comments_count: 0,
+      is_subtask: false
     }));
     setTaskList(seeded as any);
+    try {
+      localStorage.setItem(primaryStorageKey, JSON.stringify(seeded));
+      localStorage.setItem(legacyStorageKey, JSON.stringify(seeded));
+    } catch (e) {}
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
     onShowToast?.('Reset demo tasks to exact workflow template');
   };
 
@@ -1899,32 +2037,48 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     const taskId = startingTask.id;
     const dateVal = actualStartDateInput || new Date().toISOString().split('T')[0];
 
-    setTaskList((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          const existingLogs = (t as any).statusLogs || [];
-          const newLog = startCommentInput.trim()
-            ? [
-                {
-                  id: `log-${Date.now()}`,
-                  text: `Moved to Ongoing: ${startCommentInput.trim()}`,
-                  timestamp: new Date().toLocaleString(),
-                  user: 'Current User'
-                }
-              ]
-            : [];
+    let updatedTargetTask: WBSTask | null = null;
+    const nextList = taskList.map((t) => {
+      if (t.id === taskId) {
+        const existingLogs = (t as any).statusLogs || [];
+        const newLog = startCommentInput.trim()
+          ? [
+              {
+                id: `log-${Date.now()}`,
+                text: `Moved to Ongoing: ${startCommentInput.trim()}`,
+                timestamp: new Date().toLocaleString(),
+                user: currentUser.first_name || 'Staff'
+              }
+            ]
+          : [];
 
-          return {
-            ...t,
-            status: 'IN_PROGRESS',
-            actual_start: dateVal,
-            delay_status: 'On Track',
-            statusLogs: [...existingLogs, ...newLog]
-          };
-        }
-        return t;
-      })
-    );
+        const updated: WBSTask = {
+          ...t,
+          status: 'IN_PROGRESS',
+          progress_percentage: 50,
+          progress_label: '0.5/1 lumpsum',
+          actual_start: dateVal,
+          delay_status: 'On Track',
+        };
+        (updated as any).statusLogs = [...existingLogs, ...newLog];
+        updatedTargetTask = updated;
+        return updated;
+      }
+      return t;
+    });
+
+    setTaskList(nextList);
+
+    try {
+      localStorage.setItem(primaryStorageKey, JSON.stringify(nextList));
+      localStorage.setItem(legacyStorageKey, JSON.stringify(nextList));
+    } catch (e) {}
+
+    if (updatedTargetTask) {
+      syncQuotationScheduleForTask(updatedTargetTask);
+    }
+    window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
+    window.dispatchEvent(new Event('booshnam_projects_updated'));
 
     onShowToast?.(`Task "${startingTask.title}" moved to Ongoing!`);
     handleCloseStartModal();
@@ -2277,12 +2431,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                               </button>
                             )}
-                            {(t.is_subtask || t.s_no === 2) && <CornerDownRight className="w-4 h-4 text-red-600 shrink-0" />}
+                            {Boolean(t.is_subtask) && <CornerDownRight className="w-4 h-4 text-red-600 shrink-0" />}
                             <span className={`font-bold text-slate-900 text-[13px] tracking-tight group-hover:text-red-600 transition-colors`}>
                               {t.title}
                             </span>
                           </div>
-                          {(!t.is_subtask && t.s_no !== 2) && (
+                          {!t.is_subtask && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2297,7 +2451,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         </div>
                       </td>
 
-                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or red "Start" button) */}
+                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or red plain text "Start" button - NO TAG/BOX) */}
                       <td className="py-3.5 px-4 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {isDone ? (
                           <button
@@ -2323,7 +2477,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleOpenStartModal(t)}
-                            className="px-4 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer active:scale-95 inline-flex items-center justify-center"
+                            className="text-red-600 hover:text-red-700 text-xs font-bold hover:underline cursor-pointer transition-colors p-0 text-left inline-flex items-center"
                             title="Click to start task"
                           >
                             Start

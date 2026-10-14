@@ -3,12 +3,13 @@ import {
   Folder, Plus, Search, ChevronDown, ChevronRight, 
   MoreVertical, ArrowLeft, Upload, Eye, Trash2, X, Check,
   FileText, Image as ImageIcon, Download, ExternalLink, ShieldCheck,
-  ZoomIn, ZoomOut, RotateCcw
+  ZoomIn, ZoomOut, RotateCcw, Clock
 } from 'lucide-react';
 import { Project, DesignDrawing } from '../../../types';
 import { addProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { confirmAction } from '../../../lib/dialogService';
 import { CustomSelect } from '../../CustomSelect';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
 
 interface DesignTabProps {
   project: Project;
@@ -192,8 +193,8 @@ export const DesignTab: React.FC<DesignTabProps> = ({ project, onShowToast }) =>
       version: uploadVersion.trim() || 'V1',
       approved_version: uploadVersion.trim() || 'V1',
       status: 'AFC Approved',
-      date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      author: `Uploaded ${uploadVersion.trim() || 'V1'} • ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`,
+      date: getCurrentUploadTimestamp(),
+      author: `Uploaded ${uploadVersion.trim() || 'V1'} • ${getCurrentUploadTimestamp()}`,
       folder: targetFolder,
       url: photoUrl,
       file_size: fileSizeStr

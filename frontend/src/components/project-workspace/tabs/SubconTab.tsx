@@ -13,7 +13,38 @@ interface SubconTabProps {
 const DEFAULT_WORK_ORDERS: SubconWorkOrder[] = [];
 
 export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) => {
-  const [workOrders, setWorkOrders] = useState<SubconWorkOrder[]>(DEFAULT_WORK_ORDERS);
+  const loadInitialWorkOrders = (): SubconWorkOrder[] => {
+    try {
+      const raw = localStorage.getItem(`booshnam_subcontractors_v1_${project.id}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+
+    // Fallback to project.assigned_subcontractors if defined
+    if (project.assigned_subcontractors && project.assigned_subcontractors.length > 0) {
+      return project.assigned_subcontractors.map((sc, idx) => ({
+        id: sc.id || `wo-assigned-${idx}`,
+        wo_number: `WO-2026-${String(idx + 1).padStart(3, '0')}`,
+        subcon_name: sc.name,
+        trade_scope: sc.trade_scope || 'Specialized Subcontractor',
+        contract_amount: 350000,
+        work_completed_percent: 0,
+        billed_amount: 0,
+        retention_percent: 5,
+        retention_amount: 0,
+        paid_amount: 0,
+        balance_payable: 0,
+        status: 'ACTIVE',
+        start_date: sc.assignment_date || new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]
+      }));
+    }
+    return DEFAULT_WORK_ORDERS;
+  };
+
+  const [workOrders, setWorkOrders] = useState<SubconWorkOrder[]>(() => loadInitialWorkOrders());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
@@ -62,7 +93,11 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
       end_date: endDate
     };
 
-    setWorkOrders([...workOrders, newWO]);
+    const updated = [...workOrders, newWO];
+    setWorkOrders(updated);
+    try {
+      localStorage.setItem(`booshnam_subcontractors_v1_${project.id}`, JSON.stringify(updated));
+    } catch (e) {}
     onShowToast?.(`Work Order ${newWO.wo_number} issued to ${newWO.subcon_name}`);
     setIsCreateOpen(false);
 

@@ -1,11 +1,12 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { 
   FileText, Folder, Download, Plus, Search, 
-  Eye, Check, X, Upload, HardDrive, FileCheck, Image, Shield 
+  Eye, Check, X, Upload, HardDrive, FileCheck, Image, Shield, Clock
 } from 'lucide-react';
 import { Project } from '../../../types';
 import { addProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { CustomSelect } from '../../CustomSelect';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
 
 interface FilesTabProps {
   project: Project;
@@ -102,7 +103,7 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
       category: docCategory,
       version: 'v1.0',
       size: '2.8 MB',
-      updated: new Date().toISOString().split('T')[0],
+      updated: getCurrentUploadTimestamp(),
       uploader: 'Site Engineer'
     };
 
@@ -241,8 +242,11 @@ export const FilesTab: React.FC<FilesTabProps> = ({ project, onShowToast }) => {
                   <td className="py-3.5 px-4 tracking-tight text-slate-500">
                     {doc.size}
                   </td>
-                  <td className="py-3.5 px-4 tracking-tight text-slate-500 text-[11px]">
-                    {doc.updated}
+                  <td className="py-3.5 px-4 tracking-tight text-slate-500 text-[11px] whitespace-nowrap">
+                    <span className="flex items-center gap-1 font-medium text-slate-700">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>{formatUploadTimestamp(doc.updated)}</span>
+                    </span>
                   </td>
                   <td className="py-3.5 px-4 text-slate-600">
                     {doc.uploader}

@@ -12,6 +12,8 @@ export interface TimesheetEntry {
   remarks?: string;
   files?: Array<{ name: string; size?: string; url?: string }>;
   created_at: number;
+  updated_at?: number;
+  last_updated_at?: string; // e.g. '14 Oct, 2026, 11:55 AM'
 }
 
 export interface QuotationScheduleTask {
@@ -35,6 +37,7 @@ export interface QuotationScheduleTask {
   actual_end?: string;
   forecast_end?: string;
   image_url?: string;
+  image_uploaded_at?: string;
   tag?: string;
   progress_user?: string;
   progress_date?: string;
@@ -99,7 +102,14 @@ export function saveTimesheet(entry: Omit<TimesheetEntry, 'id' | 'created_at'>):
 
 export function updateTimesheet(id: string, partial: Partial<TimesheetEntry>): TimesheetEntry[] {
   const current = getStoredTimesheets();
-  const updated = current.map(item => item.id === id ? { ...item, ...partial } : item);
+  const now = Date.now();
+  const formatted = formatDisplayDateTime(now);
+  const updated = current.map(item => item.id === id ? { 
+    ...item, 
+    ...partial,
+    updated_at: partial.updated_at || now,
+    last_updated_at: partial.last_updated_at || formatted
+  } : item);
   try {
     localStorage.setItem(TIMESHEET_STORAGE_KEY, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('booshnam_timesheets_updated', { detail: updated }));
@@ -162,5 +172,26 @@ export function formatDisplayDate(dateStr: string): string {
     return `${day} ${month}, ${year}`;
   } catch (e) {
     return dateStr;
+  }
+}
+
+// Format a date/timestamp into 'DD MMM, YYYY, hh:mm A'
+export function formatDisplayDateTime(val?: number | string | Date): string {
+  if (!val) return '';
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return String(val);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = String(hours).padStart(2, '0');
+    return `${day} ${month}, ${year}, ${formattedHours}:${minutes} ${ampm}`;
+  } catch (e) {
+    return String(val);
   }
 }

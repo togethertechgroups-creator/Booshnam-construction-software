@@ -47,7 +47,7 @@ import {
   UserAccount, 
   isPageAllowedForActiveUser 
 } from './lib/authService';
-import { syncProjectAssignmentNotifications, getNotifications } from './lib/notificationService';
+import { syncProjectAssignmentNotifications, syncTodayTasksReminderNotifications, getNotifications } from './lib/notificationService';
 import { getOrInitializeProjects } from './lib/departmentService';
 import { syncAllProjectsFinancials } from './lib/projectFinanceUtils';
 
@@ -326,11 +326,7 @@ export function App() {
       const synchronizedProjs = syncAllProjectsFinancials();
       const finalProjs = synchronizedProjs && synchronizedProjs.length > 0 ? synchronizedProjs : allDeptsProjs;
       setProjects(finalProjs);
-      if (finalProjs.length > 0) {
-        setSelectedProject(prev => prev || finalProjs[0]);
-      } else {
-        setSelectedProject(null);
-      }
+      setSelectedProject(prev => prev || null);
       window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: finalProjs }));
     } catch (e) {}
   }, []);
@@ -356,10 +352,7 @@ export function App() {
     return MOCK_USER;
   });
   const [projects, setProjects] = useState<Project[]>(() => getOrInitializeProjects());
-  const [selectedProject, setSelectedProject] = useState<Project | null>(() => {
-    const projs = getOrInitializeProjects();
-    return projs[0] || null;
-  });
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isMobileSimOpen, setIsMobileSimOpen] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -562,8 +555,9 @@ export function App() {
       active_role: matchedRole
     }));
 
-    // Synchronize assignment notifications from all projects for this user
+    // Synchronize assignment notifications and pending task reminders from all projects for this user
     syncProjectAssignmentNotifications();
+    syncTodayTasksReminderNotifications();
 
     // Check if there are any unread project assignments for this user and pop up a notification
     setTimeout(() => {
@@ -662,6 +656,9 @@ export function App() {
 
   // Guard main view navigation if dirty data is pending and check permission
   const handleNavigateView = async (targetView: string) => {
+    if (targetView === 'projects') {
+      window.dispatchEvent(new CustomEvent('booshnam_reset_projects_view'));
+    }
     if (targetView === currentView) return;
     if (!isPageAllowedForActiveUser(targetView)) {
       showToast('Access denied: You do not have permission to access this module');

@@ -1,3 +1,5 @@
+import { formatUploadTimestamp } from './timestampUtils';
+
 export interface ProjectPhoto {
   id: string;
   url: string;
@@ -44,7 +46,7 @@ export const addProjectPhoto = (
     id: `ph-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     url: photo.url,
     title: photo.title,
-    date: photo.date || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+    date: formatUploadTimestamp(photo.date),
     source: photo.source || 'Site Photo',
     category: photo.category || 'General',
     details: photo.details,

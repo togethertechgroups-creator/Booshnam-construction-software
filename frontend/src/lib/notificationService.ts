@@ -55,8 +55,14 @@ export function isNotificationForUser(
   const cleanRoleName = (roleName || '').toLowerCase().trim();
   const rec = (n.recipient || '').toLowerCase().trim();
 
-  const isAdmin = !roleCode || cleanRole === 'super_admin' || cleanRole === 'admin' || 
-    cleanRoleName.includes('admin') || cleanRoleName.includes('owner') || cleanName === 'admin' || cleanName === 'priya';
+  const isAdmin = !roleCode || cleanRole === 'super_admin' || cleanRole === 'admin' || cleanRole === 'owner_director' ||
+    cleanRoleName.includes('admin') || cleanRoleName.includes('owner') || cleanName === 'admin' || cleanName === 'superadmin' || cleanName === 'priya' || cleanName === 'rajesh' || cleanName === 'super administrator';
+
+  // 0. Today's Tasks & Pending Tasks Reminder:
+  // Must NEVER appear on Super Admin dashboard or notifications! Only for staff members and project assignees.
+  if (n.title?.includes("Today's Tasks") || n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-') || n.id?.startsWith('notif-today-tasks-')) {
+    if (isAdmin) return false;
+  }
 
   // 1. Task Assigned & Project Assigned:
   // ONLY for the specific individual or role assigned! Admin/Super Admin NEVER receives other people's assignment notifications.
@@ -211,12 +217,233 @@ export function syncProjectAssignmentNotifications(): void {
   }
 }
 
+/**
+ * Automatically syncs Today's Tasks & Pending Tasks reminder notification for staff members and project assignees.
+ * - If a task is not completed on its assigned date, it continues to appear and updates daily until completed.
+ * - Once marked completed, it automatically disappears from pending task reminders.
+ * - Strictly NEVER generates notifications for Super Admin.
+ */
+export function syncTodayTasksReminderNotifications(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    let sessionUser: any = null;
+    const rawSess = localStorage.getItem('booshnam_active_session_v2');
+    if (rawSess) sessionUser = JSON.parse(rawSess);
+    if (!sessionUser) {
+      const rawUser = localStorage.getItem('siteops_user');
+      if (rawUser) sessionUser = JSON.parse(rawUser);
+    }
+    if (!sessionUser) return;
+
+    const uName = (sessionUser.staff_name || sessionUser.first_name || sessionUser.username || '').toLowerCase().trim();
+    const uRole = (sessionUser.role_name || '').toLowerCase().trim();
+    const uCode = (sessionUser.role_code || '').toUpperCase().trim();
+
+    // MUST NOT RUN FOR SUPER ADMIN / ADMIN
+    const isAdmin = !uCode || uCode === 'SUPER_ADMIN' || uCode === 'ADMIN' || uCode === 'OWNER_DIRECTOR' ||
+      uRole.includes('admin') || uRole.includes('owner') || uName === 'admin' || uName === 'superadmin' || uName === 'priya' || uName === 'rajesh' || uName === 'super administrator';
+    
+    if (isAdmin) {
+      // Purge any reminder notifications if previously saved for admin
+      const allNotifs = getAllRawNotifications();
+      const cleaned = allNotifs.filter(n => !(n.title?.includes("Today's Tasks") || n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-') || n.id?.startsWith('notif-today-tasks-')));
+      if (cleaned.length !== allNotifs.length) {
+        saveNotifications(cleaned);
+      }
+      return;
+    }
+
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+
+    // Read projects
+    let projects: any[] = [];
+    const rawProjs = localStorage.getItem('booshnam_projects_v2');
+    if (rawProjs) projects = JSON.parse(rawProjs);
+    if (!Array.isArray(projects)) return;
+
+    const pendingTasksForUser: Array<{ 
+      id: string; 
+      title: string; 
+      projectName: string; 
+      projectId: string; 
+      isOverdue: boolean; 
+      daysOverdue: number;
+      assignedDateStr?: string;
+    }> = [];
+
+    projects.forEach((proj: any) => {
+      const pid = proj.id;
+      if (!pid) return;
+      const team = Array.isArray(proj.assigned_team) ? proj.assigned_team : [];
+      const userInTeam = team.find((mem: any) => {
+        const memName = (mem.name || '').toLowerCase().trim();
+        return memName === uName || memName.includes(uName) || uName.includes(memName);
+      });
+      const teamRole = (userInTeam?.role || '').toLowerCase().trim();
+
+      const rawTasks = localStorage.getItem(`booshnam_wbs_tasks_v2_${pid}`) || 
+                       localStorage.getItem(`booshnam_wbs_tasks_v10_${pid}`);
+      if (!rawTasks) return;
+      try {
+        const tList = JSON.parse(rawTasks);
+        if (!Array.isArray(tList)) return;
+
+        tList.forEach((t: any) => {
+          const aName = (t.assigned_to_name || t.assigned_to || '').toLowerCase().trim();
+          let isAssigned = false;
+          if (uName && (aName === uName || aName.includes(uName) || uName.includes(aName))) {
+            isAssigned = true;
+          } else if (Array.isArray(t.assigned_team) && t.assigned_team.some((mem: any) => (mem.name || '').toLowerCase().includes(uName))) {
+            isAssigned = true;
+          } else if (userInTeam && teamRole && (aName === teamRole || aName.includes(teamRole))) {
+            isAssigned = true;
+          } else if (userInTeam && uRole && (aName === uRole || aName.includes(uRole))) {
+            isAssigned = true;
+          }
+
+          if (!isAssigned) return;
+
+          // Check if already completed
+          const isDone = t.status === 'COMPLETED' || (typeof t.progress_percentage === 'number' && t.progress_percentage >= 100);
+          if (isDone) return;
+
+          const sDate = t.start_date || t.planned_start || '';
+          const eDate = t.end_date || t.planned_end || '';
+          const aDate = t.assignment_date || '';
+
+          const targetDate = eDate || aDate || sDate || '';
+          const activationDate = sDate || aDate || eDate || '';
+
+          // If task is scheduled strictly in the future, skip
+          if (activationDate > todayStr && targetDate > todayStr) return;
+
+          let isOverdue = false;
+          let daysOverdue = 0;
+
+          if (targetDate && targetDate < todayStr) {
+            isOverdue = true;
+            try {
+              const targetTime = new Date(`${targetDate.slice(0, 10)}T00:00:00`).getTime();
+              const todayTime = new Date(`${todayStr}T00:00:00`).getTime();
+              daysOverdue = Math.max(1, Math.floor((todayTime - targetTime) / (1000 * 60 * 60 * 24)));
+            } catch {
+              daysOverdue = 1;
+            }
+          } else if (aDate && aDate < todayStr && (!eDate || eDate <= todayStr)) {
+            isOverdue = true;
+            try {
+              const refTime = new Date(`${(eDate || aDate).slice(0, 10)}T00:00:00`).getTime();
+              const todayTime = new Date(`${todayStr}T00:00:00`).getTime();
+              daysOverdue = Math.max(1, Math.floor((todayTime - refTime) / (1000 * 60 * 60 * 24)));
+            } catch {
+              daysOverdue = 1;
+            }
+          }
+
+          pendingTasksForUser.push({
+            id: t.id,
+            title: t.title || t.name,
+            projectName: proj.name || 'Project',
+            projectId: pid,
+            isOverdue,
+            daysOverdue,
+            assignedDateStr: aDate || sDate || targetDate
+          });
+        });
+      } catch (e) {}
+    });
+
+    const allNotifs = getAllRawNotifications();
+    const uClean = uName.replace(/[^a-z0-9]/g, '-');
+    const notifKey = `notif-pending-tasks-${uClean}`;
+
+    // CASE 1: All tasks completed (or none assigned)
+    // Automatically remove reminder notifications for this user!
+    if (pendingTasksForUser.length === 0) {
+      const filtered = allNotifs.filter(n => {
+        const isReminder = n.id === notifKey || 
+                           n.id.startsWith(`notif-pending-tasks-${uClean}`) || 
+                           n.id.startsWith(`notif-today-tasks-${uClean}`) ||
+                           ((n.title?.includes("Today's Tasks") || n.title?.includes("Pending Tasks")) &&
+                            (n.recipient?.toLowerCase().trim() === uName || uName.includes(n.recipient?.toLowerCase().trim() || '')));
+        return !isReminder;
+      });
+
+      if (filtered.length !== allNotifs.length) {
+        saveNotifications(filtered);
+      }
+      return;
+    }
+
+    // CASE 2: User has pending tasks needing completion!
+    const overdueList = pendingTasksForUser.filter(t => t.isOverdue);
+    const todayList = pendingTasksForUser.filter(t => !t.isOverdue);
+    const totalPending = pendingTasksForUser.length;
+
+    let notifTitle = "Pending Tasks Reminder";
+    let notifMessage = "";
+
+    if (overdueList.length > 0 && todayList.length > 0) {
+      const maxOverdue = Math.max(...overdueList.map(t => t.daysOverdue));
+      notifTitle = `Pending Tasks Reminder (${totalPending} Pending • ${overdueList.length} Overdue)`;
+      const sampleNames = overdueList.slice(0, 2).map(t => `"${t.title}"`).join(', ');
+      notifMessage = `Reminder: You have ${totalPending} pending task(s) needing completion (${overdueList.length} overdue by up to ${maxOverdue} day(s), including ${sampleNames}, plus ${todayList.length} scheduled for today). Please complete them.`;
+    } else if (overdueList.length > 0) {
+      const maxOverdue = Math.max(...overdueList.map(t => t.daysOverdue));
+      notifTitle = `Pending Tasks Reminder (${overdueList.length} Overdue)`;
+      const sampleNames = overdueList.slice(0, 2).map(t => `"${t.title}"`).join(', ');
+      const extra = overdueList.length > 2 ? ` +${overdueList.length - 2} more` : '';
+      notifMessage = `Reminder: ${overdueList.length} task(s) (${sampleNames}${extra}) were not completed on their assigned date (overdue up to ${maxOverdue} day(s)). Please complete them as soon as possible.`;
+    } else {
+      notifTitle = `Today's Tasks Reminder (${todayList.length} Scheduled)`;
+      const sampleNames = todayList.slice(0, 2).map(t => `"${t.title}"`).join(', ');
+      const extra = todayList.length > 2 ? ` +${todayList.length - 2} more` : '';
+      notifMessage = `You have ${todayList.length} task(s) scheduled for completion today (${sampleNames}${extra}). Please complete them.`;
+    }
+
+    // Clean any prior versions of reminders for this user
+    const remainingNotifs = allNotifs.filter(n => {
+      if (n.id === notifKey) return false;
+      const isOldReminder = n.id.startsWith(`notif-pending-tasks-${uClean}`) || 
+                            n.id.startsWith(`notif-today-tasks-${uClean}`) ||
+                            ((n.title?.includes("Today's Tasks") || n.title?.includes("Pending Tasks")) &&
+                             (n.recipient?.toLowerCase().trim() === uName || uName.includes(n.recipient?.toLowerCase().trim() || '')));
+      return !isOldReminder;
+    });
+
+    const activeReminderNotif: AppNotification = {
+      id: notifKey,
+      title: notifTitle,
+      message: notifMessage,
+      type: 'TASK_ASSIGNED',
+      recipient: sessionUser.staff_name || sessionUser.username,
+      sender: 'SiteOps System',
+      projectName: pendingTasksForUser[0].projectName,
+      projectId: pendingTasksForUser[0].projectId,
+      taskName: pendingTasksForUser[0].title,
+      timestamp: 'Today (Daily update)',
+      read: false
+    };
+
+    saveNotifications([activeReminderNotif, ...remainingNotifs]);
+  } catch (e) {
+    console.error('Failed to sync today task reminder notifications', e);
+  }
+}
+
+export const syncPendingTasksReminderNotifications = syncTodayTasksReminderNotifications;
+
 export function getNotifications(
   recipientName?: string,
   roleCode?: string,
   roleName?: string
 ): AppNotification[] {
   syncProjectAssignmentNotifications();
+  syncTodayTasksReminderNotifications();
 
   const all = getAllRawNotifications();
   let sessionStaffName: string | undefined;

@@ -3,10 +3,11 @@ import {
   X, Search, Calendar, Pencil, ChevronDown, ChevronUp, 
   Upload, Check, Building2, Plus, ArrowLeftRight, FileText,
   Boxes, CreditCard, DollarSign, ArrowUpRight, ArrowDownRight,
-  ShieldCheck, AlertCircle, Sparkles, User
+  ShieldCheck, AlertCircle, Sparkles, User, Clock
 } from 'lucide-react';
 import { Project } from '../../types';
 import { PartyRecord, BankAccountRecord, getFinanceParties } from '../../lib/financeSyncService';
+import { getCurrentUploadTimestamp } from '../../lib/timestampUtils';
 
 // All Transaction Option definitions matching Image 1
 export interface TransactionTypeOption {
@@ -87,6 +88,8 @@ interface CreateTransactionModalFlowProps {
     category?: string;
     notes?: string;
     files?: File[];
+    fileUploadTimestamps?: string[];
+    fileAttachments?: Array<{ name: string; size: string; uploadedAt: string }>;
   }) => void;
   buttonRef?: React.RefObject<HTMLButtonElement | null>;
 }
@@ -124,12 +127,15 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
   const [partySearchQuery, setPartySearchQuery] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Bank Transfer' | 'Cheque'>('Bank Transfer');
-  const [selectedBankId, setSelectedBankId] = useState<string>('');
+  const [selectedBankId, setSelectedBankId] = useState<string>(() => {
+    return bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || '';
+  });
   const [costCode, setCostCode] = useState('');
   const [referenceNo, setReferenceNo] = useState('');
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const [notes, setNotes] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [fileTimestamps, setFileTimestamps] = useState<string[]>([]);
   const [formErrors, setFormErrors] = useState<{ party?: string; amount?: string }>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,12 +155,13 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
     setPartySearchQuery('');
     setAmount('');
     setPaymentMethod('Bank Transfer');
-    setSelectedBankId('');
+    setSelectedBankId(bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || '');
     setCostCode('');
     setReferenceNo('');
     setIsMoreDetailsOpen(false);
     setNotes('');
     setUploadedFiles([]);
+    setFileTimestamps([]);
     setFormErrors({});
     setSelectedProject(null);
     setProjectSearchQuery('');
@@ -301,12 +308,16 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
+      const nowTs = getCurrentUploadTimestamp();
+      const newTimestamps = filesArray.map(() => nowTs);
       setUploadedFiles(prev => [...prev, ...filesArray]);
+      setFileTimestamps(prev => [...prev, ...newTimestamps]);
     }
   };
 
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setFileTimestamps(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -327,8 +338,9 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
       return;
     }
 
+    const finalBankId = selectedBankId || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || '';
     const matchedParty = parties.find(p => p.name.trim().toLowerCase() === partyName.trim().toLowerCase());
-    const matchedAccount = bankAccounts.find(b => b.id === selectedBankId);
+    const matchedAccount = bankAccounts.find(b => b.id === finalBankId);
 
     onSaveSuccess({
       transactionType: selectedOption.name,
@@ -341,13 +353,19 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
       partyId: matchedParty?.id,
       amount: numAmt,
       paymentMethod,
-      bankAccountId: selectedBankId,
-      bankAccountName: matchedAccount?.accountName,
+      bankAccountId: finalBankId,
+      bankAccountName: matchedAccount?.accountName || (finalBankId === 'cash' ? 'Cash Account' : 'Company Account'),
       costCode: costCode || undefined,
       referenceNo: referenceNo.trim() || undefined,
       category: selectedOption.group,
       notes: notes.trim() || undefined,
-      files: uploadedFiles
+      files: uploadedFiles,
+      fileUploadTimestamps: fileTimestamps,
+      fileAttachments: uploadedFiles.map((f, idx) => ({
+        name: f.name,
+        size: `${(f.size / 1024).toFixed(0)} KB`,
+        uploadedAt: fileTimestamps[idx] || getCurrentUploadTimestamp()
+      }))
     });
 
     resetAllFields();
@@ -934,23 +952,23 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
                   ))}
                 </div>
 
-                {/* Bank Account Selector if Bank Transfer */}
-                {paymentMethod === 'Bank Transfer' && bankAccounts.length > 0 && (
+                {/* Bank / Cash Account Selector */}
+                {bankAccounts.length > 0 && (
                   <div className="pt-2 border-t border-slate-100">
-                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
-                      SELECT BANK ACCOUNT:
+                    <label className="text-[10px] font-bold text-slate-700 block mb-1 uppercase tracking-wider">
+                      {selectedOption.type === 'INCOME' ? 'Deposit Into Account *' : 'Pay / Deduct From Account *'}
                     </label>
                     <select
                       value={selectedBankId}
                       onChange={e => setSelectedBankId(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:border-red-600"
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500 cursor-pointer"
                     >
-                      <option value="">Default Company Bank Account</option>
                       {bankAccounts.map(b => (
                         <option key={b.id} value={b.id}>
-                          {b.accountName} - {b.accountNumber ? `••••${b.accountNumber.slice(-4)}` : ''} (₹{b.balance?.toLocaleString('en-IN')})
+                          {b.accountName} {b.isPrimary ? '(PRIMARY)' : ''} - {b.accountNumber ? `••••${b.accountNumber.slice(-4)}` : ''} (Balance: ₹{b.balance?.toLocaleString('en-IN')})
                         </option>
                       ))}
+                      <option value="cash">Cash Account / Petty Cash</option>
                     </select>
                   </div>
                 )}
@@ -1037,16 +1055,29 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
                   <span className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</span>
                 </div>
 
-                {/* Uploaded files preview */}
+                {/* Uploaded files preview with date & time */}
                 {uploadedFiles.length > 0 && (
-                  <div className="mt-2 space-y-1">
+                  <div className="mt-2.5 space-y-2">
                     {uploadedFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-100 text-[11px] text-slate-700">
-                        <span className="truncate max-w-[280px]">{file.name}</span>
+                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 shadow-2xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                            <FileText className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="truncate block font-semibold text-slate-800 text-[11px] max-w-[220px] sm:max-w-[260px]">{file.name}</span>
+                            <span className="text-[10px] text-slate-500 flex items-center gap-1 font-medium mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>Uploaded: <strong className="text-slate-700">{fileTimestamps[idx] || getCurrentUploadTimestamp()}</strong></span>
+                              <span>• {(file.size / 1024).toFixed(0)} KB</span>
+                            </span>
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveFile(idx)}
-                          className="text-slate-400 hover:text-red-600 p-0.5"
+                          className="text-slate-400 hover:text-red-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors shrink-0"
+                          title="Remove file"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>

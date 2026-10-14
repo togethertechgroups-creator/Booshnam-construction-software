@@ -6,7 +6,7 @@ import {
   FolderKanban, ListTodo, MessageSquare, Check,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { TimesheetEntry } from '../lib/timesheetService';
+import { TimesheetEntry, formatDisplayDateTime } from '../lib/timesheetService';
 
 interface TimeLogDetailViewProps {
   isOpen?: boolean;
@@ -90,6 +90,15 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   Verified
                 </span>
+                {(timesheet.last_updated_at || timesheet.updated_at) && (
+                  <span 
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200"
+                    title={`Last Updated: ${timesheet.last_updated_at || formatDisplayDateTime(timesheet.updated_at)}`}
+                  >
+                    <Clock className="w-3 h-3 text-amber-600" />
+                    Updated
+                  </span>
+                )}
               </div>
             </div>
 
@@ -189,7 +198,7 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
             {/* -------------------------------------------------------------- */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
               
-              {/* Card Header: Red Bar + Title + Entry ID */}
+              {/* Card Header: Red Bar + Title + Entry ID + Last Updated */}
               <div className="px-4 py-3 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-3.5 bg-red-600 rounded-full" />
@@ -197,9 +206,17 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
                     Additional Details:
                   </h3>
                 </div>
-                <span className="text-[11px] text-slate-400">
-                  Entry ID: <code className="font-mono text-slate-600 font-semibold">{timesheet.id}</code>
-                </span>
+                <div className="flex items-center gap-2">
+                  {(timesheet.last_updated_at || timesheet.updated_at) && (
+                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50/90 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      <span>Updated: {timesheet.last_updated_at || formatDisplayDateTime(timesheet.updated_at)}</span>
+                    </span>
+                  )}
+                  <span className="text-[11px] text-slate-400">
+                    Entry ID: <code className="font-mono text-slate-600 font-semibold">{timesheet.id}</code>
+                  </span>
+                </div>
               </div>
 
               {/* Details List */}
@@ -254,6 +271,32 @@ export const TimeLogDetailView: React.FC<TimeLogDetailViewProps> = ({
                   </span>
                   <div className="flex-1 text-slate-900 font-semibold">
                     {timesheet.display_date || timesheet.date}
+                  </div>
+                </div>
+
+                {/* Last Updated Date & Time */}
+                <div className={`px-4 py-3 flex items-start gap-3 hover:bg-slate-50/40 transition-colors ${
+                  timesheet.last_updated_at || timesheet.updated_at ? 'bg-amber-50/25' : ''
+                }`}>
+                  <span className="w-24 text-slate-400 font-medium shrink-0 flex items-center gap-1.5 pt-0.5">
+                    <Clock className={`w-3.5 h-3.5 ${timesheet.last_updated_at || timesheet.updated_at ? 'text-amber-600' : 'text-slate-400'}`} />
+                    <span>Last Updated:</span>
+                  </span>
+                  <div className="flex-1 flex flex-wrap items-center gap-2">
+                    {timesheet.last_updated_at || timesheet.updated_at ? (
+                      <>
+                        <span className="text-slate-900 font-bold">
+                          {timesheet.last_updated_at || formatDisplayDateTime(timesheet.updated_at)}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                          Auto-recorded
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400 italic">
+                        Not updated yet (Created {formatDisplayDateTime(timesheet.created_at) || timesheet.display_date || timesheet.date})
+                      </span>
+                    )}
                   </div>
                 </div>
 

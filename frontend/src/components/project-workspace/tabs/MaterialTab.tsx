@@ -2,11 +2,12 @@ import React, { useState, useRef } from 'react';
 import { 
   ShoppingCart, Plus, PackageCheck, AlertTriangle, 
   Search, Filter, Check, X, FileText, Truck, ArrowDownRight, Layers,
-  Upload, Image as ImageIcon
+  Upload, Image as ImageIcon, Clock
 } from 'lucide-react';
 import { Project, MaterialRequest, GoodsReceiptNote, StockItem } from '../../../types';
 import { addProjectPhoto } from '../../../lib/projectPhotoUtils';
 import { CustomSelect } from '../../CustomSelect';
+import { getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
 
 interface MaterialTabProps {
   project: Project;
@@ -93,6 +94,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
   const [grnChallan, setGrnChallan] = useState('');
   const [grnNotes, setGrnNotes] = useState('');
   const [grnPhotoUrl, setGrnPhotoUrl] = useState<string | null>(null);
+  const [grnPhotoTimestamp, setGrnPhotoTimestamp] = useState<string>('');
   const grnPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const lowStockCount = stock.filter(s => s.is_low_stock).length;
@@ -104,6 +106,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         setGrnPhotoUrl(reader.result);
+        setGrnPhotoTimestamp(getCurrentUploadTimestamp());
       }
     };
     reader.readAsDataURL(file);
@@ -174,6 +177,7 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
     setGrnVehicle('');
     setGrnNotes('');
     setGrnPhotoUrl(null);
+    setGrnPhotoTimestamp('');
     if (grnPhotoInputRef.current) grnPhotoInputRef.current.value = '';
   };
 
@@ -662,8 +666,9 @@ export const MaterialTab: React.FC<MaterialTabProps> = ({
                         alt="Challan preview" 
                         className="max-h-32 w-auto mx-auto rounded-lg object-contain shadow-xs border border-slate-200"
                       />
-                      <div className="text-[11px] font-semibold text-emerald-700">
-                        Challan photo attached • Synced to Project Photos
+                      <div className="text-[11px] font-semibold text-emerald-700 flex items-center justify-center gap-1">
+                        <Clock className="w-3.5 h-3.5 inline text-emerald-600" />
+                        <span>Challan attached • Uploaded: {grnPhotoTimestamp || getCurrentUploadTimestamp()}</span>
                       </div>
                     </div>
                   ) : (

@@ -203,7 +203,9 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
           {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
           {prefix && <span className="text-slate-400 font-normal shrink-0">{prefix}</span>}
           {dot && <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />}
-          <span className="truncate">{selectedOption.label}</span>
+          <span className={`truncate ${!value ? 'text-slate-400 font-normal' : 'text-slate-800'}`}>
+            {selectedOption.label}
+          </span>
           {badge !== undefined && (
             <span className="ml-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 font-bold text-[10px] rounded-md">
               {badge}
@@ -223,7 +225,7 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
         <div
           className={`absolute top-full mt-1.5 ${
             align === 'right' ? 'right-0' : 'left-0'
-          } z-50 w-full min-w-[200px] max-w-sm bg-white rounded-xl border border-slate-200/90 shadow-2xl p-1.5 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-150 select-none ring-1 ring-black/5 ${dropdownClassName}`}
+          } z-50 w-full min-w-[200px] bg-white rounded-xl border border-slate-200/90 shadow-2xl p-1.5 text-xs text-slate-800 animate-in fade-in zoom-in-95 duration-150 select-none ring-1 ring-black/5 ${dropdownClassName}`}
         >
           {/* Search bar inside dropdown if enabled/many options */}
           {shouldShowSearch && (

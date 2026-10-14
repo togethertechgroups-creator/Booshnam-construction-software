@@ -16,6 +16,7 @@ import { confirmAction, setFormDirty, clearFormDirty, confirmNavigationIfDirty }
 import { CustomSelect } from '../../CustomSelect';
 import { PREDEFINED_TASKS_TEMPLATE } from '../../../lib/mockData';
 import { syncQuotationTaskToProject, QuotationScheduleTask } from '../../../lib/quotationScheduleService';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
 
 interface TaskTabProps {
   project: Project;
@@ -77,6 +78,7 @@ export interface TaskExtraMeta {
   workforce?: TaskWorkforceResource[];
   equipment?: TaskEquipmentResource[];
   progressUpdates?: TaskProgressEntry[];
+  proofUploadedAt?: string;
   messages?: TaskMessageEntry[];
   statusLogs?: TaskStatusLogEntry[];
 }
@@ -843,11 +845,20 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         const dataUrl = reader.result;
+        const timestamp = getCurrentUploadTimestamp();
         setFormProofUrl(dataUrl);
         if (editingTask) {
-          setEditingTask(prev => prev ? { ...prev, completion_proof_url: dataUrl } : null);
+          setEditingTask(prev => prev ? { 
+            ...prev, 
+            completion_proof_url: dataUrl,
+            completion_proof_uploaded_at: timestamp
+          } : null);
+          saveTaskMeta(editingTask.id, prev => ({
+            ...prev,
+            proofUploadedAt: timestamp
+          }));
         }
-        onShowToast?.('Task photo attached! Click "Save Changes" below to apply & sync.');
+        onShowToast?.(`Task photo attached on ${timestamp}! Click "Save Changes" below to apply & sync.`);
       }
     };
     reader.readAsDataURL(file);
@@ -1315,6 +1326,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
     const proofUrlToSave = formProofUrl || editingTask.completion_proof_url;
 
+    const nowTimestamp = getCurrentUploadTimestamp();
+
     const updatedTask: WBSTask = {
       ...editingTask,
       title: formTitle.trim() || editingTask.title,
@@ -1328,9 +1341,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       assigned_to_name: formAssigned || editingTask.assigned_to_name,
       delay_status: formDelayStatus || editingTask.delay_status,
       completion_proof_url: proofUrlToSave,
+      completion_proof_uploaded_at: proofUrlToSave ? (editingTask.completion_proof_uploaded_at || nowTimestamp) : editingTask.completion_proof_uploaded_at,
       completion_remarks: formRemarks || editingTask.completion_remarks,
       completed_by: isCompleted ? (editingTask.completed_by || currentUser.first_name || 'Staff') : editingTask.completed_by,
-      completed_at: isCompleted ? (editingTask.completed_at || todayStr) : editingTask.completed_at,
+      completed_at: isCompleted ? (editingTask.completed_at || nowTimestamp) : editingTask.completed_at,
       progress_percentage: isCompleted ? 100 : (editingTask.progress_percentage || 0),
       progress_label: isCompleted ? '1/1 lumpsum' : (editingTask.progress_label || '0/1 lumpsum')
     };
@@ -1349,12 +1363,13 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     // 3. Save to extra metadata
     saveTaskMeta(updatedTask.id, prev => ({
       ...prev,
+      proofUploadedAt: proofUrlToSave ? (prev.proofUploadedAt || nowTimestamp) : prev.proofUploadedAt,
       progressUpdates: proofUrlToSave ? [
         {
           id: `prog-${Date.now()}`,
           user: currentUser.first_name || 'Staff',
           amount: isCompleted ? '1 lumpsum ✓' : `${updatedTask.progress_percentage || 50}%`,
-          date: todayStr,
+          date: nowTimestamp,
           note: formRemarks || 'Updated task details and attached proof photo.',
           proof_url: proofUrlToSave
         },
@@ -1364,7 +1379,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         {
           id: `log-${Date.now()}`,
           text: `Task saved: Status is ${updatedTask.status}${proofUrlToSave ? ' with attached photo' : ''}`,
-          timestamp: `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          timestamp: nowTimestamp,
           user: currentUser.first_name || 'Staff'
         },
         ...(prev.statusLogs || [])
@@ -1587,24 +1602,25 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   // Submit Progress Update (+ Progress button)
   const handleSaveProgressUpdate = () => {
     if (!editingTask) return;
-    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const progressTimestamp = getCurrentUploadTimestamp();
     const newEntry: TaskProgressEntry = {
       id: `prog-${Date.now()}`,
       user: currentUser.first_name || currentUser.username || 'Dasari Uma Sri Devi',
       amount: progressAmountInput.trim() || '1 lumpsum',
-      date: todayStr,
+      date: progressTimestamp,
       note: progressNoteInput.trim() || undefined,
       proof_url: formProofUrl || undefined
     };
 
     saveTaskMeta(editingTask.id, prev => ({
       ...prev,
+      proofUploadedAt: formProofUrl ? (prev.proofUploadedAt || progressTimestamp) : prev.proofUploadedAt,
       progressUpdates: [newEntry, ...(prev.progressUpdates || [])],
       statusLogs: [
         {
           id: `log-${Date.now()}`,
           text: `Progress recorded: ${newEntry.amount}${progressNoteInput ? ` (${progressNoteInput})` : ''}`,
-          timestamp: `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          timestamp: progressTimestamp,
           user: currentUser.first_name || 'Staff'
         },
         ...(prev.statusLogs || [])
@@ -1612,6 +1628,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     }));
 
     if (progressIsCompleted) {
+      const todayStr = new Date().toISOString().split('T')[0];
       const updatedTask: WBSTask = {
         ...editingTask,
         status: 'COMPLETED',
@@ -1620,9 +1637,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         actual_end: editingTask.end_date || todayStr,
         delay_status: 'On Time',
         completion_proof_url: formProofUrl || editingTask.completion_proof_url,
+        completion_proof_uploaded_at: formProofUrl ? progressTimestamp : editingTask.completion_proof_uploaded_at,
         completion_remarks: progressNoteInput || editingTask.completion_remarks,
         completed_by: currentUser.first_name || 'Dasari Uma Sri Devi',
-        completed_at: todayStr
+        completed_at: progressTimestamp
       };
       setEditingTask(updatedTask);
       setTaskList(prev => prev.map(t => t.id === editingTask.id ? updatedTask : t));
@@ -3044,9 +3062,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       {(editingTask.completion_proof_url || formProofUrl) && (
                         <div className="p-3.5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              ATTACHED COMPLETION PROOF
-                            </span>
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                ATTACHED COMPLETION PROOF
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>Uploaded: <strong className="text-slate-700">{currentTaskMeta.proofUploadedAt || editingTask.completion_proof_uploaded_at || formatUploadTimestamp(editingTask.completed_at || editingTask.actual_end)}</strong></span>
+                              </span>
+                            </div>
                             <button
                               type="button"
                               onClick={() => setPreviewProofModal(editingTask.completion_proof_url || formProofUrl)}
@@ -3090,8 +3114,9 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                     <span className="text-xs font-bold text-slate-900 block leading-tight">
                                       {prog.user}
                                     </span>
-                                    <span className="text-[10px] text-slate-400">
-                                      {prog.date}
+                                    <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                      <Clock className="w-3 h-3 text-slate-400" />
+                                      <span>{formatUploadTimestamp(prog.date)}</span>
                                     </span>
                                   </div>
                                 </div>
@@ -3331,9 +3356,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                   <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-xs">
                       {(formProofUrl || editingTask.completion_proof_url) && (
-                        <span className="flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-semibold text-[11px] shadow-2xs">
+                        <span className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-semibold text-[11px] shadow-2xs">
                           <Camera className="w-3.5 h-3.5 text-emerald-600" />
                           <span>Photo Attached</span>
+                          <span className="text-[10px] text-emerald-600 font-normal">
+                            ({currentTaskMeta.proofUploadedAt || editingTask.completion_proof_uploaded_at || formatUploadTimestamp()})
+                          </span>
                         </span>
                       )}
                       <span className="text-slate-500 text-xs hidden sm:inline">

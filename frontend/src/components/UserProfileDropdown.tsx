@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Bell, User as UserIcon, Settings, UserX, LogOut, X, Pencil, ChevronDown,
-  CheckCircle2, FileText, Briefcase, Check, Sparkles, Eye, ArrowRight, CreditCard
+  CheckCircle2, FileText, Briefcase, Check, Sparkles, Eye, ArrowRight, CreditCard,
+  AlertTriangle, Clock
 } from 'lucide-react';
 import { User } from '../types';
 import { MOCK_USER } from '../lib/mockData';
@@ -126,11 +127,15 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
     window.addEventListener('siteops_user_updated', handleSync);
     window.addEventListener('booshnam_session_changed', handleSync);
     window.addEventListener('siteops_notifications_updated', handleSync);
+    window.addEventListener('booshnam_wbs_tasks_updated', handleSync);
+    window.addEventListener('booshnam_projects_updated', handleSync);
 
     return () => {
       window.removeEventListener('siteops_user_updated', handleSync);
       window.removeEventListener('booshnam_session_changed', handleSync);
       window.removeEventListener('siteops_notifications_updated', handleSync);
+      window.removeEventListener('booshnam_wbs_tasks_updated', handleSync);
+      window.removeEventListener('booshnam_projects_updated', handleSync);
     };
   }, []);
 
@@ -371,11 +376,15 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                           n.type === 'TASK_COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
                           n.type === 'PROJECT_ASSIGNED' ? 'bg-blue-100 text-blue-700' :
                           n.type === 'PAYMENT_REQUEST' ? 'bg-red-100 text-red-700' :
+                          (n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-')) ? 'bg-rose-100 text-rose-700 border border-rose-200' :
+                          (n.title?.includes("Today's Tasks") || n.id?.startsWith('notif-today-tasks-')) ? 'bg-amber-100 text-amber-700 border border-amber-200' :
                           'bg-amber-100 text-amber-700'
                         }`}>
                           {n.type === 'TASK_COMPLETED' ? <CheckCircle2 className="w-3.5 h-3.5" /> :
                            n.type === 'PROJECT_ASSIGNED' ? <Briefcase className="w-3.5 h-3.5" /> :
                            n.type === 'PAYMENT_REQUEST' ? <CreditCard className="w-3.5 h-3.5" /> :
+                           (n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-')) ? <AlertTriangle className="w-3.5 h-3.5" /> :
+                           (n.title?.includes("Today's Tasks") || n.id?.startsWith('notif-today-tasks-')) ? <Clock className="w-3.5 h-3.5" /> :
                            <FileText className="w-3.5 h-3.5" />}
                         </div>
                         <div className="min-w-0 flex-1">

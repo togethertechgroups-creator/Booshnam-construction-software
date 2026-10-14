@@ -79,6 +79,7 @@ import {
   getUserAllowedDepartmentIds
 } from '../lib/departmentService';
 import { getCurrentUserAccount } from '../lib/authService';
+import { TodayTasksReminderBanner } from '../components/dashboard/TodayTasksReminderBanner';
 
 export interface UnderlyingAttendanceRecord {
   id: string;
@@ -1808,6 +1809,14 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         {/* OPERATIONAL TAB CONTENT */}
         {activeTab === 'operational' && (
           <div className="p-6 space-y-6">
+
+            {/* Today's Tasks Reminder Notification Banner (Only for Staff Members & Project Assignees, Never for Super Admin) */}
+            <TodayTasksReminderBanner
+              projects={projects}
+              onSelectProject={onSelectProject}
+              onNavigate={onNavigate}
+              onShowToast={showToast}
+            />
 
             {/* 4 Status KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

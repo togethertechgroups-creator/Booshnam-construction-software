@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { 
   DollarSign, CheckCircle2, Clock, AlertCircle, Plus, 
   Search, Filter, Download, ArrowUpRight, ArrowDownRight, 
-  Receipt, Building2, User, FileText, Check, X, ShieldCheck,
+  Receipt, Building2, User, Users, FileText, Check, X, ShieldCheck,
   CreditCard, Wallet, Landmark, TrendingUp, Boxes, Gift, 
   Trophy, Bell, ChevronDown, ExternalLink, RefreshCw, Printer, 
   Sparkles, SlidersHorizontal, Calendar, Phone, Mail, FileSpreadsheet,
@@ -22,6 +22,10 @@ import { CreatePaymentRequestDrawerFlow, PaymentRequestSubmitData } from '../com
 import { PaymentRequestOverviewDrawer } from '../components/finance/PaymentRequestOverviewDrawer';
 import { ensurePartyExists, getFinanceParties, saveFinanceParties } from '../lib/financeSyncService';
 import { exportInvoiceToPDF } from '../lib/invoiceExportService';
+import { FinanceDashboardTab } from '../components/finance/FinanceDashboardTab';
+import { ProjectFinanceTab } from '../components/finance/ProjectFinanceTab';
+import { FinancialReportsTab } from '../components/finance/FinancialReportsTab';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../lib/timestampUtils';
 
 export interface PaymentRequestItem {
   id: string;
@@ -98,6 +102,10 @@ export interface FinanceTransaction {
   transactionType?: string;
   costCode?: string;
   notes?: string;
+  bankAccountId?: string;
+  bankAccountName?: string;
+  attachmentName?: string;
+  attachmentUploadedAt?: string;
 }
 
 export interface BankAccountRecord {
@@ -168,6 +176,7 @@ export interface ExpenseItem {
   referenceNo?: string;
   billNumber?: string;
   billFile?: string;
+  billFileUploadedAt?: string;
   status: 'Approved' | 'Paid' | 'Pending Approval' | 'Rejected';
   approvedBy?: string;
   notes?: string;
@@ -256,12 +265,23 @@ export interface UnifiedPartyActivityItem {
   badgeClass: string;
 }
 
+export type FinanceTabKey = 
+  | 'dashboard'
+  | 'party' 
+  | 'transaction' 
+  | 'payment_requests' 
+  | 'expenses' 
+  | 'account_transfer' 
+  | 'accounts' 
+  | 'project_finance' 
+  | 'reports';
+
 interface AccountsFinanceViewProps {
   projects?: Project[];
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   onShowToast?: (msg: string) => void;
-  initialTab?: 'party' | 'transaction' | 'payment_requests' | 'expenses' | 'account_transfer' | 'accounts';
+  initialTab?: FinanceTabKey;
 }
 
 export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
@@ -271,8 +291,8 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   onShowToast,
   initialTab
 }) => {
-  // Navigation Tabs: Party, Transaction, Payment Requests, Expenses, Account to Account Transfer, Accounts
-  const [activeTab, setActiveTab] = useState<'party' | 'transaction' | 'payment_requests' | 'expenses' | 'account_transfer' | 'accounts'>(initialTab || 'party');
+  // Navigation Tabs: Dashboard, Party, Transaction, Payment Requests, Expenses, Account to Account Transfer, Accounts, Project Finance, Reports
+  const [activeTab, setActiveTab] = useState<FinanceTabKey>(initialTab || 'dashboard');
 
   useEffect(() => {
     if (initialTab) {
@@ -394,6 +414,23 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
     }
   ];
 
+  // Helper to format proper Bank / Account display name (guaranteeing Bank Name is shown rather than holder name)
+  const getAccountDisplayName = (ba: BankAccountRecord | { bankName?: string; accountName?: string; accountHolderName?: string }) => {
+    const isHolder = Boolean(ba.accountName && ba.accountHolderName && ba.accountName.trim().toLowerCase() === ba.accountHolderName.trim().toLowerCase());
+    if (isHolder && ba.bankName && ba.bankName.trim() && ba.bankName !== 'Commercial Bank') {
+      const bn = ba.bankName.trim();
+      return /account|a\/c|bank/i.test(bn) ? bn : `${bn} A/c`;
+    }
+    if (ba.accountName && ba.accountName.trim() && !isHolder) {
+      return ba.accountName.trim();
+    }
+    if (ba.bankName && ba.bankName.trim() && ba.bankName !== 'Commercial Bank') {
+      const bn = ba.bankName.trim();
+      return /account|a\/c|bank/i.test(bn) ? bn : `${bn} A/c`;
+    }
+    return ba.accountName || ba.bankName || 'Bank Account';
+  };
+
   // Bank Accounts State with LocalStorage Persistence
   const [bankAccounts, setBankAccounts] = useState<BankAccountRecord[]>(() => {
     try {
@@ -403,11 +440,19 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
         if (Array.isArray(parsed) && parsed.length > 0) {
           const filtered = parsed
             .filter((b: BankAccountRecord) => !['ba-hdfc', 'ba-sbi', 'ba-default-1', 'ba-default-2'].includes(b.id))
-            .map((b: BankAccountRecord) => ({
-              ...b,
-              balance: (b.balance === 4850000 || b.balance === 12450000 || b.balance === 17583911.51) ? 0 : (b.balance || 0),
-              openingBalance: (b.openingBalance === 4850000 || b.openingBalance === 12450000) ? 0 : (b.openingBalance || 0),
-            }));
+            .map((b: BankAccountRecord) => {
+              const isHolder = Boolean(b.accountName && b.accountHolderName && b.accountName.trim().toLowerCase() === b.accountHolderName.trim().toLowerCase());
+              const isPriyaOrBug = isHolder || !b.accountName || b.accountName.toLowerCase() === 'priya';
+              const cleanAccName = isPriyaOrBug && b.bankName && b.bankName !== 'Commercial Bank'
+                ? (/account|a\/c|bank/i.test(b.bankName.trim()) ? b.bankName.trim() : `${b.bankName.trim()} A/c`)
+                : (b.accountName || `${b.bankName || 'Bank'} A/c`);
+              return {
+                ...b,
+                accountName: cleanAccName,
+                balance: (b.balance === 4850000 || b.balance === 12450000 || b.balance === 17583911.51) ? 0 : (b.balance || 0),
+                openingBalance: (b.openingBalance === 4850000 || b.openingBalance === 12450000) ? 0 : (b.openingBalance || 0),
+              };
+            });
           if (filtered.length > 0) {
             return filtered;
           }
@@ -829,6 +874,7 @@ const toIsoDate = (displayStr: string) => {
   const [isCustomPartyInput, setIsCustomPartyInput] = useState(false);
   const [isCustomPRPartyInput, setIsCustomPRPartyInput] = useState(false);
   const [isCustomExpPartyInput, setIsCustomExpPartyInput] = useState(false);
+  const [isCustomExpProjectInput, setIsCustomExpProjectInput] = useState(false);
 
   // Transactions Ledger per Party
   const [partyTransactions, setPartyTransactions] = useState<Record<string, PartyLedgerTransaction[]>>(() => {
@@ -884,8 +930,19 @@ const toIsoDate = (displayStr: string) => {
     return new Date().toISOString().split('T')[0];
   });
   const [paymentInMode, setPaymentInMode] = useState<'UPI' | 'NEFT/RTGS' | 'Cheque' | 'Cash'>('UPI');
+  const [paymentInAccount, setPaymentInAccount] = useState('');
   const [paymentInRef, setPaymentInRef] = useState('');
   const [paymentInNotes, setPaymentInNotes] = useState('');
+
+  // Payment Out Modal Form State
+  const [isPaymentOutModalOpen, setIsPaymentOutModalOpen] = useState(false);
+  const [paymentOutProject, setPaymentOutProject] = useState('Booshnam Associates Pvt Ltd');
+  const [paymentOutAmount, setPaymentOutAmount] = useState('');
+  const [paymentOutDate, setPaymentOutDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [paymentOutMode, setPaymentOutMode] = useState<'UPI' | 'NEFT/RTGS' | 'Cheque' | 'Cash'>('NEFT/RTGS');
+  const [paymentOutAccount, setPaymentOutAccount] = useState('');
+  const [paymentOutRef, setPaymentOutRef] = useState('');
+  const [paymentOutNotes, setPaymentOutNotes] = useState('');
 
   // Create Transaction / Invoice Modal Form State
   const [isCreatePartyTxnModalOpen, setIsCreatePartyTxnModalOpen] = useState(false);
@@ -898,22 +955,7 @@ const toIsoDate = (displayStr: string) => {
   });
   const [partyTxnNotes, setPartyTxnNotes] = useState('');
 
-  // KPI Metrics Baseline from Image 1 + Dynamic Party Balances
-  const partyKpiMetrics = useMemo(() => {
-    let advancePaid = 0;
-    let toPay = 0;
-    let toReceive = 0;
-    let advanceReceived = 0;
-
-    for (const cp of parties) {
-      if (cp.status === 'Advance Paid') advancePaid += cp.balanceDue;
-      else if (cp.status === 'To Pay') toPay += cp.balanceDue;
-      else if (cp.status === 'To Receive') toReceive += cp.balanceDue;
-      else if (cp.status === 'Advance Received') advanceReceived += cp.balanceDue;
-    }
-
-    return { advancePaid, toPay, toReceive, advanceReceived };
-  }, [parties]);
+  // Note: partyKpiMetrics is calculated dynamically below getPartySummaryFinancials for 100% real-time accuracy across transactions & ledgers
 
   // Filtered Parties matching Search & Dropdowns
   const filteredParties = useMemo(() => {
@@ -1065,6 +1107,48 @@ const toIsoDate = (displayStr: string) => {
       [activePartyOverview.id]: [newTx, ...(prev[activePartyOverview.id] || [])]
     }));
 
+    // 1. Credit the chosen bank account or cash account
+    const targetAccountId = paymentInAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id;
+    const targetAccountName = bankAccounts.find(b => b.id === targetAccountId)?.accountName || (targetAccountId === 'cash' ? 'Cash Account' : 'Company Account');
+
+    if (targetAccountId) {
+      setBankAccounts(prev => {
+        const next = prev.map(b => {
+          if (b.id === targetAccountId || b.accountName === targetAccountId) {
+            return { ...b, balance: (b.balance || 0) + amt };
+          }
+          return b;
+        });
+        try {
+          localStorage.setItem('booshnam_finance_bank_accounts_v4', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      if (targetAccountId === 'cash' || paymentInMode === 'Cash') {
+        setCashOpeningBalance(prev => prev + amt);
+      }
+    }
+
+    // 2. Automatically record a FinanceTransaction of type 'INCOME' so it shows on Dashboard & statements
+    const newTxn: FinanceTransaction = {
+      id: `tx-in-${Date.now()}`,
+      txnCode: `RCT-${Date.now().toString().slice(-6)}`,
+      date: formattedDate,
+      type: 'INCOME',
+      partyName: activePartyOverview.name,
+      projectName: paymentInProject,
+      category: 'Client Payment',
+      amount: amt,
+      mode: paymentInMode as any,
+      referenceNo: paymentInRef || `REF-${Date.now().toString().slice(-4)}`,
+      status: 'Completed',
+      notes: paymentInNotes ? `Payment In: ${paymentInNotes}` : 'Party payment receipt',
+      bankAccountId: targetAccountId,
+      bankAccountName: targetAccountName
+    };
+    setTransactions(prev => [newTxn, ...prev]);
+
     // Update summary
     const currentSummary = partySummaries[activePartyOverview.id] || {
       opening: 0,
@@ -1107,6 +1191,127 @@ const toIsoDate = (displayStr: string) => {
 
     if (onShowToast) {
       onShowToast(`Payment In of ₹${amt.toLocaleString('en-IN')} recorded for ${activePartyOverview.name}!`);
+    }
+  };
+
+  // Handle Save Payment Out (Disbursement / Payout to Vendor / Contractor)
+  const handleSavePaymentOut = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activePartyOverview) return;
+    const amt = parseFloat(paymentOutAmount);
+    if (!amt || amt <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    const today = new Date();
+    let dStr = String(today.getDate()).padStart(2, '0');
+    let mStr = today.toLocaleDateString('en-GB', { month: 'short' });
+    let yStr = String(today.getFullYear());
+    let formattedDate = `${dStr} ${mStr} ${yStr}`;
+
+    if (paymentOutDate) {
+      const parsed = new Date(paymentOutDate);
+      if (!isNaN(parsed.getTime())) {
+        dStr = String(parsed.getDate()).padStart(2, '0');
+        mStr = parsed.toLocaleDateString('en-GB', { month: 'short' });
+        yStr = String(parsed.getFullYear());
+        formattedDate = `${dStr} ${mStr} ${yStr}`;
+      } else {
+        formattedDate = paymentOutDate;
+      }
+    }
+
+    // 1. Deduct from selected bank account
+    const targetAccountId = paymentOutAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id;
+    const targetAccountName = bankAccounts.find(b => b.id === targetAccountId)?.accountName || (targetAccountId === 'cash' ? 'Cash Account' : 'Company Account');
+
+    if (targetAccountId) {
+      setBankAccounts(prev => {
+        const next = prev.map(b => {
+          if (b.id === targetAccountId || b.accountName === targetAccountId) {
+            return { ...b, balance: Math.max(0, (b.balance || 0) - amt) };
+          }
+          return b;
+        });
+        try {
+          localStorage.setItem('booshnam_finance_bank_accounts_v4', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      if (targetAccountId === 'cash' || paymentOutMode === 'Cash') {
+        setCashOpeningBalance(prev => Math.max(0, prev - amt));
+      }
+    }
+
+    // 2. Record FinanceTransaction of type 'EXPENSE'
+    const newTxn: FinanceTransaction = {
+      id: `tx-out-${Date.now()}`,
+      txnCode: `PAY-${Date.now().toString().slice(-6)}`,
+      date: formattedDate,
+      type: 'EXPENSE',
+      partyName: activePartyOverview.name,
+      projectName: paymentOutProject,
+      category: activePartyOverview.type === 'Staff' ? 'Labour & Daily Wages' : 'Vendor Payment',
+      amount: amt,
+      mode: paymentOutMode as any,
+      referenceNo: paymentOutRef || `REF-${Date.now().toString().slice(-4)}`,
+      status: 'Completed',
+      notes: paymentOutNotes ? `Payment Out: ${paymentOutNotes}` : 'Party payment payout',
+      bankAccountId: targetAccountId,
+      bankAccountName: targetAccountName
+    };
+    setTransactions(prev => [newTxn, ...prev]);
+
+    // 3. Add to party ledger
+    const newTx: PartyLedgerTransaction = {
+      id: `ptx-${Date.now()}`,
+      partyId: activePartyOverview.id,
+      partyName: activePartyOverview.name,
+      date: formattedDate,
+      day: dStr,
+      month: mStr,
+      year: yStr,
+      title: `Payment Out via ${paymentOutMode}${paymentOutRef ? ` - Ref: ${paymentOutRef}` : ''}`,
+      projectName: paymentOutProject,
+      notes: paymentOutNotes || undefined,
+      amount: amt,
+      type: 'PAYMENT_OUT'
+    };
+    setPartyTransactions(prev => ({
+      ...prev,
+      [activePartyOverview.id]: [newTx, ...(prev[activePartyOverview.id] || [])]
+    }));
+
+    // 4. Update party balance
+    setParties(prev => prev.map(p => {
+      if (p.id === activePartyOverview.id) {
+        const newPaid = (p.totalPaid || 0) + amt;
+        const newBal = Math.max(0, p.balanceDue - amt);
+        return {
+          ...p,
+          totalPaid: newPaid,
+          balanceDue: newBal,
+          status: newBal === 0 ? 'Settled' : 'To Pay'
+        };
+      }
+      return p;
+    }));
+
+    setActivePartyOverview(prev => prev ? {
+      ...prev,
+      balanceDue: Math.max(0, prev.balanceDue - amt),
+      status: Math.max(0, prev.balanceDue - amt) === 0 ? 'Settled' : 'To Pay'
+    } : null);
+
+    setIsPaymentOutModalOpen(false);
+    setPaymentOutAmount('');
+    setPaymentOutRef('');
+    setPaymentOutNotes('');
+
+    if (onShowToast) {
+      onShowToast(`Payment Out of ₹${amt.toLocaleString('en-IN')} recorded for ${activePartyOverview.name}!`);
     }
   };
 
@@ -1253,6 +1458,7 @@ const toIsoDate = (displayStr: string) => {
   const [newTxnCategory, setNewTxnCategory] = useState('Material Purchase');
   const [newTxnAmount, setNewTxnAmount] = useState('');
   const [newTxnMode, setNewTxnMode] = useState<'NEFT/RTGS' | 'UPI' | 'CHEQUE' | 'CASH'>('NEFT/RTGS');
+  const [newTxnAccount, setNewTxnAccount] = useState('');
   const [newTxnRef, setNewTxnRef] = useState('');
 
   // Filtered Payment Requests
@@ -1383,6 +1589,62 @@ const toIsoDate = (displayStr: string) => {
 
   // Status Change Handler for Payment Request (Interactive Status in Image 4)
   const handleUpdatePaymentRequestStatus = (id: string, newStatus: 'Unpaid' | 'Paid' | 'On Hold') => {
+    const targetReq = paymentRequests.find(r => r.id === id);
+    if (newStatus === 'Paid' && targetReq && targetReq.status !== 'Paid') {
+      const now = new Date();
+      const nowStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      
+      // 1. Automatically record financial transaction (Expense outflow)
+      const newTxn: FinanceTransaction = {
+        id: `tx-pr-${Date.now()}`,
+        txnCode: `TX-${Date.now().toString().slice(-6)}`,
+        date: nowStr,
+        type: 'EXPENSE',
+        partyName: targetReq.partyName,
+        projectName: targetReq.projectName || 'General Project',
+        category: targetReq.category || 'Vendor Payment',
+        amount: targetReq.amount,
+        mode: (targetReq.paymentMode as any) || 'NEFT/RTGS',
+        referenceNo: targetReq.referenceNo || targetReq.requestCode,
+        status: 'Completed',
+        notes: `Payment Request #${targetReq.requestCode} settled`
+      };
+      setTransactions(prev => [newTxn, ...prev]);
+
+      // 2. Deduct from primary bank account balance
+      setBankAccounts(prev => {
+        const primIdx = prev.findIndex(b => b.isPrimary) !== -1 ? prev.findIndex(b => b.isPrimary) : 0;
+        if (primIdx >= 0 && prev[primIdx]) {
+          return prev.map((b, i) => i === primIdx ? { ...b, balance: Math.max(0, (b.balance || 0) - targetReq.amount) } : b);
+        }
+        return prev;
+      });
+
+      // 3. Update party ledger transaction
+      const targetParty = parties.find(p => p.name.trim().toLowerCase() === targetReq.partyName.trim().toLowerCase());
+      if (targetParty) {
+        const ptx: PartyLedgerTransaction = {
+          id: `ptx-${Date.now()}`,
+          partyId: targetParty.id,
+          partyName: targetParty.name,
+          date: nowStr,
+          day: String(now.getDate()).padStart(2, '0'),
+          month: now.toLocaleString('en-GB', { month: 'short' }),
+          year: String(now.getFullYear()),
+          title: `Settled PR #${targetReq.requestCode}`,
+          projectName: targetReq.projectName,
+          category: targetReq.category,
+          amount: targetReq.amount,
+          type: 'PAYMENT_OUT',
+          notes: `Settled via ${targetReq.paymentMode || 'NEFT/RTGS'}`
+        };
+        setPartyTransactions(prev => ({
+          ...prev,
+          [targetParty.id]: [ptx, ...(prev[targetParty.id] || [])]
+        }));
+      }
+    }
+
     setPaymentRequests(prev => {
       const updated = prev.map(r => {
         if (r.id === id) {
@@ -1487,6 +1749,33 @@ const toIsoDate = (displayStr: string) => {
     const txnCode = `TXN-2026-${String(transactions.length + 1).padStart(3, '0')}`;
     const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
+    const isIncome = newTxnType === 'INCOME';
+    const targetAccountId = newTxnAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id;
+    const targetAccountName = bankAccounts.find(b => b.id === targetAccountId)?.accountName || (targetAccountId === 'cash' ? 'Cash Account' : 'Company Account');
+
+    // Update bank accounts
+    if (targetAccountId) {
+      setBankAccounts(prev => {
+        const next = prev.map(b => {
+          if (b.id === targetAccountId || b.accountName === targetAccountId) {
+            return {
+              ...b,
+              balance: isIncome ? (b.balance || 0) + amt : Math.max(0, (b.balance || 0) - amt)
+            };
+          }
+          return b;
+        });
+        try {
+          localStorage.setItem('booshnam_finance_bank_accounts_v4', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+
+      if (targetAccountId === 'cash' || newTxnMode === 'CASH') {
+        setCashOpeningBalance(prev => isIncome ? prev + amt : Math.max(0, prev - amt));
+      }
+    }
+
     const newTx: FinanceTransaction = {
       id: `tx-${Date.now()}`,
       txnCode,
@@ -1498,7 +1787,9 @@ const toIsoDate = (displayStr: string) => {
       amount: amt,
       mode: newTxnMode,
       referenceNo: newTxnRef || `REF-${Date.now().toString().slice(-6)}`,
-      status: 'Completed'
+      status: 'Completed',
+      bankAccountId: targetAccountId,
+      bankAccountName: targetAccountName
     };
 
     setTransactions(prev => [newTx, ...prev]);
@@ -1611,7 +1902,9 @@ const toIsoDate = (displayStr: string) => {
       status: 'Completed',
       transactionType: txData.transactionType,
       costCode: txData.costCode,
-      notes: txData.notes
+      notes: txData.notes,
+      attachmentName: txData.files?.[0]?.name,
+      attachmentUploadedAt: (txData as any).fileUploadTimestamps?.[0] || (txData.files?.[0] ? getCurrentUploadTimestamp() : undefined)
     };
 
     // 1. Update Transactions state & localStorage
@@ -1705,14 +1998,15 @@ const toIsoDate = (displayStr: string) => {
       });
     }
 
-    // 4. Update Bank Account Balance if Bank Transfer or Cash
-    if (txData.paymentMethod === 'Bank Transfer' && txData.bankAccountId) {
+    // 4. Update Bank Account Balance (Credit if Income, Debit if Expense)
+    const targetAccountId = txData.bankAccountId || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id;
+    if (targetAccountId) {
       setBankAccounts(prev => {
         const next = prev.map(b => {
-          if (b.id === txData.bankAccountId) {
+          if (b.id === targetAccountId || b.accountName === txData.bankAccountName) {
             return {
               ...b,
-              balance: isIncome ? b.balance + txData.amount : Math.max(0, b.balance - txData.amount)
+              balance: isIncome ? (b.balance || 0) + txData.amount : Math.max(0, (b.balance || 0) - txData.amount)
             };
           }
           return b;
@@ -1722,6 +2016,10 @@ const toIsoDate = (displayStr: string) => {
         } catch {}
         return next;
       });
+
+      if (targetAccountId === 'cash' || txData.paymentMethod === 'Cash') {
+        setCashOpeningBalance(prev => isIncome ? prev + txData.amount : Math.max(0, prev - txData.amount));
+      }
     }
 
     // 5. If Expense, sync to Expenses tab
@@ -1830,6 +2128,32 @@ const toIsoDate = (displayStr: string) => {
     }
   }, [expenses]);
 
+  // Auto-reconcile bank balances from recorded transactions if primary account balance is zero but transactions exist
+  useEffect(() => {
+    if (transactions.length > 0 && bankAccounts.length > 0) {
+      const primaryAcc = bankAccounts.find(b => b.isPrimary) || bankAccounts[0];
+      if (primaryAcc && primaryAcc.balance === 0) {
+        const unassignedInflow = transactions
+          .filter(t => t.type === 'INCOME' && (!t.bankAccountId || t.bankAccountId === primaryAcc.id))
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+        const unassignedOutflow = transactions
+          .filter(t => t.type === 'EXPENSE' && (!t.bankAccountId || t.bankAccountId === primaryAcc.id))
+          .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) +
+          expenses
+            .filter(e => e.status === 'Paid' && (!e.paidFromAccount || e.paidFromAccount === primaryAcc.accountName || e.paidFromAccount === primaryAcc.id))
+            .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+        
+        const netMovement = unassignedInflow - unassignedOutflow;
+        const otherBalances = bankAccounts.filter(b => b.id !== primaryAcc.id).reduce((s, b) => s + (b.balance || 0), 0);
+        const targetBalance = Math.max(0, netMovement - otherBalances);
+
+        if (targetBalance > 0) {
+          setBankAccounts(prev => prev.map(b => b.id === primaryAcc.id ? { ...b, balance: targetBalance } : b));
+        }
+      }
+    }
+  }, [transactions, expenses]);
+
   // Expenses Filters & Search State
   const [expenseSearchQuery, setExpenseSearchQuery] = useState('');
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
@@ -1841,16 +2165,14 @@ const toIsoDate = (displayStr: string) => {
   const [isRecordExpenseModalOpen, setIsRecordExpenseModalOpen] = useState(false);
   const [selectedExpenseDetails, setSelectedExpenseDetails] = useState<ExpenseItem | null>(null);
 
-  // New Expense Form State
+  // New Expense Form State - Fresh blank defaults
   const [newExpTitle, setNewExpTitle] = useState('');
-  const [newExpCategory, setNewExpCategory] = useState<ExpenseItem['category']>('Materials');
+  const [newExpCategory, setNewExpCategory] = useState<ExpenseItem['category']>('Utilities & Admin');
   const [newExpAmount, setNewExpAmount] = useState('');
-  const [newExpProject, setNewExpProject] = useState(projects[0]?.name || '');
+  const [newExpProject, setNewExpProject] = useState('');
   const [newExpLocation, setNewExpLocation] = useState('');
   const [newExpPayee, setNewExpPayee] = useState('');
-  const [newExpAccount, setNewExpAccount] = useState(() => {
-    return bankAccounts[0]?.accountName || 'Primary Bank Account';
-  });
+  const [newExpAccount, setNewExpAccount] = useState('');
   const [newExpMode, setNewExpMode] = useState<ExpenseItem['paymentMode']>('NEFT/RTGS');
   const [newExpDate, setNewExpDate] = useState(() => {
     return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -1858,8 +2180,35 @@ const toIsoDate = (displayStr: string) => {
   const [newExpRef, setNewExpRef] = useState('');
   const [newExpBillNo, setNewExpBillNo] = useState('');
   const [newExpFileName, setNewExpFileName] = useState('');
+  const [newExpFileTimestamp, setNewExpFileTimestamp] = useState('');
   const [newExpStatus, setNewExpStatus] = useState<ExpenseItem['status']>('Paid');
   const [newExpNotes, setNewExpNotes] = useState('');
+
+  // Complete reset to clean, fresh state
+  const resetExpenseForm = () => {
+    setNewExpTitle('');
+    setNewExpCategory('Utilities & Admin');
+    setNewExpAmount('');
+    setNewExpProject('');
+    setNewExpLocation('');
+    setNewExpPayee('');
+    setIsCustomExpPartyInput(false);
+    setIsCustomExpProjectInput(false);
+    setNewExpAccount('');
+    setNewExpMode('NEFT/RTGS');
+    setNewExpDate(new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
+    setNewExpRef('');
+    setNewExpBillNo('');
+    setNewExpFileName('');
+    setNewExpFileTimestamp('');
+    setNewExpStatus('Paid');
+    setNewExpNotes('');
+  };
+
+  const handleCloseExpenseModal = () => {
+    setIsRecordExpenseModalOpen(false);
+    resetExpenseForm();
+  };
 
   // Filtered Expenses
   const filteredExpenses = useMemo(() => {
@@ -1908,19 +2257,25 @@ const toIsoDate = (displayStr: string) => {
       alert('Please enter a valid expense amount');
       return;
     }
-    if (!newExpTitle.trim()) {
-      alert('Please enter an expense title / description');
+    if (!newExpProject.trim()) {
+      alert('Please select or enter a Project / Office');
+      return;
+    }
+    if (!newExpAccount.trim()) {
+      alert('Please select a Paid From Account');
       return;
     }
 
     const nextCode = `EXP-2026-${String(expenses.length + 106).padStart(3, '0')}`;
+    const expTitle = newExpTitle.trim() || `${newExpCategory} Expense (${newExpProject.trim()})`;
+
     const newExp: ExpenseItem = {
       id: `exp-${Date.now()}`,
       expenseCode: nextCode,
       date: newExpDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      title: newExpTitle.trim(),
+      title: expTitle,
       category: newExpCategory,
-      projectName: newExpProject,
+      projectName: newExpProject.trim(),
       subProjectOrLocation: newExpLocation || undefined,
       partyOrVendorName: newExpPayee || 'Self / Site Cash',
       amount: amt,
@@ -1929,6 +2284,7 @@ const toIsoDate = (displayStr: string) => {
       referenceNo: newExpRef || `VOUCH-${Date.now().toString().slice(-6)}`,
       billNumber: newExpBillNo || undefined,
       billFile: newExpFileName || undefined,
+      billFileUploadedAt: newExpFileName ? (newExpFileTimestamp || getCurrentUploadTimestamp()) : undefined,
       status: newExpStatus,
       notes: newExpNotes || undefined,
       approvedBy: newExpStatus === 'Paid' || newExpStatus === 'Approved' ? 'Project Accounts' : undefined
@@ -1937,7 +2293,13 @@ const toIsoDate = (displayStr: string) => {
     // If Paid, deduct from the designated bank or cash account balance
     if (newExpStatus === 'Paid') {
       setBankAccounts(prev => prev.map(acc => {
-        if (acc.accountName === newExpAccount || acc.id === newExpAccount) {
+        const accDisplay = getAccountDisplayName(acc);
+        if (
+          acc.accountName === newExpAccount || 
+          accDisplay === newExpAccount || 
+          acc.id === newExpAccount || 
+          acc.bankName === newExpAccount
+        ) {
           return { ...acc, balance: Math.max(0, acc.balance - amt) };
         }
         return acc;
@@ -1946,16 +2308,7 @@ const toIsoDate = (displayStr: string) => {
 
     setExpenses(prev => [newExp, ...prev]);
     setIsRecordExpenseModalOpen(false);
-
-    // Reset Form
-    setNewExpTitle('');
-    setNewExpAmount('');
-    setNewExpPayee('');
-    setNewExpLocation('');
-    setNewExpRef('');
-    setNewExpBillNo('');
-    setNewExpFileName('');
-    setNewExpNotes('');
+    resetExpenseForm();
 
     if (onShowToast) {
       onShowToast(`Expense voucher ${nextCode} for ₹${amt.toLocaleString('en-IN')} recorded successfully`);
@@ -2273,11 +2626,16 @@ const toIsoDate = (displayStr: string) => {
     const rawNo = data.accountNumber.trim();
     const formattedNumber = rawNo || `${Math.floor(100000000000 + Math.random() * 900000000000)}`;
 
+    const bankClean = data.bankName.trim();
+    const derivedAccountName = bankClean 
+      ? (/account|a\/c|bank/i.test(bankClean) ? bankClean : `${bankClean} A/c`)
+      : (data.accountHolderName.trim() ? `${data.accountHolderName.trim()} A/c` : 'New Bank Account');
+
     const newAcc: BankAccountRecord = {
       id: `ba-${Date.now()}`,
-      accountName: data.accountHolderName.trim() || data.bankName.trim() || 'New Account',
+      accountName: derivedAccountName,
       accountHolderName: data.accountHolderName.trim() || 'Booshnam Associates Pvt Ltd',
-      bankName: data.bankName.trim() || 'Commercial Bank',
+      bankName: bankClean || 'Commercial Bank',
       bankAddress: data.bankAddress.trim() || '',
       accountNumber: formattedNumber,
       ifscCode: data.ifscCode.trim().toUpperCase() || 'BANK0001234',
@@ -2558,6 +2916,37 @@ const toIsoDate = (displayStr: string) => {
       totalActivityCount: nonTxnLedgers.length + matchedTxns.length + matchedPRs.length + matchedExps.length
     };
   };
+
+  // Dynamic KPI Metrics Baseline + Real-time party balances (Requirement 1, 3, & 17)
+  const partyKpiMetrics = useMemo(() => {
+    let advancePaid = 0;
+    let toPay = 0;
+    let toReceive = 0;
+    let advanceReceived = 0;
+
+    for (const cp of parties) {
+      const fin = getPartySummaryFinancials(cp);
+      if (cp.type === 'Client') {
+        if (fin.status === 'To Receive') {
+          toReceive += fin.balanceDue;
+        } else if (fin.status === 'Advance Received') {
+          advanceReceived += (fin.totalPaid > fin.totalBilled ? fin.totalPaid - fin.totalBilled : (cp.balanceDue || 0));
+        } else if (cp.status === 'Advance Received') {
+          advanceReceived += (cp.balanceDue || 0);
+        }
+      } else {
+        if (fin.status === 'To Pay') {
+          toPay += fin.balanceDue;
+        } else if (fin.status === 'Advance Paid') {
+          advancePaid += (fin.totalPaid > fin.totalBilled ? fin.totalPaid - fin.totalBilled : (cp.balanceDue || 0));
+        } else if (cp.status === 'Advance Paid') {
+          advancePaid += (cp.balanceDue || 0);
+        }
+      }
+    }
+
+    return { advancePaid, toPay, toReceive, advanceReceived };
+  }, [parties, transactions, partyTransactions, paymentRequests, expenses]);
 
   // Currently viewed live party object
   const liveActiveParty = useMemo(() => {
@@ -2842,81 +3231,41 @@ const toIsoDate = (displayStr: string) => {
           2. SUB-NAVIGATION TABS (Party | Transaction | Payment Requests | Expenses | Accounts)
       ───────────────────────────────────────────────────────────── */}
       <div className="border-b border-slate-200 bg-white px-6">
-        <nav className="flex items-center gap-8 -mb-px overflow-x-auto scrollbar-none">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('party');
-              setActivePartyOverview(null);
-            }}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'party'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Party
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('transaction')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'transaction'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Transaction
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('payment_requests')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'payment_requests'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Payment Requests
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('expenses')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'expenses'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Expenses
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('account_transfer')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'account_transfer'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Account to Account Transfer
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('accounts')}
-            className={`py-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 ${
-              activeTab === 'accounts'
-                ? 'border-red-600 text-red-600 font-bold'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            Accounts
-          </button>
+        <nav className="flex items-center gap-2 -mb-px overflow-x-auto scrollbar-none py-1">
+          {[
+            { id: 'dashboard', label: 'Finance Dashboard', icon: Landmark },
+            { id: 'party', label: 'Parties & Ledgers', icon: Users },
+            { id: 'transaction', label: 'Transactions', icon: ArrowLeftRight },
+            { id: 'payment_requests', label: 'Payment Requests', icon: Clock },
+            { id: 'expenses', label: 'Expenses', icon: Receipt },
+            { id: 'account_transfer', label: 'Contra Transfers', icon: ArrowLeftRight },
+            { id: 'accounts', label: 'Bank Accounts & Cash', icon: Wallet },
+            { id: 'project_finance', label: 'Project Finance & P&L', icon: Building2 },
+            { id: 'reports', label: 'Financial Reports', icon: FileSpreadsheet },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id as FinanceTabKey);
+                  if (tab.id === 'party') {
+                    setActivePartyOverview(null);
+                  }
+                }}
+                className={`py-2.5 px-3.5 text-xs font-semibold tracking-wide transition-all border-b-2 cursor-pointer shrink-0 rounded-t-lg flex items-center gap-1.5 ${
+                  isActive
+                    ? 'border-red-600 text-red-600 font-bold bg-red-50/50'
+                    : 'border-transparent text-slate-600 hover:text-red-600 hover:bg-red-50/20'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-red-600' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -2925,6 +3274,38 @@ const toIsoDate = (displayStr: string) => {
           3. TAB CONTENT
       ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 p-6 bg-[#fbfcfd]">
+
+        {/* ═════════════════════════════════════════════════════════════
+            TAB 0: FINANCE DASHBOARD (Overview, 4 KPI cards, Quick Actions, Accounts)
+        ═════════════════════════════════════════════════════════════ */}
+        {activeTab === 'dashboard' && (
+          <FinanceDashboardTab
+            parties={parties}
+            transactions={transactions}
+            paymentRequests={paymentRequests}
+            expenses={expenses}
+            bankAccounts={bankAccounts}
+            transfers={transfers}
+            projects={projects}
+            partyKpiMetrics={partyKpiMetrics}
+            onNavigateTab={(tab) => {
+              setActiveTab(tab);
+              if (tab === 'party') setActivePartyOverview(null);
+            }}
+            onOpenCreateTransaction={() => {
+              setCreateTxnFlowStep('menu');
+              setIsCreateTxnFlowOpen(true);
+            }}
+            onOpenPaymentRequest={() => setIsNewRequestModalOpen(true)}
+            onOpenRecordExpense={() => {
+              resetExpenseForm();
+              setIsRecordExpenseModalOpen(true);
+            }}
+            onOpenTransferModal={() => setIsNewTransferModalOpen(true)}
+            onOpenAddParty={() => setIsAddPartyDrawerOpen(true)}
+            getAccountDisplayName={getAccountDisplayName}
+          />
+        )}
 
         {/* ═════════════════════════════════════════════════════════════
             TAB 1: PAYMENT REQUESTS (The exact view from user screenshot)
@@ -3774,6 +4155,15 @@ const toIsoDate = (displayStr: string) => {
 
                       <button
                         type="button"
+                        onClick={() => setIsPaymentOutModalOpen(true)}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Payment Out (Payout)</span>
+                      </button>
+
+                      <button
+                        type="button"
                         onClick={() => {
                           setNewTxnParty(currentParty.name);
                           setIsRecordTxnModalOpen(true);
@@ -4059,7 +4449,18 @@ const toIsoDate = (displayStr: string) => {
                   ) : (
                     filteredTransactions.map(t => (
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 px-4 text-slate-600">{t.date}</td>
+                        <td className="py-3 px-4 text-slate-600">
+                          <div>{t.date}</div>
+                          {t.attachmentName && (
+                            <div className="text-[10px] text-emerald-700 flex items-center gap-1 mt-0.5" title={`Attached on ${t.attachmentUploadedAt || t.date}`}>
+                              <Paperclip className="w-3 h-3 text-emerald-600 shrink-0" />
+                              <span className="truncate max-w-[110px] font-medium">{t.attachmentName}</span>
+                              {t.attachmentUploadedAt && (
+                                <span className="text-slate-400 font-mono text-[9px] shrink-0">({t.attachmentUploadedAt.split(',')[1]?.trim() || t.attachmentUploadedAt})</span>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="py-3 px-4 font-mono font-medium text-slate-800">{t.txnCode}</td>
                         <td className="py-3 px-4">
                           <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded ${
@@ -4245,9 +4646,7 @@ const toIsoDate = (displayStr: string) => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (!newExpAccount || !bankAccounts.some(b => b.accountName === newExpAccount)) {
-                      setNewExpAccount(bankAccounts[0]?.accountName || 'Booshnam Associates Operations A/c');
-                    }
+                    resetExpenseForm();
                     setIsRecordExpenseModalOpen(true);
                   }}
                   className="h-9 flex items-center justify-center gap-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
@@ -4567,7 +4966,7 @@ const toIsoDate = (displayStr: string) => {
                   >
                     <div className="min-w-0 pr-2">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs font-bold text-slate-900 truncate block">{acc.accountName}</span>
+                        <span className="text-xs font-bold text-slate-900 truncate block">{getAccountDisplayName(acc)}</span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate">{acc.bankName} • {acc.accountNumber}</p>
                     </div>
@@ -4651,7 +5050,7 @@ const toIsoDate = (displayStr: string) => {
                             onChange={(val) => setTransferAccountFilter(val)}
                             options={[
                               { label: 'All Bank & Cash Accounts', value: 'All' },
-                              ...bankAccounts.map(b => ({ label: b.accountName, value: b.id })),
+                              ...bankAccounts.map(b => ({ label: getAccountDisplayName(b), value: b.id })),
                             ]}
                             size="sm"
                             variant="brand"
@@ -5714,6 +6113,45 @@ const toIsoDate = (displayStr: string) => {
             )}
           </div>
         )}
+
+        {/* ═════════════════════════════════════════════════════════════
+            TAB 7: PROJECT-WISE FINANCE & PROFITABILITY (BOQ, Budget overrun, Cost breakdown)
+        ═════════════════════════════════════════════════════════════ */}
+        {activeTab === 'project_finance' && (
+          <ProjectFinanceTab
+            projects={projects}
+            transactions={transactions}
+            paymentRequests={paymentRequests}
+            expenses={expenses}
+            bankAccounts={bankAccounts}
+            onOpenRecordExpense={(defaultProj) => {
+              resetExpenseForm();
+              if (defaultProj) setNewExpProject(defaultProj);
+              setIsRecordExpenseModalOpen(true);
+            }}
+            onOpenCreateTransaction={() => {
+              setCreateTxnFlowStep('menu');
+              setIsCreateTxnFlowOpen(true);
+            }}
+          />
+        )}
+
+        {/* ═════════════════════════════════════════════════════════════
+            TAB 8: FINANCIAL REPORTS & AUDIT TRAIL (11 report types, Export & Print)
+        ═════════════════════════════════════════════════════════════ */}
+        {activeTab === 'reports' && (
+          <FinancialReportsTab
+            parties={parties}
+            transactions={transactions}
+            paymentRequests={paymentRequests}
+            expenses={expenses}
+            bankAccounts={bankAccounts}
+            transfers={transfers}
+            projects={projects}
+            getAccountDisplayName={getAccountDisplayName}
+            getPartySummaryFinancials={getPartySummaryFinancials}
+          />
+        )}
       </div>
 
 
@@ -6245,6 +6683,26 @@ const toIsoDate = (displayStr: string) => {
                 </div>
               </div>
 
+              {/* Bank / Cash Account Selector */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  {newTxnType === 'INCOME' ? 'Credit / Deposit To Account *' : 'Debit / Pay From Account *'}
+                </label>
+                <CustomSelect
+                  value={newTxnAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || ''}
+                  onChange={val => setNewTxnAccount(val)}
+                  options={[
+                    ...bankAccounts.map(b => ({
+                      label: `${b.accountName} ${b.isPrimary ? '(PRIMARY)' : ''} - ₹${b.balance?.toLocaleString('en-IN')}`,
+                      value: b.id
+                    })),
+                    { label: `Cash Account (Physical Cash) - ₹${cashClosingBalance?.toLocaleString('en-IN')}`, value: 'cash' }
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
+              </div>
+
               {/* Payment Mode & Reference */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -6639,6 +7097,23 @@ const toIsoDate = (displayStr: string) => {
               </div>
 
               <div>
+                <label className="block font-semibold text-slate-700 mb-1">Deposit Into Account *</label>
+                <CustomSelect
+                  value={paymentInAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || ''}
+                  onChange={val => setPaymentInAccount(val)}
+                  options={[
+                    ...bankAccounts.map(b => ({
+                      label: `${b.accountName} ${b.isPrimary ? '(PRIMARY)' : ''} - ₹${b.balance?.toLocaleString('en-IN')}`,
+                      value: b.id
+                    })),
+                    { label: `Cash Account (Physical Cash) - ₹${cashClosingBalance?.toLocaleString('en-IN')}`, value: 'cash' }
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
+              </div>
+
+              <div>
                 <label className="block font-semibold text-slate-700 mb-1">Reference / UTR / Cheque No.</label>
                 <input
                   type="text"
@@ -6674,6 +7149,148 @@ const toIsoDate = (displayStr: string) => {
                 >
                   <Plus className="w-3.5 h-3.5 stroke-[3]" />
                   <span>Record Payment In</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: PARTY PAYMENT OUT (DISBURSEMENT / VOUCHER) */}
+      {isPaymentOutModalOpen && activePartyOverview && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 inline-block"></span>
+                  <span>Record Payment Out (Payout)</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Disburse money to <strong className="text-slate-800">{activePartyOverview.name}</strong>
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsPaymentOutModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePaymentOut} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Select Project *</label>
+                <CustomSelect
+                  value={paymentOutProject}
+                  onChange={val => setPaymentOutProject(val)}
+                  options={[
+                    'Booshnam Associates Pvt Ltd',
+                    ...projects.map(p => p.name),
+                    'General Project / Unallocated',
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Amount to Pay (₹) *</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="1"
+                    placeholder="e.g. 25000"
+                    value={paymentOutAmount}
+                    onChange={e => setPaymentOutAmount(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Pay / Deduct From Account *</label>
+                <CustomSelect
+                  value={paymentOutAccount || bankAccounts.find(b => b.isPrimary)?.id || bankAccounts[0]?.id || ''}
+                  onChange={val => setPaymentOutAccount(val)}
+                  options={[
+                    ...bankAccounts.map(b => ({
+                      label: `${b.accountName} ${b.isPrimary ? '(PRIMARY)' : ''} - ₹${b.balance?.toLocaleString('en-IN')}`,
+                      value: b.id
+                    })),
+                    { label: `Cash Account (Physical Cash) - ₹${cashClosingBalance?.toLocaleString('en-IN')}`, value: 'cash' }
+                  ]}
+                  size="md"
+                  variant="brand"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    value={paymentOutDate}
+                    onChange={e => setPaymentOutDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Payment Mode</label>
+                  <CustomSelect
+                    value={paymentOutMode}
+                    onChange={(val) => setPaymentOutMode(val as any)}
+                    options={[
+                      { label: 'NEFT / RTGS / Bank', value: 'NEFT/RTGS' },
+                      { label: 'UPI / GPay / PhonePe', value: 'UPI' },
+                      { label: 'Cheque', value: 'Cheque' },
+                      { label: 'Cash', value: 'Cash' },
+                    ]}
+                    size="md"
+                    variant="brand"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Reference / UTR / Cheque No.</label>
+                <input
+                  type="text"
+                  placeholder="e.g. UTR-998273 or CHQ-1029"
+                  value={paymentOutRef}
+                  onChange={e => setPaymentOutRef(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Notes / Remarks</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Payment for material delivery or labour muster"
+                  value={paymentOutNotes}
+                  onChange={e => setPaymentOutNotes(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-red-600 resize-none"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => setIsPaymentOutModalOpen(false)} 
+                  className="px-3.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4.5 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Record Payment Out</span>
                 </button>
               </div>
             </form>
@@ -6818,45 +7435,53 @@ const toIsoDate = (displayStr: string) => {
 
       {/* MODAL L: RECORD NEW EXPENSE */}
       {isRecordExpenseModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center">
-                  <Receipt className="w-4 h-4" />
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleCloseExpenseModal();
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur-xs z-20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-sm shadow-red-200 shrink-0">
+                  <Receipt className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Record Construction Expense</h3>
-                  <p className="text-[11px] text-slate-400">Log operational bills, contractor claims, and site petty cash</p>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">Record Construction Expense</h3>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">Log operational bills, contractor claims, and site petty cash</p>
                 </div>
               </div>
               <button 
-                onClick={() => setIsRecordExpenseModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+                type="button"
+                onClick={handleCloseExpenseModal}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveExpense} className="p-6 space-y-4">
+            <form onSubmit={handleSaveExpense} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Row 1: Expense Description / Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Expense Description / Title *
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Expense Description / Title
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. UltraTech M25 Grade RMC Pouring (45 CuM)"
+                  placeholder="e.g. UltraTech M25 Grade RMC Pouring (45 CuM) or Office Maintenance"
                   value={newExpTitle}
                   onChange={e => setNewExpTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
+                  className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 2: Category & Amount */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Category *
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Category <span className="text-red-500">*</span>
                   </label>
                   <CustomSelect
                     value={newExpCategory}
@@ -6871,69 +7496,102 @@ const toIsoDate = (displayStr: string) => {
                       'Safety & Compliance',
                       'Utilities & Admin',
                     ]}
+                    placeholder="Select Category..."
                     size="md"
+                    triggerClassName="!h-10 !rounded-xl"
                     variant="brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Amount (₹) *
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Amount (₹) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    placeholder="e.g. 48000"
-                    value={newExpAmount}
-                    onChange={e => setNewExpAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-500"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs pointer-events-none">₹</span>
+                    <input
+                      type="number"
+                      required
+                      min="0.01"
+                      step="any"
+                      placeholder="e.g. 48000"
+                      value={newExpAmount}
+                      onChange={e => setNewExpAmount(e.target.value)}
+                      className="w-full h-10 pl-8 pr-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 font-semibold text-slate-900 placeholder:text-slate-400 transition-all"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 3: Project & Site Location */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Project *
-                  </label>
-                  <CustomSelect
-                    value={newExpProject}
-                    onChange={(val) => setNewExpProject(val)}
-                    options={projects.length > 0 ? projects.map(p => ({ label: p.name, value: p.name })) : ['Default Project']}
-                    placeholder="Select Project..."
-                    size="md"
-                    variant="brand"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 truncate">
+                      Project / Location <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomExpProjectInput(!isCustomExpProjectInput)}
+                      className="text-[11px] font-semibold text-red-600 hover:text-red-700 transition-colors shrink-0 cursor-pointer ml-2"
+                    >
+                      {isCustomExpProjectInput ? '← Select from list' : '+ Custom / Type'}
+                    </button>
+                  </div>
+                  {isCustomExpProjectInput ? (
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Office, Corporate HQ, or Project Name"
+                      value={newExpProject}
+                      onChange={e => setNewExpProject(e.target.value)}
+                      className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
+                    />
+                  ) : (
+                    <CustomSelect
+                      value={newExpProject}
+                      onChange={(val) => setNewExpProject(val)}
+                      options={[
+                        { label: '🏢 Office / Head Office', value: 'Office' },
+                        { label: '🏢 Office Administration', value: 'Office Administration' },
+                        ...projects.map(p => ({ label: `🏗️ ${p.name}`, value: p.name })),
+                      ]}
+                      placeholder="Select Project or Office..."
+                      size="md"
+                      triggerClassName="!h-10 !rounded-xl"
+                      variant="brand"
+                    />
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Site Location / Sub-Work
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Block A - 2nd Floor Slab"
+                    placeholder="e.g. Block A - 2nd Floor Slab or Office"
                     value={newExpLocation}
                     onChange={e => setNewExpLocation(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
+                    className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 4: Vendor / Payee Name & Paid From Account */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-semibold text-slate-700">
-                      Vendor / Payee Name *
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 truncate">
+                      Vendor / Payee Name <span className="text-red-500">*</span>
                     </label>
                     {parties.length > 0 && (
                       <button
                         type="button"
                         onClick={() => setIsCustomExpPartyInput(!isCustomExpPartyInput)}
-                        className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                        className="text-[11px] font-semibold text-red-600 hover:text-red-700 transition-colors shrink-0 cursor-pointer ml-2"
                       >
-                        {isCustomExpPartyInput ? '← Select registered party' : '+ Enter custom payee'}
+                        {isCustomExpPartyInput ? '← Select party' : '+ Enter custom payee'}
                       </button>
                     )}
                   </div>
@@ -6949,6 +7607,7 @@ const toIsoDate = (displayStr: string) => {
                       }))}
                       placeholder="Select registered payee..."
                       size="md"
+                      triggerClassName="!h-10 !rounded-xl"
                       variant="brand"
                     />
                   ) : (
@@ -6958,42 +7617,52 @@ const toIsoDate = (displayStr: string) => {
                       placeholder="e.g. UltraTech Cement or Site Worker"
                       value={newExpPayee}
                       onChange={e => setNewExpPayee(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
+                      className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
                     />
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Paid From Account *
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Paid From Account <span className="text-red-500">*</span>
                   </label>
                   <CustomSelect
                     value={newExpAccount}
                     onChange={(val) => setNewExpAccount(val)}
-                    options={bankAccounts.map(ba => ({
-                      label: ba.accountName,
-                      value: ba.accountName,
-                      description: `Available: ₹${ba.balance.toLocaleString('en-IN')}`,
-                      badge: `₹${ba.balance.toLocaleString('en-IN')}`,
-                    }))}
-                    placeholder="Select Bank Account..."
+                    options={bankAccounts.map(ba => {
+                      const displayName = getAccountDisplayName(ba);
+                      return {
+                        label: displayName,
+                        value: displayName,
+                        description: `Available: ₹${ba.balance.toLocaleString('en-IN')}${ba.accountHolderName ? ` • Holder: ${ba.accountHolderName}` : ''}`,
+                        badge: `₹${ba.balance.toLocaleString('en-IN')}`,
+                      };
+                    })}
+                    placeholder="Select Bank / Cash Account..."
                     size="md"
+                    triggerClassName="!h-10 !rounded-xl"
                     variant="brand"
                   />
                   {(() => {
-                    const sel = bankAccounts.find(ba => ba.accountName === newExpAccount || ba.id === newExpAccount);
+                    const sel = bankAccounts.find(ba => 
+                      ba.accountName === newExpAccount || 
+                      getAccountDisplayName(ba) === newExpAccount || 
+                      ba.id === newExpAccount
+                    );
                     return sel ? (
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        Available Balance: <strong className="text-slate-800 tracking-tight">₹{sel.balance.toLocaleString('en-IN')}</strong>
-                      </span>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1 px-1">
+                        <span>Available Balance:</span>
+                        <strong className="text-emerald-700 font-bold tracking-tight">₹{sel.balance.toLocaleString('en-IN')}</strong>
+                      </div>
                     ) : null;
                   })()}
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Row 5: Payment Mode, Voucher Date, and Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Payment Mode
                   </label>
                   <CustomSelect
@@ -7007,25 +7676,43 @@ const toIsoDate = (displayStr: string) => {
                       { label: 'Cheque', value: 'Cheque' },
                     ]}
                     size="md"
+                    triggerClassName="!h-10 !rounded-xl"
                     variant="brand"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Voucher Date
                   </label>
-                  <input
-                    type="text"
-                    value={newExpDate}
-                    onChange={e => setNewExpDate(e.target.value)}
-                    placeholder="14 Jul 26"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newExpDate}
+                      onChange={e => setNewExpDate(e.target.value)}
+                      placeholder="DD Mon YYYY"
+                      className="w-full h-10 pl-3.5 pr-8 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 text-slate-800 placeholder:text-slate-400 font-medium transition-all"
+                    />
+                    <input
+                      type="date"
+                      tabIndex={-1}
+                      onChange={e => {
+                        if (e.target.value) {
+                          const d = new Date(e.target.value);
+                          if (!isNaN(d.getTime())) {
+                            setNewExpDate(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }));
+                          }
+                        }
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 cursor-pointer"
+                      title="Choose Date"
+                    />
+                    <Calendar className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Status
                   </label>
                   <CustomSelect
@@ -7038,14 +7725,16 @@ const toIsoDate = (displayStr: string) => {
                     ]}
                     align="right"
                     size="md"
+                    triggerClassName="!h-10 !rounded-xl"
                     variant="brand"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 6: Reference & Invoice Bill No */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Reference / UTR / Cheque #
                   </label>
                   <input
@@ -7053,12 +7742,12 @@ const toIsoDate = (displayStr: string) => {
                     placeholder="e.g. HDFC20260714088"
                     value={newExpRef}
                     onChange={e => setNewExpRef(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
+                    className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
                     Invoice / Bill #
                   </label>
                   <input
@@ -7066,45 +7755,71 @@ const toIsoDate = (displayStr: string) => {
                     placeholder="e.g. INV-8821"
                     value={newExpBillNo}
                     onChange={e => setNewExpBillNo(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                    className="w-full h-10 px-3.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 font-medium"
                   />
                 </div>
               </div>
 
-              {/* Receipt File Attachment */}
+              {/* Row 7: Receipt File Attachment */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Upload Invoice / Delivery Challan
                 </label>
-                <div className="border border-dashed border-slate-300 rounded-xl p-3 flex items-center justify-between bg-slate-50/50 hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                <div className="border border-dashed border-slate-200 hover:border-red-400 rounded-xl p-3 flex items-center justify-between bg-slate-50/70 hover:bg-red-50/20 transition-all">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                       <Paperclip className="w-4 h-4" />
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-800">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-slate-800 truncate">
                         {newExpFileName || 'Attach tax invoice or weight slip'}
                       </p>
-                      <p className="text-[10px] text-slate-400">PDF, PNG, JPG up to 10MB</p>
+                      <p className="text-[10px] text-slate-400">
+                        {newExpFileName ? (
+                          <span className="text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span>Uploaded: <strong className="text-slate-700">{newExpFileTimestamp || getCurrentUploadTimestamp()}</strong></span>
+                          </span>
+                        ) : (
+                          'PDF, PNG, JPG up to 10MB'
+                        )}
+                      </p>
                     </div>
                   </div>
-                  <label className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-100 cursor-pointer shadow-2xs">
-                    <span>{newExpFileName ? 'Change' : 'Browse'}</span>
-                    <input
-                      type="file"
-                      className="hidden"
-                      onChange={e => {
-                        if (e.target.files?.[0]) {
-                          setNewExpFileName(e.target.files[0].name);
-                        }
-                      }}
-                    />
-                  </label>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {newExpFileName && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewExpFileName('');
+                          setNewExpFileTimestamp('');
+                        }}
+                        className="px-2 py-1 text-[11px] font-semibold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                    <label className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 cursor-pointer shadow-2xs transition-all">
+                      <span>{newExpFileName ? 'Change' : 'Browse'}</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={e => {
+                          if (e.target.files?.[0]) {
+                            const nowTs = getCurrentUploadTimestamp();
+                            setNewExpFileName(e.target.files[0].name);
+                            setNewExpFileTimestamp(nowTs);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
 
+              {/* Row 8: Remarks / Purpose */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Remarks / Site Purpose
                 </label>
                 <textarea
@@ -7112,23 +7827,25 @@ const toIsoDate = (displayStr: string) => {
                   placeholder="Details of delivery, batch quality check, or supervisor remarks..."
                   value={newExpNotes}
                   onChange={e => setNewExpNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:border-red-600"
+                  className="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/15 transition-all text-slate-800 placeholder:text-slate-400 resize-none font-medium"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              {/* Footer Actions */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5 sticky bottom-0 bg-white/95 backdrop-blur-xs py-2">
                 <button
                   type="button"
-                  onClick={() => setIsRecordExpenseModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  onClick={handleCloseExpenseModal}
+                  className="px-4.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm transition-all cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm shadow-red-200 transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  Record Expense
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>Record Expense</span>
                 </button>
               </div>
             </form>
@@ -7314,7 +8031,7 @@ const toIsoDate = (displayStr: string) => {
                         value={newTrfFromAccountId}
                         onChange={(val) => setNewTrfFromAccountId(val)}
                         options={bankAccounts.map(b => ({
-                          label: b.accountName,
+                          label: getAccountDisplayName(b),
                           value: b.id,
                           description: `Available: ₹${b.balance.toLocaleString('en-IN')}`,
                           badge: `₹${b.balance.toLocaleString('en-IN')}`,
@@ -7346,7 +8063,7 @@ const toIsoDate = (displayStr: string) => {
                         value={newTrfToAccountId}
                         onChange={(val) => setNewTrfToAccountId(val)}
                         options={bankAccounts.map(b => ({
-                          label: b.accountName,
+                          label: getAccountDisplayName(b),
                           value: b.id,
                           description: `Current: ₹${b.balance.toLocaleString('en-IN')}`,
                           badge: `₹${b.balance.toLocaleString('en-IN')}`,

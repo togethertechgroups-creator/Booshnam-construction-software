@@ -14,6 +14,18 @@ export interface ProjectFinancialSummary {
   netCashPosition: number;
   totalExpense: number;
   totalSalesInvoice: number;
+  totalBilled: number;
+  totalReceived: number;
+  totalPaid: number;
+  advanceReceived: number;
+  advancePaid: number;
+  workPaymentsReceived: number;
+  toReceive: number;
+  toPay: number;
+  outstandingBalance: number;
+  unallocatedClientAdvance: number;
+  allocatedClientAdvance: number;
+  settledTransactionsCount: number;
   estimatedBudget: number;
   boqValue: number;
   workDoneValue: number;
@@ -58,6 +70,7 @@ export function getProjectTransactions(project: { id?: string; code?: string; na
         if (Array.isArray(parsed)) {
           for (const tx of parsed) {
             if (tx && tx.id && !txMap.has(tx.id)) {
+              if (tx.id.includes('seed-') || (tx.transaction_number === '#65' && tx.party_name === 'PRASATH') || (tx.transaction_number === '#INV-67' && tx.party_name === 'Jisha Jeevan Buildtech')) continue;
               txMap.set(tx.id, tx);
             }
           }
@@ -80,6 +93,7 @@ export function getProjectTransactions(project: { id?: string; code?: string; na
           if (Array.isArray(parsed)) {
             for (const tx of parsed) {
               if (!tx || !tx.id || txMap.has(tx.id)) continue;
+              if (tx.id.includes('seed-') || (tx.transaction_number === '#65' && tx.party_name === 'PRASATH') || (tx.transaction_number === '#INV-67' && tx.party_name === 'Jisha Jeevan Buildtech')) continue;
               
               const txProj = tx.project || (tx as any).projectId || (tx as any).project_id;
               const txProjCode = (tx as any).projectCode || (tx as any).project_code;
@@ -194,21 +208,53 @@ export function calculateProjectFinancialSummary(
   const transactions = preloadedTransactions || getProjectTransactions(project);
   const paymentRequests = getProjectPaymentRequests(project);
 
-  // 1. Cash In & Cash Out
-  const cashIn = transactions
+  // Filter active transactions (excluding reversed ones)
+  const activeTransactions = transactions.filter(t => t.status !== 'REVERSED' && !t.is_reversed);
+
+  // 1. Cash In & Cash Out (Only from actual saved non-reversed transactions)
+  const cashIn = activeTransactions
     .filter(t => t.type === 'IN')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  const cashOut = transactions
+  const cashOut = activeTransactions
     .filter(t => t.type === 'OUT')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
+  const totalReceived = cashIn;
+  const totalPaid = cashOut;
   const netCashPosition = cashIn - cashOut;
   const totalExpense = cashOut;
 
-  // 2. Sales Invoicing
-  // Explicit sales invoices recorded for this project
-  const explicitSales = transactions
+  // Advance Received: Client advance money actually received
+  const advanceReceived = activeTransactions
+    .filter(t => t.type === 'IN' && (
+      t.payment_category === 'CLIENT_ADVANCE' ||
+      t.transaction_sub_type === 'Client Advance' ||
+      (t.transaction_sub_type === 'Payment In' && (t.notes?.toLowerCase().includes('advance') || (t.category && t.category.toLowerCase().includes('advance'))))
+    ))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // Advance Paid: Advance money actually paid to suppliers or subcontractors
+  const advancePaid = activeTransactions
+    .filter(t => t.type === 'OUT' && (
+      t.notes?.toLowerCase().includes('advance') ||
+      (t.transaction_sub_type && t.transaction_sub_type.toLowerCase().includes('advance')) ||
+      (t.payment_category === 'SUPPLIER_PAYMENT' && t.notes?.toLowerCase().includes('advance'))
+    ))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // Work Payments Received: Direct work payments or milestone payments
+  const workPaymentsReceived = activeTransactions
+    .filter(t => t.type === 'IN' && (
+      t.payment_category === 'WORK_PAYMENT' ||
+      t.payment_category === 'MILESTONE_PAYMENT' ||
+      t.transaction_sub_type === 'Work Payment' ||
+      t.transaction_sub_type === 'Milestone Payment'
+    ))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // 2. Sales Invoicing / Total Billed
+  const explicitSales = activeTransactions
     .filter(t => 
       t.transaction_sub_type === 'Sales Invoice' || 
       t.transaction_sub_type === 'Material Sales' ||
@@ -216,14 +262,34 @@ export function calculateProjectFinancialSummary(
     )
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  // If explicit sales invoices exist, use them. Only fall back to project.sales_invoice if positive, otherwise 0
   const totalSalesInvoice = explicitSales > 0 ? explicitSales : Number(project.sales_invoice || 0);
+  const totalBilled = totalSalesInvoice;
 
-  // 3. Estimated Budget & BOQ Value
+  // 3. Estimated Budget & BOQ Value (Estimated/agreed work value, reference only)
   let estimatedBudget = Number(project.estimated_budget || (project as any).project_value || 0);
   let boqValue = Number(project.boq_value || 0);
 
-  // If budget or BOQ are 0, check if this project originated from or has a matching quotation in booshnam_quotations_v2
+  // Check saved BOQ records for this project first (the primary source of BOQ value)
+  try {
+    const rawBoqs = localStorage.getItem(`siteops_boq_records_v2_${project.id}`);
+    if (rawBoqs) {
+      const parsedBoqs = JSON.parse(rawBoqs);
+      if (Array.isArray(parsedBoqs) && parsedBoqs.length > 0) {
+        const computedBOQ = parsedBoqs.reduce((acc: number, b: any) => {
+          if (b.items && Array.isArray(b.items)) {
+            const itemsSum = b.items.reduce((s: number, it: any) => s + (Number(it.sales_price || it.total_amount) || 0), 0);
+            return acc + (itemsSum || Number(b.boq_value) || 0);
+          }
+          return acc + (Number(b.boq_value) || 0);
+        }, 0);
+        if (computedBOQ > 0) {
+          boqValue = computedBOQ;
+        }
+      }
+    }
+  } catch (e) {}
+
+  // If budget or BOQ are 0, check quotations
   if (estimatedBudget === 0 || boqValue === 0) {
     try {
       const rawQuotes = localStorage.getItem('booshnam_quotations_v2');
@@ -255,8 +321,10 @@ export function calculateProjectFinancialSummary(
     estimatedBudget = boqValue;
   }
 
+  // Outstanding Balance: remaining expected payment from client
+  const outstandingBalance = Math.max(0, boqValue - totalReceived);
+
   // 4. Work Done Value
-  // Work done represents the value of work completed so far, based on task completion % or explicit work_done
   let progressPct = Number(project.progress_percentage || 0);
   if (project.id) {
     try {
@@ -281,12 +349,12 @@ export function calculateProjectFinancialSummary(
     : Math.max(0, boqValue - (estimatedBudget || cashOut));
 
   // 6. Receivables & Payables
-  // Receivables = billed amount not yet collected (totalSalesInvoice - cashIn)
   let receivables = project.receivables !== undefined && project.receivables > 0
     ? project.receivables
-    : Math.max(0, totalSalesInvoice - cashIn);
+    : Math.max(0, totalBilled - totalReceived);
 
-  // Payables = pending payment requests + subcontractor balance
+  const toReceive = receivables;
+
   let subconBalance = 0;
   try {
     const rawSubcons = localStorage.getItem(`booshnam_subcontractors_v1_${project.id}`);
@@ -306,12 +374,30 @@ export function calculateProjectFinancialSummary(
     ? project.payables
     : (pendingPrTotal + subconBalance);
 
-  // 7. Salary Expense Breakdown
+  const toPay = payables;
+
+  // 7. Advance Allocations Tracking
+  let allocatedClientAdvance = 0;
+  try {
+    const rawAllocs = localStorage.getItem('siteops_transaction_allocations_v1');
+    if (rawAllocs) {
+      const parsedAllocs = JSON.parse(rawAllocs);
+      if (Array.isArray(parsedAllocs)) {
+        allocatedClientAdvance = parsedAllocs
+          .filter((a: any) => a.project_id === project.id && a.status === 'ACTIVE')
+          .reduce((sum: number, a: any) => sum + (Number(a.allocated_amount) || 0), 0);
+      }
+    }
+  } catch (e) {}
+
+  const unallocatedClientAdvance = Math.max(0, advanceReceived - allocatedClientAdvance);
+
+  // 8. Salary Expense Breakdown
   let siteStaffExpense = Number(project.site_staff_expense || 0);
   let labourContractorExpense = Number(project.labour_contractor_expense || 0);
   let officeStaffExpense = Number(project.office_staff_expense || 0);
 
-  transactions
+  activeTransactions
     .filter(t => t.type === 'OUT')
     .forEach(t => {
       const sub = (t.transaction_sub_type || '').toLowerCase();
@@ -332,9 +418,9 @@ export function calculateProjectFinancialSummary(
       }
     });
 
-  // 8. Cost Code & Category Breakdown (only if transactions exist)
+  // 9. Cost Code & Category Breakdown
   const costCodeMap = new Map<string, number>();
-  transactions
+  activeTransactions
     .filter(t => t.type === 'OUT')
     .forEach(t => {
       const code = t.cost_code || t.category || t.transaction_sub_type || 'General Expense';
@@ -359,12 +445,28 @@ export function calculateProjectFinancialSummary(
   const overBudgetCount = costCodeBreakdown.filter(c => c.isOverBudget).length;
   const underBudgetCount = costCodeBreakdown.filter(c => !c.isOverBudget).length;
 
+  const settledTransactionsCount = activeTransactions.filter(
+    t => t.status === 'CLEARED' || t.status === 'RECONCILED' || (t.allocated_amount && t.allocated_amount >= t.amount)
+  ).length;
+
   return {
     cashIn,
     cashOut,
     netCashPosition,
     totalExpense,
     totalSalesInvoice,
+    totalBilled,
+    totalReceived,
+    totalPaid,
+    advanceReceived,
+    advancePaid,
+    workPaymentsReceived,
+    toReceive,
+    toPay,
+    outstandingBalance,
+    unallocatedClientAdvance,
+    allocatedClientAdvance,
+    settledTransactionsCount,
     estimatedBudget,
     boqValue,
     workDoneValue,
@@ -377,8 +479,8 @@ export function calculateProjectFinancialSummary(
     costCodeBreakdown,
     overBudgetCount,
     underBudgetCount,
-    transactionsCount: transactions.length,
-    recentTransactions: transactions.slice(0, 10)
+    transactionsCount: activeTransactions.length,
+    recentTransactions: activeTransactions.slice(0, 10)
   };
 }
 

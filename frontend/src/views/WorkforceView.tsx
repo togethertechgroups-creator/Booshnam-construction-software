@@ -525,7 +525,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   <ArrowLeft className="w-5 h-5" />
                 </button>
               )}
-              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+              <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
                 {selectedStaffForOverview ? `Staff Profile: ${selectedStaffForOverview.name}` : "Staff & Payroll Management"}
               </h1>
             </div>

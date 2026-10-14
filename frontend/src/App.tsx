@@ -666,7 +666,13 @@ export function App() {
     }
     const canNavigate = await confirmNavigationIfDirty();
     if (canNavigate) {
-      setCurrentView(targetView);
+      if (targetView === 'projects') {
+        setSelectedProject(null);
+        window.dispatchEvent(new CustomEvent('booshnam_show_all_projects'));
+      }
+      if (targetView !== currentView) {
+        setCurrentView(targetView);
+      }
     }
   };
 

@@ -1191,7 +1191,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
           {/* Page Header Banner */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mx-6">
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Attendance Roster — {attendanceData.find(d => d.date === selectedModalDate)?.fullDate || `${selectedModalDate}-2026`}
             </h1>
           </div>
@@ -1544,7 +1544,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 
           {/* Page Header Banner */}
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mx-6">
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               Underlying Project Health Sheet — All Monitored Sites ({kpiCounts.total})
             </h1>
           </div>
@@ -1706,11 +1706,11 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         <div className="flex-1 flex flex-col min-w-0 bg-white">
           {/* Edge-to-edge Header with Hamburger, Title, Refresh, Share & User Profile */}
           {/* Edge-to-edge Header with Title, Operational/Financial Tabs, Live Pulse, Refresh & User Profile */}
-          <div className="px-6 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white sticky top-0 z-20">
+          <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-3 bg-white sticky top-0 z-20">
             {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
             <div className="flex items-center gap-3.5 flex-wrap">
               <div className="flex items-center gap-2">
-                <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Dashboard</h1>
+                <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">Dashboard</h1>
               </div>
 
               <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">

@@ -17,4 +17,10 @@ local.properties
 .venv/
 backend/.venv/
 mobile/screen_*.png
+demo/
+*.mp4
+__pycache__/
+*.py[cod]
+*$py.class
+backend/**/__pycache__/
 

@@ -151,7 +151,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
       <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               Task Management Hub
             </h1>
           </div>

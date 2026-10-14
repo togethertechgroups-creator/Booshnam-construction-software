@@ -361,7 +361,7 @@ export const DepartmentsView: React.FC<DepartmentsViewProps> = ({
       <div className="px-6 py-3.5 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-20 shadow-2xs">
         <div className="flex items-center gap-4 flex-wrap">
           <div>
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               <span>Department Hub</span>
             </h1>
           </div>

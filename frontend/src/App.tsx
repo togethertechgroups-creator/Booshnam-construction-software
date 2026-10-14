@@ -356,10 +356,7 @@ export function App() {
     return MOCK_USER;
   });
   const [projects, setProjects] = useState<Project[]>(() => getOrInitializeProjects());
-  const [selectedProject, setSelectedProject] = useState<Project | null>(() => {
-    const projs = getOrInitializeProjects();
-    return projs[0] || null;
-  });
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isMobileSimOpen, setIsMobileSimOpen] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -662,14 +659,19 @@ export function App() {
 
   // Guard main view navigation if dirty data is pending and check permission
   const handleNavigateView = async (targetView: string) => {
-    if (targetView === currentView) return;
     if (!isPageAllowedForActiveUser(targetView)) {
       showToast('Access denied: You do not have permission to access this module');
       return;
     }
     const canNavigate = await confirmNavigationIfDirty();
     if (canNavigate) {
-      setCurrentView(targetView);
+      if (targetView === 'projects') {
+        setSelectedProject(null);
+        window.dispatchEvent(new CustomEvent('booshnam_show_all_projects'));
+      }
+      if (targetView !== currentView) {
+        setCurrentView(targetView);
+      }
     }
   };
 

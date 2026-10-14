@@ -1096,7 +1096,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
         <div className="flex items-center justify-between">
           {/* Left Title: Leads & Quotation */}
           <div>
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               Leads & Quotation
             </h1>
           </div>

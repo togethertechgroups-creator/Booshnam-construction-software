@@ -972,7 +972,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+            <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
               Company Settings
             </h1>
           </div>

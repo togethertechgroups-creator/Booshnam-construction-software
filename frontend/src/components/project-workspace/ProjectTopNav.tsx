@@ -300,29 +300,29 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-                  className="flex items-center gap-1.5 py-0.5 px-1 -ml-1 rounded-lg hover:bg-slate-100 text-slate-900 font-bold text-sm sm:text-base transition-colors cursor-pointer group text-left max-w-full"
+                  className="flex items-center gap-1.5 py-0.5 px-1 -ml-1 rounded-lg hover:bg-slate-100 text-slate-900 font-bold text-base sm:text-lg transition-colors cursor-pointer group text-left max-w-full"
                   title="Switch Project"
                 >
                   <span className="truncate text-slate-900 font-bold tracking-tight">
                     {displayTitle}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform shrink-0" />
+                  <ChevronDown className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition-transform shrink-0" />
                 </button>
               </div>
 
               {/* Subtitle: Site Location & Status */}
-              <div className="flex items-center gap-2.5 text-xs text-slate-500 mt-0.5 flex-wrap">
+              <div className="flex items-center gap-2.5 text-xs sm:text-[13px] text-slate-500 mt-0.5 flex-wrap">
                 <span className="flex items-center gap-1 font-medium text-slate-700">
                   <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                  <span>Site:</span>
-                  <strong className="text-slate-900 font-semibold">{project.city || project.location || 'Site'}</strong>
+                  <span className="font-semibold">Site:</span>
+                  <strong className="text-slate-900 font-bold">{project.city || project.location || 'Site'}</strong>
                 </span>
 
                 <span className="text-slate-300 hidden sm:inline">•</span>
 
                 <span className="hidden sm:inline-flex items-center gap-1 text-slate-600">
-                  <span>Client:</span>
-                  <strong className="text-slate-800">{project.client_name || 'Client'}</strong>
+                  <span className="font-semibold">Client:</span>
+                  <strong className="text-slate-800 font-bold">{project.client_name || 'Client'}</strong>
                 </span>
 
 
@@ -483,7 +483,7 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
         </div>
 
         {/* Row 2: Horizontal Tabs with Role Permission Filtering (Requirement 3 & 7) */}
-        <nav className="flex items-center gap-3 sm:gap-4 md:gap-5.5 lg:gap-6 pt-2.5 mt-2.5 border-t border-slate-100 overflow-x-auto no-scrollbar">
+        <nav className="flex items-center gap-3.5 sm:gap-4.5 md:gap-6 pt-2.5 mt-2.5 border-t border-slate-100 overflow-x-auto no-scrollbar">
           {allowedTabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -491,10 +491,10 @@ export const ProjectTopNav: React.FC<ProjectTopNavProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => onSelectTab(tab.id)}
-                className={`relative pb-1 text-xs sm:text-[13px] font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+                className={`relative pb-1.5 text-[13.5px] sm:text-[14.5px] transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   isActive 
                     ? 'text-red-600 font-bold border-b-2 border-red-600 -mb-px' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-700 font-semibold hover:text-slate-950'
                 }`}
               >
                 <span>{tab.label}</span>

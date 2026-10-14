@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, CheckCircle2, Clock, AlertCircle, FileText, 
   Calendar, Layers, Flag, Download, Check, Search, 
@@ -7,7 +7,7 @@ import {
   User, ExternalLink, ChevronRight, Filter, TrendingUp,
   CheckSquare, Sparkles, Phone, Mail, MapPin, Briefcase,
   DollarSign, PlusCircle, UserCheck, ShieldCheck, X, Users, Edit2, Building2, ChevronLeft, ArrowRight, Maximize2, Minimize2, Compass,
-  Trash2, AlertTriangle
+  Trash2, AlertTriangle, ChevronDown, Lock
 } from 'lucide-react';
 import { ProjectTopNav, WorkspaceTabId, isSoilDepartmentProject, SOIL_EXCLUDED_TABS } from '../components/project-workspace/ProjectTopNav';
 import { ProjectSettingsModal } from '../components/project-workspace/ProjectSettingsModal';
@@ -68,6 +68,45 @@ interface ProjectsViewProps {
 }
 
 // Helper options for project assignment are dynamically derived from staffService
+const BUDGET_PRESETS = [
+  { label: '₹10 L', value: 1000000 },
+  { label: '₹25 L', value: 2500000 },
+  { label: '₹50 L', value: 5000000 },
+  { label: '₹1 Cr', value: 10000000 },
+  { label: '₹2.5 Cr', value: 25000000 },
+  { label: '₹5 Cr', value: 50000000 },
+];
+
+const SummaryCardWave: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div className={`absolute right-0 bottom-0 pointer-events-none select-none overflow-hidden ${className}`}>
+    <svg
+      className="w-28 h-18 sm:w-32 sm:h-20"
+      viewBox="0 0 130 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M0 80C24 72 45 46 78 56C102 64 114 42 130 30V80H0Z"
+        fill="currentColor"
+        fillOpacity="0.08"
+      />
+      <path
+        d="M20 80C44 75 62 52 92 60C108 64 120 50 130 42V80H20Z"
+        fill="currentColor"
+        fillOpacity="0.14"
+      />
+      <path
+        d="M48 80C72 76 88 62 108 65C118 67 125 60 130 54V80H48Z"
+        fill="currentColor"
+        fillOpacity="0.22"
+      />
+      {/* 3 ascending signal bars */}
+      <rect x="113" y="26" width="2.5" height="6.5" rx="1.25" fill="currentColor" fillOpacity="0.4" />
+      <rect x="118.5" y="21" width="2.5" height="11.5" rx="1.25" fill="currentColor" fillOpacity="0.6" />
+      <rect x="124" y="15" width="2.5" height="17.5" rx="1.25" fill="currentColor" fillOpacity="0.85" />
+    </svg>
+  </div>
+);
 
 export const ProjectsView: React.FC<ProjectsViewProps> = ({
   projects: propProjects,
@@ -87,7 +126,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 }) => {
   // Navigation / View Modes: 'list' | 'create' | 'details'
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'details'>('list');
-  const [activeProject, setActiveProject] = useState<Project | null>(propSelectedProject || project || null);
+  const [activeProject, setActiveProject] = useState<Project | null>(propSelectedProject || null);
   const [detailTab, setDetailTab] = useState<'overview' | 'wbs' | 'gantt' | 'drawings'>('overview');
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTabId>('dashboard');
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
@@ -106,8 +145,22 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     if (propSelectedProject) {
       setActiveProject(propSelectedProject);
       setViewMode('details');
+    } else {
+      setActiveProject(null);
+      setViewMode('list');
     }
   }, [propSelectedProject]);
+
+  // Listen for explicit show all projects event (e.g. from sidebar Projects click)
+  useEffect(() => {
+    const handleShowAll = () => {
+      setActiveProject(null);
+      setViewMode('list');
+      onSelectProject?.(null);
+    };
+    window.addEventListener('booshnam_show_all_projects', handleShowAll);
+    return () => window.removeEventListener('booshnam_show_all_projects', handleShowAll);
+  }, [onSelectProject]);
 
   // Filter & Search states for Projects list
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,6 +200,33 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     return current === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : current;
   });
   const [newProjectType, setNewProjectType] = useState('Private Construction');
+  const [newStartDate, setNewStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [newEndDate, setNewEndDate] = useState(() => new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]);
+  const [newScope, setNewScope] = useState('');
+  const [isDeptDropdownOpen, setIsDeptDropdownOpen] = useState(false);
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+
+  const timelineDurationDays = useMemo(() => {
+    if (!newStartDate || !newEndDate) return null;
+    const s = new Date(newStartDate).getTime();
+    const e = new Date(newEndDate).getTime();
+    if (isNaN(s) || isNaN(e) || e <= s) return null;
+    const diffDays = Math.round((e - s) / (1000 * 60 * 60 * 24));
+    const months = (diffDays / 30.417).toFixed(1);
+    return { days: diffDays, months };
+  }, [newStartDate, newEndDate]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(e.target as Node)) {
+        setIsDeptDropdownOpen(false);
+      }
+    };
+    if (isDeptDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDeptDropdownOpen]);
 
   useEffect(() => {
     if (activeDeptId !== 'booshnam_associates') {
@@ -168,6 +248,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       setNewAddress('');
       setNewCity('');
       setNewEstimatedBudget('');
+      setNewStartDate(new Date().toISOString().split('T')[0]);
+      setNewEndDate(new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]);
+      setNewScope('');
       setSelectedPM('');
       setSelectedEngineer('');
       setSelectedSupervisor('');
@@ -470,6 +553,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     currentUser?.role_name === 'Owner / Director' ||
     currentUser?.first_name?.toLowerCase() === 'priya' ||
     currentUser?.first_name?.toLowerCase() === 'rajesh';
+
+  // Booshnam Master Super Admin identification
+  const isBooshnamMasterSuperAdmin = Boolean(
+    isCompanyWideSuperAdmin ||
+    activeAccount?.role_code === 'SUPER_ADMIN' ||
+    activeAccount?.username === 'superadmin' ||
+    activeAccount?.id === 'usr-super' ||
+    (currentUser?.role_code === 'SUPER_ADMIN' && (!userDept || userDept === 'Executive Management' || userDept === 'Booshnam Associates'))
+  );
+
+  // Department can only be selected and assigned if the user is Booshnam Master Super Admin in Booshnam Associates (Master overview).
+  // For all individual department workspaces or other users, department selection is prohibited and locked to the respective department.
+  const canSelectDepartment = isBooshnamMasterSuperAdmin && activeDeptId === 'booshnam_associates';
 
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
@@ -802,7 +898,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   }, [viewMode, newProjectName, newClientName, newAddress, selectedPM, selectedEngineer]);
 
   const handleCancelWizard = async () => {
-    const isDirty = Boolean(newProjectName.trim() || newClientName.trim() || newAddress.trim() || selectedPM || selectedEngineer);
+    const isDirty = Boolean(newProjectName.trim() || newClientName.trim() || newAddress.trim() || newScope.trim() || selectedPM || selectedEngineer);
     if (isDirty) {
       const canLeave = await confirmAction({
         title: 'Leave Project Wizard?',
@@ -820,6 +916,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setNewAddress('');
     setNewCity('');
     setNewEstimatedBudget('');
+    setNewStartDate(new Date().toISOString().split('T')[0]);
+    setNewEndDate(new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]);
+    setNewScope('');
     setSelectedPM('');
     setSelectedEngineer('');
     setSelectedSupervisor('');
@@ -972,8 +1071,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       latitude: 13.0827,
       longitude: 80.2707,
       geofence_radius_meters: 200,
-      start_date: new Date().toISOString().split('T')[0],
-      expected_end_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+      start_date: newStartDate || new Date().toISOString().split('T')[0],
+      expected_end_date: newEndDate || new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
       estimated_budget: budgetNum,
       boq_value: budgetNum,
       actual_cost: 0,
@@ -988,7 +1087,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       stage: 'Planning & Mobilization',
       category: resolvedCategory,
       status: 'ACTIVE',
-      description: `Initiated for ${newClientName || newProjectName} located at ${newAddress || ''}, ${newCity || ''}. Auto-generated ${generatedTasks.length} predefined tasks.`,
+      description: newScope.trim() || `Initiated for ${newClientName || newProjectName} located at ${newAddress || ''}, ${newCity || ''}. Auto-generated ${generatedTasks.length} predefined tasks.`,
+      scope_of_work: newScope.trim() || undefined,
       tasks_count: generatedTasks.length,
       assigned_team: assignedTeam
     };
@@ -1050,14 +1150,17 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       ? (allowedDeptIds.includes(activeDeptId as any) ? activeDeptId : allowedDeptIds[0])
       : (activeDeptId !== 'booshnam_associates' ? activeDeptId : newDepartment);
     const currentDeptObj = ORGANIZATION_DEPARTMENTS.find(d => d.id === effectiveDeptId || d.name === effectiveDeptId) || ORGANIZATION_DEPARTMENTS[1];
+    const selectableDepts = ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview);
     const displayedWizardTasks = wizardTasks;
 
     return (
       <div className={`w-full bg-slate-100 flex flex-col antialiased ${
-        isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-100 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : 'min-h-screen'
+        isFullscreen 
+          ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-100 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` 
+          : 'h-screen max-h-screen overflow-hidden'
       }`}>
         {/* ── TOP FULL-SCREEN HEADER BAR ── */}
-        <header className="w-full bg-white border-b border-slate-200/90 px-4 sm:px-8 py-3.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+        <header className="w-full bg-white border-b border-slate-200/90 px-4 sm:px-8 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-xs shrink-0">
           {/* Left: Branding & Title */}
           <div className="flex items-center gap-3">
             <button
@@ -1069,7 +1172,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Creating Project</h1>
+              <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight leading-tight">Creating Project</h1>
             </div>
           </div>
 
@@ -1100,151 +1203,302 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         </header>
 
         {/* ── MAIN EXPANSIVE 12-COLUMN STUDIO CANVAS ── */}
-        <main className={`flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 ${
+        <main className={`flex-1 min-h-0 w-full mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col justify-center overflow-hidden ${
           isFullscreen ? 'max-w-[1700px]' : 'max-w-[1550px]'
         }`}>
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full min-h-0 items-stretch">
             
             {/* ── LEFT/CENTER (7 COLUMNS): ACTIVE WIZARD STEP ── */}
-            <div className="lg:col-span-7 space-y-6">
+            <div className="lg:col-span-7 h-full min-h-0 flex flex-col">
 
               {/* STEP 1: Project Details */}
               {wizardStep === 1 && (
-                <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-5 sm:p-7 space-y-5 min-h-[500px] flex flex-col justify-between animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="bg-white rounded-[26px] border border-slate-200/80 shadow-sm p-4 sm:p-5 h-full min-h-0 flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
                     <div>
-                      <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+                      <h2 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
                         Project Details
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Enter key project parameters, commercial classification, and client contact information.
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Enter key project parameters, choose department, and budget baseline.
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
                       Step 1 of 3
                     </span>
                   </div>
 
-                  {wizardError && (
-                    <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2.5">
-                      <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                      <span className="font-semibold">{wizardError}</span>
-                    </div>
-                  )}
+                  {/* Scroll-free internal body */}
+                  <div className="flex-1 min-h-0 py-2.5 space-y-3 overflow-y-auto no-scrollbar pr-0.5">
+                    {wizardError && (
+                      <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                        <span className="font-semibold">{wizardError}</span>
+                      </div>
+                    )}
 
-                  {/* Section A: Project Identity */}
-                  <div className="space-y-4">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
-                      General Identity
+                    {/* Department Section: Only Booshnam Master Super Admin in Booshnam Associates can select */}
+                    {canSelectDepartment && (
+                      <div className="space-y-1 relative" ref={deptDropdownRef}>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                            Select Department <span className="text-red-500">*</span>
+                          </label>
+                          <span className="text-[11px] font-medium text-slate-400">
+                            Business Division
+                          </span>
+                        </div>
+
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
+                            className={`w-full h-11 px-3.5 bg-white border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer shadow-2xs ${
+                              isDeptDropdownOpen 
+                                ? 'border-red-600 ring-2 ring-red-600/10' 
+                                : 'border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0 border border-red-100">
+                                <Building2 className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold text-slate-900 truncate">
+                                  {currentDeptObj?.name || 'Select Department'}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-medium truncate">
+                                  {currentDeptObj?.role || currentDeptObj?.shortName} • Prefix: {currentDeptObj?.codePrefix}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200/60 font-bold text-[10px]">
+                                {currentDeptObj?.codePrefix}
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDeptDropdownOpen ? 'rotate-180 text-red-600' : ''}`} />
+                            </div>
+                          </button>
+
+                          {/* Floating Dropdown Menu */}
+                          {isDeptDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-60 overflow-y-auto p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                              {selectableDepts.map((dept) => {
+                                const isSelected = newDepartment === dept.id;
+                                return (
+                                  <button
+                                    key={dept.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setNewDepartment(dept.id);
+                                      if (dept.id.includes('SOIL')) setNewProjectType('Soil Investigation');
+                                      else if (dept.id.includes('MATERIAL')) setNewProjectType('Material Testing');
+                                      else if (dept.id === 'ARCHITECTURAL') setNewProjectType('Architectural');
+                                      else if (dept.id === 'GOVERNMENT_PROJECT') setNewProjectType('Government Projects');
+                                      else setNewProjectType('Private Construction');
+                                      setIsDeptDropdownOpen(false);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-red-50 text-red-950 font-bold border border-red-200/80 shadow-2xs'
+                                        : 'hover:bg-slate-50 text-slate-700 border border-transparent'
+                                    }`}
+                                  >
+                                    <div className="min-w-0 flex-1 pr-2">
+                                      <div className="text-xs font-bold leading-snug">
+                                        {dept.name}
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 font-medium">
+                                        {dept.role || dept.shortName} • Prefix: {dept.codePrefix}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                                        isSelected ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-500'
+                                      }`}>
+                                        {dept.codePrefix}
+                                      </span>
+                                      {isSelected && <Check className="w-3.5 h-3.5 text-red-600 stroke-[3]" />}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Section A: Project Identity */}
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                        General Identity
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Project Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Enter project name"
+                            value={newProjectName}
+                            onChange={(e) => {
+                              setNewProjectName(e.target.value);
+                              if (wizardError) setWizardError('');
+                            }}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
+                            autoFocus
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">
+                            Client Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Enter client name"
+                            value={newClientName}
+                            onChange={(e) => setNewClientName(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Project Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newProjectName}
-                        onChange={(e) => {
-                          setNewProjectName(e.target.value);
-                          if (wizardError) setWizardError('');
-                        }}
-                        className="w-full px-4 py-3 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
-                        autoFocus
+                    {/* Section B: Location & Site Details */}
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                        Location & Site Details
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">Address / Site Location</label>
+                          <input
+                            type="text"
+                            placeholder="Enter site address / location"
+                            value={newAddress}
+                            onChange={(e) => setNewAddress(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">City</label>
+                          <input
+                            type="text"
+                            placeholder="Enter city"
+                            value={newCity}
+                            onChange={(e) => setNewCity(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section C: Project Schedule & Timeline */}
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                        Project Schedule & Dates
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">Start Date</label>
+                          <input
+                            type="date"
+                            value={newStartDate}
+                            onChange={(e) => setNewStartDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 mb-1">Target Completion Date</label>
+                          <input
+                            type="date"
+                            value={newEndDate}
+                            min={newStartDate}
+                            onChange={(e) => setNewEndDate(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section D: Project Budget & Commercials */}
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                        Budget & Estimated Cost
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              placeholder="Enter estimated budget"
+                              value={newEstimatedBudget}
+                              onChange={(e) => setNewEstimatedBudget(e.target.value)}
+                              className="w-full pl-7 pr-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
+                            />
+                          </div>
+                          {newEstimatedBudget && Number(newEstimatedBudget) > 0 ? (
+                            <p className="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>{formatINR(newEstimatedBudget)} ({getLakhsCroresText(newEstimatedBudget)})</span>
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              Sets the financial budget baseline for expenses and cost tracking
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section E: Scope & Key Deliverables */}
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3 bg-red-600 rounded-full" />
+                        Scope & Key Notes <span className="text-[10px] font-normal text-slate-400 lowercase">(optional)</span>
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={newScope}
+                        onChange={(e) => setNewScope(e.target.value)}
+                        placeholder="Enter brief project scope, deliverables, or site instructions..."
+                        className="w-full px-3 py-2 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition resize-none"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Client Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Apex Living Developers"
-                        value={newClientName}
-                        onChange={(e) => setNewClientName(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Section B: Location & Site Details */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
-                      Location & Site Details
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">Address / Site Location</label>
-                        <input
-                          type="text"
-                          value={newAddress}
-                          onChange={(e) => setNewAddress(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1.5">City</label>
-                        <input
-                          type="text"
-                          value={newCity}
-                          onChange={(e) => setNewCity(e.target.value)}
-                          className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section C: Project Budget & Commercials */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <div className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-3.5 bg-red-600 rounded-full" />
-                      Budget & Estimated Cost
-                    </div>
-
-                    <div className="max-w-md">
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                        Estimated Budget / Project Cost (₹)
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1000"
-                          placeholder="e.g. 2500000"
-                          value={newEstimatedBudget}
-                          onChange={(e) => setNewEstimatedBudget(e.target.value)}
-                          className="w-full pl-8 pr-4 py-2.5 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/10 transition shadow-2xs"
-                        />
-                      </div>
-                      {newEstimatedBudget && Number(newEstimatedBudget) > 0 ? (
-                        <p className="text-[11px] font-bold text-emerald-600 mt-1">
-                          {formatINR(newEstimatedBudget)} {getLakhsCroresText(newEstimatedBudget)}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          Sets the project's financial budget baseline for expenses and cost tracking
-                        </p>
-                      )}
                     </div>
                   </div>
 
                   {/* Continue Button */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between shrink-0 mt-auto">
                     <button
                       type="button"
                       onClick={handleCancelWizard}
-                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       onClick={handleWizardContinueToStep2}
-                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
                     >
                       <span>Continue to Team Assignment (Step 2)</span>
                       <ArrowRight className="w-4 h-4" />
@@ -1255,21 +1509,24 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               {/* STEP 2: Team Assignment */}
               {wizardStep === 2 && (
-                <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-5 sm:p-7 space-y-5 min-h-[500px] flex flex-col justify-between animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div className="bg-white rounded-[26px] border border-slate-200/80 shadow-sm p-4 sm:p-5 h-full min-h-0 flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
                         <Users className="w-5 h-5 text-red-600" />
                         Assign Key Team Members
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Designate site engineers, project managers, and supervisors for daily field operations.
                       </p>
                     </div>
-                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
                       Step 2 of 3
                     </span>
                   </div>
+
+                  {/* Scrollable internal body */}
+                  <div className="flex-1 min-h-0 py-2.5 space-y-3.5 overflow-y-auto no-scrollbar pr-0.5">
 
                   {/* 3-Column Grid of Key Leadership Roles - Perfectly Aligned */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 items-stretch">
@@ -1438,7 +1695,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                               type="text"
                               value={extraMemberRole}
                               onChange={(e) => setExtraMemberRole(e.target.value)}
-                              placeholder="e.g. Architect, Quality Auditor..."
+                              placeholder="Enter designation / role"
                               className="w-full h-10 px-3 border border-slate-200 rounded-xl text-xs font-medium bg-white focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600"
                             />
                           </div>
@@ -1468,13 +1725,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
                     )}
                   </div>
+                </div>
 
-                  {/* Navigation Buttons */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                {/* Navigation Buttons */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0 mt-auto">
                     <button
                       type="button"
                       onClick={() => setWizardStep(1)}
-                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       <span>Back to Details</span>
@@ -1482,7 +1740,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     <button
                       type="button"
                       onClick={handleWizardContinueToStep3}
-                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
                     >
                       <span>Continue to Predefined Tasks (Step 3)</span>
                       <ArrowRight className="w-4 h-4" />
@@ -1493,22 +1751,25 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
               {/* STEP 3: Predefined Tasks */}
               {wizardStep === 3 && (
-                <div className="bg-white rounded-[28px] border border-slate-200/80 shadow-sm p-5 sm:p-7 space-y-5 min-h-[500px] flex flex-col justify-between animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div className="bg-white rounded-[26px] border border-slate-200/80 shadow-sm p-4 sm:p-5 h-full min-h-0 flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100 shrink-0">
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                         Tasks & Workflow
                       </h2>
-                      <p className="text-xs text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-0.5">
                         Tasks pre-populated for this project. Check or uncheck to include, click Edit to customize, or add new tasks.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-slate-700 bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl">
+                      <span className="text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-3 py-1 rounded-xl">
                         {selectedTaskIds.length} / {wizardTasks.length} Active
                       </span>
                     </div>
                   </div>
+
+                  {/* Scrollable internal body */}
+                  <div className="flex-1 min-h-0 py-2 space-y-2.5 overflow-y-auto no-scrollbar pr-0.5">
 
                   {/* Toolbar */}
                   <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2">
@@ -1566,7 +1827,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             type="text"
                             value={customTaskForm.title}
                             onChange={(e) => setCustomTaskForm({ ...customTaskForm, title: e.target.value })}
-                            placeholder="e.g. Concrete Cube Testing or Borehole Drilling"
+                            placeholder="Enter task title"
                             className="w-full h-10 px-3 border border-slate-200 rounded-xl bg-white text-xs font-medium"
                           />
                         </div>
@@ -1787,12 +2048,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     })}
                   </div>
 
+                  </div>
+
                   {/* Action Buttons */}
-                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between mt-auto">
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0 mt-auto">
                     <button
                       type="button"
                       onClick={() => setWizardStep(2)}
-                      className="px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       <span>Back to Team</span>
@@ -1800,7 +2063,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     <button
                       type="button"
                       onClick={handleWizardSubmit}
-                      className="px-8 py-3.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-600/25 hover:shadow-lg hover:shadow-red-600/35 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
+                      className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-md shadow-red-600/25 hover:shadow-lg hover:shadow-red-600/35 transition-all flex items-center gap-2 cursor-pointer active:scale-98"
                     >
                       <Check className="w-4 h-4" />
                       <span>Create Project ({selectedTaskIds.length} Tasks)</span>
@@ -1810,48 +2073,51 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               )}
             </div>
 
-            {/* ── RIGHT (5 COLUMNS): WIZARD SHOWCASE BANNER CARD (MATCHING DESIGN) ── */}
-            <div className="lg:col-span-5 sticky top-20">
-              <div className="bg-white rounded-[28px] border border-slate-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between p-5 sm:p-6 min-h-[500px]">
+            {/* ── RIGHT (5 COLUMNS): WIZARD SHOWCASE BANNER CARD (FULL PICTURE CARD) ── */}
+            <div className="lg:col-span-5 h-full min-h-0 flex flex-col">
+              <div className="bg-white rounded-[26px] border border-slate-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between p-5 sm:p-6 h-full min-h-0">
                 
-                {/* ── TOP-RIGHT CONSTRUCTION ILLUSTRATION HERO ── */}
-                <div className="absolute top-0 right-0 w-[165px] sm:w-[185px] h-[155px] pointer-events-none select-none z-0">
+                {/* ── FULL CARD PICTURE ARTWORK (PROJECT WIZARD BANNER) ── */}
+                <div className="absolute inset-0 pointer-events-none select-none z-0 overflow-hidden">
                   <img
-                    src="/construction-hero.png"
-                    alt="Construction"
-                    className="w-full h-full object-contain object-top-right"
+                    src="/project-wizard-banner.jpg"
+                    alt="Project Studio Artwork"
+                    className="w-full h-full object-cover object-top"
                   />
-                </div>
-
-                {/* ── BOTTOM PINK WAVY GRADIENT RIBBON ── */}
-                <div className="absolute bottom-0 left-0 right-0 h-[85px] pointer-events-none select-none z-0 overflow-hidden opacity-85">
-                  <img
-                    src="/construction-wave.png"
-                    alt=""
-                    className="w-full h-full object-cover object-bottom"
-                  />
+                  {/* Pristine gradient overlay keeping text, timeline cards, and badges crystal clear */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-white/80 to-white/25" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-transparent to-white/10" />
                 </div>
 
                 {/* ── TOP: TITLE & SUBTITLE ── */}
-                <div className="relative z-10">
+                <div className="relative z-10 shrink-0">
                   <div className="w-8 h-1 bg-red-600 rounded-full mb-2.5" />
                   <h2 className="text-xl sm:text-[23px] font-black text-slate-900 tracking-tight leading-tight">
                     Let's Build Your<br />
                     <span className="text-red-600">Project</span>
                   </h2>
-                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed max-w-[200px] font-medium">
+                  <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed max-w-[210px] font-medium">
                     Add the key details to create a new project. Next, you can assign your team and setup departments.
                   </p>
+
+                  {/* Active Selected Department Pill */}
+                  {currentDeptObj && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/90 backdrop-blur-xs border border-red-200/70 text-red-700 text-[11px] font-bold mt-2.5 shadow-2xs">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                      <span>{currentDeptObj.name}</span>
+                      <span className="text-slate-400 font-normal">({currentDeptObj.codePrefix})</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* ── MIDDLE: 3-STEP VERTICAL TIMELINE (COMPACT & CENTERED) ── */}
-                <div className="relative z-10 my-3 py-1">
+                {/* ── MIDDLE: 3-STEP VERTICAL TIMELINE (EXPANDED & CENTERED) ── */}
+                <div className="relative z-10 my-auto py-2 shrink-0">
                   {/* Vertical connecting line through circle centers:
                       Circle width is w-7 (28px), center is at 14px.
                       Line is w-0.5 (2px) at left-[13px] -> perfectly centered at 14px! */}
                   <div className="absolute left-[13px] top-[18px] bottom-[18px] w-0.5 bg-slate-200/90 z-0" />
 
-                  <div className="space-y-2.5 relative z-10">
+                  <div className="space-y-3 relative z-10">
                     {/* Step 1: Project Details */}
                     <div
                       onClick={() => setWizardStep(1)}
@@ -1869,10 +2135,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       {/* Step Card */}
-                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border ${
+                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border backdrop-blur-xs ${
                         wizardStep === 1
-                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
-                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
+                          ? 'bg-white/95 border-rose-200/90 shadow-2xs ring-1 ring-red-500/20'
+                          : 'bg-white/80 hover:bg-white/95 border-slate-200/60 shadow-2xs'
                       }`}>
                         {/* Icon Box */}
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
@@ -1927,10 +2193,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       {/* Step Card */}
-                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border ${
+                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border backdrop-blur-xs ${
                         wizardStep === 2
-                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
-                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
+                          ? 'bg-white/95 border-rose-200/90 shadow-2xs ring-1 ring-red-500/20'
+                          : 'bg-white/80 hover:bg-white/95 border-slate-200/60 shadow-2xs'
                       }`}>
                         {/* Icon Box */}
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
@@ -1983,10 +2249,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       {/* Step Card */}
-                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border ${
+                      <div className={`flex-1 flex items-center gap-2.5 p-2.5 sm:p-3 rounded-2xl transition-all border backdrop-blur-xs ${
                         wizardStep === 3
-                          ? 'bg-[#fff5f5] border-rose-200/90 shadow-2xs'
-                          : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200/60'
+                          ? 'bg-white/95 border-rose-200/90 shadow-2xs ring-1 ring-red-500/20'
+                          : 'bg-white/80 hover:bg-white/95 border-slate-200/60 shadow-2xs'
                       }`}>
                         {/* Icon Box */}
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
@@ -2019,7 +2285,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 </div>
 
                 {/* ── BOTTOM: 3 FEATURE BENEFIT PILLARS ── */}
-                <div className="relative z-10 pt-3 border-t border-slate-100/90">
+                <div className="relative z-10 pt-3 border-t border-slate-200/70 shrink-0 bg-white/80 backdrop-blur-xs rounded-2xl px-2 py-2">
                   <div className="grid grid-cols-3 items-center divide-x divide-slate-200/80 text-center">
                     {/* Track Progress */}
                     <div className="flex flex-col items-center gap-1 px-1">
@@ -2107,7 +2373,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={onToggleSidebar}
-          onBack={() => setViewMode('list')}
+          onBack={() => {
+            setActiveProject(null);
+            setViewMode('list');
+            onSelectProject?.(null);
+          }}
           userRole={currentUser.role_code}
           userRoleName={currentUser.role_name}
           isFullscreen={isFullscreen}
@@ -2139,6 +2409,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               project={activeProject}
               tasks={tasks}
               onShowToast={onShowToast}
+              onNavigateTab={(tab) => setWorkspaceTab(tab as any)}
             />
           )}
 
@@ -2445,9 +2716,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
     }`}>
       {/* Top Header Bar Inside Full-Bleed View */}
-      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
+      <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
         <div>
-          <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Projects</h1>
+          <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">Projects</h1>
         </div>
 
         {/* Right Settings, Bell & User Avatar */}
@@ -2491,52 +2762,132 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       {/* Main Single Card Content Body */}
       <div className="p-4 sm:p-6 space-y-6 flex-1">
 
-        {/* Top 3 Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Approval (Pending) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-              <span>Approval (Pending)</span>
-              <span className="text-slate-400 cursor-pointer" title="Approvals requiring owner/director action">ⓘ</span>
+        {/* Top 4 Summary Cards (Matching Reference UI) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Approval (Pending) */}
+          <div
+            onClick={() => {
+              if (activeProject) setWorkspaceTab('dashboard');
+              else onShowToast?.(`Pending Approvals: ${deptPendingApprovals}`);
+            }}
+            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
+          >
+            {/* Squircle Icon */}
+            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#FDEEEC] text-[#D9383A] flex items-center justify-center shrink-0 shadow-2xs">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="m9 15 2 2 4-4" />
+              </svg>
             </div>
-            <div className="text-2xl font-bold text-slate-900">
-              {deptPendingApprovals}
-            </div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-            <ThumbsUp className="w-5 h-5" />
-          </div>
-        </div>
 
-        {/* Card 2: Material (Pending) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-              <span>Material (Pending)</span>
-              <span className="text-slate-400 cursor-pointer" title="Pending material indent and purchase orders">ⓘ</span>
-            </div>
-            <div className="text-2xl font-bold text-slate-900">{deptPendingMaterials}</div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
-            <ShoppingCart className="w-5 h-5" />
-          </div>
-        </div>
+            {/* Info Stack */}
+            <div className="flex-1 min-w-0 z-10">
+              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
+                Approval (Pending)
+              </div>
+              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
+                {deptPendingApprovals}
+              </div>
 
-        {/* Card 3: To Do (Pending) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1">
-              <span>To Do (Pending)</span>
-              <span className="text-slate-400 cursor-pointer" title="Pending tasks and action items">ⓘ</span>
             </div>
-            <div className="text-2xl font-bold text-slate-900">{deptPendingTodos}</div>
+
+            {/* Wave Decoration */}
+            <SummaryCardWave className="text-[#D9383A]" />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
-            <ListTodo className="w-5 h-5" />
+
+          {/* Card 2: Material (Pending) */}
+          <div
+            onClick={() => {
+              if (activeProject) setWorkspaceTab('material');
+              else onShowToast?.(`Pending Materials: ${deptPendingMaterials}`);
+            }}
+            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
+          >
+            {/* Squircle Icon */}
+            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#FEF5E7] text-[#E88915] flex items-center justify-center shrink-0 shadow-2xs">
+              <ShoppingCart className="w-6 h-6" strokeWidth={2.2} />
+            </div>
+
+            {/* Info Stack */}
+            <div className="flex-1 min-w-0 z-10">
+              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
+                Material (Pending)
+              </div>
+              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
+                {deptPendingMaterials}
+              </div>
+
+            </div>
+
+            {/* Wave Decoration */}
+            <SummaryCardWave className="text-[#E88915]" />
+          </div>
+
+          {/* Card 3: To Do (Pending) */}
+          <div
+            onClick={() => {
+              if (activeProject) setWorkspaceTab('todo');
+              else onShowToast?.(`Pending To Do: ${deptPendingTodos}`);
+            }}
+            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
+          >
+            {/* Squircle Icon */}
+            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#E8F1FD] text-[#2563EB] flex items-center justify-center shrink-0 shadow-2xs">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="6" cy="8" r="2.2" />
+                <line x1="11" y1="8" x2="20" y2="8" />
+                <circle cx="6" cy="16" r="2.2" />
+                <line x1="11" y1="16" x2="20" y2="16" />
+              </svg>
+            </div>
+
+            {/* Info Stack */}
+            <div className="flex-1 min-w-0 z-10">
+              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
+                To Do (Pending)
+              </div>
+              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
+                {deptPendingTodos}
+              </div>
+
+            </div>
+
+            {/* Wave Decoration */}
+            <SummaryCardWave className="text-[#2563EB]" />
+          </div>
+
+          {/* Card 4: Total Projects */}
+          <div
+            onClick={() => {
+              setStatusFilter('All');
+              setStageFilter('All');
+              setCategoryFilter('All');
+              setSearchQuery('');
+              onShowToast?.(`Showing all ${filteredProjects.length} projects`);
+            }}
+            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
+          >
+            {/* Squircle Icon */}
+            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#E6F7EC] text-[#1E8349] flex items-center justify-center shrink-0 shadow-2xs">
+              <CheckCircle2 className="w-6 h-6" strokeWidth={2.2} />
+            </div>
+
+            {/* Info Stack */}
+            <div className="flex-1 min-w-0 z-10">
+              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
+                Total Projects
+              </div>
+              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
+                {filteredProjects.length}
+              </div>
+
+            </div>
+
+            {/* Wave Decoration */}
+            <SummaryCardWave className="text-[#1E8349]" />
           </div>
         </div>
-      </div>
 
       {/* ── UNIFIED FILTER & ACTION TOOLBAR ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -2559,66 +2910,35 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             />
           </div>
 
-          {/* Department Filter: Multi-Select Filter in Booshnam Associates, or Single-Select in restricted branches */}
-          {activeDeptId === 'booshnam_associates' ? (
-            <DepartmentMultiSelectFilter
-              selectedIds={overviewDeptIds}
-              onChange={setOverviewDeptIds}
-              departments={projectDepartmentFilterItems}
-              totalCount={allProjects.length}
-              labelPrefix="Dept"
-            />
-          ) : (
-            <div className="w-56">
-              <CustomSelect
-                value={activeDeptId}
-                onChange={(val) => {
-                  setActiveDepartmentId(val as any);
-                  setActiveDeptId(val);
-                }}
-                disabled={isRestrictedDeptUser ? (allowedDeptIds ? allowedDeptIds.length <= 1 : true) : false}
-                options={departmentFilterOptions}
-                prefix="Dept: "
-                size="sm"
-                variant="brand"
+          {/* Department Filter: Only visible to Super Admin */}
+          {isBooshnamMasterSuperAdmin && (
+            activeDeptId === 'booshnam_associates' ? (
+              <DepartmentMultiSelectFilter
+                selectedIds={overviewDeptIds}
+                onChange={setOverviewDeptIds}
+                departments={projectDepartmentFilterItems}
+                totalCount={allProjects.length}
+                labelPrefix="Dept"
               />
-            </div>
+            ) : (
+              <div className="w-56">
+                <CustomSelect
+                  value={activeDeptId}
+                  onChange={(val) => {
+                    setActiveDepartmentId(val as any);
+                    setActiveDeptId(val);
+                  }}
+                  disabled={isRestrictedDeptUser ? (allowedDeptIds ? allowedDeptIds.length <= 1 : true) : false}
+                  options={departmentFilterOptions}
+                  prefix="Dept: "
+                  size="sm"
+                  variant="brand"
+                />
+              </div>
+            )
           )}
 
-          {/* Project Type Dropdown */}
-          <div className="w-44">
-            <CustomSelect
-              value={categoryFilter}
-              onChange={(val) => setCategoryFilter(val)}
-              options={[
-                { label: 'Type: All', value: 'All' },
-                { label: 'Private Construction', value: 'Private Construction' },
-                { label: 'Government Projects', value: 'Government Projects' },
-              ]}
-              placeholder="Project Type"
-              size="sm"
-              variant="brand"
-            />
-          </div>
 
-          {/* Stage Dropdown */}
-          <div className="w-44">
-            <CustomSelect
-              value={stageFilter}
-              onChange={(val) => setStageFilter(val)}
-              options={[
-                { label: 'Stage: All', value: 'All' },
-                { label: 'Foundation & Framing', value: 'Foundation & Framing' },
-                { label: 'Superstructure RCC', value: 'Superstructure RCC' },
-                { label: 'Brickwork & Lintel', value: 'Brickwork & Lintel' },
-                { label: 'Finishing & MEP', value: 'Finishing & MEP' },
-                { label: 'Planning & Mobilization', value: 'Planning & Mobilization' },
-              ]}
-              placeholder="Stage"
-              size="sm"
-              variant="brand"
-            />
-          </div>
 
           {/* Count Badge */}
           <span className="h-8 px-3 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg border border-slate-200/80 shadow-2xs flex items-center justify-center gap-1">

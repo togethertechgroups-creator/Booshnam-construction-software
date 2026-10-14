@@ -2763,7 +2763,7 @@ const toIsoDate = (displayStr: string) => {
       <header className="border-b border-slate-200 bg-white px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
         {/* Title */}
         <div className="flex items-center gap-3">
-          <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">Finance</h1>
+          <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">Finance</h1>
         </div>
 
         {/* Right utilities */}

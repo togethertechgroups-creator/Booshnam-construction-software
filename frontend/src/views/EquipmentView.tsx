@@ -567,7 +567,7 @@ export const EquipmentView: React.FC<EquipmentViewProps> = ({
       
       {/* ── TOP HEADER (Matching Reference Image Exactly) ── */}
       <div className="px-6 py-3.5 border-b border-slate-200 flex items-center justify-between gap-4 bg-white sticky top-0 z-20">
-        <h1 className="text-[21px] font-bold text-[#262626] font-heading tracking-tight">
+        <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
           Asset Management
         </h1>
 

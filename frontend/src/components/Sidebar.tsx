@@ -369,62 +369,80 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Sidebar — expanded (w-64) or mini icon rail (w-[72px]) */}
-      <aside className={`bg-white text-slate-800 border-r border-slate-200 flex flex-col h-screen fixed left-0 top-0 z-40 select-none transition-all duration-300 ease-in-out ${
+      <aside className={`bg-white text-slate-800 flex flex-col h-screen fixed left-0 top-0 z-40 select-none transition-all duration-300 ease-in-out ${
         isOpen ? 'w-64 shadow-xs' : 'w-[72px] shadow-xs'
       }`}>
 
-        {/* ── Brand Header (Interactive Workspace & Department Switcher) ── */}
-        {(() => {
-          const isCompanyWideSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
-          const allowedDeptIds = getUserAllowedDepartmentIds(activeAccount);
+        {/* ── Brand Header (Clean White Area with Booshnam Associates Logo + Collapse Toggle) ── */}
+        {isOpen ? (
+          <div className="px-3.5 pt-3 pb-2.5 bg-white flex items-center justify-between shrink-0">
+            <div className="flex items-center text-left py-0.5">
+              <img
+                src="/logo@2x.png"
+                alt="Booshnam Associates"
+                className="h-[46px] w-auto max-w-[190px] object-contain select-none"
+              />
+            </div>
+            {onToggle && (
+              <button
+                type="button"
+                onClick={onToggle}
+                title="Collapse Sidebar"
+                className="p-1 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+              >
+                <ChevronLeftIcon size={18} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="pt-3 pb-2 px-2 bg-white flex flex-col items-center gap-2 shrink-0">
+            <img
+              src="/booshnam-app-icon.png"
+              alt="Booshnam Associates"
+              className="w-10 h-10 object-contain drop-shadow-2xs select-none"
+            />
+            {onToggle && (
+              <button
+                type="button"
+                onClick={onToggle}
+                title="Expand Sidebar"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer relative"
+              >
+                <ChevronLeftIcon size={18} className="rotate-180" />
+                {unacknowledgedLowStockCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+        )}
 
-          const availableDepts = isCompanyWideSuperAdmin
-            ? ORGANIZATION_DEPARTMENTS
-            : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && allowedDeptIds.includes(d.id));
+        {/* ── Signature Brand-Colored Curved Panel (Google Drive Reference UI Aesthetic) ── */}
+        <div 
+          className="flex-1 min-h-0 flex flex-col relative text-white"
+          style={{
+            background: 'linear-gradient(180deg, #C61D45 0%, #BA193F 55%, #991433 100%)',
+            borderTopRightRadius: isOpen ? '42px' : '24px',
+          }}
+        >
+          {/* Department Selector Pill Button (Upload New File Style) */}
+          {(() => {
+            const isCompanyWideSuperAdmin = isUserCompanyWideSuperAdmin(activeAccount);
+            const allowedDeptIds = getUserAllowedDepartmentIds(activeAccount);
 
-          const finalAvailableDepts = availableDepts.length > 0 ? availableDepts : [ORGANIZATION_DEPARTMENTS[1]];
-          const canSwitchDepartment = finalAvailableDepts.length > 1;
+            const availableDepts = isCompanyWideSuperAdmin
+              ? ORGANIZATION_DEPARTMENTS
+              : ORGANIZATION_DEPARTMENTS.filter(d => !d.isMainOverview && allowedDeptIds.includes(d.id));
 
-          return (
-            <div className="px-3.5 pt-3 pb-2.5 border-b border-slate-100 relative bg-white" ref={headerDropdownRef}>
-              {isOpen ? (
-                /* EXPANDED: Official Horizontal Logo + Collapse Button, and Department Selector underneath */
-                <div className="space-y-2">
-                  {/* Top Row: Official Booshnam Logo + Collapse toggle button */}
-                  <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (canSwitchDepartment) {
-                          setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
-                        }
-                      }}
-                      className={`flex items-center text-left py-0.5 ${
-                        canSwitchDepartment ? 'cursor-pointer' : 'cursor-default'
-                      }`}
-                      title={canSwitchDepartment ? "Click to switch department" : "Booshnam Associates"}
-                    >
-                      <img
-                        src="/logo@2x.png"
-                        alt="Booshnam Associates"
-                        className="h-[48px] w-auto max-w-[195px] object-contain select-none"
-                      />
-                    </button>
+            const finalAvailableDepts = availableDepts.length > 0 ? availableDepts : [ORGANIZATION_DEPARTMENTS[1]];
+            const canSwitchDepartment = finalAvailableDepts.length > 1;
 
-                    {/* Right: Collapse toggle button */}
-                    {onToggle && (
-                      <button
-                        type="button"
-                        onClick={onToggle}
-                        title="Collapse Sidebar"
-                        className="p-1 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-                      >
-                        <ChevronLeftIcon size={18} />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Under Logo: Selected Department View & Dropdown Trigger */}
+            return (
+              <div className={`shrink-0 relative z-30 ${isOpen ? 'px-3 pt-3 pb-2' : 'py-2.5 px-2 flex justify-center'}`} ref={headerDropdownRef}>
+                {isOpen ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -432,24 +450,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setIsHeaderDropdownOpen(!isHeaderDropdownOpen);
                       }
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 mt-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/80 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all duration-300 ease-in-out text-left group ${
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-full bg-white text-slate-800 hover:text-[#C61D45] shadow-md shadow-black/10 transition-all font-bold text-[13.5px] group ${
                       canSwitchDepartment ? 'cursor-pointer' : 'cursor-default'
                     }`}
                     title={canSwitchDepartment ? "Switch Department" : activeDeptEntity.name}
                   >
-                    <div className="flex items-center min-w-0 flex-1">
-                      <span className="text-[13px] font-black font-heading text-slate-800 tracking-tight truncate group-hover:text-[#ED1C24] transition-colors duration-200">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="truncate text-slate-800 font-bold group-hover:text-[#C61D45] transition-colors">
                         {activeDeptEntity.name}
                       </span>
                     </div>
                     {canSwitchDepartment && (
-                      <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-300 ${isHeaderDropdownOpen ? 'rotate-180 text-[#ED1C24]' : 'group-hover:text-slate-700'}`} />
+                      <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isHeaderDropdownOpen ? 'rotate-180 text-[#C61D45]' : 'group-hover:text-slate-600'}`} />
                     )}
                   </button>
-                </div>
-              ) : (
-                /* COLLAPSED MINI: Clean icon button, clicking opens dropdown */
-                <div className="flex flex-col items-center gap-2">
+                ) : (
                   <button
                     type="button"
                     onClick={() => {
@@ -458,37 +473,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }
                     }}
                     title={`${activeDeptEntity.name} - ${canSwitchDepartment ? 'Switch Department' : displayName}`}
-                    className={canSwitchDepartment ? "cursor-pointer" : "cursor-default"}
+                    className={`w-10 h-10 rounded-full bg-white text-[#C61D45] flex items-center justify-center shadow-md font-bold text-xs mx-auto transition-transform ${
+                      canSwitchDepartment ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'
+                    }`}
                   >
-                    <img
-                      src="/booshnam-app-icon.png"
-                      alt="Booshnam Associates"
-                      className="w-10 h-10 object-contain drop-shadow-2xs select-none"
-                    />
+                    <span>{activeDeptEntity.codePrefix || 'BA'}</span>
                   </button>
-                  {onToggle && (
-                    <button
-                      type="button"
-                      onClick={onToggle}
-                      title="Expand Sidebar"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#C61D45] hover:bg-slate-100 transition-colors cursor-pointer relative"
-                    >
-                      <ChevronLeftIcon size={18} className="rotate-180" />
-                      {unacknowledgedLowStockCount > 0 && (
-                        <span className="absolute top-1 right-1 flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                        </span>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* ── DROPDOWN MENU: Clean list without PRV badges ── */}
-              {isHeaderDropdownOpen && canSwitchDepartment && (
-                <div className={`absolute ${isOpen ? 'left-2 w-[calc(100%-16px)]' : 'left-16 w-80'} top-[calc(100%+4px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800`}>
-                  <div className="max-h-[75vh] overflow-y-auto divide-y divide-slate-100/80 scrollbar-thin scrollbar-thumb-slate-200">
+                {/* ── DROPDOWN MENU: Clean list without PRV badges ── */}
+                {isHeaderDropdownOpen && canSwitchDepartment && (
+                  <div className={`absolute ${isOpen ? 'left-2 w-[calc(100%-16px)]' : 'left-16 w-80'} top-[calc(100%+4px)] bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 text-slate-800`}>
+                    <div className="max-h-[75vh] overflow-y-auto divide-y divide-slate-100/80 scrollbar-thin scrollbar-thumb-slate-200">
                     {(() => {
                       const booshnamDept = finalAvailableDepts.find(d => d.id === 'booshnam_associates');
                       const soilDepts = finalAvailableDepts.filter(d => d.id === 'SOIL_INVESTIGATION' || d.id === 'COIMBATORE_SOIL');
@@ -521,7 +517,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               }`}
                             >
                               <div className="min-w-0 flex-1 pr-2">
-                                <div className={`text-[13px] font-bold truncate leading-snug ${activeDeptEntity.id === booshnamDept.id ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                <div className={`text-sm font-bold truncate leading-snug ${activeDeptEntity.id === booshnamDept.id ? 'text-[#C61D45]' : 'text-slate-800'}`}>
                                   {booshnamDept.name}
                                 </div>
                               </div>
@@ -544,10 +540,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 }`}
                               >
                                 <div className="min-w-0 flex-1 pr-2">
-                                  <div className={`text-[13px] font-bold truncate leading-snug ${isSoilActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                  <div className={`text-sm font-bold truncate leading-snug ${isSoilActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
                                     Soil Investigation
                                   </div>
-                                  <div className="text-[10px] text-slate-400 font-medium">
+                                  <div className="text-[11px] text-slate-400 font-medium">
                                     {activeDeptEntity.id === 'SOIL_INVESTIGATION'
                                       ? 'Active: Chennai Branch'
                                       : activeDeptEntity.id === 'COIMBATORE_SOIL'
@@ -581,7 +577,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                           setIsHeaderDropdownOpen(false);
                                           onSelectView('company_dashboard');
                                         }}
-                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-[13px] transition-colors cursor-pointer ${
                                           isBranchSelected
                                             ? 'bg-white font-bold text-[#C61D45] shadow-xs border border-red-200/80'
                                             : 'text-slate-700 hover:bg-white hover:text-slate-900 font-medium'
@@ -615,10 +611,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 }`}
                               >
                                 <div className="min-w-0 flex-1 pr-2">
-                                  <div className={`text-[13px] font-bold truncate leading-snug ${isMaterialActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                  <div className={`text-sm font-bold truncate leading-snug ${isMaterialActive ? 'text-[#C61D45]' : 'text-slate-800'}`}>
                                     Material Testing
                                   </div>
-                                  <div className="text-[10px] text-slate-400 font-medium">
+                                  <div className="text-[11px] text-slate-400 font-medium">
                                     {activeDeptEntity.id === 'MATERIAL_TESTING'
                                       ? 'Active: Chennai Branch'
                                       : activeDeptEntity.id === 'COIMBATORE_MATERIAL_TESTING'
@@ -652,7 +648,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                           setIsHeaderDropdownOpen(false);
                                           onSelectView('company_dashboard');
                                         }}
-                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                                        className={`w-full text-left pl-3.5 pr-3 py-2 rounded-lg flex items-center justify-between text-[13px] transition-colors cursor-pointer ${
                                           isBranchSelected
                                             ? 'bg-white font-bold text-[#C61D45] shadow-xs border border-red-200/80'
                                             : 'text-slate-700 hover:bg-white hover:text-slate-900 font-medium'
@@ -690,7 +686,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 }`}
                               >
                                 <div className="min-w-0 flex-1 pr-2">
-                                  <div className={`text-[13px] font-bold truncate leading-snug ${isSelected ? 'text-[#C61D45]' : 'text-slate-800'}`}>
+                                  <div className={`text-sm font-bold truncate leading-snug ${isSelected ? 'text-[#C61D45]' : 'text-slate-800'}`}>
                                     {dept.name}
                                   </div>
                                 </div>
@@ -710,16 +706,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           );
         })()}
 
-        {/* ── Navigation Menu (White Background with #C61D45 Card Active Item) ── */}
+        {/* ── Navigation Menu (White Active Card on #C61D45 Brand Container) ── */}
         <nav 
-          className="flex-1 overflow-y-auto pt-1.5 pb-3 px-3 space-y-1 no-scrollbar"
+          className="flex-1 overflow-y-auto pt-1 pb-2 px-3 space-y-1 no-scrollbar"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {navSections.map((section, sIdx) => (
             <div key={sIdx} className="space-y-0.5">
-              {/* Divider Line between sections (No headline text, clean divider) */}
+              {/* Divider Line between sections */}
               {sIdx > 0 && (
-                <div className={isOpen ? "my-2 mx-1 border-t border-slate-200/80" : "w-6 h-px bg-slate-200 my-1.5 mx-auto"} />
+                <div className={isOpen ? "my-2 mx-1 border-t border-white/15" : "w-6 h-px bg-white/20 my-1.5 mx-auto"} />
               )}
 
               <div className={isOpen ? 'space-y-0.5' : 'space-y-1 flex flex-col items-center'}>
@@ -733,33 +729,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         key={item.id}
                         type="button"
                         onClick={() => onSelectView(item.id === 'dashboard' ? 'company_dashboard' : item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] transition-all cursor-pointer group relative overflow-hidden ${
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all cursor-pointer group relative overflow-hidden ${
                           isActive
-                            ? 'bg-[#C61D45] text-white shadow-sm shadow-[#C61D45]/20 font-bold'
-                            : 'text-slate-700 hover:text-[#C61D45] hover:bg-[#C61D45]/8 font-medium'
+                            ? 'bg-white text-[#C61D45] shadow-md shadow-black/15 font-bold'
+                            : 'text-white/90 hover:text-white hover:bg-white/12 font-semibold'
                         }`}
                       >
-                        {isActive && item.id === 'dashboard' && (
-                          <img
-                            src="/city-sketch.jpg"
-                            alt=""
-                            aria-hidden="true"
-                            className="absolute right-0 top-0 h-full w-full object-cover opacity-25 mix-blend-multiply pointer-events-none select-none"
-                          />
-                        )}
                         <div className="flex items-center gap-3 min-w-0 relative z-10">
-                          <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                            <Icon className={`w-4 h-4 transition-colors shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-[#C61D45]'}`} />
+                          <div className="w-5.5 h-5.5 flex items-center justify-center shrink-0">
+                            <Icon className={`w-[19px] h-[19px] transition-colors shrink-0 ${
+                              isActive ? 'text-[#C61D45]' : 'text-white/90 group-hover:text-white'
+                            }`} />
                           </div>
-                          <span className="truncate leading-normal">{item.label}</span>
+                          <span className={`truncate leading-tight text-[14.5px] ${isActive ? 'text-[#C61D45] font-bold' : 'text-white/95 group-hover:text-white'}`}>
+                            {item.label}
+                          </span>
                         </div>
 
                         {item.badge && (
-                          <span className={`text-[10.5px] px-1.5 py-0.5 rounded-full font-bold flex items-center gap-1 transition-all shadow-2xs shrink-0 ${
-                            isActive ? 'bg-white text-[#C61D45]' : 'bg-[#C61D45] text-white'
+                          <span className={`text-xs px-2 py-0.5 min-w-[20px] rounded-full font-bold flex items-center justify-center gap-1 transition-all shrink-0 ${
+                            isActive
+                              ? 'bg-[#C61D45] text-white shadow-2xs'
+                              : 'bg-white text-[#C61D45] shadow-xs'
                           }`}>
                             {item.hasBell && (
-                              <Bell className={`w-2.5 h-2.5 shrink-0 ${isActive ? 'text-[#C61D45]' : 'text-white'} fill-current`} />
+                              <Bell className={`w-3 h-3 shrink-0 fill-current ${isActive ? 'text-white' : 'text-[#C61D45]'}`} />
                             )}
                             <span>{item.badge}</span>
                           </span>
@@ -775,17 +769,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       type="button"
                       onClick={() => onSelectView(item.id === 'dashboard' ? 'company_dashboard' : item.id)}
                       title={item.label}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer relative ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer relative ${
                         isActive
-                          ? 'bg-[#C61D45] text-white shadow-sm shadow-[#C61D45]/25 font-bold'
-                          : 'text-slate-400 hover:text-[#C61D45] hover:bg-slate-100'
+                          ? 'bg-white text-[#C61D45] shadow-md font-bold'
+                          : 'text-white/80 hover:text-white hover:bg-white/15'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-[#C61D45]' : 'text-white'}`} />
                       {(item.badge || item.hasDot) && (
                         <span className="absolute top-0.5 right-0.5 flex h-2.5 w-2.5">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${item.hasDot ? 'bg-amber-400' : 'bg-[#C61D45]'} opacity-75`}></span>
-                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.hasDot ? 'bg-amber-500' : 'bg-[#C61D45]'} border border-white`}></span>
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${item.hasDot ? 'bg-amber-400' : 'bg-white'} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${item.hasDot ? 'bg-amber-500' : 'bg-white'} border border-[#C61D45]`}></span>
                         </span>
                       )}
                     </button>
@@ -796,10 +790,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </nav>
 
-        {/* ── Quick Actions: New Project & New Quotation (Box Cards matching reference UI) ── */}
+        {/* ── Quick Actions: New Project & New Lead (White Action Cards inside Brand Panel) ── */}
         {isOpen ? (
           activeRole.code !== 'CLIENT' && (
-            <div className="px-3 pt-2.5 pb-2 border-t border-slate-100/90 bg-slate-50/50 shrink-0">
+            <div className="px-3 pt-2.5 pb-4 border-t border-white/15 shrink-0">
               <div className="grid grid-cols-2 gap-2">
                 {/* 1. New Project Box Card */}
                 <button
@@ -810,10 +804,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     window.dispatchEvent(new CustomEvent('booshnam_open_create_project'));
                   }}
                   title="Create New Project"
-                  className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] text-white border border-[#b0173a] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
+                  className="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
                 >
-                  <FolderPlus className="w-5 h-5 text-white mb-1.5 transition-transform group-hover:scale-110" />
-                  <span className="text-[11px] font-bold text-white text-center leading-tight truncate w-full tracking-tight">
+                  <FolderPlus className="w-5.5 h-5.5 text-[#C61D45] mb-1 transition-transform group-hover:scale-110" />
+                  <span className="text-[12.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight">
                     New Project
                   </span>
                 </button>
@@ -827,10 +821,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
                   }}
                   title="Create New Lead"
-                  className="flex flex-col items-center justify-center py-3 px-2 rounded-2xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] text-white border border-[#b0173a] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
+                  className="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
                 >
-                  <Calculator className="w-5 h-5 text-white mb-1.5 transition-transform group-hover:scale-110" />
-                  <span className="text-[11px] font-bold text-white text-center leading-tight truncate w-full tracking-tight">
+                  <Calculator className="w-5.5 h-5.5 text-[#C61D45] mb-1 transition-transform group-hover:scale-110" />
+                  <span className="text-[12.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight">
                     New Lead
                   </span>
                 </button>
@@ -839,7 +833,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )
         ) : (
           activeRole.code !== 'CLIENT' && (
-            <div className="py-2.5 px-2 border-t border-slate-100/90 flex flex-col items-center gap-2 shrink-0 bg-slate-50/50">
+            <div className="py-2.5 px-1.5 border-t border-white/15 flex flex-col items-center gap-2 shrink-0 pb-4">
               <button
                 type="button"
                 onClick={() => {
@@ -848,9 +842,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   window.dispatchEvent(new CustomEvent('booshnam_open_create_project'));
                 }}
                 title="Create New Project"
-                className="w-10 h-10 rounded-xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] border border-[#b0173a] text-white flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <FolderPlus className="w-5 h-5 text-white" />
+                <FolderPlus className="w-5.5 h-5.5 text-[#C61D45]" />
               </button>
 
               <button
@@ -861,38 +855,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
                 }}
                 title="Create New Lead"
-                className="w-10 h-10 rounded-xl bg-[#C61D45] hover:bg-[#a81639] active:bg-[#941130] border border-[#b0173a] text-white flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="w-10 h-10 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
               >
-                <Calculator className="w-5 h-5 text-white" />
+                <Calculator className="w-5.5 h-5.5 text-[#C61D45]" />
               </button>
             </div>
           )
         )}
-
-        {/* ── Sidebar Bottom / Footer (TogetherCore Logo & Version 1.0.0) ── */}
-        {isOpen ? (
-          <div className="px-4 pt-2 pb-2 border-t border-slate-100/90 flex flex-col items-center justify-center gap-1 text-center shrink-0 bg-white select-none">
-            <img 
-              src="/togethercore-logo-tight.png" 
-              alt="TogetherCore" 
-              className="w-[92px] h-auto max-h-[62px] object-contain pointer-events-none select-none drop-shadow-2xs"
-            />
-            <span className="text-[9px] font-semibold text-slate-400 tracking-wider uppercase select-none">
-              Version 1.0.0
-            </span>
-          </div>
-        ) : (
-          <div className="py-2 px-1 border-t border-slate-100/90 flex flex-col items-center justify-center gap-1 text-center shrink-0 bg-white select-none" title="TogetherCore • Version 1.0.0">
-            <img 
-              src="/togethercore-icon.png" 
-              alt="TogetherCore" 
-              className="w-[26px] h-auto object-contain pointer-events-none select-none"
-            />
-            <span className="text-[8px] font-semibold text-slate-400 select-none">
-              v1.0.0
-            </span>
-          </div>
-        )}
+        </div>
       </aside>
     </>
   );

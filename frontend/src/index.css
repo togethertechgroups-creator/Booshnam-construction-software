@@ -27,14 +27,25 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 16.32px; /* Increases font size by ~2% globally across all pages */
+  }
+
   body {
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     @apply bg-site-bg text-site-text antialiased;
   }
 
-  /* Headings & Titles: Modern aesthetic typography */
+  /* Headings & Titles: Modern aesthetic typography with bold weights */
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Lato', system-ui, -apple-system, sans-serif;
+    font-weight: 700 !important;
+  }
+
+  /* Table headers everywhere: bold and crisp contrast */
+  th {
+    font-weight: 700 !important;
+    color: #1e293b;
   }
 }
 

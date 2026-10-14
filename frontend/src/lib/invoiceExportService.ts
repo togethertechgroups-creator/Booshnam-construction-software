@@ -1,6 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { getTermsConditions } from './termsService';
+import { SalesInvoice } from '../types';
 
 export interface InvoiceItem {
   id?: string;
@@ -377,4 +379,91 @@ export function exportInvoiceToPDF(inv: InvoiceExportData): void {
   // Save PDF file
   const safeFilename = `${inv.invoice_number.replace(/[^a-zA-Z0-9_-]/g, '_')}_Tax_Invoice.pdf`;
   doc.save(safeFilename);
+}
+
+/**
+ * Export SalesInvoice directly to PDF
+ */
+export function exportSalesInvoiceToPDF(inv: SalesInvoice, projectName?: string): void {
+  const exportData: InvoiceExportData = {
+    invoice_number: inv.invoice_number,
+    invoice_date: inv.invoice_date,
+    due_date: new Date(new Date(inv.invoice_date || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    party_name: inv.client_name,
+    project_name: projectName || inv.project_id,
+    items: inv.items.map(it => ({
+      id: it.id,
+      description: it.item_name || it.description || '',
+      quantity: it.invoiced_quantity,
+      unit: it.unit,
+      unit_rate: it.unit_rate,
+      amount: it.total_amount
+    })),
+    subtotal: inv.sub_total || inv.total_amount,
+    tax_rate: inv.gst_amount ? Math.round((inv.gst_amount / (inv.sub_total || 1)) * 100) : 18,
+    tax_amount: inv.gst_amount || 0,
+    total_amount: inv.total_amount,
+    payment_status: inv.balance_due === 0 ? 'PAID' : ((inv.settled_amount || 0) > 0 ? 'PARTIALLY_PAID' : 'UNPAID')
+  };
+  exportInvoiceToPDF(exportData);
+}
+
+/**
+ * Export SalesInvoice directly to Excel (.xlsx)
+ */
+export function exportSalesInvoiceToExcel(inv: SalesInvoice, projectName?: string): void {
+  const wb = XLSX.utils.book_new();
+
+  // Header rows
+  const rows: (string | number)[][] = [
+    ['TAX INVOICE - BOOSHNAM ASSOCIATES PVT. LTD.'],
+    ['Invoice Number:', inv.invoice_number],
+    ['Invoice Date:', inv.invoice_date || ''],
+    ['Client / Billed To:', inv.client_name || ''],
+    ['Project:', projectName || inv.project_id || ''],
+    ['BOQ Number:', inv.boq_number || ''],
+    ['Due Date:', new Date(new Date(inv.invoice_date || Date.now()).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]],
+    ['Status:', inv.status || 'APPROVED'],
+    [],
+    ['S.No', 'Item Description', 'Invoiced Qty', 'Unit', 'Unit Rate (₹)', 'GST %', 'GST Amount (₹)', 'Total Amount (₹)']
+  ];
+
+  // Item rows
+  inv.items.forEach((item, idx) => {
+    rows.push([
+      idx + 1,
+      item.item_name || item.description || '',
+      item.invoiced_quantity,
+      item.unit || 'nos',
+      item.unit_rate,
+      item.gst_percent || 0,
+      item.gst_amount || 0,
+      item.total_amount
+    ]);
+  });
+
+  const subTotal = inv.sub_total || inv.total_amount;
+  const gstAmount = inv.gst_amount || 0;
+  const totalAmount = inv.total_amount;
+  const settledAmount = inv.settled_amount || 0;
+  const balanceDue = inv.balance_due ?? (totalAmount - settledAmount);
+
+  rows.push(
+    [],
+    ['', '', '', '', '', 'Sub Total:', `₹ ${subTotal.toLocaleString('en-IN')}`],
+    ['', '', '', '', '', 'CGST (9%):', `₹ ${Math.round(gstAmount / 2).toLocaleString('en-IN')}`],
+    ['', '', '', '', '', 'SGST (9%):', `₹ ${Math.round(gstAmount / 2).toLocaleString('en-IN')}`],
+    ['', '', '', '', '', 'Total Amount:', `₹ ${totalAmount.toLocaleString('en-IN')}`],
+    ['', '', '', '', '', 'Settled Amount:', `₹ ${settledAmount.toLocaleString('en-IN')}`],
+    ['', '', '', '', '', 'Balance Due:', `₹ ${balanceDue.toLocaleString('en-IN')}`],
+    [],
+    ['Bank Details:', `${inv.bank_name || 'Axis Bank'} - AC: ${inv.bank_account || '922020058090700'}`],
+    ['Terms & Conditions:', 'Late payments may result in late payment fees. All disputes subject to India jurisdiction only.']
+  );
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Sales Invoice');
+
+  const safeFilename = `${inv.invoice_number.replace(/[^a-zA-Z0-9_-]/g, '_')}_Invoice.xlsx`;
+  XLSX.writeFile(wb, safeFilename);
 }

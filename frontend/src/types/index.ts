@@ -534,7 +534,7 @@ export interface ProjectTransaction {
   payment_mode: 'NEFT/RTGS' | 'UPI' | 'Cheque' | 'Cash' | string;
   reference_no?: string;
   cost_code?: string;
-  status: 'CLEARED' | 'PENDING' | 'RECONCILED' | 'APPROVED';
+  status: 'CLEARED' | 'PENDING' | 'RECONCILED' | 'APPROVED' | 'REVERSED';
   notes?: string;
   entry_by?: string;
   paid_to?: string;
@@ -542,6 +542,58 @@ export interface ProjectTransaction {
   transaction_sub_type?: string;
   bank_name?: string;
   bank_account?: string;
+  project_id?: string;
+  project_name?: string;
+  payment_category?: 'CLIENT_ADVANCE' | 'WORK_PAYMENT' | 'MILESTONE_PAYMENT' | 'OTHER_RECEIPT' | 'SUPPLIER_PAYMENT' | 'SUBCON_PAYMENT' | 'EXPENSE';
+  boq_id?: string;
+  boq_number?: string;
+  boq_value_ref?: number;
+  advance_percentage?: number;
+  allocated_amount?: number;
+  unallocated_amount?: number;
+  target_boq_item_id?: string;
+  target_milestone_id?: string;
+  is_reversed?: boolean;
+  reversed_at?: string;
+  reversed_by?: string;
+  reversal_reason?: string;
+}
+
+export interface TransactionAllocation {
+  id: string;
+  source_transaction_id: string;
+  source_transaction_number: string;
+  project_id: string;
+  project_name: string;
+  party_id?: string;
+  party_name: string;
+  boq_id: string;
+  boq_number: string;
+  boq_item_id?: string;
+  boq_item_name?: string;
+  milestone_id?: string;
+  milestone_name?: string;
+  allocated_amount: number;
+  allocation_date: string;
+  status: 'ACTIVE' | 'REVERSED';
+  notes?: string;
+  created_by: string;
+  created_at: string;
+  reversed_at?: string;
+  reversed_by?: string;
+  reversal_reason?: string;
+}
+
+export interface FinancialAuditLog {
+  id: string;
+  project_id?: string;
+  entity_type: 'TRANSACTION' | 'ALLOCATION' | 'BOQ' | 'INVOICE';
+  entity_id: string;
+  action: 'CREATE' | 'ALLOCATE' | 'REVERSE' | 'SETTLE';
+  amount?: number;
+  performed_by: string;
+  timestamp: string;
+  details: string;
 }
 
 export interface PaymentRequest {
@@ -595,11 +647,87 @@ export interface ProjectToDo {
   created_at: string;
 }
 
+export interface SubconWorkOrderItem {
+  id: string;
+  item_name: string;
+  dimensions?: string; // N x L x W x H
+  unit_rate: number;
+  unit: string;
+  quantity: number;
+  billed_quantity: number;
+  unbilled_quantity?: number;
+  amount: number;
+  gst_percent?: number;
+  linked_task_id?: string;
+  linked_task_name?: string;
+}
+
+export interface SubconMilestone {
+  id: string;
+  title: string;
+  target_date: string;
+  weightage_percent: number;
+  amount: number;
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+}
+
+export interface SubconBillItem {
+  item_id: string;
+  item_name: string;
+  unit_rate: number;
+  unit: string;
+  billed_qty: number;
+  unbilled_qty: number;
+  invoice_qty: number;
+  amount: number;
+}
+
+export interface SubconBill {
+  id: string;
+  bill_number: string;
+  voucher_no?: string;
+  work_order_id: string;
+  work_order_number: string;
+  vendor_name: string;
+  invoice_date: string;
+  items: SubconBillItem[];
+  item_level_tax: boolean;
+  tax_percent: number;
+  tax_amount: number;
+  subtotal: number;
+  discount: number;
+  additional_charges: number;
+  total_amount: number;
+  deduction: number;
+  retention_percent: number;
+  retention_amount: number;
+  net_amount: number;
+  round_off: boolean;
+  cost_code?: string;
+  status: 'APPROVED' | 'PENDING' | 'PAID';
+  notes?: string;
+  created_at: string;
+}
+
+export interface SubconMaterialIssue {
+  id: string;
+  material_name: string;
+  unit: string;
+  issued_qty: number;
+  consumed_qty: number;
+  returned_qty: number;
+  issue_date: string;
+  challan_no?: string;
+}
+
 export interface SubconWorkOrder {
   id: string;
   wo_number: string;
   subcon_name: string;
   trade_scope: string;
+  work_order_title?: string;
+  work_order_date?: string;
+  tax_type?: 'ITEM_LEVEL' | 'BILL_LEVEL';
   contract_amount: number;
   work_completed_percent: number;
   billed_amount: number;
@@ -607,9 +735,25 @@ export interface SubconWorkOrder {
   retention_amount: number;
   paid_amount: number;
   balance_payable: number;
+  approval_status?: 'Approved' | 'Pending' | 'Draft' | 'Rejected';
   status: 'ACTIVE' | 'DRAFT' | 'COMPLETED' | 'ON_HOLD';
   start_date: string;
   end_date: string;
+  media_urls?: string[];
+  items?: SubconWorkOrderItem[];
+  milestones?: SubconMilestone[];
+  bills?: SubconBill[];
+  materials?: SubconMaterialIssue[];
+  bank_details?: {
+    account_holder_name?: string;
+    account_number?: string;
+    ifsc_code?: string;
+    bank_name?: string;
+    notes?: string;
+  };
+  additional_discount?: number;
+  additional_charges?: number;
+  gst_amount?: number;
 }
 
 export interface MOMActionItem {
@@ -640,25 +784,52 @@ export interface MOMRecord {
   created_at?: string;
 }
 
+export interface BOQMilestone {
+  id: string;
+  boq_id?: string;
+  name: string;
+  percentage: number;
+  amount: number;
+  target_date?: string;
+  status?: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SETTLED';
+  settled_amount?: number;
+}
+
 export interface BOQItem {
   id: string;
   s_no: number;
   type?: 'item' | 'section';
   parent_id?: string;
   item_code?: string;
+  item_name?: string;
+  hsn_sac_code?: string;
+  specification?: string;
   description: string;
   dimensions?: string; // N x L x W x H
   cost_price?: number;
   mark_up_percent?: number;
   gst_percent?: number;
+  tax_percent?: number;
+  tax_amount?: number;
+  discount_percent?: number;
+  discount_amount?: number;
+  additional_charges?: number;
   unit_rate: number;
   quantity: number;
   unit: string;
+  calculated_amount?: number; // quantity * unit_rate
+  total_amount?: number;
   progress_percentage?: number;
   linked_task_id?: string;
   linked_task_name?: string;
   billed_quantity: number;
   sales_price: number;
+  cost_code?: string;
+  supply_rate?: number;
+  installation_rate?: number;
+  attached_files?: string[];
+  settled_amount?: number;
+  outstanding_amount?: number;
 }
 
 export interface BOQRecord {
@@ -676,6 +847,14 @@ export interface BOQRecord {
   billed_value: number;
   media_files?: Array<{ name: string; size?: string; url?: string }>;
   items: BOQItem[];
+  milestones?: BOQMilestone[];
+  additional_discount?: number;
+  additional_charges?: number;
+  additional_charges_percent?: boolean;
+  round_off?: boolean;
+  bank_details?: string;
+  terms_and_conditions?: string;
+  notes?: string;
   created_at?: string;
 }
 
@@ -818,6 +997,69 @@ export interface ProjectTransactionRecord {
   paid_by_or_to?: string;
   notes?: string;
   invoice_ref?: string;
+}
+
+// ----------------------------------------------------
+// Sales Invoices & Expenses Models (Video Flow)
+// ----------------------------------------------------
+export interface SalesInvoiceItem {
+  id: string;
+  item_id?: string;
+  item_code?: string;
+  item_name: string;
+  description?: string;
+  unit: string;
+  invoiced_quantity: number;
+  total_quantity: number;
+  unit_rate: number;
+  subtotal: number;
+  gst_percent: number;
+  gst_amount: number;
+  total_amount: number;
+}
+
+export interface SalesInvoice {
+  id: string;
+  project_id: string;
+  boq_id?: string;
+  boq_number?: string;
+  invoice_number: string;
+  invoice_date: string;
+  date?: string;
+  client_name: string;
+  items: SalesInvoiceItem[];
+  sub_total: number;
+  discount: number;
+  gst_amount: number;
+  total_amount: number;
+  settled_amount: number;
+  balance_due: number;
+  status: 'APPROVED' | 'PARTIALLY_SETTLED' | 'SETTLED' | 'PENDING';
+  bank_name?: string;
+  bank_account?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+export interface ProjectExpenseRecord {
+  id: string;
+  project_id: string;
+  voucher_no: string;
+  date: string;
+  party_name: string;
+  item_name: string;
+  quantity: number;
+  unit_rate: number;
+  enable_gst: boolean;
+  gst_percent: number;
+  subtotal: number;
+  tax_amount: number;
+  total_amount: number;
+  settled_amount: number;
+  balance_due: number;
+  status: 'PENDING' | 'SETTLED' | 'PARTIALLY_SETTLED';
+  notes?: string;
+  created_at?: string;
 }
 
 

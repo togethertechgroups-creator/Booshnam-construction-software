@@ -29,6 +29,86 @@ if (typeof window !== 'undefined') {
       }
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
+
+    // Synchronously purge all legacy dummy/seed transactions, invoices, and subcon orders
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      
+      if (key.startsWith('siteops_project_invoices_')) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const clean = parsed.filter((inv: any) => !(
+                inv.id?.startsWith('inv-seed-67') ||
+                (inv.invoice_number === 'INV-67' && inv.boq_number === 'Sales-62')
+              ));
+              if (clean.length !== parsed.length) {
+                localStorage.setItem(key, JSON.stringify(clean));
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (key.startsWith('booshnam_subcon_workorders_v2_')) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const clean = parsed.filter((wo: any) => !(
+                wo.id === 'wo-seed-62' ||
+                wo.id?.startsWith('wo-seed-') ||
+                (wo.wo_number === '#WO--62' && wo.subcon_name === 'PRASATH')
+              ));
+              if (clean.length !== parsed.length) {
+                localStorage.setItem(key, JSON.stringify(clean));
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (key.startsWith('siteops_project_transactions_')) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const clean = parsed.filter((tx: any) => !(
+                tx.id?.includes('seed-') ||
+                (tx.transaction_number === '#65' && tx.party_name === 'PRASATH') ||
+                (tx.transaction_number === '#INV-67' && tx.party_name === 'Jisha Jeevan Buildtech')
+              ));
+              if (clean.length !== parsed.length) {
+                localStorage.setItem(key, JSON.stringify(clean));
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (key.startsWith('siteops_project_expenses_')) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const clean = parsed.filter((exp: any) => !(
+                exp.id?.includes('seed-') ||
+                (exp.voucher_no === '#65' && exp.party_name === 'PRASATH')
+              ));
+              if (clean.length !== parsed.length) {
+                localStorage.setItem(key, JSON.stringify(clean));
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    }
   } catch (e) {}
 
   // Intercept browser window.alert to always display modern in-app notifications

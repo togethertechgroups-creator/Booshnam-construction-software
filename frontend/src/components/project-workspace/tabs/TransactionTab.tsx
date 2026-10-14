@@ -478,6 +478,144 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
     }
   };
 
+  // Ticket-style date badge for transaction and payment request rows (matching user UI screenshot)
+  const renderRowTicketBadge = (
+    dateStr?: string,
+    kind: 'subcon' | 'invoice' | 'in' | 'out' | 'request' | 'default' = 'default'
+  ) => {
+    let day = '07';
+    let month = 'Oct';
+    let year = '26';
+    try {
+      const d = new Date(dateStr || Date.now());
+      if (!isNaN(d.getTime())) {
+        day = String(d.getDate()).padStart(2, '0');
+        month = d.toLocaleDateString('en-GB', { month: 'short' });
+        year = String(d.getFullYear()).slice(-2);
+      }
+    } catch {}
+
+    const dateFormatted = `${day} ${month} ${year}`;
+
+    if (kind === 'invoice') {
+      return (
+        <div className="w-[48px] h-[48px] rounded-lg border border-blue-200/90 shadow-2xs overflow-hidden flex flex-col shrink-0 select-none bg-white">
+          <div className="h-[17px] bg-[#2563EB] text-white text-[9.5px] font-bold flex items-center justify-center tracking-tight">
+            {dateFormatted}
+          </div>
+          <div className="flex-1 bg-[#EFF6FF] flex items-center justify-center p-1">
+            <svg width="20" height="21" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#2563EB]">
+              <path
+                d="M3 2C3 1.44772 3.44772 1 4 1H16C16.5523 1 17 1.44772 17 2V19.5L14.5 18L12 19.5L9.5 18L7 19.5L4.5 18L3 19V2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="white"
+              />
+              <rect x="5.5" y="5.5" width="9" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+              <text x="10" y="10.8" fontSize="4.2" fontWeight="800" textAnchor="middle" fill="currentColor" fontFamily="sans-serif">INV</text>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    if (kind === 'subcon' || kind === 'out') {
+      return (
+        <div className="w-[48px] h-[48px] rounded-lg border border-slate-300/90 shadow-2xs overflow-hidden flex flex-col shrink-0 select-none bg-white">
+          <div className="h-[17px] bg-[#2B324B] text-white text-[9.5px] font-bold flex items-center justify-center tracking-tight">
+            {dateFormatted}
+          </div>
+          <div className="flex-1 bg-[#F0F3F9] flex items-center justify-center p-1">
+            <svg width="20" height="21" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#334155]">
+              <path
+                d="M3 2C3 1.44772 3.44772 1 4 1H16C16.5523 1 17 1.44772 17 2V19.5L14.5 18L12 19.5L9.5 18L7 19.5L4.5 18L3 19V2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="white"
+              />
+              <path d="M6 6.5H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M6 9.5H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M6 12.5H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    if (kind === 'in') {
+      return (
+        <div className="w-[48px] h-[48px] rounded-lg border border-emerald-300/90 shadow-2xs overflow-hidden flex flex-col shrink-0 select-none bg-white">
+          <div className="h-[17px] bg-[#059669] text-white text-[9.5px] font-bold flex items-center justify-center tracking-tight">
+            {dateFormatted}
+          </div>
+          <div className="flex-1 bg-[#ECFDF5] flex items-center justify-center p-1">
+            <svg width="20" height="21" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#059669]">
+              <path
+                d="M3 2C3 1.44772 3.44772 1 4 1H16C16.5523 1 17 1.44772 17 2V19.5L14.5 18L12 19.5L9.5 18L7 19.5L4.5 18L3 19V2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="white"
+              />
+              <path d="M10 5.5V13.5M10 13.5L7 10.5M10 13.5L13 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    if (kind === 'request') {
+      return (
+        <div className="w-[48px] h-[48px] rounded-lg border border-indigo-200/90 shadow-2xs overflow-hidden flex flex-col shrink-0 select-none bg-white">
+          <div className="h-[17px] bg-[#4F46E5] text-white text-[9.5px] font-bold flex items-center justify-center tracking-tight">
+            {dateFormatted}
+          </div>
+          <div className="flex-1 bg-[#EEF2FF] flex items-center justify-center p-1">
+            <svg width="20" height="21" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#4F46E5]">
+              <path
+                d="M3 2C3 1.44772 3.44772 1 4 1H16C16.5523 1 17 1.44772 17 2V19.5L14.5 18L12 19.5L9.5 18L7 19.5L4.5 18L3 19V2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="white"
+              />
+              <rect x="5.5" y="5.5" width="9" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+              <text x="10" y="10.8" fontSize="4.2" fontWeight="800" textAnchor="middle" fill="currentColor" fontFamily="sans-serif">REQ</text>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-[48px] h-[48px] rounded-lg border border-slate-300/90 shadow-2xs overflow-hidden flex flex-col shrink-0 select-none bg-white">
+        <div className="h-[17px] bg-[#475569] text-white text-[9.5px] font-bold flex items-center justify-center tracking-tight">
+          {dateFormatted}
+        </div>
+        <div className="flex-1 bg-[#F8FAFC] flex items-center justify-center p-1">
+          <svg width="20" height="21" viewBox="0 0 20 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-[#475569]">
+            <path
+              d="M3 2C3 1.44772 3.44772 1 4 1H16C16.5523 1 17 1.44772 17 2V19.5L14.5 18L12 19.5L9.5 18L7 19.5L4.5 18L3 19V2Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="white"
+            />
+            <path d="M6 7H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M6 11H14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </div>
+      </div>
+    );
+  };
+
   const handleDeleteInvoice = (inv: SalesInvoice) => {
     deleteSalesInvoice(project.id, inv.id);
     setProjectInvoices(getProjectInvoices(project.id, project.client_name));
@@ -622,10 +760,10 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
           type: 'OUT' as const,
           party_name: bill.vendor_name || wo.subcon_name || 'Subcontractor',
           party_category: 'SUBCONTRACTOR',
-          category: 'Sub Con Expense',
-          transaction_sub_type: 'Sub Con Expense',
+          category: 'Subcon Expense',
+          transaction_sub_type: 'Subcon Expense',
           amount: Number(bill.total_amount) || Number(bill.net_amount) || 0,
-          payment_mode: bill.status === 'APPROVED' ? 'Approved Bill' : 'Pending',
+          payment_mode: bill.status === 'PAID' ? 'Paid' : 'unpaid',
           reference_no: bill.bill_number,
           status: 'APPROVED' as const,
           notes: `RA Bill ${bill.bill_number} for Work Order ${wo.wo_number || ''}`,
@@ -1530,129 +1668,131 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       </div>
 
       {/* ============================================================== */}
-      {/* 3. SIX METRIC CARDS: Balance, In, Out, Sales, Expense, Margin */}
+      {/* 3. SIX METRIC CARDS — Reference card style with icon visuals   */}
       {/* ============================================================== */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-        
-        {/* Card 1: Balance */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-indigo-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Balance</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+
+        {/* Card 1: Balance — White / Indigo */}
+        <div className="relative bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between">
+          {/* Decorative bg blob */}
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-indigo-50/70 pointer-events-none" />
+          {/* Icon */}
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <Wallet className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate">Balance</p>
+            <p className="mt-1.5 text-xl font-black text-slate-900 tracking-tight truncate leading-tight">
               ₹ {projectBalance.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100/60 truncate">
-                Net Cash
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+              Net Cash
+            </span>
           </div>
         </div>
 
-        {/* Card 2: In */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-emerald-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total In</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+        {/* Card 2: Total In — Emerald gradient */}
+        <div className="relative rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 60%, #6ee7b7 100%)' }}>
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-white/20 pointer-events-none" />
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-white/50 text-emerald-700 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <ArrowDownRight className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-emerald-800/70 uppercase tracking-widest truncate">Total In</p>
+            <p className="mt-1.5 text-xl font-black text-emerald-900 tracking-tight truncate leading-tight">
               ₹ {totalIn.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md border border-emerald-100/60 truncate">
-                <ArrowDownRight className="w-3 h-3 text-emerald-600 shrink-0" />
-                Received
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-emerald-800 bg-white/50 px-2.5 py-1 rounded-lg truncate">
+              <ArrowDownRight className="w-3 h-3 shrink-0" />
+              Received
+            </span>
           </div>
         </div>
 
-        {/* Card 3: Out */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-rose-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total Out</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-rose-50 text-rose-600 border border-rose-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+        {/* Card 3: Total Out — Rose / Warm */}
+        <div className="relative rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)' }}>
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-white/5 pointer-events-none" />
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <ArrowUpRight className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest truncate">Total Out</p>
+            <p className="mt-1.5 text-xl font-black text-white tracking-tight truncate leading-tight">
               ₹ {totalOut.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-rose-700 bg-rose-50/80 px-2 py-0.5 rounded-md border border-rose-100/60 truncate">
-                <ArrowUpRight className="w-3 h-3 text-rose-600 shrink-0" />
-                Paid Out
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-rose-300 bg-rose-500/20 px-2.5 py-1 rounded-lg truncate">
+              <ArrowUpRight className="w-3 h-3 shrink-0" />
+              Paid Out
+            </span>
           </div>
         </div>
 
-        {/* Card 4: Sales */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-blue-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Sales</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-50 text-blue-600 border border-blue-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+        {/* Card 4: Sales — Blue gradient */}
+        <div className="relative rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 60%, #bfdbfe 100%)' }}>
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-white/30 pointer-events-none" />
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <FileText className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-blue-400 uppercase tracking-widest truncate">Sales</p>
+            <p className="mt-1.5 text-xl font-black text-blue-900 tracking-tight truncate leading-tight">
               ₹ {totalSales.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-100/60 truncate">
-                Invoiced
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-blue-700 bg-blue-200/60 px-2.5 py-1 rounded-lg truncate">
+              Invoiced
+            </span>
           </div>
         </div>
 
-        {/* Card 5: Expense */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-amber-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Expense</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 border border-amber-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+        {/* Card 5: Expense — Amber / Orange gradient */}
+        <div className="relative rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 60%, #fdba74 100%)' }}>
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-white/30 pointer-events-none" />
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <TrendingUp className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-orange-500/80 uppercase tracking-widest truncate">Expense</p>
+            <p className="mt-1.5 text-xl font-black text-orange-900 tracking-tight truncate leading-tight">
               ₹ {totalExpense.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold text-amber-700 bg-amber-50/80 px-2 py-0.5 rounded-md border border-amber-100/60 truncate">
-                Direct Costs
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-orange-800 bg-orange-200/60 px-2.5 py-1 rounded-lg truncate">
+              Direct Costs
+            </span>
           </div>
         </div>
 
-        {/* Card 6: Margin */}
-        <div className="bg-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-slate-200/90 border-t-4 border-t-purple-500 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group min-w-0">
-          <div className="flex items-center justify-between gap-1.5 min-w-0">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Margin</span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 border border-purple-100/80 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-              <Percent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </div>
+        {/* Card 6: Margin — Purple / Violet */}
+        <div className="relative rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden group min-w-0 p-4 flex flex-col justify-between"
+          style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #e9d5ff 60%, #d8b4fe 100%)' }}>
+          <div className="absolute right-0 top-0 w-20 h-20 rounded-bl-[3rem] bg-white/30 pointer-events-none" />
+          <div className="absolute right-3 top-3 w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+            <Percent className="w-[18px] h-[18px]" />
           </div>
-          <div className="mt-2 min-w-0">
-            <div className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
+          <div className="min-w-0 pr-10">
+            <p className="text-[11px] font-bold text-purple-400 uppercase tracking-widest truncate">Margin</p>
+            <p className="mt-1.5 text-xl font-black text-purple-900 tracking-tight truncate leading-tight">
               ₹ {margin.toLocaleString('en-IN')}
-            </div>
-            <div className="mt-1 flex items-center min-w-0">
-              <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold text-purple-700 bg-purple-50/80 px-2 py-0.5 rounded-md border border-purple-100/60 truncate">
-                {totalSales > 0 ? `${((margin / totalSales) * 100).toFixed(0)}% Margin` : 'Net Margin'}
-              </span>
-            </div>
+            </p>
+          </div>
+          <div className="mt-3">
+            <span className="inline-flex items-center text-[10.5px] font-semibold text-purple-700 bg-purple-200/60 px-2.5 py-1 rounded-lg truncate">
+              {totalSales > 0 ? `${((margin / totalSales) * 100).toFixed(0)}% Margin` : 'Net Margin'}
+            </span>
           </div>
         </div>
 
@@ -1662,11 +1802,10 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       {/* 4. TRANSACTIONS TABLE / LIST (Matching Image 1 & 4)            */}
       {/* ============================================================== */}
       <div className="bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xs">
-        {/* Table Header */}
+        {/* Table Header (Matching User Screenshot: 3 Columns) */}
         <div className="grid grid-cols-12 px-6 py-3.5 bg-[#F8F9FE] border-b border-slate-200/70 text-[13px] font-semibold text-slate-700 select-none">
-          <div className="col-span-2">Date & Time</div>
-          <div className="col-span-4">Party Name</div>
-          <div className="col-span-3 pl-1">Details</div>
+          <div className="col-span-6 sm:col-span-5">Party Name</div>
+          <div className="col-span-3 sm:col-span-4 pl-2 sm:pl-6 text-left">Details</div>
           <div className="col-span-3 text-right">Amount</div>
         </div>
 
@@ -1710,6 +1849,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                 } catch (e) {}
 
                 const isInvoice = tx.transaction_sub_type === 'Sales Invoice' || tx.category === 'Sales Invoice';
+                const isSubcon = tx.category === 'Subcon Expense' || tx.transaction_sub_type === 'Subcon Expense' || tx.category === 'Sub Con Expense' || tx.transaction_sub_type === 'Sub Con Expense';
                 const isPaymentIn = tx.type === 'IN' && !isInvoice;
                 const isReversed = tx.status === 'REVERSED' || tx.is_reversed;
                 const isClientAdvance = tx.payment_category === 'CLIENT_ADVANCE' || tx.transaction_sub_type === 'Client Advance' || (isPaymentIn && (tx.notes?.toLowerCase().includes('advance') || tx.category?.toLowerCase().includes('advance')));
@@ -1741,44 +1881,43 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                       isReversed ? 'opacity-60 bg-slate-50/50' : ''
                     }`}
                   >
-                    {/* Column 1: Date & Time */}
-                    <div className="col-span-2 min-w-0 pr-3">
-                      <div className={`text-[13px] font-semibold tracking-tight leading-tight truncate ${
-                        isReversed ? 'text-slate-400 line-through' : 'text-slate-800'
-                      }`}>
-                        {displayDate}
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-normal mt-0.5 leading-tight truncate">
-                        {displayTime || '10:00 AM'}
+                    {/* Column 1: Party Name with Date Ticket Badge (Matching Screenshot) */}
+                    <div className="col-span-6 sm:col-span-5 min-w-0 pr-3 flex items-center gap-3.5">
+                      {/* Ticket Badge */}
+                      {renderRowTicketBadge(
+                        tx.date,
+                        isInvoice ? 'invoice' : (isSubcon ? 'subcon' : (isPaymentIn ? 'in' : 'out'))
+                      )}
+
+                      {/* Party Name & Subtitle */}
+                      <div className="min-w-0 flex-1">
+                        <h4 className={`font-semibold text-[13.5px] sm:text-[14px] tracking-tight leading-snug truncate ${
+                          isReversed ? 'text-slate-400 line-through' : 'text-slate-800 group-hover:text-blue-600 transition-colors'
+                        }`}>
+                          {tx.party_name}
+                        </h4>
+                        <div className="text-[11.5px] font-normal text-slate-500 mt-1 flex items-center gap-1.5 truncate">
+                          <span>
+                            {isInvoice 
+                              ? 'Sales Invoice' 
+                              : isSubcon
+                              ? 'Subcon Expense'
+                              : tx.transaction_sub_type || (isPaymentIn ? 'Payment In' : 'Payment Out')}
+                          </span>
+                          <span className="text-slate-300">|</span>
+                          <span>{tx.transaction_number}</span>
+                          {tx.boq_number && (
+                            <>
+                              <span className="text-slate-300">|</span>
+                              <span>{tx.boq_number}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Column 2: Party Name & Subtitle */}
-                    <div className="col-span-4 min-w-0 pr-3 truncate">
-                      <h4 className={`font-semibold text-[13.5px] sm:text-[14px] tracking-tight leading-tight truncate ${
-                        isReversed ? 'text-slate-400 line-through' : 'text-slate-800 group-hover:text-blue-600 transition-colors'
-                      }`}>
-                        {tx.party_name}
-                      </h4>
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5 flex items-center gap-1.5 truncate">
-                        <span>
-                          {isInvoice 
-                            ? 'Sales Invoice' 
-                            : tx.transaction_sub_type || (isPaymentIn ? 'Payment In' : 'Subcon Expense')}
-                        </span>
-                        <span className="text-slate-300">|</span>
-                        <span>{tx.transaction_number}</span>
-                        {tx.boq_number && (
-                          <>
-                            <span className="text-slate-300">|</span>
-                            <span>{tx.boq_number}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Column 3: Details */}
-                    <div className="col-span-3 flex items-center justify-start text-left pl-1 min-w-0">
+                    {/* Column 2: Details (Matching Screenshot) */}
+                    <div className="col-span-3 sm:col-span-4 flex items-center justify-start text-left pl-2 sm:pl-6 min-w-0">
                       {isClientAdvance && advBal && !isReversed ? (
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-md ${
@@ -1805,28 +1944,15 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                           )}
                         </div>
                       ) : (
-                        tx.notes && tx.notes !== '-' && tx.notes !== '—' ? (
-                          tx.notes.includes('Remaining') ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/70 shadow-2xs truncate">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                              <span className="truncate">{tx.notes}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center text-xs font-medium text-slate-600 bg-[#F1F3F9] px-2.5 py-0.5 rounded-md truncate max-w-sm">
-                              {tx.notes}
-                            </span>
-                          )
-                        ) : (
-                          <span className="inline-flex items-center justify-center w-7 h-5 rounded-md bg-[#F1F3F9] text-[#8E95A9] text-xs font-semibold select-none">
-                            -
-                          </span>
-                        )
+                        <span className="inline-flex items-center justify-center w-7 h-5 rounded-md bg-[#F1F3F9] text-[#8E95A9] text-xs font-semibold select-none">
+                          -
+                        </span>
                       )}
                     </div>
 
-                    {/* Column 4: Amount & Status Badge */}
+                    {/* Column 3: Amount & Status Badge (Matching Screenshot) */}
                     <div className="col-span-3 text-right shrink-0">
-                      <div className={`tracking-tight font-semibold text-sm sm:text-[15px] ${
+                      <div className={`tracking-tight font-semibold text-sm sm:text-[14.5px] ${
                         isReversed ? 'text-slate-400 line-through' : 'text-slate-800'
                       }`}>
                         ₹ {Number(tx.amount).toLocaleString('en-IN')}
@@ -1846,9 +1972,9 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                             <span>Reverse</span>
                           </button>
                         )}
-                        {tx.payment_mode && tx.payment_mode !== 'Settled' && tx.payment_mode !== '-' && (
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10.5px] font-semibold lowercase ${
-                            tx.payment_mode.toLowerCase() === 'unpaid'
+                        {!isInvoice && tx.payment_mode && tx.payment_mode !== 'Settled' && tx.payment_mode !== '-' && (
+                          <span className={`inline-block px-2.5 py-0.5 rounded text-[10.5px] font-semibold lowercase ${
+                            tx.payment_mode.toLowerCase() === 'unpaid' || tx.payment_mode.toLowerCase() === 'pending'
                               ? 'bg-[#EEF1FC] text-[#5364CD]'
                               : tx.payment_mode.toLowerCase() === 'partially paid'
                               ? 'bg-amber-50 text-amber-700'
@@ -1856,7 +1982,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                               ? 'bg-emerald-50 text-emerald-700'
                               : 'bg-[#F1F3F9] text-slate-600'
                           }`}>
-                            {tx.payment_mode.toLowerCase()}
+                            {tx.payment_mode.toLowerCase() === 'pending' ? 'unpaid' : tx.payment_mode.toLowerCase()}
                           </span>
                         )}
                       </div>
@@ -1910,37 +2036,26 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                     onClick={() => setSelectedPRForOverview(pr)}
                     className="grid grid-cols-12 px-6 py-4 items-center hover:bg-[#F8F9FE]/70 transition-colors cursor-pointer group select-none"
                   >
-                    {/* Column 1: Date & Time */}
-                    <div className="col-span-2 min-w-0 pr-3">
-                      <div className="text-[13px] font-semibold text-slate-800 leading-tight truncate">
-                        {prDate}
-                      </div>
-                      <div className="text-[11px] text-slate-400 font-normal mt-0.5 leading-tight truncate">
-                        {prTime || '10:00 AM'}
-                      </div>
-                    </div>
-
-                    {/* Column 2: Party Name & Subtitle */}
-                    <div className="col-span-4 min-w-0 pr-3 truncate">
-                      <h4 className="font-semibold text-[13.5px] sm:text-[14px] tracking-tight leading-tight text-slate-800 group-hover:text-blue-600 transition-colors truncate">
-                        {pr.party_name}
-                      </h4>
-                      <div className="text-[11px] font-normal text-slate-500 mt-0.5 truncate flex items-center gap-1.5">
-                        <span>{pr.request_type}</span>
-                        <span className="text-slate-300">|</span>
-                        <span>{pr.request_number}</span>
+                    {/* Column 1: Party Name with Date Ticket Badge */}
+                    <div className="col-span-6 sm:col-span-5 min-w-0 pr-3 flex items-center gap-3.5">
+                      {renderRowTicketBadge(pr.payment_date, 'request')}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold text-[13.5px] sm:text-[14px] tracking-tight leading-snug text-slate-800 group-hover:text-blue-600 transition-colors truncate">
+                          {pr.party_name}
+                        </h4>
+                        <div className="text-[11.5px] font-normal text-slate-500 mt-1 truncate flex items-center gap-1.5">
+                          <span>{pr.request_type}</span>
+                          <span className="text-slate-300">|</span>
+                          <span>{pr.request_number}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Column 3: Details / Due Date */}
-                    <div className="col-span-3 flex items-center justify-start text-left pl-1 min-w-0">
+                    {/* Column 2: Details */}
+                    <div className="col-span-3 sm:col-span-4 flex items-center justify-start text-left pl-2 sm:pl-6 min-w-0">
                       {pr.due_date ? (
                         <span className="inline-flex items-center text-xs font-medium text-slate-600 bg-[#F1F3F9] px-2.5 py-0.5 rounded-md truncate">
                           Due: {pr.due_date}
-                        </span>
-                      ) : pr.notes && pr.notes !== '-' ? (
-                        <span className="inline-flex items-center text-xs font-medium text-slate-600 bg-[#F1F3F9] px-2.5 py-0.5 rounded-md truncate">
-                          {pr.notes}
                         </span>
                       ) : (
                         <span className="inline-flex items-center justify-center w-7 h-5 rounded-md bg-[#F1F3F9] text-[#8E95A9] text-xs font-semibold select-none">
@@ -1949,22 +2064,22 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                       )}
                     </div>
 
-                    {/* Column 4: Amount & Status Badge */}
+                    {/* Column 3: Amount & Status Badge */}
                     <div className="col-span-3 text-right shrink-0">
-                      <div className="tracking-tight font-semibold text-sm sm:text-[15px] text-slate-800">
+                      <div className="tracking-tight font-semibold text-sm sm:text-[14.5px] text-slate-800">
                         ₹ {Number(pr.amount).toLocaleString('en-IN')}
                       </div>
                       <div className="mt-1 flex items-center justify-end gap-1.5">
-                        <span className={`px-2 py-0.5 rounded text-[10.5px] font-semibold lowercase ${
+                        <span className={`px-2.5 py-0.5 rounded text-[10.5px] font-semibold lowercase ${
                           pr.status === 'APPROVED' 
                             ? 'bg-emerald-50 text-emerald-700'
                             : pr.status === 'REJECTED'
                             ? 'bg-rose-50 text-rose-700'
                             : pr.status === 'PAID'
                             ? 'bg-red-50 text-red-700'
-                            : 'bg-amber-50 text-amber-700'
+                            : 'bg-[#EEF1FC] text-[#5364CD]'
                         }`}>
-                          {pr.status?.toLowerCase()}
+                          {pr.status?.toLowerCase() || 'pending'}
                         </span>
                       </div>
                     </div>

@@ -12,6 +12,7 @@ import {
 import { ProjectTopNav, WorkspaceTabId, isSoilDepartmentProject, SOIL_EXCLUDED_TABS } from '../components/project-workspace/ProjectTopNav';
 import { ProjectSettingsModal } from '../components/project-workspace/ProjectSettingsModal';
 import { ProjectTeamModal } from '../components/project-workspace/ProjectTeamModal';
+import { AddStaffModal } from '../components/project-workspace/AddStaffModal';
 import { FeedbackModal } from '../components/project-workspace/FeedbackModal';
 import { DashboardTab } from '../components/project-workspace/tabs/DashboardTab';
 import { DesignTab } from '../components/project-workspace/tabs/DesignTab';
@@ -26,7 +27,7 @@ import { SubconTab } from '../components/project-workspace/tabs/SubconTab';
 import { EquipmentTab } from '../components/project-workspace/tabs/EquipmentTab';
 import { FilesTab } from '../components/project-workspace/tabs/FilesTab';
 import { MOMTab } from '../components/project-workspace/tabs/MOMTab';
-import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department } from '../types';
+import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department, SubconWorkOrder } from '../types';
 import { SelectOrTypeInput, SelectOption } from '../components/SelectOrTypeInput';
 import { CustomSelect } from '../components/CustomSelect';
 import { DepartmentMultiSelectFilter } from '../components/DepartmentMultiSelectFilter';
@@ -50,6 +51,7 @@ import { DepartmentLogo } from '../components/DepartmentLogo';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { syncAllProjectsFinancials } from '../lib/projectFinanceUtils';
 import StatsAndButton from '../components/StatsAndButton';
+import { ensurePartyExists, getFinanceParties } from '../lib/financeSyncService';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -133,6 +135,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [projectForAddStaff, setProjectForAddStaff] = useState<Project | null>(null);
 
   // Auto-redirect to dashboard if current workspace tab is excluded for Soil Investigation projects
   useEffect(() => {
@@ -141,7 +144,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     }
   }, [activeProject, workspaceTab]);
 
-  // Sync propSelectedProject changes into activeProject & details view
+
+  // Sync propSelectedProject changes into activeProject
   useEffect(() => {
     if (propSelectedProject) {
       setActiveProject(propSelectedProject);
@@ -184,9 +188,22 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     const handleDeptChange = (e: any) => {
       const newId = e.detail || getActiveDepartmentId();
       setActiveDeptId(newId);
+      // Reset view to list when department changes so no stale project (e.g. GGG) from another department is shown
+      setViewMode('list');
+      setActiveProject(null);
     };
     window.addEventListener('booshnam_active_dept_changed', handleDeptChange);
     return () => window.removeEventListener('booshnam_active_dept_changed', handleDeptChange);
+  }, []);
+
+  // Listen for reset projects view event (e.g. when clicking Projects in the sidebar navigation)
+  useEffect(() => {
+    const handleResetView = () => {
+      setViewMode('list');
+      setActiveProject(null);
+    };
+    window.addEventListener('booshnam_reset_projects_view', handleResetView);
+    return () => window.removeEventListener('booshnam_reset_projects_view', handleResetView);
   }, []);
 
   // Wizard state for Creating Project
@@ -256,6 +273,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       setSelectedEngineer('');
       setSelectedSupervisor('');
       setSelectedAccounts('');
+      setStaffAssignmentDate(new Date().toISOString().split('T')[0]);
+      setSelectedSubcontractorName('');
+      setSubcontractorTrade('Civil Works');
+      setSubcontractorDate(new Date().toISOString().split('T')[0]);
+      setAssignedSubcontractors([]);
       setWizardError('');
       setWizardStep(1);
       setViewMode('create');
@@ -378,6 +400,102 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setShowAddExtraMember(false);
   };
 
+  // Staff & Subcontractor Assignment in Create Project Wizard
+  const [staffAssignmentDate, setStaffAssignmentDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedSubcontractorName, setSelectedSubcontractorName] = useState('');
+  const [subcontractorTrade, setSubcontractorTrade] = useState('Civil Works');
+  const [subcontractorDate, setSubcontractorDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [assignedSubcontractors, setAssignedSubcontractors] = useState<Array<{
+    id: string;
+    name: string;
+    trade_scope: string;
+    assignment_date: string;
+    phone?: string;
+    email?: string;
+  }>>([]);
+
+  const registeredSubcontractorOptions: SelectOption[] = useMemo(() => {
+    let subcons: SelectOption[] = [];
+    try {
+      const parties = getFinanceParties();
+      subcons = parties
+        .filter(p => p.type === 'Subcontractor' || (p as any).category === 'SUBCONTRACTOR')
+        .map(p => ({ name: p.name, label: p.name, roleHint: 'Registered Subcontractor' }));
+    } catch (e) {}
+
+    const defaults: SelectOption[] = [
+      { name: 'Sri Venkateswara Civil Works', roleHint: 'Civil & Structural' },
+      { name: 'Apex Structural Fabricators', roleHint: 'Steel & PEB' },
+      { name: 'Modern Electricals & MEP', roleHint: 'Electrical & Cabling' },
+      { name: 'Balaji Plumbing & Sanitary', roleHint: 'Plumbing & Drainage' },
+      { name: 'Royal Tiles & Granite Works', roleHint: 'Flooring & Tiling' },
+      { name: 'Vertex Painting & Waterproofing', roleHint: 'Painting & Finishing' },
+      { name: 'Star HVAC Solutions', roleHint: 'Ducting & Cooling' },
+      { name: 'Evergreen Earthmovers', roleHint: 'Excavation & Site Grading' }
+    ];
+
+    defaults.forEach(d => {
+      if (!subcons.some(s => s.name.toLowerCase() === d.name.toLowerCase())) {
+        subcons.push(d);
+      }
+    });
+    return subcons;
+  }, []);
+
+  const tradeScopeOptions: SelectOption[] = useMemo(() => [
+    { name: 'Civil Works', roleHint: 'Foundations & Structure' },
+    { name: 'Structural Steel & Fabrication', roleHint: 'PEB & Truss' },
+    { name: 'Electrical & MEP', roleHint: 'Conduiting & Cabling' },
+    { name: 'Plumbing & Sanitary', roleHint: 'Piping & Fixtures' },
+    { name: 'Flooring & Tiling', roleHint: 'Vitrified & Granite' },
+    { name: 'Painting & Finishing', roleHint: 'Internal & External' },
+    { name: 'Waterproofing', roleHint: 'Basement & Terrace' },
+    { name: 'HVAC & Ventilation', roleHint: 'Ducting & Air Conditioning' },
+    { name: 'Carpentry & Joinery', roleHint: 'Doors, Windows & Woodwork' },
+    { name: 'Site Excavation & Earthwork', roleHint: 'Earthmoving & Grading' },
+    { name: 'Masonry & Plastering', roleHint: 'Brickwork & Mortar' }
+  ], []);
+
+  const handleAddSubcontractor = () => {
+    const cleanName = selectedSubcontractorName.trim();
+    if (!cleanName) return;
+    const existing = assignedSubcontractors.find(
+      s => s.name.toLowerCase().trim() === cleanName.toLowerCase()
+    );
+    if (existing) {
+      onShowToast?.(`Subcontractor "${cleanName}" is already assigned.`);
+      return;
+    }
+
+    let phone: string | undefined;
+    let email: string | undefined;
+    try {
+      const parties = getFinanceParties();
+      const found = parties.find(p => p.name.toLowerCase().trim() === cleanName.toLowerCase());
+      if (found) {
+        phone = found.phone;
+        email = found.email;
+      }
+    } catch (e) {}
+
+    const newSubcon = {
+      id: `subcon-${Date.now()}-${assignedSubcontractors.length + 1}`,
+      name: cleanName,
+      trade_scope: subcontractorTrade.trim() || 'Civil Works',
+      assignment_date: subcontractorDate || staffAssignmentDate || new Date().toISOString().split('T')[0],
+      phone,
+      email
+    };
+
+    setAssignedSubcontractors(prev => [...prev, newSubcon]);
+    onShowToast?.(`Assigned Subcontractor: ${cleanName} (${newSubcon.trade_scope})`);
+    setSelectedSubcontractorName('');
+  };
+
+  const handleRemoveSubcontractor = (index: number) => {
+    setAssignedSubcontractors(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Local projects fallback with persistent localStorage support
   const [localProjects, setLocalProjects] = useState<Project[]>(() => {
     if (propProjects && propProjects.length > 0) return propProjects;
@@ -390,6 +508,22 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
     );
   }, [propProjects, localProjects]);
+
+  // Handle explicit project auto-open request (e.g. from TodayTasksReminderBanner, WBS Schedule link, or Lead conversion)
+  useEffect(() => {
+    const autoOpenId = sessionStorage.getItem('booshnam_auto_open_project_id');
+    if (autoOpenId) {
+      sessionStorage.removeItem('booshnam_auto_open_project_id');
+      const matched = allProjects.find(p => p.id === autoOpenId || p.code === autoOpenId);
+      if (matched) {
+        setActiveProject(matched);
+        onSelectProject?.(matched);
+        setWorkspaceTab('dashboard');
+        setViewMode('details');
+        return;
+      }
+    }
+  }, [allProjects, onSelectProject]);
 
   // Synchronize all project financial totals on mount & listen for updates
   useEffect(() => {
@@ -891,15 +1025,32 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // Track dirty form state for Project Wizard
   useEffect(() => {
     if (viewMode === 'create') {
-      const isDirty = Boolean(newProjectName.trim() || newClientName.trim() || newAddress.trim() || selectedPM || selectedEngineer);
+      const isDirty = Boolean(
+        newProjectName.trim() || 
+        newClientName.trim() || 
+        newAddress.trim() || 
+        selectedPM || 
+        selectedEngineer || 
+        assignedSubcontractors.length > 0 || 
+        selectedSubcontractorName.trim()
+      );
       setFormDirty(isDirty, 'Project Details');
     } else {
       clearFormDirty();
     }
-  }, [viewMode, newProjectName, newClientName, newAddress, selectedPM, selectedEngineer]);
+  }, [viewMode, newProjectName, newClientName, newAddress, selectedPM, selectedEngineer, assignedSubcontractors, selectedSubcontractorName]);
 
   const handleCancelWizard = async () => {
-    const isDirty = Boolean(newProjectName.trim() || newClientName.trim() || newAddress.trim() || newScope.trim() || selectedPM || selectedEngineer);
+    const isDirty = Boolean(
+      newProjectName.trim() || 
+      newClientName.trim() || 
+      newAddress.trim() || 
+      newScope.trim() || 
+      selectedPM || 
+      selectedEngineer || 
+      assignedSubcontractors.length > 0 || 
+      selectedSubcontractorName.trim()
+    );
     if (isDirty) {
       const canLeave = await confirmAction({
         title: 'Leave Project Wizard?',
@@ -924,6 +1075,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setSelectedEngineer('');
     setSelectedSupervisor('');
     setSelectedAccounts('');
+    setStaffAssignmentDate(new Date().toISOString().split('T')[0]);
+    setSelectedSubcontractorName('');
+    setSubcontractorTrade('Civil Works');
+    setSubcontractorDate(new Date().toISOString().split('T')[0]);
+    setAssignedSubcontractors([]);
     setWizardError('');
     setWizardStep(1);
     setViewMode('list');
@@ -934,10 +1090,42 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     const cleanProjName = newProjectName.trim() || 'New Project';
     const activeTasksCount = wizardTasks.filter(t => selectedTaskIds.includes(t.id)).length;
 
+    // Gather all assigned subcontractors (including currently selected if not explicitly added)
+    let finalSubcontractors = [...assignedSubcontractors];
+    if (selectedSubcontractorName.trim()) {
+      const alreadyIn = finalSubcontractors.some(s => s.name.toLowerCase().trim() === selectedSubcontractorName.toLowerCase().trim());
+      if (!alreadyIn) {
+        let phone: string | undefined;
+        let email: string | undefined;
+        try {
+          const parties = getFinanceParties();
+          const found = parties.find(p => p.name.toLowerCase().trim() === selectedSubcontractorName.toLowerCase().trim());
+          if (found) {
+            phone = found.phone;
+            email = found.email;
+          }
+        } catch (e) {}
+        finalSubcontractors.push({
+          id: `subcon-${Date.now()}`,
+          name: selectedSubcontractorName.trim(),
+          trade_scope: subcontractorTrade.trim() || 'Civil Works',
+          assignment_date: subcontractorDate || staffAssignmentDate || new Date().toISOString().split('T')[0],
+          phone,
+          email
+        });
+      }
+    }
+
+    const teamSummaryText = [
+      selectedPM ? `${selectedPM} (PM)` : '',
+      selectedEngineer ? `${selectedEngineer} (Site Engineer)` : '',
+      finalSubcontractors.length > 0 ? `${finalSubcontractors.length} Subcontractor(s)` : ''
+    ].filter(Boolean).join(', ') || 'the designated project team';
+
     // User requested confirmation popup before assigning/creating project
     const confirmed = await confirmAction({
       title: 'Create & Assign Project',
-      message: `Are you sure you want to create project "${cleanProjName}" and assign it to ${selectedPM ? `${selectedPM} (PM)` : 'the designated project team'} with ${activeTasksCount} initial tasks?`,
+      message: `Are you sure you want to create project "${cleanProjName}" and assign it to ${teamSummaryText} with ${activeTasksCount} initial tasks?`,
       confirmText: 'Create & Assign',
       cancelText: 'Review Form',
       variant: 'primary',
@@ -966,6 +1154,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-pm-${Date.now()}`,
         name: selectedPM.trim(),
         role: s?.designation || s?.role_name || 'Project Manager',
+        assignment_date: staffAssignmentDate,
         phone: s?.phone ? `+91 ${s.phone}` : '',
         email: s?.email || ''
       });
@@ -976,6 +1165,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-eng-${Date.now()}`,
         name: selectedEngineer.trim(),
         role: s?.designation || s?.role_name || 'Site Engineer',
+        assignment_date: staffAssignmentDate,
         phone: s?.phone ? `+91 ${s.phone}` : '',
         email: s?.email || ''
       });
@@ -986,6 +1176,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-sup-${Date.now()}`,
         name: selectedSupervisor.trim(),
         role: s?.designation || s?.role_name || 'Site Supervisor',
+        assignment_date: staffAssignmentDate,
         phone: s?.phone ? `+91 ${s.phone}` : '',
         email: s?.email || ''
       });
@@ -996,6 +1187,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: defaultAccountsStaff.id || `team-acc-default`,
         name: defaultAccountsStaff.name,
         role: (defaultAccountsStaff as any).designation || (defaultAccountsStaff as any).role_name || 'Accounts',
+        assignment_date: staffAssignmentDate,
         phone: defaultAccountsStaff.phone ? `+91 ${defaultAccountsStaff.phone}` : '',
         email: defaultAccountsStaff.email || ''
       });
@@ -1008,8 +1200,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         id: s?.id || `team-extra-${Date.now()}-${idx}`,
         name: extra.name.trim(),
         role: extra.role.trim() || s?.designation || s?.role_name || 'Project Staff',
+        assignment_date: staffAssignmentDate,
         phone: extra.phone || (s?.phone ? `+91 ${s.phone}` : undefined),
         email: extra.email || s?.email
+      });
+    });
+
+    // Also include any assigned subcontractors in assignedTeam:
+    finalSubcontractors.forEach((sc, idx) => {
+      assignedTeam.push({
+        id: sc.id || `team-subcon-${Date.now()}-${idx}`,
+        name: sc.name,
+        role: `Subcontractor (${sc.trade_scope})`,
+        assignment_date: sc.assignment_date,
+        trade_scope: sc.trade_scope,
+        is_subcontractor: true,
+        phone: sc.phone,
+        email: sc.email
       });
     });
 
@@ -1027,14 +1234,14 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         title: pt.title,
         name: pt.title,
         wbs_code: `1.${idx + 1}`,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: staffAssignmentDate || new Date().toISOString().split('T')[0],
         end_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
         duration_days: 14,
         description: pt.description,
         department: pt.department,
         status: 'TODO',
         priority: pt.default_priority,
-        planned_start: new Date().toISOString().split('T')[0],
+        planned_start: staffAssignmentDate || new Date().toISOString().split('T')[0],
         planned_end: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
         progress_percentage: 0,
         assigned_to: taskAssignee,
@@ -1047,6 +1254,32 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       localStorage.setItem(`booshnam_wbs_tasks_v2_${newProjId}`, JSON.stringify(generatedTasks));
       localStorage.setItem(`booshnam_wbs_tasks_v10_${newProjId}`, JSON.stringify(generatedTasks));
     } catch (e) {}
+
+    // Persist subcontractors in localStorage & sync with Accounts & Finance parties
+    if (finalSubcontractors.length > 0) {
+      const subconWorkOrders: SubconWorkOrder[] = finalSubcontractors.map((sc, idx) => ({
+        id: sc.id || `wo-${Date.now()}-${idx}`,
+        wo_number: `WO-2026-${String(idx + 1).padStart(3, '0')}`,
+        subcon_name: sc.name,
+        trade_scope: sc.trade_scope,
+        contract_amount: 350000,
+        work_completed_percent: 0,
+        billed_amount: 0,
+        retention_percent: 5,
+        retention_amount: 0,
+        paid_amount: 0,
+        balance_payable: 0,
+        status: 'ACTIVE',
+        start_date: sc.assignment_date,
+        end_date: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]
+      }));
+      try {
+        localStorage.setItem(`booshnam_subcontractors_v1_${newProjId}`, JSON.stringify(subconWorkOrders));
+        finalSubcontractors.forEach(sc => {
+          ensurePartyExists(sc.name, cleanProjName, 'Subcontractor');
+        });
+      } catch (e) {}
+    }
 
     if (setTasks) {
       setTasks(prev => [...generatedTasks, ...prev]);
@@ -1072,7 +1305,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       latitude: 13.0827,
       longitude: 80.2707,
       geofence_radius_meters: 200,
-      start_date: newStartDate || new Date().toISOString().split('T')[0],
+      start_date: newStartDate || staffAssignmentDate || new Date().toISOString().split('T')[0],
       expected_end_date: newEndDate || new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
       estimated_budget: budgetNum,
       boq_value: budgetNum,
@@ -1091,7 +1324,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       description: newScope.trim() || `Initiated for ${newClientName || newProjectName} located at ${newAddress || ''}, ${newCity || ''}. Auto-generated ${generatedTasks.length} predefined tasks.`,
       scope_of_work: newScope.trim() || undefined,
       tasks_count: generatedTasks.length,
-      assigned_team: assignedTeam
+      assigned_team: assignedTeam,
+      assigned_subcontractors: finalSubcontractors
     };
 
     const updated = [newProj, ...allProjects];
@@ -1124,6 +1358,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setSelectedEngineer('');
     setSelectedSupervisor('');
     setSelectedAccounts('');
+    setStaffAssignmentDate(new Date().toISOString().split('T')[0]);
+    setSelectedSubcontractorName('');
+    setSubcontractorTrade('Civil Works');
+    setSubcontractorDate(new Date().toISOString().split('T')[0]);
+    setAssignedSubcontractors([]);
     setWizardTasks([...PREDEFINED_TASKS_TEMPLATE]);
     setSelectedTaskIds(PREDEFINED_TASKS_TEMPLATE.map(t => t.id));
     setEditingTask(null);
@@ -1613,6 +1852,125 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           placeholder="Select Site Supervisor..."
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Staff Assignment Date & Subcontractor Assignment Section */}
+                  <div className="pt-4 border-t border-slate-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                          Subcontractor Assignment ({assignedSubcontractors.length})
+                        </span>
+                        <p className="text-[11px] text-slate-500">
+                          Appoint trade contractors with trade scope and commencement date.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5 text-red-600" />
+                          Staff Date:
+                        </span>
+                        <input
+                          type="date"
+                          value={staffAssignmentDate}
+                          onChange={(e) => {
+                            setStaffAssignmentDate(e.target.value);
+                            if (!subcontractorDate) setSubcontractorDate(e.target.value);
+                          }}
+                          className="h-8 px-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Subcontractor Input Card */}
+                    <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-2xl space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                            Subcontractor Agency / Firm
+                          </label>
+                          <SelectOrTypeInput
+                            value={selectedSubcontractorName}
+                            onChange={setSelectedSubcontractorName}
+                            options={registeredSubcontractorOptions}
+                            placeholder="Select or type subcontractor..."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                            Trade Scope
+                          </label>
+                          <SelectOrTypeInput
+                            value={subcontractorTrade}
+                            onChange={setSubcontractorTrade}
+                            options={tradeScopeOptions}
+                            placeholder="e.g. Civil, Electrical..."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3 text-indigo-600" />
+                            <span>Commencement Date</span>
+                          </label>
+                          <input
+                            type="date"
+                            value={subcontractorDate}
+                            onChange={(e) => setSubcontractorDate(e.target.value)}
+                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 cursor-pointer shadow-2xs"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end pt-1">
+                        <button
+                          type="button"
+                          onClick={handleAddSubcontractor}
+                          disabled={!selectedSubcontractorName.trim()}
+                          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-98"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Subcontractor</span>
+                        </button>
+                      </div>
+
+                      {assignedSubcontractors.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
+                          {assignedSubcontractors.map((sc, idx) => (
+                            <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-indigo-200/80 rounded-xl text-xs shadow-2xs">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0">
+                                  <Building2 className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="font-bold text-slate-800 block truncate leading-tight">
+                                    {sc.name}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 font-medium mt-0.5">
+                                    <span className="bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">{sc.trade_scope}</span>
+                                    <span className="text-slate-400">•</span>
+                                    <span className="text-slate-500 flex items-center gap-0.5">
+                                      <Calendar className="w-2.5 h-2.5" />
+                                      {sc.assignment_date}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSubcontractor(idx)}
+                                className="text-slate-400 hover:text-rose-600 p-1 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors shrink-0 ml-2"
+                                title="Remove Subcontractor"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -2226,7 +2584,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             )}
                           </div>
                           <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                            Assign PM, Engineers, Supervisors and Accounts team.
+                            Assign PM, Engineers, Subcontractors, and Site Supervisors.
                           </p>
                         </div>
                       </div>
@@ -2347,7 +2705,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         {/* Project Top Navigation Bar */}
         <ProjectTopNav
           project={activeProject}
-          allProjects={allProjects}
+          allProjects={filteredProjects.length > 0 ? filteredProjects : allProjects}
           activeTab={workspaceTab}
           onSelectTab={setWorkspaceTab}
           onSelectProject={(p) => {
@@ -2622,7 +2980,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   : { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500 animate-pulse', label: 'Ongoing' };
 
                 return (
-                  <div key={p.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group">
+                  <div 
+                    key={p.id} 
+                    onClick={() => handleOpenProjectDetails(p)}
+                    className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group cursor-pointer"
+                  >
                     <div className={`h-1.5 ${avatar.colorClass}`} />
                     <div className="p-5 flex-1 flex flex-col gap-3.5">
                       <div className="flex items-start gap-3">
@@ -2680,7 +3042,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       <button
-                        onClick={() => handleOpenProjectDetails(p)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenProjectDetails(p);
+                        }}
                         className="w-full mt-auto py-2.5 bg-slate-900 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 shadow-sm hover:shadow"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -2916,7 +3282,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 <th className="py-3.5 px-4 w-36 text-center">Status</th>
                 <th className="py-3.5 px-5 w-44 text-center">Progress</th>
                 <th className="py-3.5 px-5 w-48 text-center">In / Out</th>
-                <th className="py-3.5 px-5 w-20 text-center">Pin</th>
+                <th className="py-3.5 px-5 w-32 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -2962,7 +3328,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   return (
                     <tr 
                       key={p.id} 
-                      className={`hover:bg-slate-50/80 transition-colors group align-middle ${
+                      onClick={() => handleOpenProjectDetails(p)}
+                      className={`hover:bg-slate-50/80 transition-colors group align-middle cursor-pointer ${
                         isPinned ? 'bg-red-50/20' : ''
                       }`}
                     >
@@ -2972,7 +3339,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           {/* Name Text - Clickable to open Project Details */}
                           <div className="min-w-0 flex-1 max-w-2xl">
                             <button
-                              onClick={() => handleOpenProjectDetails(p)}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenProjectDetails(p);
+                              }}
                               className="text-left font-bold text-slate-900 hover:text-red-600 transition-colors cursor-pointer leading-snug group-hover:text-red-600 text-[15px]"
                               title="Click to view overall project details, pending work, and finances"
                             >
@@ -3053,11 +3424,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         </div>
                       </td>
 
-                      {/* Actions Column (Pin & Super Admin Delete Buttons) */}
+                      {/* Actions Column (Pin, Delete & Add Staff (+) Buttons) */}
                       <td className="py-4 px-5 text-center align-middle whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
+                          {/* Pin Button */}
                           <button
-                            onClick={() => togglePin(p.id)}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePin(p.id);
+                            }}
                             className={`p-2 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center ${
                               isPinned 
                                 ? 'text-red-600 bg-red-50 hover:bg-red-100 shadow-2xs' 
@@ -3068,19 +3444,35 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             <Pin className={`w-4 h-4 transition-transform ${isPinned ? 'fill-red-600 rotate-45' : 'group-hover:scale-110'}`} />
                           </button>
 
-                          {isSuperAdmin && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setProjectToDelete(p);
-                              }}
-                              className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
-                              title="Delete Project"
-                            >
-                              <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                            </button>
-                          )}
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isSuperAdmin) {
+                                onShowToast?.('Permission Denied: Only Admin or Super Admin can delete projects.');
+                                return;
+                              }
+                              setProjectToDelete(p);
+                            }}
+                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          </button>
+
+                          {/* Add Staff (+) Button */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProjectForAddStaff(p);
+                            }}
+                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
+                            title="Add Staff"
+                          >
+                            <Plus className="w-4 h-4 group-hover:scale-110 transition-transform stroke-[2.5]" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -3105,6 +3497,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         onDeleteProject={handleDeleteProject}
         isSuperAdmin={isSuperAdmin}
         onShowToast={onShowToast}
+      />
+
+      {/* Add Staff Modal */}
+      <AddStaffModal
+        isOpen={Boolean(projectForAddStaff)}
+        onClose={() => setProjectForAddStaff(null)}
+        project={projectForAddStaff}
+        onUpdateProject={(updatedProj) => {
+          setProjectForAddStaff(updatedProj);
+          const updated = allProjects.map(p => p.id === updatedProj.id ? updatedProj : p);
+          handleUpdateProjects(updated);
+          if (activeProject && activeProject.id === updatedProj.id) {
+            setActiveProject(updatedProj);
+          }
+        }}
+        onShowToast={onShowToast}
+        currentUser={currentUser}
       />
 
       {/* Delete Project Confirmation Modal */}

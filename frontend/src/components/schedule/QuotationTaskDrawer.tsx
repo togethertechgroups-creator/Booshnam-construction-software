@@ -6,6 +6,7 @@ import {
   FileText, Download, CheckSquare, Sparkles
 } from 'lucide-react';
 import { QuotationScheduleTask } from '../../lib/quotationScheduleService';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../lib/timestampUtils';
 
 interface QuotationTaskDrawerProps {
   isOpen: boolean;
@@ -252,8 +253,9 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                   const reader = new FileReader();
                   reader.onload = (ev) => {
                     const url = ev.target?.result as string;
-                    onUpdateTask?.({ ...task, image_url: url });
-                    onShowToast?.('Task photo attached.');
+                    const timestamp = getCurrentUploadTimestamp();
+                    onUpdateTask?.({ ...task, image_url: url, image_uploaded_at: timestamp });
+                    onShowToast?.(`Task photo attached on ${timestamp}`);
                   };
                   reader.readAsDataURL(e.target.files[0]);
                 }
@@ -477,19 +479,34 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
               
               {/* Attached Photo Preview (Matching user's uploaded proof) */}
               {samplePhotoUrl ? (
-                <div 
-                  onClick={() => setLightboxOpen(true)}
-                  className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center cursor-pointer max-h-56 shadow-2xs hover:border-red-400 transition-all"
-                  title="Click to view full photo"
-                >
-                  <img 
-                    src={samplePhotoUrl} 
-                    alt={task.task_name} 
-                    className="w-full max-h-52 object-cover group-hover:scale-105 transition-transform duration-200 opacity-95 group-hover:opacity-100" 
-                  />
-                  <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-2xs">
-                    <Eye className="w-4 h-4" />
-                    <span>Click to Preview Full Photo</span>
+                <div className="space-y-1.5">
+                  <div 
+                    onClick={() => setLightboxOpen(true)}
+                    className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center cursor-pointer max-h-56 shadow-2xs hover:border-red-400 transition-all"
+                    title="Click to view full photo"
+                  >
+                    <img 
+                      src={samplePhotoUrl} 
+                      alt={task.task_name} 
+                      className="w-full max-h-52 object-cover group-hover:scale-105 transition-transform duration-200 opacity-95 group-hover:opacity-100" 
+                    />
+                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-2xs">
+                      <Eye className="w-4 h-4" />
+                      <span>Click to Preview Full Photo</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between px-1 text-[11px] text-slate-500">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Uploaded on: <strong className="text-slate-800">{task.image_uploaded_at || formatUploadTimestamp(task.completed_at || task.actual_end)}</strong></span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-red-600 hover:underline font-semibold cursor-pointer text-[11px]"
+                    >
+                      Change Photo
+                    </button>
                   </div>
                 </div>
               ) : (

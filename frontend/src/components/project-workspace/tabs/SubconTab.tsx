@@ -25,7 +25,29 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
 
   // Work Orders state
   const [workOrders, setWorkOrders] = useState<SubconWorkOrder[]>(() => {
-    return getProjectSubconOrders(projectId);
+    const existing = getProjectSubconOrders(projectId);
+    if (existing.length > 0) return existing;
+    if (project.assigned_subcontractors && project.assigned_subcontractors.length > 0) {
+      const generated: SubconWorkOrder[] = project.assigned_subcontractors.map((sc, idx) => ({
+        id: sc.id || `wo-assigned-${idx}`,
+        wo_number: `WO-2026-${String(idx + 1).padStart(3, '0')}`,
+        subcon_name: sc.name,
+        trade_scope: sc.trade_scope || 'Specialized Subcontractor',
+        contract_amount: 350000,
+        work_completed_percent: 0,
+        billed_amount: 0,
+        retention_percent: 5,
+        retention_amount: 0,
+        paid_amount: 0,
+        balance_payable: 0,
+        status: 'ACTIVE',
+        start_date: sc.assignment_date || new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 60 * 86400000).toISOString().split('T')[0]
+      }));
+      saveProjectSubconOrders(projectId, generated);
+      return generated;
+    }
+    return [];
   });
 
   // Re-load if project changes

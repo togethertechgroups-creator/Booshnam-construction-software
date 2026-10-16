@@ -7,13 +7,14 @@ import {
   Sparkles, ShieldCheck, MapPin, Calendar, Check,
   ChevronDown, RotateCcw, Award, Layers, MoreVertical, Edit2,
   Gift, HelpCircle, Info, Bell, BellRing, Globe,
-  Maximize2, Minimize2
+  Maximize2, Minimize2, Paperclip, Upload
 } from 'lucide-react';
 import { Project, Department, Lead, Quotation, QuotationItem, Role } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { CustomSelect } from '../components/CustomSelect';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { CustomDatePicker } from '../components/CustomDatePicker';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../lib/timestampUtils';
 import { confirmAction } from '../lib/dialogService';
 import { getFollowUpStatus, getViewedRemindersMap, markRemindersAsViewed, isReminderViewed } from '../lib/leadsNotificationService';
 import { exportQuotationToPDF, exportQuotationToWord, numberToIndianWords } from '../lib/quotationExportService';
@@ -475,6 +476,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [quoteNotes, setQuoteNotes] = useState('Payment: 50% advance along with work order, balance upon draft report submission.');
   const [quoteTerms, setQuoteTerms] = useState<string>(() => getTermsConditions().quotationTerms);
   const [quoteErrors, setQuoteErrors] = useState<{ clientName?: string }>({});
+  const [quoteAttachmentName, setQuoteAttachmentName] = useState('');
+  const [quoteAttachmentUrl, setQuoteAttachmentUrl] = useState<string | null>(null);
+  const [quoteAttachmentUploadedAt, setQuoteAttachmentUploadedAt] = useState('');
+  const quoteFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handleTermsUpdate = () => {
@@ -495,6 +500,9 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     setQuoteClientAddress('');
     setQuoteProjectTitle('Soil Investigation');
     setQuoteDiscount(0);
+    setQuoteAttachmentName('');
+    setQuoteAttachmentUrl(null);
+    setQuoteAttachmentUploadedAt('');
     setQuoteItems([
       {
         id: `item-${Date.now()}`,
@@ -507,6 +515,27 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       }
     ]);
     setIsNewQuoteModalOpen(true);
+  };
+
+  const handleQuoteFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ts = getCurrentUploadTimestamp();
+    setQuoteAttachmentName(file.name);
+    setQuoteAttachmentUploadedAt(ts);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setQuoteAttachmentUrl(reader.result);
+          onShowToast?.(`Quotation attachment "${file.name}" uploaded on ${ts}`);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setQuoteAttachmentUrl('https://images.unsplash.com/photo-1541888946425-d0fbb186156a?w=800&auto=format&fit=crop&q=80');
+      onShowToast?.(`Document "${file.name}" attached on ${ts}`);
+    }
   };
 
   // Listen for global quick action trigger from Sidebar
@@ -1045,7 +1074,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       total_amount: quoteGrandTotal,
       notes: quoteNotes,
       terms_conditions: quoteTerms,
-      items: quoteItems
+      items: quoteItems,
+      attachment_name: quoteAttachmentName || undefined,
+      attachment_url: quoteAttachmentUrl || undefined,
+      attachment_uploaded_at: quoteAttachmentName ? (quoteAttachmentUploadedAt || getCurrentUploadTimestamp()) : undefined
     };
 
     setQuotations(prev => [newQuote, ...prev]);
@@ -1692,9 +1724,19 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           {quote.date}
                         </td>
 
-                        {/* Subject */}
+                        {/* Subject & Attachment */}
                         <td className="py-3.5 px-3.5 font-medium text-slate-800 text-left align-middle">
-                          {quote.project_title || 'Soil Investigation'}
+                          <div>{quote.project_title || 'Soil Investigation'}</div>
+                          {quote.attachment_name && (
+                            <div className="text-[11px] text-emerald-700 font-normal flex items-center gap-1.5 mt-1" title={`Uploaded on ${quote.attachment_uploaded_at || quote.date}`}>
+                              <Paperclip className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span className="font-semibold text-slate-700 truncate max-w-[150px]">{quote.attachment_name}</span>
+                              <span className="text-slate-500 font-medium text-[10px] flex items-center gap-1 bg-slate-100/80 px-1.5 py-0.2 rounded border border-slate-200">
+                                <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                <span>{quote.attachment_uploaded_at || quote.date}</span>
+                              </span>
+                            </div>
+                          )}
                         </td>
 
                         {/* Client */}
@@ -2404,6 +2446,68 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                       onChange={(e) => setQuoteTerms(e.target.value)}
                       className="w-full p-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-red-600 resize-none"
                     />
+                  </div>
+
+                  {/* Upload Scope Document / Reference File */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700">Attach Document / Drawing / Scope Proof</label>
+                      <span className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</span>
+                    </div>
+
+                    <input 
+                      type="file" 
+                      ref={quoteFileInputRef}
+                      onChange={handleQuoteFileChange}
+                      className="hidden"
+                      accept="image/*,.pdf,.dwg,.doc,.docx"
+                    />
+
+                    {quoteAttachmentName ? (
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-2xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                            <Paperclip className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="truncate block font-semibold text-slate-800 text-xs">{quoteAttachmentName}</span>
+                            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>Uploaded: <strong className="text-slate-700">{quoteAttachmentUploadedAt || getCurrentUploadTimestamp()}</strong></span>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => quoteFileInputRef.current?.click()}
+                            className="px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg hover:bg-white cursor-pointer transition-colors"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuoteAttachmentName('');
+                              setQuoteAttachmentUrl(null);
+                              setQuoteAttachmentUploadedAt('');
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors"
+                            title="Remove attachment"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => quoteFileInputRef.current?.click()}
+                        className="border-2 border-dashed border-slate-200 hover:border-red-500 rounded-xl p-3.5 flex items-center justify-center gap-2 bg-slate-50/50 hover:bg-red-50/20 cursor-pointer transition-all text-center"
+                      >
+                        <Upload className="w-4 h-4 text-red-600" />
+                        <span className="text-xs font-semibold text-slate-700">Click to attach Client Scope or Drawing file</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

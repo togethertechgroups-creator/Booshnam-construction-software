@@ -8,6 +8,7 @@ import {
 import { Project, Role } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
+import { TodayTasksReminderBanner } from '../components/dashboard/TodayTasksReminderBanner';
 
 interface DashboardViewProps {
   projects: Project[];
@@ -121,6 +122,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       <div className="p-6 space-y-6">
+        {/* Today's Tasks Reminder Notification Banner (Only for Staff Members & Project Assignees, Never for Super Admin) */}
+        <TodayTasksReminderBanner
+          projects={projects}
+          onSelectProject={onSelectProject}
+          onNavigate={onNavigate}
+        />
+
         {/* KPI Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Budget / Variance */}
@@ -259,7 +267,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => {
-                  onSelectProject?.(activeProj);
+                  if (activeProj) {
+                    sessionStorage.setItem('booshnam_auto_open_project_id', activeProj.id);
+                    onSelectProject?.(activeProj);
+                  }
                   onNavigate('projects');
                 }}
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold transition-colors"

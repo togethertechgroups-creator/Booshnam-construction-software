@@ -4,7 +4,7 @@ import {
   Filter, Check, X, FileText, Calendar, Wallet, SlidersHorizontal,
   Truck, ThumbsUp, Download, ChevronDown, ChevronUp, TrendingUp,
   Coins, Edit3, MoreVertical, UploadCloud, Info, Percent, User,
-  Pencil, Building2, RotateCcw, Sparkles, Layers, AlertCircle,
+  Pencil, Building2, Clock, RotateCcw, Sparkles, Layers, AlertCircle,
   Mail, SquarePen, Trash2, FileSpreadsheet, CheckCircle2, Settings
 } from 'lucide-react';
 import { Project, ProjectTransaction, PaymentRequest, BOQRecord, SalesInvoice, ProjectExpenseRecord, SubconWorkOrder } from '../../../types';
@@ -17,6 +17,7 @@ import {
   PartyRecord 
 } from '../../../lib/financeSyncService';
 import { syncProjectFinancialsToStorage } from '../../../lib/projectFinanceUtils';
+import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
 import { AllocateAdvanceModal } from '../AllocateAdvanceModal';
 import { 
   getTransactionAdvanceBalance, 
@@ -170,6 +171,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const [formNotes, setFormNotes] = useState('');
   const [formMediaUrl, setFormMediaUrl] = useState<string | null>(null);
+  const [formMediaUploadedAt, setFormMediaUploadedAt] = useState<string | null>(null);
 
   // Project Invoices & Expenses (Video Flow)
   const [projectInvoices, setProjectInvoices] = useState<SalesInvoice[]>(() => {
@@ -326,6 +328,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   const [prNotes, setPrNotes] = useState('');
   const [prMediaUrl, setPrMediaUrl] = useState<string | null>(null);
   const [prMediaName, setPrMediaName] = useState<string | null>(null);
+  const [prMediaUploadedAt, setPrMediaUploadedAt] = useState<string | null>(null);
   const prFileInputRef = useRef<HTMLInputElement>(null);
 
   // Parties from Accounts & Finance
@@ -1150,16 +1153,20 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const ts = getCurrentUploadTimestamp();
+    setFormMediaUploadedAt(ts);
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           setFormMediaUrl(reader.result);
+          onShowToast?.(`Receipt attached on ${ts}`);
         }
       };
       reader.readAsDataURL(file);
     } else {
       setFormMediaUrl('https://images.unsplash.com/photo-1541888946425-d0fbb186156a?w=800&auto=format&fit=crop&q=80');
+      onShowToast?.(`Document attached on ${ts}`);
     }
   };
 
@@ -1256,12 +1263,14 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
   const handlePrFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      const ts = getCurrentUploadTimestamp();
       setPrMediaName(file.name);
+      setPrMediaUploadedAt(ts);
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           setPrMediaUrl(reader.result);
-          onShowToast?.(`File "${file.name}" attached`);
+          onShowToast?.(`File "${file.name}" attached on ${ts}`);
         }
       };
       reader.readAsDataURL(file);
@@ -3678,17 +3687,27 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
                   className="hidden"
                 />
                 {prMediaUrl ? (
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-700">
-                    <Check className="w-4 h-4 text-emerald-600" />
-                    <span className="truncate max-w-[220px]">{prMediaName || 'Attached Document'}</span>
+                  <div className="flex items-center justify-between w-full max-w-sm px-3 py-2 bg-white rounded-xl border border-emerald-200 shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div className="flex flex-col text-left min-w-0">
+                        <span className="truncate max-w-[200px] text-xs font-bold text-slate-800">{prMediaName || 'Attached Document'}</span>
+                        <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>Uploaded: <strong className="text-slate-700">{prMediaUploadedAt || getCurrentUploadTimestamp()}</strong></span>
+                        </span>
+                      </div>
+                    </div>
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPrMediaUrl(null);
                         setPrMediaName(null);
+                        setPrMediaUploadedAt(null);
                       }}
-                      className="p-1 hover:text-red-600 text-slate-400 ml-1"
+                      className="p-1 hover:text-red-600 text-slate-400 rounded-lg hover:bg-slate-100 cursor-pointer transition-colors shrink-0"
+                      title="Remove attachment"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

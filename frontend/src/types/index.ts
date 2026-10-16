@@ -80,6 +80,9 @@ export interface ProjectTeamMember {
   pf_number?: string;
   esi_number?: string;
   fathers_name?: string;
+  assignment_date?: string;
+  trade_scope?: string;
+  is_subcontractor?: boolean;
 }
 
 export interface Project {
@@ -129,6 +132,14 @@ export interface Project {
   project_dimension?: string;
   scope_of_work?: string;
   assigned_team?: ProjectTeamMember[];
+  assigned_subcontractors?: Array<{
+    id: string;
+    name: string;
+    trade_scope: string;
+    assignment_date: string;
+    phone?: string;
+    email?: string;
+  }>;
 }
 
 
@@ -177,6 +188,7 @@ export interface WBSTask {
   assigned_team?: Array<{ name: string; initials: string; avatar?: string }>;
   dependencies?: string[];
   completion_proof_url?: string;
+  completion_proof_uploaded_at?: string;
   completion_remarks?: string;
   completed_by?: string;
   completed_at?: string;
@@ -454,6 +466,9 @@ export interface Quotation {
   prepared_by?: string;
   items: QuotationItem[];
   created_at?: string;
+  attachment_name?: string;
+  attachment_url?: string;
+  attachment_uploaded_at?: string;
 }
 
 export interface AssetAllocation {

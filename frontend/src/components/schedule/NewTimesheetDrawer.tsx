@@ -9,9 +9,11 @@ import {
   saveTimesheet, 
   calculateDurationString, 
   formatDisplayDate,
+  formatDisplayDateTime,
   TimesheetEntry 
 } from '../../lib/timesheetService';
 import { getStaffMembers, StaffMember } from '../../lib/staffService';
+import { getCurrentUserAccount } from '../../lib/authService';
 
 interface NewTimesheetDrawerProps {
   isOpen: boolean;
@@ -32,6 +34,40 @@ const COMMON_PARTIES = [
   'Accounts Lead - R. Meenakshi'
 ];
 
+/**
+ * Fetch the logged-in user's display name from their active account session,
+ * matching to staff records or account profile.
+ */
+export function getLoggedInUserPartyName(): string {
+  try {
+    const active = getCurrentUserAccount();
+    if (active) {
+      const allStaff = getStaffMembers();
+      const accountName = (active.staff_name || active.username || '').trim();
+      const matched = allStaff.find(s => 
+        (active.staff_id && s.id === active.staff_id) ||
+        (accountName && s.name.trim().toLowerCase() === accountName.toLowerCase()) ||
+        (active.username && s.name.trim().toLowerCase() === active.username.trim().toLowerCase())
+      );
+      if (matched) {
+        return matched.designation ? `${matched.designation} - ${matched.name}` : matched.name;
+      }
+      if (accountName) return accountName;
+    }
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('siteops_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.name) return parsed.name;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to get logged-in user party name', err);
+  }
+  return '';
+}
+
 const COMMON_TASKS = [
   'Quotation',
   'Site Topographical & Soil Inspection',
@@ -44,6 +80,246 @@ const COMMON_TASKS = [
   'Billing, Invoicing & Sign-off Dossier',
   'Daily Progress Report & Site Log'
 ];
+
+interface TimePickerDropdownProps {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  defaultPeriod?: 'AM' | 'PM';
+  presets?: string[];
+  align?: 'left' | 'right';
+}
+
+const HOURS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+
+function getCurrentFormattedTime(): string {
+  const now = new Date();
+  let hours = now.getHours();
+  const minutes = now.getMinutes();
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+  const hStr = String(hours).padStart(2, '0');
+  const mStr = String(minutes).padStart(2, '0');
+  return `${hStr}:${mStr} ${period}`;
+}
+
+function parseTimeString(val: string, defaultPeriod: 'AM' | 'PM' = 'AM'): { hour: string; minute: string; period: 'AM' | 'PM' } {
+  if (!val) {
+    return { hour: defaultPeriod === 'AM' ? '09' : '05', minute: '00', period: defaultPeriod };
+  }
+  const clean = val.trim().toUpperCase();
+  const period: 'AM' | 'PM' = clean.includes('PM') ? 'PM' : clean.includes('AM') ? 'AM' : defaultPeriod;
+  const timeOnly = clean.replace(/AM|PM/g, '').trim();
+  const parts = timeOnly.split(':');
+  let h = parts[0] ? String(parseInt(parts[0], 10)) : '09';
+  if (isNaN(Number(h)) || Number(h) < 1 || Number(h) > 12) h = '09';
+  h = h.padStart(2, '0');
+  
+  let m = parts[1] ? String(parseInt(parts[1], 10)) : '00';
+  if (isNaN(Number(m)) || Number(m) < 0 || Number(m) > 59) m = '00';
+  m = m.padStart(2, '0');
+
+  return { hour: h, minute: m, period };
+}
+
+const TimePickerDropdown: React.FC<TimePickerDropdownProps> = ({
+  label,
+  value,
+  onChange,
+  isOpen,
+  onClose,
+  defaultPeriod = 'AM',
+  presets = [],
+  align = 'left'
+}) => {
+  if (!isOpen) return null;
+
+  const { hour, minute, period } = parseTimeString(value, defaultPeriod);
+
+  const handleSelectHour = (h: string) => {
+    onChange(`${h}:${minute} ${period}`);
+  };
+
+  const handleSelectMinute = (m: string) => {
+    onChange(`${hour}:${m} ${period}`);
+  };
+
+  const handleSelectPeriod = (p: 'AM' | 'PM') => {
+    onChange(`${hour}:${minute} ${p}`);
+  };
+
+  const handleSetNow = () => {
+    onChange(getCurrentFormattedTime());
+  };
+
+  const minuteList = (() => {
+    if (minute && !MINUTES.includes(minute)) {
+      return [...MINUTES, minute].sort((a, b) => parseInt(a) - parseInt(b));
+    }
+    return MINUTES;
+  })();
+
+  return (
+    <div 
+      onClick={(e) => e.stopPropagation()}
+      className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 z-50 w-[260px] sm:w-[275px] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150 select-none`}
+    >
+      {/* Dropdown Header */}
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+        <div className="flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-red-600" />
+          <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+            {label}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleSetNow}
+            className="text-[10px] font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition-colors cursor-pointer"
+            title="Set to Current Time"
+          >
+            Now
+          </button>
+          <span className="text-[11px] font-mono font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+            {value || `${hour}:${minute} ${period}`}
+          </span>
+        </div>
+      </div>
+
+      {/* 3 Selectable Columns: Hour | Minute | AM/PM */}
+      <div className="grid grid-cols-3 gap-1.5 text-center">
+        
+        {/* Hours Column */}
+        <div className="space-y-1">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Hour
+          </div>
+          <div className="h-40 overflow-y-auto space-y-1 pr-0.5">
+            {HOURS.map((h) => {
+              const isSelected = hour === h;
+              return (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => handleSelectHour(h)}
+                  className={`w-full py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-red-600 text-white font-bold shadow-xs' 
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {h}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Minutes Column */}
+        <div className="space-y-1">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Minute
+          </div>
+          <div className="h-40 overflow-y-auto space-y-1 pr-0.5">
+            {minuteList.map((m) => {
+              const isSelected = minute === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => handleSelectMinute(m)}
+                  className={`w-full py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'bg-red-600 text-white font-bold shadow-xs' 
+                      : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {m}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* AM/PM Period Column */}
+        <div className="space-y-1 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            Period
+          </div>
+          <div className="space-y-2 py-1">
+            <button
+              type="button"
+              onClick={() => handleSelectPeriod('AM')}
+              className={`w-full py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                period === 'AM'
+                  ? 'bg-red-600 text-white shadow-xs ring-2 ring-red-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              AM
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectPeriod('PM')}
+              className={`w-full py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                period === 'PM'
+                  ? 'bg-red-600 text-white shadow-xs ring-2 ring-red-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              PM
+            </button>
+          </div>
+
+          {/* Done Confirmation button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full mt-2 py-1.5 bg-slate-900 hover:bg-black text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-xs"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Done</span>
+          </button>
+        </div>
+
+      </div>
+
+      {/* Quick Presets Row */}
+      {presets.length > 0 && (
+        <div className="pt-2.5 mt-2.5 border-t border-slate-100">
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-left">
+            Quick Presets
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {presets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  onChange(preset);
+                  onClose();
+                }}
+                className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all cursor-pointer ${
+                  value === preset
+                    ? 'bg-red-50 text-red-700 border-red-300 font-bold'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
 
 export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
   isOpen,
@@ -58,13 +334,16 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     return today.toISOString().split('T')[0];
   });
   
-  const [partyName, setPartyName] = useState<string>('');
+  const [partyName, setPartyName] = useState<string>(() => getLoggedInUserPartyName());
   const [partyDropdownOpen, setPartyDropdownOpen] = useState(false);
   const [partySearchQuery, setPartySearchQuery] = useState('');
 
   const [startTime, setStartTime] = useState<string>('');
   const [stopTime, setStopTime] = useState<string>('');
   const [duration, setDuration] = useState<string>('');
+
+  const [startDropdownOpen, setStartDropdownOpen] = useState(false);
+  const [stopDropdownOpen, setStopDropdownOpen] = useState(false);
 
   const [projectName, setProjectName] = useState<string>('');
   const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
@@ -78,14 +357,16 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const partyRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<HTMLDivElement>(null);
+  const stopRef = useRef<HTMLDivElement>(null);
   const projectRef = useRef<HTMLDivElement>(null);
   const taskRef = useRef<HTMLDivElement>(null);
 
-  // Populate state when editEntry changes
+  // Populate state when editEntry changes or drawer opens
   useEffect(() => {
     if (editEntry && isOpen) {
       setDate(editEntry.date || new Date().toISOString().split('T')[0]);
-      setPartyName(editEntry.party_name || '');
+      setPartyName(editEntry.party_name || getLoggedInUserPartyName());
       setStartTime(editEntry.start_time || '');
       setStopTime(editEntry.end_time || '');
       setDuration(editEntry.duration || '');
@@ -93,10 +374,12 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
       setTaskName(editEntry.task_name || '');
       setRemarks(editEntry.remarks || '');
       setUploadedFiles(editEntry.files || []);
+      setStartDropdownOpen(false);
+      setStopDropdownOpen(false);
     } else if (!editEntry && isOpen) {
-      // Clean empty state for new entry
+      // Clean state for new entry with logged-in user automatically populated
       setDate(new Date().toISOString().split('T')[0]);
-      setPartyName('');
+      setPartyName(getLoggedInUserPartyName());
       setStartTime('');
       setStopTime('');
       setDuration('');
@@ -104,6 +387,8 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
       setTaskName('');
       setRemarks('');
       setUploadedFiles([]);
+      setStartDropdownOpen(false);
+      setStopDropdownOpen(false);
     }
   }, [editEntry, isOpen, projects]);
 
@@ -112,6 +397,12 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (partyRef.current && !partyRef.current.contains(e.target as Node)) {
         setPartyDropdownOpen(false);
+      }
+      if (startRef.current && !startRef.current.contains(e.target as Node)) {
+        setStartDropdownOpen(false);
+      }
+      if (stopRef.current && !stopRef.current.contains(e.target as Node)) {
+        setStopDropdownOpen(false);
       }
       if (projectRef.current && !projectRef.current.contains(e.target as Node)) {
         setProjectDropdownOpen(false);
@@ -132,13 +423,17 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     }
   }, [startTime, stopTime]);
 
-  // Registered staff combined with defaults
+  // Registered staff combined with defaults and active user
   const availableParties = (() => {
     const fromStaff = getStaffMembers().map((s: StaffMember) => s.designation ? `${s.designation} - ${s.name}` : s.name);
     const combined = [...fromStaff];
     COMMON_PARTIES.forEach((p: string) => {
       if (!combined.includes(p)) combined.push(p);
     });
+    const loggedUserParty = getLoggedInUserPartyName();
+    if (loggedUserParty && !combined.includes(loggedUserParty)) {
+      combined.unshift(loggedUserParty);
+    }
     return combined;
   })();
 
@@ -193,6 +488,8 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
     }
 
     if (editEntry) {
+      const now = Date.now();
+      const formattedDateTime = formatDisplayDateTime(now);
       const updatedEntry: TimesheetEntry = {
         ...editEntry,
         date,
@@ -204,7 +501,9 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
         project_name: projectName.trim(),
         task_name: taskName.trim() || '--',
         remarks: remarks.trim(),
-        files: uploadedFiles
+        files: uploadedFiles,
+        updated_at: now,
+        last_updated_at: formattedDateTime
       };
       const allUpdated = getStoredTimesheets().map((t: TimesheetEntry) => t.id === editEntry.id ? updatedEntry : t);
       localStorage.setItem('booshnam_team_timesheets_v1', JSON.stringify(allUpdated));
@@ -334,10 +633,21 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
             )}
           </div>
 
-          {/* START & STOP TIME (Side by Side matching Image 3) */}
+          {/* START & STOP TIME (Side by Side with Interactive Time Dropdowns) */}
           <div className="grid grid-cols-2 gap-4">
             {/* START */}
-            <div className="relative border border-slate-300 hover:border-slate-400 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 rounded-xl px-4 pt-3 pb-2.5 bg-white transition-all">
+            <div 
+              ref={startRef}
+              onClick={() => {
+                setStartDropdownOpen(prev => !prev);
+                setStopDropdownOpen(false);
+              }}
+              className={`relative border rounded-xl px-4 pt-3 pb-2.5 bg-white transition-all cursor-pointer select-none ${
+                startDropdownOpen 
+                  ? 'border-red-600 ring-2 ring-red-100' 
+                  : 'border-slate-300 hover:border-slate-400'
+              }`}
+            >
               <label className="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold text-slate-500 tracking-wide uppercase pointer-events-none">
                 START
               </label>
@@ -347,14 +657,53 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   placeholder="04:00 PM"
-                  className="w-full text-sm text-slate-800 font-medium bg-transparent outline-none pr-2"
+                  readOnly
+                  className="w-full text-sm text-slate-800 font-semibold bg-transparent outline-none pr-2 cursor-pointer"
                 />
-                <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStartDropdownOpen(prev => !prev);
+                    setStopDropdownOpen(false);
+                  }}
+                  className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                    startDropdownOpen ? 'bg-red-50 text-red-600' : 'text-slate-400 hover:text-red-600'
+                  }`}
+                  title="Select Start Time"
+                >
+                  <Clock className="w-4 h-4 shrink-0" />
+                </button>
               </div>
+
+              {/* Time Picker Dropdown for START */}
+              <TimePickerDropdown
+                label="Start Time"
+                value={startTime}
+                onChange={(val) => {
+                  setStartTime(val);
+                }}
+                isOpen={startDropdownOpen}
+                onClose={() => setStartDropdownOpen(false)}
+                defaultPeriod="AM"
+                presets={['08:00 AM', '09:00 AM', '10:00 AM', '01:00 PM', '02:00 PM']}
+                align="left"
+              />
             </div>
 
             {/* STOP */}
-            <div className="relative border border-slate-300 hover:border-slate-400 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 rounded-xl px-4 pt-3 pb-2.5 bg-white transition-all">
+            <div 
+              ref={stopRef}
+              onClick={() => {
+                setStopDropdownOpen(prev => !prev);
+                setStartDropdownOpen(false);
+              }}
+              className={`relative border rounded-xl px-4 pt-3 pb-2.5 bg-white transition-all cursor-pointer select-none ${
+                stopDropdownOpen 
+                  ? 'border-red-600 ring-2 ring-red-100' 
+                  : 'border-slate-300 hover:border-slate-400'
+              }`}
+            >
               <label className="absolute -top-2.5 left-3 bg-white px-1.5 text-[11px] font-bold text-slate-500 tracking-wide uppercase pointer-events-none">
                 STOP
               </label>
@@ -364,10 +713,38 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
                   value={stopTime}
                   onChange={(e) => setStopTime(e.target.value)}
                   placeholder="04:25 PM"
-                  className="w-full text-sm text-slate-800 font-medium bg-transparent outline-none pr-2"
+                  readOnly
+                  className="w-full text-sm text-slate-800 font-semibold bg-transparent outline-none pr-2 cursor-pointer"
                 />
-                <Clock className="w-4 h-4 text-slate-400 shrink-0" />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStopDropdownOpen(prev => !prev);
+                    setStartDropdownOpen(false);
+                  }}
+                  className={`p-1 rounded-lg transition-colors cursor-pointer ${
+                    stopDropdownOpen ? 'bg-red-50 text-red-600' : 'text-slate-400 hover:text-red-600'
+                  }`}
+                  title="Select Stop Time"
+                >
+                  <Clock className="w-4 h-4 shrink-0" />
+                </button>
               </div>
+
+              {/* Time Picker Dropdown for STOP */}
+              <TimePickerDropdown
+                label="Stop Time"
+                value={stopTime}
+                onChange={(val) => {
+                  setStopTime(val);
+                }}
+                isOpen={stopDropdownOpen}
+                onClose={() => setStopDropdownOpen(false)}
+                defaultPeriod="PM"
+                presets={['01:00 PM', '04:00 PM', '05:00 PM', '05:30 PM', '06:00 PM']}
+                align="right"
+              />
             </div>
           </div>
 
@@ -406,32 +783,94 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
                   placeholder="Select or enter project"
                   className="w-full text-sm text-slate-800 font-medium bg-transparent outline-none pr-2"
                 />
-                <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {projectName !== 'All Projects' ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProjectName('All Projects');
+                        setProjectDropdownOpen(false);
+                        setProjectSearchQuery('');
+                      }}
+                      className="text-[11px] font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                      title="Select all projects at once"
+                    >
+                      Select All
+                    </button>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                      All Projects
+                    </span>
+                  )}
+                  <Search className="w-4 h-4 text-slate-400" />
+                </div>
               </div>
             </div>
 
             {/* Dropdown suggestions */}
             {projectDropdownOpen && (
               <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 max-h-56 overflow-y-auto animate-in fade-in zoom-in-95">
-                <div className="px-3 py-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Available Projects
+                {/* Select All Option at top */}
+                {(!projectSearchQuery || 'select all'.includes(projectSearchQuery.toLowerCase()) || 'all projects'.includes(projectSearchQuery.toLowerCase())) && (
+                  <div className="p-1 border-b border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProjectName('All Projects');
+                        setProjectDropdownOpen(false);
+                        setProjectSearchQuery('');
+                      }}
+                      className={`w-full px-3 py-2 text-left text-xs font-semibold rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                        projectName === 'All Projects'
+                          ? 'bg-red-50 text-red-700 border border-red-200'
+                          : 'bg-slate-50 hover:bg-red-50/80 text-slate-800 hover:text-red-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center justify-center w-4 h-4 rounded border transition-colors ${
+                          projectName === 'All Projects'
+                            ? 'bg-red-600 border-red-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        }`}>
+                          <Check className="w-3 h-3 stroke-[3]" />
+                        </span>
+                        <span>Select All (All Projects)</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-700">
+                        {availableProjectOptions.length} Projects
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Available Projects</span>
+                  <span className="text-[10px] text-slate-400">{filteredProjects.length}</span>
                 </div>
-                {filteredProjects.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => {
-                      setProjectName(p);
-                      setProjectDropdownOpen(false);
-                    }}
-                    className={`w-full px-3.5 py-2 text-left text-xs flex items-center justify-between hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer ${
-                      projectName === p ? 'bg-red-50/70 text-red-700 font-bold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span>{p}</span>
-                    {projectName === p && <Check className="w-3.5 h-3.5 text-red-600" />}
-                  </button>
-                ))}
+
+                {filteredProjects.length === 0 ? (
+                  <div className="px-3.5 py-3 text-center text-xs text-slate-400">
+                    No matching projects found
+                  </div>
+                ) : (
+                  filteredProjects.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        setProjectName(p);
+                        setProjectDropdownOpen(false);
+                      }}
+                      className={`w-full px-3.5 py-2 text-left text-xs flex items-center justify-between hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer ${
+                        projectName === p ? 'bg-red-50/70 text-red-700 font-bold' : 'text-slate-700'
+                      }`}
+                    >
+                      <span>{p}</span>
+                      {projectName === p && <Check className="w-3.5 h-3.5 text-red-600" />}
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>

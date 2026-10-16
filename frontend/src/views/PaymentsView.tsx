@@ -267,7 +267,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
     }`}>
       {/* Edge-to-edge Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
+      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">

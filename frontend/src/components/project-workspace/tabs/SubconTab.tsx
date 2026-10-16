@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Plus, CheckCircle2, MoreVertical, 
   Trash2, Eye, Edit2, Check, Clock, X, ExternalLink 
@@ -54,6 +55,29 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
 
   // Row action menu dropdown
   const [activeMenuWoId, setActiveMenuWoId] = useState<string | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<{ id: string; rect: DOMRect } | null>(null);
+
+  // Close menu on click outside, scroll, resize or Escape
+  useEffect(() => {
+    if (!menuAnchor) return;
+    const handleClose = () => {
+      setMenuAnchor(null);
+      setActiveMenuWoId(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('click', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('click', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuAnchor]);
 
   // Filtered orders
   const filteredOrders = workOrders.filter(w => {
@@ -284,41 +308,24 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setActiveMenuWoId(activeMenuWoId === wo.id ? null : wo.id);
+                            if (menuAnchor?.id === wo.id) {
+                              setMenuAnchor(null);
+                              setActiveMenuWoId(null);
+                            } else {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuAnchor({ id: wo.id, rect });
+                              setActiveMenuWoId(wo.id);
+                            }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            menuAnchor?.id === wo.id
+                              ? 'bg-slate-200 text-slate-800'
+                              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                          }`}
+                          title="Actions"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
-
-                        {/* Dropdown Menu */}
-                        {activeMenuWoId === wo.id && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute right-4 top-10 z-20 w-36 bg-white rounded-xl shadow-xl border border-slate-100 py-1 text-xs font-medium text-slate-700 animate-in fade-in"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedWO(wo);
-                                setActiveMenuWoId(null);
-                              }}
-                              className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center gap-2"
-                            >
-                              <Eye className="w-3.5 h-3.5 text-slate-500" />
-                              <span>View Details</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteWO(wo.id, e)}
-                              className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Delete Order</span>
-                            </button>
-                          </div>
-                        )}
                       </td>
                     </tr>
                   );
@@ -336,6 +343,63 @@ export const SubconTab: React.FC<SubconTabProps> = ({ project, onShowToast }) =>
         onSubmit={handleCreateSubmit}
         nextWoNumber={nextWoNumber}
       />
+
+      {/* Portal Dropdown Menu: completely unclipped by table containers */}
+      {menuAnchor && typeof document !== 'undefined' && (() => {
+        const targetWo = workOrders.find((w) => w.id === menuAnchor.id);
+        if (!targetWo) return null;
+
+        const rect = menuAnchor.rect;
+        const menuHeight = 110;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+        const top = openUp ? undefined : rect.bottom + 4;
+        const bottom = openUp ? Math.max(8, window.innerHeight - rect.top + 4) : undefined;
+        const right = Math.max(12, Math.min(window.innerWidth - rect.right, window.innerWidth - 160));
+
+        return createPortal(
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: top !== undefined ? `${top}px` : undefined,
+              bottom: bottom !== undefined ? `${bottom}px` : undefined,
+              right: `${right}px`,
+              zIndex: 9999,
+            }}
+            className="w-36 bg-white rounded-xl shadow-2xl border border-slate-200 py-1 text-xs font-medium text-slate-700 animate-in fade-in select-none"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedWO(targetWo);
+                setMenuAnchor(null);
+                setActiveMenuWoId(null);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5 text-slate-500" />
+              <span>View Details</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                setMenuAnchor(null);
+                setActiveMenuWoId(null);
+                handleDeleteWO(targetWo.id, e);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-rose-50 text-rose-600 flex items-center gap-2 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Order</span>
+            </button>
+          </div>,
+          document.body
+        );
+      })()}
 
     </div>
   );

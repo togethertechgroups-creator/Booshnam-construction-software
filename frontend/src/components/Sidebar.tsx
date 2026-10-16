@@ -6,7 +6,7 @@ import {
   BookOpen, Settings, ChevronDown, ArrowLeft, Shield,
   Layers, ListTodo, Calculator, ShieldCheck, Menu, LogOut,
   Landmark, Compass, BarChart3, HardHat, DollarSign, Building2, CheckCircle2, Bell,
-  FolderPlus, Calendar
+  FolderPlus, Calendar, MessageSquare
 } from 'lucide-react';
 
 export function ChevronLeftIcon({ size = 24, ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
@@ -32,6 +32,7 @@ import {
 } from '../lib/departmentService';
 import { getDueFollowUpsCount } from '../lib/leadsNotificationService';
 import { getUnacknowledgedLowStockItems } from '../lib/stockNotificationService';
+import { getTotalUnreadChatCount } from '../lib/chatService';
 
 interface SidebarProps {
   currentView: string;
@@ -104,6 +105,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       window.removeEventListener('booshnam_session_changed', syncDept);
       window.removeEventListener('siteops_user_updated', syncDept);
       window.removeEventListener('storage', syncDept);
+    };
+  }, []);
+
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(() => getTotalUnreadChatCount());
+
+  useEffect(() => {
+    const syncChat = () => setUnreadChatCount(getTotalUnreadChatCount());
+    syncChat();
+    window.addEventListener('booshnam_chat_updated', syncChat);
+    window.addEventListener('storage', syncChat);
+    return () => {
+      window.removeEventListener('booshnam_chat_updated', syncChat);
+      window.removeEventListener('storage', syncChat);
     };
   }, []);
 
@@ -790,11 +804,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </nav>
 
-        {/* ── Quick Actions: New Project & New Lead (White Action Cards inside Brand Panel) ── */}
+        {/* ── Quick Actions: New Project, New Lead & Chat (White Action Cards inside Brand Panel) ── */}
         {isOpen ? (
-          activeRole.code !== 'CLIENT' && (
-            <div className="px-3 pt-2.5 pb-4 border-t border-white/15 shrink-0">
-              <div className="grid grid-cols-2 gap-2">
+          activeRole.code !== 'CLIENT' ? (
+            <div className="px-3 pt-2 pb-3 border-t border-white/15 shrink-0">
+              <div className="grid grid-cols-3 gap-1.5">
                 {/* 1. New Project Box Card */}
                 <button
                   type="button"
@@ -804,10 +818,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     window.dispatchEvent(new CustomEvent('booshnam_open_create_project'));
                   }}
                   title="Create New Project"
-                  className="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group h-[58px]"
                 >
-                  <FolderPlus className="w-5.5 h-5.5 text-[#C61D45] mb-1 transition-transform group-hover:scale-110" />
-                  <span className="text-[12.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight">
+                  <img
+                    src="/icons/new-project.png"
+                    alt="New Project"
+                    className="w-[22px] h-[22px] object-contain transition-transform group-hover:scale-110 drop-shadow-2xs select-none"
+                  />
+                  <span className="text-[10.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight mt-1">
                     New Project
                   </span>
                 </button>
@@ -821,46 +839,120 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
                   }}
                   title="Create New Lead"
-                  className="flex flex-col items-center justify-center py-2.5 px-2 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group h-[58px]"
                 >
-                  <Calculator className="w-5.5 h-5.5 text-[#C61D45] mb-1 transition-transform group-hover:scale-110" />
-                  <span className="text-[12.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight">
+                  <img
+                    src="/icons/new-lead.png"
+                    alt="New Lead"
+                    className="w-[22px] h-[22px] object-contain transition-transform group-hover:scale-110 drop-shadow-2xs select-none"
+                  />
+                  <span className="text-[10.5px] font-bold text-[#C61D45] text-center leading-tight truncate w-full tracking-tight mt-1">
                     New Lead
+                  </span>
+                </button>
+
+                {/* 3. WhatsApp Chat Box Card */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('booshnam_open_chat'));
+                  }}
+                  title="Open Real-time Chat (WhatsApp)"
+                  className="relative flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white hover:bg-emerald-50 active:bg-emerald-100 text-emerald-700 transition-all cursor-pointer shadow-xs hover:shadow-md active:scale-95 group border border-emerald-100/50 h-[58px]"
+                >
+                  {unreadChatCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-[#25D366] text-white font-extrabold text-[9px] rounded-full flex items-center justify-center shadow-md animate-pulse border border-[#C61D45]">
+                      {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                    </span>
+                  )}
+                  <img
+                    src="/icons/chat.png"
+                    alt="Chat"
+                    className="w-[22px] h-[22px] object-contain transition-transform group-hover:scale-110 drop-shadow-2xs select-none"
+                  />
+                  <span className="text-[10.5px] font-bold text-emerald-700 text-center leading-tight truncate w-full tracking-tight mt-1">
+                    Chat
                   </span>
                 </button>
               </div>
             </div>
-          )
-        ) : (
-          activeRole.code !== 'CLIENT' && (
-            <div className="py-2.5 px-1.5 border-t border-white/15 flex flex-col items-center gap-2 shrink-0 pb-4">
+          ) : (
+            <div className="px-3 pt-2 pb-3 border-t border-white/15 shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  sessionStorage.setItem('booshnam_auto_open_create_project', '1');
-                  onSelectView('projects');
-                  window.dispatchEvent(new CustomEvent('booshnam_open_create_project'));
-                }}
-                title="Create New Project"
-                className="w-10 h-10 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+                onClick={() => window.dispatchEvent(new CustomEvent('booshnam_open_chat'))}
+                title="Open Real-time Chat (WhatsApp)"
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-white text-emerald-700 font-bold text-xs shadow-xs hover:bg-emerald-50 active:scale-95 cursor-pointer h-9"
               >
-                <FolderPlus className="w-5.5 h-5.5 text-[#C61D45]" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  sessionStorage.setItem('booshnam_auto_open_create_quotation', '1');
-                  onSelectView('quotation');
-                  window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
-                }}
-                title="Create New Lead"
-                className="w-10 h-10 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
-              >
-                <Calculator className="w-5.5 h-5.5 text-[#C61D45]" />
+                <img
+                  src="/icons/chat.png"
+                  alt="Chat Support"
+                  className="w-5 h-5 object-contain drop-shadow-2xs select-none"
+                />
+                <span>Chat Support</span>
               </button>
             </div>
           )
+        ) : (
+          <div className="py-2.5 px-1.5 border-t border-white/15 flex flex-col items-center gap-2 shrink-0 pb-4">
+            {activeRole.code !== 'CLIENT' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem('booshnam_auto_open_create_project', '1');
+                    onSelectView('projects');
+                    window.dispatchEvent(new CustomEvent('booshnam_open_create_project'));
+                  }}
+                  title="Create New Project"
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <img
+                    src="/icons/new-project.png"
+                    alt="New Project"
+                    className="w-5 h-5 object-contain drop-shadow-2xs select-none"
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem('booshnam_auto_open_create_quotation', '1');
+                    onSelectView('quotation');
+                    window.dispatchEvent(new CustomEvent('booshnam_open_create_quotation'));
+                  }}
+                  title="Create New Lead"
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-white/95 active:bg-slate-100 text-[#C61D45] flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+                >
+                  <img
+                    src="/icons/new-lead.png"
+                    alt="New Lead"
+                    className="w-5 h-5 object-contain drop-shadow-2xs select-none"
+                  />
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('booshnam_open_chat'));
+              }}
+              title="Open Real-time Chat (WhatsApp)"
+              className="relative w-9 h-9 rounded-xl bg-white hover:bg-emerald-50 active:bg-slate-100 text-emerald-700 flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer"
+            >
+              {unreadChatCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 bg-[#25D366] text-white font-extrabold text-[9px] rounded-full flex items-center justify-center shadow-md animate-pulse border border-[#C61D45]">
+                  {unreadChatCount > 99 ? '99+' : unreadChatCount}
+                </span>
+              )}
+              <img
+                src="/icons/chat.png"
+                alt="Chat"
+                className="w-5 h-5 object-contain drop-shadow-2xs select-none"
+              />
+            </button>
+          </div>
         )}
         </div>
       </aside>

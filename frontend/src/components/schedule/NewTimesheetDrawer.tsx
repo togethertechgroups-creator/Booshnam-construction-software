@@ -241,7 +241,7 @@ export const NewTimesheetDrawer: React.FC<NewTimesheetDrawerProps> = ({
       />
 
       {/* Slide-over Drawer (Image 3 design in Red & White Theme) */}
-      <div className="relative w-full max-w-[500px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between animate-in slide-in-from-right duration-300">
+      <div className="relative w-full max-w-[500px] bg-white h-full shadow-2xl z-10 flex flex-col justify-between border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-300">
         
         {/* Drawer Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">

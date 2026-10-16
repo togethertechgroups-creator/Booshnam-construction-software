@@ -2578,7 +2578,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       {/* ========================================================================= */}
       {isTaskDrawerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+          <div className="bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl flex flex-col border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-200">
             {editingTask ? (
               /* ================================================================= */
               /* A. TASK DETAIL VIEW (SCREENSHOT 2 & 3)                           */

@@ -153,7 +153,7 @@ export const AddPartyDrawer: React.FC<AddPartyDrawerProps> = ({
       />
 
       {/* Slide-over Drawer Panel */}
-      <div className="relative w-full max-w-md bg-white shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-200 ease-out border-l border-slate-200">
+      <div className="relative w-full max-w-md bg-white shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-200 ease-out border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden">
         
         {/* Top Header matching Image 2 */}
         <div className="px-5 py-3.5 bg-white flex items-center justify-between border-b border-slate-100">

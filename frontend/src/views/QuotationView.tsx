@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Calculator, Plus, Search, Filter, Download, Printer, Eye, 
   Trash2, CheckCircle2, Clock, AlertCircle, X, ChevronRight, 
@@ -406,8 +407,18 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [drawerValue, setDrawerValue] = useState('');
   const [drawerNotes, setDrawerNotes] = useState('');
 
-  // Row Action Dropdown state
+  // New Lead Drawer Form Validation Errors & Scroll Ref
+  const [drawerErrors, setDrawerErrors] = useState<{
+    leadType?: string;
+    contactName?: string;
+    phone?: string;
+    email?: string;
+  }>({});
+  const drawerScrollRef = useRef<HTMLDivElement>(null);
+
+  // Row Action Dropdown state (with Portal anchor rect for unclipped positioning)
   const [activeRowMenuId, setActiveRowMenuId] = useState<string | null>(null);
+  const [rowMenuAnchor, setRowMenuAnchor] = useState<{ id: string; rect: DOMRect } | null>(null);
 
   // =========================================================================
   // 2. QUOTATIONS STATE & PERSISTENCE
@@ -436,9 +447,11 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [quoteStatusFilter, setQuoteStatusFilter] = useState<string>('ALL');
   const [quoteDateFilter, setQuoteDateFilter] = useState<string>('ALL');
 
-  // Quotation Status Dropdown Popup (Image 3)
+  // Quotation Status Dropdown Popup (Image 3) & Row Actions
   const [activeQuoteStatusDropdownId, setActiveQuoteStatusDropdownId] = useState<string | null>(null);
+  const [quoteStatusMenuAnchor, setQuoteStatusMenuAnchor] = useState<{ id: string; rect: DOMRect } | null>(null);
   const [activeQuoteRowMenuId, setActiveQuoteRowMenuId] = useState<string | null>(null);
+  const [quoteRowMenuAnchor, setQuoteRowMenuAnchor] = useState<{ id: string; rect: DOMRect } | null>(null);
 
   // Preview & Download Modal States
   const [isNewQuoteModalOpen, setIsNewQuoteModalOpen] = useState(false);
@@ -461,6 +474,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const [quoteDiscount, setQuoteDiscount] = useState<number>(0);
   const [quoteNotes, setQuoteNotes] = useState('Payment: 50% advance along with work order, balance upon draft report submission.');
   const [quoteTerms, setQuoteTerms] = useState<string>(() => getTermsConditions().quotationTerms);
+  const [quoteErrors, setQuoteErrors] = useState<{ clientName?: string }>({});
 
   useEffect(() => {
     const handleTermsUpdate = () => {
@@ -508,18 +522,37 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     return () => window.removeEventListener('booshnam_open_create_quotation', handleOpenNewQuote);
   }, []);
 
-  // Close floating menus when clicking outside
+  const closeAllRowMenus = () => {
+    setActiveRowMenuId(null);
+    setRowMenuAnchor(null);
+    setActiveQuoteRowMenuId(null);
+    setQuoteRowMenuAnchor(null);
+    setActiveQuoteStatusDropdownId(null);
+    setQuoteStatusMenuAnchor(null);
+  };
+
+  // Close floating menus when clicking outside, scrolling, or pressing Escape
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.dropdown-trigger-container')) {
-        setActiveQuoteStatusDropdownId(null);
-        setActiveRowMenuId(null);
-        setActiveQuoteRowMenuId(null);
+    const handleClose = (e?: MouseEvent | Event) => {
+      if (e && (e.target as HTMLElement)?.closest?.('.dropdown-trigger-container')) {
+        return;
       }
+      closeAllRowMenus();
     };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAllRowMenus();
+    };
+
+    document.addEventListener('click', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // =========================================================================
@@ -597,6 +630,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   // =========================================================================
   const handleOpenNewLeadDrawer = () => {
     setEditingLeadId(null);
+    setDrawerErrors({});
     setDrawerAssignee('');
     setDrawerAssignedRole('');
     setDrawerDate('');
@@ -624,6 +658,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   const handleEditLead = (lead: Lead) => {
     markRemindersAsViewed([lead.id]);
     setEditingLeadId(lead.id);
+    setDrawerErrors({});
     setDrawerAssignee(lead.assigned_to_name || '');
     setDrawerAssignedRole(lead.assigned_role || '');
     setDrawerDate(lead.creation_date || '');
@@ -646,22 +681,45 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
     setDrawerValue(lead.estimated_value ? String(lead.estimated_value) : '');
     setDrawerNotes(lead.notes || '');
     setIsLeadDrawerOpen(true);
-    setActiveRowMenuId(null);
+    closeAllRowMenus();
   };
 
   const handleSaveLeadFromDrawer = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!drawerContactName.trim()) {
-      onShowToast?.('Please enter Contact Name');
-      return;
+
+    const errors: { leadType?: string; contactName?: string; phone?: string; email?: string } = {};
+
+    if (!drawerLeadType.trim()) {
+      errors.leadType = 'Please enter Lead Type';
     }
-    if (!drawerPhone.trim()) {
-      onShowToast?.('Please enter Contact Number');
+
+    if (!drawerContactName.trim()) {
+      errors.contactName = 'Please enter Contact Name';
+    }
+
+    const cleanPhone = drawerPhone.trim();
+    const cleanDigits = cleanPhone.replace(/\D/g, '');
+    if (!cleanPhone) {
+      errors.phone = 'Please enter Contact Number';
+    } else if (cleanDigits.length < 10) {
+      errors.phone = 'Please enter a valid 10-digit mobile number';
+    }
+
+    if (drawerEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(drawerEmail.trim())) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setDrawerErrors(errors);
+      const firstError = Object.values(errors)[0];
+      onShowToast?.(firstError);
+      drawerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
+    setDrawerErrors({});
+
     const todayStr = '25 September 2026';
-    const cleanPhone = drawerPhone.trim();
     const resolvedValue = Number(drawerBudget) || Number(drawerValue) || 15000;
 
     if (editingLeadId) {
@@ -736,7 +794,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   };
 
   const handleDeleteLead = async (id: string, name: string) => {
-    setActiveRowMenuId(null);
+    closeAllRowMenus();
     const confirmed = await confirmAction({
       title: 'Delete Lead',
       message: `Are you sure you want to remove lead for "${name}"?`,
@@ -752,7 +810,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   // Convert Lead to Quotation
   const handleConvertLeadToQuote = (lead: Lead) => {
     markRemindersAsViewed([lead.id]);
-    setActiveRowMenuId(null);
+    closeAllRowMenus();
     setQuoteClientName(lead.client_name);
     setQuoteClientPhone(lead.phone || '');
     setQuoteClientEmail(lead.email || '');
@@ -778,7 +836,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
   // Convert Lead to Project
   const handleConvertLeadToProject = (lead: Lead) => {
     markRemindersAsViewed([lead.id]);
-    setActiveRowMenuId(null);
+    closeAllRowMenus();
     setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, stage: 'WON', status_label: 'Client Confirmed', probability: 100 } : l));
     const budgetVal = lead.estimated_value || 0;
     const cleanTitle = lead.project_title?.trim() || `${lead.client_name} Project`;
@@ -961,9 +1019,11 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
   const handleSaveQuotation = (status: Quotation['status'] = 'Draft') => {
     if (!quoteClientName.trim()) {
+      setQuoteErrors({ clientName: 'Please enter Client Name' });
       onShowToast?.('Please enter Client Name');
       return;
     }
+    setQuoteErrors({});
 
     const nextCode = `QBAG/${String(quotations.length + 3078)}/2026-27`;
     const newQuote: Quotation = {
@@ -1354,27 +1414,18 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
             {/* Leads Table (matching Image 1) */}
             <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="w-full text-left border-collapse text-xs table-fixed">
                   <thead>
                     <tr className="bg-[#f8fafc] text-slate-600 border-b border-slate-200/80">
-                      <th className="py-3 px-4 font-semibold text-slate-700 w-16 text-center">S.No.</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Lead Type</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Contact Name</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Last Updated</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Contact Number</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 text-center">Status</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 whitespace-nowrap">Follow Up</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Source</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 text-center w-12">
-                        <button 
-                          type="button" 
-                          onClick={handleOpenNewLeadDrawer}
-                          title="Quick Add Lead"
-                          className="p-1 hover:bg-red-50 hover:text-red-600 rounded text-slate-400 cursor-pointer transition-colors"
-                        >
-                          <Plus className="w-4 h-4 inline" />
-                        </button>
-                      </th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 w-[6%] text-center">S.No.</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left w-[14%] truncate">Lead Type</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left w-[16%] truncate">Contact Name</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left whitespace-nowrap w-[14%]">Last Updated</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left whitespace-nowrap w-[13%]">Contact Number</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left w-[13%]">Status</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left whitespace-nowrap w-[13%]">Follow Up</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left whitespace-nowrap w-[7%]">Source</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-center w-[4%]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1384,23 +1435,23 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         onClick={() => handleEditLead(lead)}
                         className="hover:bg-slate-50/80 transition-colors group text-slate-800 cursor-pointer"
                       >
-                        <td className="py-3.5 px-4 font-medium text-slate-500">
+                        <td className="py-3.5 px-3.5 font-medium text-slate-500 text-center align-middle">
                           {idx + 1}
                         </td>
 
-                        <td className="py-3.5 px-4 font-semibold text-slate-800">
+                        <td className="py-3.5 px-3.5 font-semibold text-slate-800 text-left align-middle truncate">
                           {lead.lead_type || 'Referal - soil testing'}
                         </td>
 
-                        <td className="py-3.5 px-4 font-medium text-slate-900">
+                        <td className="py-3.5 px-3.5 font-medium text-slate-900 text-left align-middle truncate">
                           {lead.client_name}
                         </td>
 
-                        <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                        <td className="py-3.5 px-3.5 text-slate-500 text-left whitespace-nowrap align-middle">
                           {lead.last_updated || '25 September 2026'}
                         </td>
 
-                        <td className="py-3.5 px-4 tracking-tight text-slate-700 whitespace-nowrap">
+                        <td className="py-3.5 px-3.5 tracking-tight text-slate-700 text-left whitespace-nowrap align-middle">
                           <a 
                             href={`tel:${lead.phone}`}
                             onClick={(e) => e.stopPropagation()}
@@ -1411,14 +1462,14 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           </a>
                         </td>
 
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className={`inline-block px-3 py-1 rounded-md text-[11px] font-semibold tracking-wide ${getLeadStatusBadge(lead.status_label || lead.stage)}`}>
+                        <td className="py-3.5 px-3.5 text-left whitespace-nowrap align-middle">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-md text-[11px] font-semibold tracking-wide ${getLeadStatusBadge(lead.status_label || lead.stage)}`}>
                             {lead.status_label || lead.stage}
                           </span>
                         </td>
 
                         {/* Follow Up Column with Status Badges and Reminders */}
-                        <td className="py-3.5 px-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-3.5 px-3.5 text-left whitespace-nowrap align-middle" onClick={(e) => e.stopPropagation()}>
                           {(() => {
                             const info = getFollowUpStatus(lead.followup_date);
                             const isViewed = isReminderViewed(lead.id, lead.followup_date);
@@ -1485,75 +1536,34 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                           })()}
                         </td>
 
-                        <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                        <td className="py-3.5 px-3.5 text-slate-600 whitespace-nowrap text-left align-middle truncate">
                           {lead.source || 'Just dial'}
                         </td>
-                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="py-3.5 px-3.5 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                           <div className="relative inline-block dropdown-trigger-container">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveRowMenuId(activeRowMenuId === lead.id ? null : lead.id);
+                                if (rowMenuAnchor?.id === lead.id) {
+                                  closeAllRowMenus();
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  closeAllRowMenus();
+                                  setRowMenuAnchor({ id: lead.id, rect });
+                                  setActiveRowMenuId(lead.id);
+                                }
                               }}
-                              className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                rowMenuAnchor?.id === lead.id
+                                  ? 'bg-slate-200 text-slate-800'
+                                  : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+                              }`}
+                              title="Lead Actions"
+                              aria-label="Lead Actions"
                             >
                               <MoreVertical className="w-4 h-4" />
                             </button>
-  
-                            {/* Options Dropdown */}
-                            {activeRowMenuId === lead.id && (
-                              <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
-                                {!isReminderViewed(lead.id, lead.followup_date) && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      markRemindersAsViewed([lead.id]);
-                                      setActiveRowMenuId(null);
-                                      onShowToast?.(`Reminder for ${lead.client_name} marked as read`);
-                                    }}
-                                    className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                                  >
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span>Mark as Read</span>
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleConvertLeadToQuote(lead)}
-                                  className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
-                                >
-                                  <Calculator className="w-3.5 h-3.5 text-red-600" />
-                                  <span>Create Quotation</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleConvertLeadToProject(lead)}
-                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 cursor-pointer font-medium"
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Convert to Project</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditLead(lead)}
-                                  className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Edit Lead</span>
-                                </button>
-                                <div className="border-t border-slate-100 my-1" />
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteLead(lead.id, lead.client_name)}
-                                  className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Delete Lead</span>
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </td>
                       </tr>
@@ -1561,7 +1571,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
 
                     {filteredLeads.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                        <td colSpan={9} className="py-12 text-center text-slate-400">
                           <p className="text-sm font-medium">No leads match the selected filter criteria.</p>
                           <button
                             type="button"
@@ -1654,16 +1664,16 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
             {/* Quotations Table (matching Image 3) */}
             <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
+                <table className="w-full text-left border-collapse text-xs table-fixed">
                   <thead>
                     <tr className="bg-[#f8fafc] text-slate-600 border-b border-slate-200/80">
-                      <th className="py-3 px-4 font-semibold text-slate-700 w-28 text-center">S.No.</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 w-32">Date</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Subject</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Client</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700">Est. Amount</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 w-44">Status</th>
-                      <th className="py-3 px-4 font-semibold text-slate-700 text-center w-12">Action</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 w-[14%] text-left whitespace-nowrap">Quote #</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 w-[12%] text-left whitespace-nowrap">Date</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left w-[24%] truncate">Subject</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left w-[18%] truncate">Client</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-left whitespace-nowrap w-[14%]">Est. Amount</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 w-[14%] text-left">Status</th>
+                      <th className="py-3 px-3.5 font-semibold text-slate-700 text-center w-[4%]">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1673,43 +1683,50 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                         className="hover:bg-slate-50/70 transition-colors group text-slate-800"
                       >
                         {/* Quotation Code */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-800 tracking-tight">
+                        <td className="py-3.5 px-3.5 font-semibold text-slate-800 tracking-tight text-left align-middle">
                           {quote.quotation_number}
                         </td>
 
                         {/* Date */}
-                        <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">
+                        <td className="py-3.5 px-3.5 text-slate-500 whitespace-nowrap text-left align-middle">
                           {quote.date}
                         </td>
 
                         {/* Subject */}
-                        <td className="py-3.5 px-4 font-medium text-slate-800">
+                        <td className="py-3.5 px-3.5 font-medium text-slate-800 text-left align-middle">
                           {quote.project_title || 'Soil Investigation'}
                         </td>
 
                         {/* Client */}
-                        <td className="py-3.5 px-4 font-medium text-slate-900">
+                        <td className="py-3.5 px-3.5 font-medium text-slate-900 text-left align-middle">
                           {quote.client_name}
                         </td>
 
                         {/* Est. Amount */}
-                        <td className="py-3.5 px-4 font-semibold text-slate-900 tracking-tight whitespace-nowrap">
+                        <td className="py-3.5 px-3.5 font-semibold text-slate-900 tracking-tight whitespace-nowrap text-left align-middle">
                           ₹ {quote.total_amount.toLocaleString('en-IN')}
                         </td>
 
                         {/* Status Dropdown Pill with Menu (matching Image 3) */}
-                        <td className="py-3.5 px-4 relative dropdown-trigger-container">
+                        <td className="py-3.5 px-3.5 relative dropdown-trigger-container text-left align-middle">
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setActiveQuoteStatusDropdownId(activeQuoteStatusDropdownId === quote.id ? null : quote.id);
+                                if (quoteStatusMenuAnchor?.id === quote.id) {
+                                  closeAllRowMenus();
+                                } else {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  closeAllRowMenus();
+                                  setQuoteStatusMenuAnchor({ id: quote.id, rect });
+                                  setActiveQuoteStatusDropdownId(quote.id);
+                                }
                               }}
                               className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center justify-between gap-2 cursor-pointer transition-all ${getQuoteStatusBadge(quote.status)}`}
                             >
                               <span>{quote.status === 'APPROVED' ? 'Client Confirmed' : quote.status}</span>
-                              <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+                              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${quoteStatusMenuAnchor?.id === quote.id ? 'rotate-180' : 'opacity-70'}`} />
                             </button>
 
                             {/* Direct Convert to Project Button when Confirmed */}
@@ -1728,90 +1745,33 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
                               </button>
                             )}
                           </div>
-
-                          {/* Floating Status Dropdown Menu (Image 3) */}
-                          {activeQuoteStatusDropdownId === quote.id && (
-                            <div className="absolute left-4 top-11 w-44 bg-white border border-slate-200 rounded-xl shadow-2xl z-40 py-1.5 text-left text-xs animate-in fade-in zoom-in-95">
-                              {['Draft', 'Sent', 'In Discussion', 'On Hold', 'Client Confirmed', 'Rejected'].map((statusOption) => (
-                                <button
-                                  key={statusOption}
-                                  type="button"
-                                  onClick={() => handleUpdateQuotationStatus(quote.id, statusOption)}
-                                  className={`w-full px-3.5 py-2 text-left hover:bg-red-50/50 transition-colors flex items-center justify-between cursor-pointer ${
-                                    quote.status === statusOption || (statusOption === 'Client Confirmed' && quote.status === 'APPROVED')
-                                      ? 'font-bold text-red-600 bg-red-50/70'
-                                      : 'text-slate-700'
-                                  }`}
-                                >
-                                  <span>{statusOption}</span>
-                                  {(quote.status === statusOption || (statusOption === 'Client Confirmed' && quote.status === 'APPROVED')) && (
-                                    <Check className="w-3.5 h-3.5 text-red-600" />
-                                  )}
-                                </button>
-                              ))}
-                            </div>
-                          )}
                         </td>
 
                         {/* Row Actions */}
-                        <td className="py-3.5 px-4 text-center relative dropdown-trigger-container">
+                        <td className="py-3.5 px-3.5 text-center align-middle relative dropdown-trigger-container">
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveQuoteRowMenuId(activeQuoteRowMenuId === quote.id ? null : quote.id);
+                              if (quoteRowMenuAnchor?.id === quote.id) {
+                                closeAllRowMenus();
+                              } else {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                closeAllRowMenus();
+                                setQuoteRowMenuAnchor({ id: quote.id, rect });
+                                setActiveQuoteRowMenuId(quote.id);
+                              }
                             }}
-                            className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-700 cursor-pointer"
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                              quoteRowMenuAnchor?.id === quote.id
+                                ? 'bg-slate-200 text-slate-800'
+                                : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+                            }`}
+                            title="Quotation Actions"
+                            aria-label="Quotation Actions"
                           >
                             <MoreVertical className="w-4 h-4" />
                           </button>
-
-                          {activeQuoteRowMenuId === quote.id && (
-                            <div className="absolute right-4 top-10 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left text-xs animate-in fade-in zoom-in-95">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveQuoteRowMenuId(null);
-                                  handleConvertQuotationToProject(quote);
-                                }}
-                                className="w-full px-3 py-2 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2 cursor-pointer font-bold"
-                              >
-                                <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Convert to Project</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveQuoteRowMenuId(null);
-                                  setPreviewQuotation(quote);
-                                }}
-                                className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-red-600" />
-                                <span>Preview Proposal</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveQuoteRowMenuId(null);
-                                  setDownloadQuoteTarget(quote);
-                                }}
-                                className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Download className="w-3.5 h-3.5 text-red-600" />
-                                <span>Download (PDF / Word)</span>
-                              </button>
-                              <div className="border-t border-slate-100 my-1" />
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteQuotation(quote.id, quote.quotation_number)}
-                                className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete Quotation</span>
-                              </button>
-                            </div>
-                          )}
                         </td>
                       </tr>
                     ))}
@@ -1844,7 +1804,7 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
       {isLeadDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex justify-end">
           <div 
-            className="w-full sm:w-[500px] md:w-[540px] bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-250"
+            className="w-full sm:w-[500px] md:w-[540px] bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-250"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drawer Header (matching Image 2 & latest screenshot) */}
@@ -1852,7 +1812,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsLeadDrawerOpen(false)}
+                  onClick={() => {
+                    setIsLeadDrawerOpen(false);
+                    setDrawerErrors({});
+                  }}
                   className="p-1 hover:bg-slate-100 rounded-lg text-slate-700 hover:text-slate-900 cursor-pointer transition-colors"
                 >
                   <X className="w-5 h-5 stroke-[2.5]" />
@@ -1875,8 +1838,24 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
             {/* Red Accent Line across 100% width under header (Red & White Theme) */}
             <div className="h-1 bg-red-600 w-full" />
 
+            {/* Top Error Alert Banner if validation failed */}
+            {Object.keys(drawerErrors).length > 0 && (
+              <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-bold text-red-800">Please fill in the required fields:</p>
+                  <ul className="list-disc list-inside mt-1 space-y-0.5 text-[11px] text-red-700 font-medium">
+                    {drawerErrors.leadType && <li>{drawerErrors.leadType}</li>}
+                    {drawerErrors.contactName && <li>{drawerErrors.contactName}</li>}
+                    {drawerErrors.phone && <li>{drawerErrors.phone}</li>}
+                    {drawerErrors.email && <li>{drawerErrors.email}</li>}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Drawer Form Body (Perfect Alignment & Red/White Theme) */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+            <div ref={drawerScrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
               {/* Row 1: LEAD ASSIGNEE & DATE (Perfect 2-col alignment) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* LEAD ASSIGNEE */}
@@ -1921,70 +1900,140 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               </div>
 
               {/* LEAD TYPE * */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  LEAD TYPE *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder=""
-                  value={drawerLeadType}
-                  onChange={(e) => setDrawerLeadType(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none pr-6"
-                />
-                <Info className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
+              <div className="space-y-1">
+                <div className={`relative border rounded-xl h-11 px-3.5 flex items-center transition-colors ${
+                  drawerErrors.leadType 
+                    ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20' 
+                    : 'border-slate-300 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100'
+                }`}>
+                  <label className={`absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold tracking-wider uppercase leading-none select-none z-10 transition-colors ${
+                    drawerErrors.leadType ? 'text-red-600' : 'text-slate-400'
+                  }`}>
+                    LEAD TYPE *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder=""
+                    value={drawerLeadType}
+                    onChange={(e) => {
+                      setDrawerLeadType(e.target.value);
+                      if (drawerErrors.leadType) setDrawerErrors(prev => ({ ...prev, leadType: undefined }));
+                    }}
+                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none pr-6"
+                  />
+                  <Info className={`w-4 h-4 absolute right-3 pointer-events-none transition-colors ${
+                    drawerErrors.leadType ? 'text-red-500' : 'text-slate-400'
+                  }`} />
+                </div>
+                {drawerErrors.leadType && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 ml-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{drawerErrors.leadType}</span>
+                  </p>
+                )}
               </div>
 
               {/* CONTACT NAME * */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  CONTACT NAME *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder=""
-                  value={drawerContactName}
-                  onChange={(e) => setDrawerContactName(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none"
-                />
-              </div>
-
-              {/* PHONE NO. * (with Flag and +91 code) */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  PHONE NO. *
-                </label>
-                <div className="flex items-center gap-2 w-full">
-                  <div className="flex items-center gap-1.5 pr-2.5 border-r border-slate-200 text-slate-700 font-medium select-none">
-                    <span className="text-sm">🇮🇳</span>
-                    <span>+91</span>
-                    <ChevronDown className="w-3 h-3 text-slate-500" />
-                  </div>
+              <div className="space-y-1">
+                <div className={`relative border rounded-xl h-11 px-3.5 flex items-center transition-colors ${
+                  drawerErrors.contactName 
+                    ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20' 
+                    : 'border-slate-300 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100'
+                }`}>
+                  <label className={`absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold tracking-wider uppercase leading-none select-none z-10 transition-colors ${
+                    drawerErrors.contactName ? 'text-red-600' : 'text-slate-400'
+                  }`}>
+                    CONTACT NAME *
+                  </label>
                   <input
-                    type="tel"
+                    type="text"
                     required
                     placeholder=""
-                    value={drawerPhone}
-                    onChange={(e) => setDrawerPhone(e.target.value)}
+                    value={drawerContactName}
+                    onChange={(e) => {
+                      setDrawerContactName(e.target.value);
+                      if (drawerErrors.contactName) setDrawerErrors(prev => ({ ...prev, contactName: undefined }));
+                    }}
                     className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none"
                   />
                 </div>
+                {drawerErrors.contactName && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 ml-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{drawerErrors.contactName}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* PHONE NO. * (with Flag and +91 code) */}
+              <div className="space-y-1">
+                <div className={`relative border rounded-xl h-11 px-3.5 flex items-center transition-colors ${
+                  drawerErrors.phone 
+                    ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20' 
+                    : 'border-slate-300 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100'
+                }`}>
+                  <label className={`absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold tracking-wider uppercase leading-none select-none z-10 transition-colors ${
+                    drawerErrors.phone ? 'text-red-600' : 'text-slate-400'
+                  }`}>
+                    PHONE NO. *
+                  </label>
+                  <div className="flex items-center gap-2 w-full">
+                    <div className="flex items-center gap-1.5 pr-2.5 border-r border-slate-200 text-slate-700 font-medium select-none">
+                      <span className="text-sm">🇮🇳</span>
+                      <span>+91</span>
+                      <ChevronDown className="w-3 h-3 text-slate-500" />
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      placeholder=""
+                      value={drawerPhone}
+                      onChange={(e) => {
+                        setDrawerPhone(e.target.value);
+                        if (drawerErrors.phone) setDrawerErrors(prev => ({ ...prev, phone: undefined }));
+                      }}
+                      className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none"
+                    />
+                  </div>
+                </div>
+                {drawerErrors.phone && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 ml-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{drawerErrors.phone}</span>
+                  </p>
+                )}
               </div>
 
               {/* EMAIL */}
-              <div className="relative border border-slate-300 rounded-xl h-11 px-3.5 flex items-center focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100 transition-colors">
-                <label className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-none select-none z-10">
-                  EMAIL
-                </label>
-                <input
-                  type="email"
-                  placeholder=""
-                  value={drawerEmail}
-                  onChange={(e) => setDrawerEmail(e.target.value)}
-                  className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none"
-                />
+              <div className="space-y-1">
+                <div className={`relative border rounded-xl h-11 px-3.5 flex items-center transition-colors ${
+                  drawerErrors.email 
+                    ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20' 
+                    : 'border-slate-300 focus-within:border-red-600 focus-within:ring-2 focus-within:ring-red-100'
+                }`}>
+                  <label className={`absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-bold tracking-wider uppercase leading-none select-none z-10 transition-colors ${
+                    drawerErrors.email ? 'text-red-600' : 'text-slate-400'
+                  }`}>
+                    EMAIL
+                  </label>
+                  <input
+                    type="email"
+                    placeholder=""
+                    value={drawerEmail}
+                    onChange={(e) => {
+                      setDrawerEmail(e.target.value);
+                      if (drawerErrors.email) setDrawerErrors(prev => ({ ...prev, email: undefined }));
+                    }}
+                    className="w-full bg-transparent text-xs text-slate-800 font-medium focus:outline-none"
+                  />
+                </div>
+                {drawerErrors.email && (
+                  <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 ml-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{drawerErrors.email}</span>
+                  </p>
+                )}
               </div>
 
               {/* COMPANY NAME */}
@@ -2147,7 +2196,10 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setIsNewQuoteModalOpen(false)}
+                onClick={() => {
+                  setIsNewQuoteModalOpen(false);
+                  setQuoteErrors({});
+                }}
                 className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -2158,15 +2210,30 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               {/* Client & Project Details */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Client Name *</label>
+                  <label className={`block text-xs font-bold mb-1 transition-colors ${quoteErrors.clientName ? 'text-red-600' : 'text-slate-700'}`}>
+                    Client Name *
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Karthick"
                     value={quoteClientName}
-                    onChange={(e) => setQuoteClientName(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100"
+                    onChange={(e) => {
+                      setQuoteClientName(e.target.value);
+                      if (quoteErrors.clientName) setQuoteErrors({});
+                    }}
+                    className={`w-full px-3 py-2 border rounded-xl text-xs text-slate-900 focus:outline-none transition-colors ${
+                      quoteErrors.clientName
+                        ? 'border-red-500 ring-2 ring-red-100 bg-red-50/20'
+                        : 'border-slate-200 focus:border-red-600 focus:ring-1 focus:ring-red-100'
+                    }`}
                   />
+                  {quoteErrors.clientName && (
+                    <p className="text-[11px] text-red-600 font-medium flex items-center gap-1 mt-1 animate-in fade-in">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{quoteErrors.clientName}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -2922,6 +2989,227 @@ export const QuotationView: React.FC<QuotationViewProps> = ({
               </div>
             </div>
           </div>
+        );
+      })()}
+
+      {/* ── PORTAL DROPDOWNS: Rendered at body level so table overflow/clipping NEVER cuts off menus ── */}
+      {rowMenuAnchor && typeof document !== 'undefined' && (() => {
+        const activeLead = leads.find((l) => l.id === rowMenuAnchor.id);
+        if (!activeLead) return null;
+
+        const rect = rowMenuAnchor.rect;
+        const menuHeight = 220;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+        const top = openUp ? undefined : rect.bottom + 4;
+        const bottom = openUp ? Math.max(8, window.innerHeight - rect.top + 4) : undefined;
+        const right = Math.max(12, Math.min(window.innerWidth - rect.right, window.innerWidth - 210));
+
+        return createPortal(
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: top !== undefined ? `${top}px` : undefined,
+              bottom: bottom !== undefined ? `${bottom}px` : undefined,
+              right: `${right}px`,
+              zIndex: 9999,
+            }}
+            className="w-48 bg-white border border-slate-200 rounded-xl shadow-2xl py-1 text-left text-xs animate-in fade-in zoom-in-95 select-none"
+          >
+            {!isReminderViewed(activeLead.id, activeLead.followup_date) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  markRemindersAsViewed([activeLead.id]);
+                  closeAllRowMenus();
+                  onShowToast?.(`Reminder for ${activeLead.client_name} marked as read`);
+                }}
+                className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Mark as Read</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleConvertLeadToQuote(activeLead);
+              }}
+              className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Calculator className="w-3.5 h-3.5 text-red-600 shrink-0" />
+              <span>Create Quotation</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleConvertLeadToProject(activeLead);
+              }}
+              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Convert to Project</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleEditLead(activeLead);
+              }}
+              className="w-full px-3 py-2 text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Edit2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>Edit Lead</span>
+            </button>
+            <div className="border-t border-slate-100 my-1" />
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleDeleteLead(activeLead.id, activeLead.client_name);
+              }}
+              className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Delete Lead</span>
+            </button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {/* Quotations Table Row Menu Portal */}
+      {quoteRowMenuAnchor && typeof document !== 'undefined' && (() => {
+        const quote = quotations.find((q) => q.id === quoteRowMenuAnchor.id);
+        if (!quote) return null;
+
+        const rect = quoteRowMenuAnchor.rect;
+        const menuHeight = 220;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+        const top = openUp ? undefined : rect.bottom + 4;
+        const bottom = openUp ? Math.max(8, window.innerHeight - rect.top + 4) : undefined;
+        const right = Math.max(12, Math.min(window.innerWidth - rect.right, window.innerWidth - 210));
+
+        return createPortal(
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: top !== undefined ? `${top}px` : undefined,
+              bottom: bottom !== undefined ? `${bottom}px` : undefined,
+              right: `${right}px`,
+              zIndex: 9999,
+            }}
+            className="w-48 bg-white border border-slate-200 rounded-xl shadow-2xl py-1 text-left text-xs animate-in fade-in zoom-in-95 select-none"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleConvertQuotationToProject(quote);
+              }}
+              className="w-full px-3 py-2 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 flex items-center gap-2 cursor-pointer font-bold"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Convert to Project</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                setPreviewQuotation(quote);
+              }}
+              className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Eye className="w-3.5 h-3.5 text-red-600 shrink-0" />
+              <span>Preview Proposal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                setDownloadQuoteTarget(quote);
+              }}
+              className="w-full px-3 py-2 text-slate-700 hover:bg-red-50 hover:text-red-600 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Download className="w-3.5 h-3.5 text-red-600 shrink-0" />
+              <span>Download (PDF / Word)</span>
+            </button>
+            <div className="border-t border-slate-100 my-1" />
+            <button
+              type="button"
+              onClick={() => {
+                closeAllRowMenus();
+                handleDeleteQuotation(quote.id, quote.quotation_number);
+              }}
+              className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>Delete Quotation</span>
+            </button>
+          </div>,
+          document.body
+        );
+      })()}
+
+      {/* Quotations Table Status Menu Portal */}
+      {quoteStatusMenuAnchor && typeof document !== 'undefined' && (() => {
+        const quote = quotations.find((q) => q.id === quoteStatusMenuAnchor.id);
+        if (!quote) return null;
+
+        const rect = quoteStatusMenuAnchor.rect;
+        const menuHeight = 260;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
+
+        const top = openUp ? undefined : rect.bottom + 4;
+        const bottom = openUp ? Math.max(8, window.innerHeight - rect.top + 4) : undefined;
+        const left = Math.max(12, Math.min(rect.left, window.innerWidth - 190));
+
+        return createPortal(
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              top: top !== undefined ? `${top}px` : undefined,
+              bottom: bottom !== undefined ? `${bottom}px` : undefined,
+              left: `${left}px`,
+              zIndex: 9999,
+            }}
+            className="w-44 bg-white border border-slate-200 rounded-xl shadow-2xl py-1.5 text-left text-xs animate-in fade-in zoom-in-95 select-none"
+          >
+            {['Draft', 'Sent', 'In Discussion', 'On Hold', 'Client Confirmed', 'Rejected'].map((statusOption) => (
+              <button
+                key={statusOption}
+                type="button"
+                onClick={() => {
+                  handleUpdateQuotationStatus(quote.id, statusOption);
+                  closeAllRowMenus();
+                }}
+                className={`w-full px-3.5 py-2 text-left hover:bg-red-50/50 transition-colors flex items-center justify-between cursor-pointer ${
+                  quote.status === statusOption || (statusOption === 'Client Confirmed' && quote.status === 'APPROVED')
+                    ? 'font-bold text-red-600 bg-red-50/70'
+                    : 'text-slate-700'
+                }`}
+              >
+                <span>{statusOption}</span>
+                {(quote.status === statusOption || (statusOption === 'Client Confirmed' && quote.status === 'APPROVED')) && (
+                  <Check className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                )}
+              </button>
+            ))}
+          </div>,
+          document.body
         );
       })()}
     </div>

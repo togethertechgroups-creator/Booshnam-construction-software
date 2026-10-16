@@ -77,7 +77,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
     }`}>
       {/* Edge-to-edge Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white px-6 py-4 border-b border-slate-200 sticky top-0 z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white px-6 py-4 border-b border-slate-200 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">

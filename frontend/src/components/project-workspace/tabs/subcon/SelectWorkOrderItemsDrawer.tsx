@@ -76,7 +76,7 @@ export const SelectWorkOrderItemsDrawer: React.FC<SelectWorkOrderItemsDrawerProp
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-200">
       <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-slate-200">
+        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-200">
           
           {/* Header */}
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">

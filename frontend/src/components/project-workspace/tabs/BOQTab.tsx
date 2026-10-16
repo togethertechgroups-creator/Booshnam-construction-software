@@ -2441,7 +2441,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* INVOICE DETAIL DRAWER (Matching Screenshots 1, 2, 3) */}
             {selectedInvoiceForDetail && (
               <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
-                <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-in slide-in-from-right duration-200">
+                <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden flex flex-col justify-between animate-in slide-in-from-right duration-200">
                   
                   {/* Header: ✕ SALES INVOICE, Entry by Bagyavathi Accountant, Mail, Download, Edit, 3-dots */}
                   <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white relative">
@@ -2845,7 +2845,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             {/* CREATE SALES INVOICE 2-STEP DRAWER (Screenshot 4 & Step 2) */}
             {isCreateInvoiceDrawerOpen && (
               <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
-                <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-in slide-in-from-right duration-200">
+                <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden flex flex-col justify-between animate-in slide-in-from-right duration-200">
                   
                   {/* Step 1: Select Items (Screenshot 4) */}
                   {invoiceStep === 1 && (
@@ -3439,7 +3439,7 @@ export const BOQTab: React.FC<BOQTabProps> = ({
             }}
           >
             <div 
-              className="relative w-full max-w-lg bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-200"
+              className="relative w-full max-w-lg bg-white shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden flex flex-col h-full animate-in slide-in-from-right duration-200"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drawer Header */}

@@ -8,7 +8,7 @@ import {
   Settings, UserX, LogOut, CheckCheck, Clock, ShieldCheck, X,
   Download, FileSpreadsheet, Check, PieChart, Wallet, CreditCard,
   ArrowLeft, Menu, LayoutDashboard, RotateCcw, FileText,
-  Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users
+  Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users, MessageSquare
 } from 'lucide-react';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 
@@ -1702,17 +1702,17 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         </div>
       ) : (
         /* Main Company Dashboard View (Edge-to-edge seamless) */
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* Edge-to-edge Header with Hamburger, Title, Refresh, Share & User Profile */}
-          {/* Edge-to-edge Header with Title, Operational/Financial Tabs, Live Pulse, Refresh & User Profile */}
-          <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-3 bg-white sticky top-0 z-20">
+        <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC]">
+          {/* Executive Header with Title, Telemetry Pill, Segmented Tabs, Project Filter & Actions */}
+          <div className="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-20 shadow-2xs">
             {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
             <div className="flex items-center gap-3.5 flex-wrap">
-              <div className="flex items-center gap-2">
-                <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">Dashboard</h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-[26px] font-black text-slate-900 font-heading tracking-tight">Dashboard</h1>
               </div>
 
-              <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/80 shadow-2xs">
+              {/* Segmented Control Pill */}
+              <div className="inline-flex p-1 bg-slate-100/90 rounded-xl border border-slate-200/90 shadow-2xs">
                 <button
                   onClick={() => setActiveTab('operational')}
                   className={`px-3.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -1721,7 +1721,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  <Activity className={`w-3.5 h-3.5 ${activeTab === 'operational' ? 'text-brand' : 'text-slate-400'}`} />
+                  <Activity className={`w-3.5 h-3.5 ${activeTab === 'operational' ? 'text-rose-600' : 'text-slate-400'}`} />
                   <span>Operational</span>
                 </button>
                 <button
@@ -1777,8 +1777,18 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               )}
             </div>
 
-            {/* Right: Fullscreen, Refresh & User Profile */}
+            {/* Right: Chat, Fullscreen, Refresh & User Profile */}
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('booshnam_open_chat'))}
+                title="Open WhatsApp Chat (Messages & Contacts)"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-medium text-xs shadow-xs transition-all cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-white" />
+                <span className="hidden sm:inline font-bold">Chat</span>
+              </button>
+
               <button 
                 type="button"
                 onClick={toggleFullscreen}
@@ -1809,7 +1819,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         {activeTab === 'operational' && (
           <div className="p-6 space-y-6">
 
-            {/* 4 Status KPI Cards */}
+            {/* 4 Status KPI Cards (Executive Modern Design with Depth, Top Accent Borders & Telemetry Equalizers) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 {
@@ -1818,8 +1828,15 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   count: kpiCounts.notStarted,
                   stage: 'Queue',
                   subtext: 'Pending kickoff',
-                  bgGradient: 'from-[#f43f5e] via-[#e11d48] to-[#9f1239]',
-                  shadowColor: 'shadow-rose-500/25',
+                  topBorder: 'border-t-[3px] border-t-rose-500',
+                  icon: <Clock className="w-5 h-5 stroke-[2.3]" />,
+                  iconBg: 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-md shadow-rose-500/25 ring-1 ring-white/50',
+                  barColor: 'bg-rose-500',
+                  stageBadge: 'bg-rose-50 text-rose-700 border border-rose-200/80',
+                  dotColor: 'bg-rose-500',
+                  hoverBorder: 'hover:border-rose-300 hover:shadow-lg hover:shadow-rose-500/10',
+                  activeRing: 'ring-2 ring-rose-500 border-rose-400 bg-rose-50/15 shadow-md',
+                  glowColor: 'from-rose-500/10 via-transparent to-transparent',
                 },
                 {
                   status: 'Ongoing',
@@ -1827,17 +1844,31 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   count: kpiCounts.ongoing,
                   stage: 'Active',
                   subtext: 'Live on site',
-                  bgGradient: 'from-[#10b981] via-[#059669] to-[#047857]',
-                  shadowColor: 'shadow-emerald-500/25',
+                  topBorder: 'border-t-[3px] border-t-emerald-500',
+                  icon: <PlayCircle className="w-5 h-5 stroke-[2.3]" />,
+                  iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md shadow-emerald-500/25 ring-1 ring-white/50',
+                  barColor: 'bg-emerald-500',
+                  stageBadge: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
+                  dotColor: 'bg-emerald-500',
+                  hoverBorder: 'hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10',
+                  activeRing: 'ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/15 shadow-md',
+                  glowColor: 'from-emerald-500/10 via-transparent to-transparent',
                 },
                 {
                   status: 'Onhold',
-                  label: 'Onhold',
+                  label: 'On Hold',
                   count: kpiCounts.onhold,
                   stage: 'On Hold',
                   subtext: 'Awaiting action',
-                  bgGradient: 'from-[#f59e0b] via-[#ea580c] to-[#c2410c]',
-                  shadowColor: 'shadow-amber-500/25',
+                  topBorder: 'border-t-[3px] border-t-amber-500',
+                  icon: <PauseCircle className="w-5 h-5 stroke-[2.3]" />,
+                  iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/25 ring-1 ring-white/50',
+                  barColor: 'bg-amber-500',
+                  stageBadge: 'bg-amber-50 text-amber-700 border border-amber-200/80',
+                  dotColor: 'bg-amber-500',
+                  hoverBorder: 'hover:border-amber-300 hover:shadow-lg hover:shadow-amber-500/10',
+                  activeRing: 'ring-2 ring-amber-500 border-amber-400 bg-amber-50/15 shadow-md',
+                  glowColor: 'from-amber-500/10 via-transparent to-transparent',
                 },
                 {
                   status: 'Completed',
@@ -1845,65 +1876,128 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   count: kpiCounts.completed,
                   stage: 'Delivered',
                   subtext: 'Handed over',
-                  bgGradient: 'from-[#3b82f6] via-[#2563eb] to-[#1d4ed8]',
-                  shadowColor: 'shadow-blue-500/25',
+                  topBorder: 'border-t-[3px] border-t-blue-600',
+                  icon: <CheckCircle2 className="w-5 h-5 stroke-[2.3]" />,
+                  iconBg: 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 ring-1 ring-white/50',
+                  barColor: 'bg-blue-600',
+                  stageBadge: 'bg-blue-50 text-blue-700 border border-blue-200/80',
+                  dotColor: 'bg-blue-600',
+                  hoverBorder: 'hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10',
+                  activeRing: 'ring-2 ring-blue-600 border-blue-400 bg-blue-50/15 shadow-md',
+                  glowColor: 'from-blue-500/10 via-transparent to-transparent',
                 },
-              ].map((card) => (
-                <div
-                  key={card.status}
-                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 bg-gradient-to-br ${card.bgGradient} border border-white/20 shadow-md ${card.shadowColor} select-none`}
-                >
-                  {/* Card Content */}
-                  <div className="relative z-10 flex flex-col justify-between">
-                      {/* Top / Center Area: Status Name & Big Centered KPI Count */}
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <span className="text-[10px] sm:text-[11px] font-bold text-white/85 uppercase tracking-wider font-sans">
+              ].map((card) => {
+                const isSelected = searchStatus === card.status;
+                const sharePercent = kpiCounts.total > 0 ? Math.round((card.count / kpiCounts.total) * 100) : 0;
+                return (
+                  <div
+                    key={card.status}
+                    onClick={() => {
+                      const next = isSelected ? 'All' : card.status;
+                      setSearchStatus(next);
+                      showToast(next === 'All' ? 'Showing all projects' : `Filtered to ${card.label} projects`);
+                    }}
+                    className={`relative overflow-hidden rounded-2xl p-4 sm:p-5 bg-gradient-to-b from-white via-white to-slate-50/50 border transition-all duration-300 cursor-pointer group select-none shadow-xs hover:shadow-xl hover:-translate-y-1 ${card.topBorder} ${
+                      isSelected
+                        ? `${card.activeRing}`
+                        : `border-slate-200/90 ${card.hoverBorder}`
+                    }`}
+                  >
+                    {/* Ambient corner glow */}
+                    <div className={`absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br ${card.glowColor} blur-xl pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                    {/* Top Right Mini Equalizer Bar Animation */}
+                    <div className="absolute top-4 right-4 flex items-end gap-1 h-4 z-10">
+                      <span className={`w-1 rounded-full transition-all duration-300 ${card.barColor} h-2 group-hover:h-3 opacity-60`} />
+                      <span className={`w-1 rounded-full transition-all duration-300 ${card.barColor} h-3.5 group-hover:h-4 opacity-80`} />
+                      <span className={`w-1 rounded-full transition-all duration-300 ${card.barColor} h-4 group-hover:h-4.5 opacity-100`} />
+                    </div>
+
+                    {/* Top Row: 3D Squircle Icon + Metric + Share Badge */}
+                    <div className="flex items-center gap-3.5 z-10 relative">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-105 ${card.iconBg}`}>
+                        {card.icon}
+                      </div>
+                      <div className="min-w-0 flex-1 pr-6">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider truncate block">
                           {card.label}
                         </span>
-                        <div className="text-3xl sm:text-4xl font-black text-white font-display tracking-tight leading-none mt-1 flex items-baseline justify-center gap-1.5">
-                          <span>{card.count}</span>
-                          <span className="text-xs sm:text-sm font-semibold text-white/75 font-sans tracking-normal">
+                        <div className="flex items-baseline gap-2 mt-0.5">
+                          <span className="text-3xl sm:text-4xl font-black text-slate-900 font-display tracking-tight leading-none">
+                            {card.count}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-400">
                             {card.count === 1 ? 'Project' : 'Projects'}
                           </span>
-                        </div>
-                      </div>
-
-                      {/* Bottom Row: Metadata (STAGE and CURRENT STATE / STATUS) */}
-                      <div className="flex items-end justify-between mt-2.5 text-white">
-                        <div>
-                          <span className="text-[10px] sm:text-[10.5px] font-bold text-white tracking-wide block mt-0.5">
-                            {card.stage}
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100/90 text-slate-600 rounded-md border border-slate-200/70 ml-auto mr-3">
+                            {sharePercent}%
                           </span>
-                        </div>
-
-                        <div className="text-right">
-                          <div className="text-[9.5px] sm:text-[10px] font-semibold text-white/95 flex items-center justify-end gap-1 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block shadow-2xs shrink-0" />
-                            <span className="truncate">{card.subtext}</span>
-                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Bottom Row: Stage Badge & Subtext */}
+                    <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs z-10 relative">
+                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${card.stageBadge}`}>
+                        {card.stage}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                        <span className={`w-1.5 h-1.5 rounded-full ${card.dotColor}`} />
+                        <span className="truncate">{card.subtext}</span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Edge Micro Progress Bar */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-100">
+                      <div 
+                        className={`h-full transition-all duration-500 ${card.barColor}`}
+                        style={{ width: `${Math.max(card.count > 0 ? 10 : 0, sharePercent)}%` }}
+                      />
+                    </div>
                   </div>
-                ))}
+                );
+              })}
             </div>
 
-            {/* Mid-Row: Project Health (Full Width Balanced Card) */}
-            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-900 text-sm font-display">Project Health</h3>
-
+            {/* Mid-Row: Project Health Telemetry (Executive Cockpit Command Center) */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4 relative overflow-hidden">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
+                    <HeartPulse className="w-5 h-5 stroke-[2.2]" />
                   </div>
-                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                    {healthStats.total === 0
-                      ? 'No project sites currently available'
-                      : 'Real-time progress & operational stability across portfolio'}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-900 text-sm sm:text-base font-display">Project Health & Operational Telemetry</h3>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      {healthStats.total === 0
+                        ? 'No project sites currently provisioned in portfolio'
+                        : 'Real-time performance index, milestone schedule adherence, and risk monitoring'}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-slate-900 relative">
+                <div className="flex items-center gap-2.5 text-slate-900 relative">
+                  {/* Status Badge */}
+                  <span className={`px-3 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-2 border shadow-2xs ${
+                    healthStats.total === 0 
+                      ? 'bg-slate-100 text-slate-600 border-slate-200' 
+                      : healthStats.isAtRisk 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${
+                      healthStats.total === 0 
+                        ? 'bg-slate-400' 
+                        : healthStats.isAtRisk 
+                        ? 'bg-rose-500 animate-ping' 
+                        : 'bg-emerald-500 animate-pulse'
+                    }`} />
+                    <span>{healthStats.total === 0 ? 'PORTFOLIO STANDBY' : healthStats.isAtRisk ? 'ACTION REQUIRED' : 'PORTFOLIO OPTIMAL'}</span>
+                  </span>
+
                   {/* Three Dots Menu Button & Dropdown */}
                   <div className="relative" ref={healthDotsMenuRef}>
                     <button
@@ -1928,7 +2022,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             setShowHealthMenuDropdown(false);
                             handleExportHealthExcel();
                           }}
-                          className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer"
+                          className="w-full px-3 py-2 text-xs text-slate-600 hover:bg-slate-50 flex items-center gap-2.5 transition-colors text-left cursor-pointer font-medium"
                         >
                           <Download className="w-4 h-4 text-slate-400" />
                           <span>Export Health Sheet (.xlsx)</span>
@@ -1939,15 +2033,15 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* 3-Section Balanced Content: Left (Stability Status) | Center (Gauge) | Right (Distribution Breakdown) */}
+              {/* 3-Section Command Center: Left (Stability Briefing) | Center (Precision Speedometer Dial) | Right (Distribution Breakdown) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center py-2">
-                {/* Left: Overall Health Stability Overview */}
-                <div className="flex flex-col justify-center space-y-2.5 p-3.5 rounded-xl bg-slate-50/70 border border-slate-100">
+                {/* Left: Operational Stability Briefing Panel */}
+                <div className="flex flex-col justify-between space-y-3 p-4 rounded-xl bg-gradient-to-br from-slate-50/90 via-white to-slate-50/40 border border-slate-200/80 shadow-2xs h-full">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
                       Operational Stability
                     </span>
-                    <span className={`text-[11px] font-semibold inline-flex items-center gap-1.5 ${
+                    <span className={`text-[11px] font-bold inline-flex items-center gap-1.5 ${
                       healthStats.isAtRisk 
                         ? 'text-rose-600' 
                         : healthStats.total === 0
@@ -1960,84 +2054,128 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                           : healthStats.total === 0
                           ? 'bg-slate-400'
                           : 'bg-emerald-500 animate-pulse'
-                      }`}></span>
+                      }`} />
                       {healthStats.statusLabel}
                     </span>
                   </div>
+
                   <div>
                     <div className="text-sm font-bold text-slate-800 font-display">
                       Portfolio Health Rating
                     </div>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                       {healthStats.total === 0
-                        ? 'No active projects currently available in portfolio.'
+                        ? 'No active projects currently available in portfolio. Launch new sites to initiate live risk telemetry.'
                         : healthStats.isAtRisk
-                        ? `${healthStats.atRiskCount} site(s) currently flagged with milestone risks or operational delays.`
+                        ? `${healthStats.atRiskCount} site(s) currently flagged with milestone risks or operational delays requiring supervisor intervention.`
                         : 'All active project sites are progressing within schedule targets and normal health tolerances.'
                       }
                     </p>
                   </div>
-                  <div className="pt-1 flex items-center gap-3 text-xs text-slate-600 font-medium">
+
+                  {/* Micro Telemetry Metrics */}
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 font-medium">
                     <div className="flex items-center gap-1.5">
                       <FolderKanban className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{healthStats.total === 1 ? '1 Site Tracked' : `${healthStats.total} Sites Tracked`}</span>
+                      <span className="font-bold text-slate-800">{healthStats.total}</span>
+                      <span className="text-slate-400">{healthStats.total === 1 ? 'Site' : 'Sites'}</span>
                     </div>
                     <span className="text-slate-300">•</span>
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 className={`w-3.5 h-3.5 ${healthStats.total === 0 ? 'text-slate-400' : 'text-emerald-600'}`} />
-                      <span>{healthStats.percent}% Overall Progress</span>
+                      <span className="font-bold text-slate-800">{healthStats.percent}%</span>
+                      <span className="text-slate-400">Velocity</span>
                     </div>
+                  </div>
+
+                  {/* Micro Progress Track */}
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        healthStats.isAtRisk 
+                          ? 'bg-gradient-to-r from-amber-500 to-rose-500' 
+                          : 'bg-gradient-to-r from-blue-500 via-cyan-500 to-emerald-500'
+                      }`}
+                      style={{ width: `${Math.max(healthStats.percent, 0)}%` }}
+                    />
                   </div>
                 </div>
 
-                {/* Center: Semi-Circle Gauge */}
+                {/* Center: Precision Telemetry Speedometer Gauge */}
                 <div className="flex flex-col items-center justify-center">
-                  <div className="relative w-64 sm:w-72 h-32 sm:h-36 flex items-end justify-center overflow-hidden animate-in fade-in duration-200">
-                    <svg viewBox="0 0 200 100" className="w-full h-full">
+                  <div className="relative w-64 sm:w-72 h-36 flex items-end justify-center overflow-hidden animate-in fade-in duration-300">
+                    <svg viewBox="0 0 200 105" className="w-full h-full">
                       <defs>
-                        <linearGradient id="healthArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <linearGradient id="telemetryGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#3B82F6" />
-                          <stop offset="50%" stopColor="#06B6D4" />
+                          <stop offset="40%" stopColor="#06B6D4" />
                           <stop offset="100%" stopColor="#10B981" />
                         </linearGradient>
-                        <linearGradient id="riskArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <linearGradient id="telemetryRiskGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#EF4444" />
                           <stop offset="50%" stopColor="#F59E0B" />
                           <stop offset="100%" stopColor="#DC2626" />
                         </linearGradient>
-                        <filter id="gaugeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                        <filter id="gaugeNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
                           <feDropShadow 
                             dx="0" 
                             dy="4" 
-                            stdDeviation="5" 
+                            stdDeviation="6" 
                             floodColor={healthStats.isAtRisk ? "#EF4444" : "#06B6D4"} 
-                            floodOpacity="0.3" 
+                            floodOpacity="0.35" 
                           />
                         </filter>
                       </defs>
-                      {/* Background Arc */}
+
+                      {/* Calibrated Radial Dots / Ticks along the arc circumference */}
+                      {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((step) => {
+                        const angleDeg = 180 - (step / 100) * 180;
+                        const angleRad = (angleDeg * Math.PI) / 180;
+                        const cx = 100 - 80 * Math.cos(angleRad);
+                        const cy = 100 - 80 * Math.sin(angleRad);
+                        const isActive = healthStats.percent > 0 && step <= healthStats.percent;
+                        return (
+                          <circle
+                            key={step}
+                            cx={cx}
+                            cy={cy}
+                            r={step % 50 === 0 ? "2.5" : "1.5"}
+                            fill={isActive ? (healthStats.isAtRisk ? "#f43f5e" : "#06b6d4") : "#cbd5e1"}
+                            opacity={isActive ? 1 : 0.55}
+                          />
+                        );
+                      })}
+
+                      {/* Background Arc Track */}
                       <path
                         d="M 20 100 A 80 80 0 0 1 180 100"
                         fill="none"
                         stroke="#F1F5F9"
-                        strokeWidth="24"
+                        strokeWidth="20"
                         strokeLinecap="round"
                       />
-                      {/* Vibrant Gradient Active Arc (Dynamic % based on healthStats.percent) */}
+
+                      {/* Active Gradient Glowing Arc */}
                       <path
                         d="M 20 100 A 80 80 0 0 1 180 100"
                         fill="none"
-                        stroke={healthStats.isAtRisk ? "url(#riskArcGrad)" : "url(#healthArcGrad)"}
-                        strokeWidth="24"
+                        stroke={healthStats.isAtRisk ? "url(#telemetryRiskGrad)" : "url(#telemetryGrad)"}
+                        strokeWidth="20"
                         strokeLinecap="round"
                         strokeDasharray="251.32"
                         strokeDashoffset={251.32 - (251.32 * Math.max(0, Math.min(100, healthStats.percent))) / 100}
-                        filter="url(#gaugeGlow)"
+                        filter="url(#gaugeNeonGlow)"
                         className="transition-all duration-700 ease-out"
                       />
+
+                      {/* Arc Base Scale Labels */}
+                      <text x="20" y="104" textAnchor="middle" fontSize="7" fill="#94A3B8" fontWeight="bold">0%</text>
+                      <text x="180" y="104" textAnchor="middle" fontSize="7" fill="#94A3B8" fontWeight="bold">100%</text>
                     </svg>
+
+                    {/* Central Display Readout */}
                     <div className="absolute bottom-1 flex flex-col items-center justify-center pointer-events-none">
-                      <span className={`text-2xl sm:text-3xl font-black font-display tracking-tight leading-none ${
+                      <span className={`text-3xl sm:text-4xl font-black font-display tracking-tight leading-none ${
                         healthStats.isAtRisk 
                           ? 'bg-gradient-to-r from-red-600 via-amber-600 to-rose-600 bg-clip-text text-transparent' 
                           : healthStats.total === 0 || healthStats.percent === 0
@@ -2046,7 +2184,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                       }`}>
                         {healthStats.percent}%
                       </span>
-                      <span className={`text-xs font-semibold mt-1 inline-flex items-center gap-1.5 ${
+                      <span className={`text-xs font-bold mt-1 inline-flex items-center gap-1.5 ${
                         healthStats.isAtRisk
                           ? 'text-rose-600'
                           : healthStats.total === 0
@@ -2059,7 +2197,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                             : healthStats.total === 0
                             ? 'bg-slate-400'
                             : 'bg-emerald-500 animate-pulse'
-                        }`}></span>
+                        }`} />
                         {healthStats.statusLabel}
                       </span>
                     </div>
@@ -2067,155 +2205,275 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
 
                 {/* Right: Distribution Breakdown Cards */}
-                <div className="flex flex-col gap-2 w-full max-w-sm mx-auto md:mx-0 md:ml-auto text-xs">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
+                <div className="flex flex-col gap-2.5 w-full max-w-sm mx-auto md:mx-0 md:ml-auto text-xs">
+                  <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-0.5">
                     <span>Distribution Breakdown</span>
-
+                    <span className="text-slate-400">{kpiCounts.total} Total Sites</span>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-emerald-50/40 border border-blue-200/80 shadow-2xs group hover:border-blue-300 transition-all">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 shadow-xs"></div>
+                  {/* Healthy Sites Tile */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-emerald-50/70 via-white to-blue-50/30 border-l-[3px] border-l-emerald-500 border-y border-r border-slate-200/80 shadow-2xs group hover:border-emerald-300 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-100/90 text-emerald-700 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-4 h-4 stroke-[2.2]" />
+                      </div>
                       <div>
                         <span className="font-bold text-slate-800 text-xs block">Healthy Sites</span>
-                        <span className="text-[9.5px] text-slate-400 font-medium">On-schedule</span>
+                        <span className="text-[10px] text-slate-400 font-medium">On-schedule & compliant</span>
                       </div>
                     </div>
-                    <span className="font-black font-display text-sm text-blue-700 bg-white px-2 py-0.5 rounded-lg border border-blue-100 shadow-2xs">
-                      {healthStats.healthyCount}
-                    </span>
+                    <div className="text-right">
+                      <span className="font-black font-display text-base text-emerald-700 bg-emerald-50/80 px-2.5 py-0.5 rounded-lg border border-emerald-200/60 inline-block">
+                        {healthStats.healthyCount}
+                      </span>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                        {kpiCounts.healthyPercent}% of sites
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-rose-50/80 via-white to-red-50/40 border border-rose-200/80 shadow-2xs group hover:border-rose-300 transition-all">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs"></div>
+                  {/* At Risk Tile */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-rose-50/70 via-white to-amber-50/30 border-l-[3px] border-l-rose-500 border-y border-r border-slate-200/80 shadow-2xs group hover:border-rose-300 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-rose-100/90 text-rose-700 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-4 h-4 stroke-[2.2]" />
+                      </div>
                       <div>
                         <span className="font-bold text-slate-800 text-xs block">At Risk</span>
-                        <span className="text-[9.5px] text-slate-400 font-medium">Action alert</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Action alert required</span>
                       </div>
                     </div>
-                    <span className="font-black font-display text-sm text-rose-600 bg-white px-2 py-0.5 rounded-lg border border-rose-100 shadow-2xs">
-                      {healthStats.atRiskCount}
-                    </span>
+                    <div className="text-right">
+                      <span className="font-black font-display text-base text-rose-600 bg-rose-50/80 px-2.5 py-0.5 rounded-lg border border-rose-200/60 inline-block">
+                        {healthStats.atRiskCount}
+                      </span>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mt-0.5">
+                        {healthStats.total > 0 ? Math.round((healthStats.atRiskCount / healthStats.total) * 100) : 0}% of sites
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Bottom: Project Operational Summary Dashboard Table (Matches Image 2) */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-0">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 text-sm">Project Operational Summary Dashboard</h3>
-                <span className="text-xs text-slate-500">{filteredSummary.length} Projects Listed</span>
+            {/* Bottom: Project Operational Summary Dashboard Table (Executive Command Bar + Crisp Data Grid) */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+              {/* Table Card Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100 shadow-2xs">
+                    <FolderKanban className="w-5 h-5 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">Project Operational Summary</h3>
+                    <p className="text-[11px] text-slate-400 font-medium">Real-time status, health monitoring, and delivery milestones</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200/60">
+                    {filteredSummary.length} {filteredSummary.length === 1 ? 'Project Listed' : 'Projects Listed'}
+                  </span>
+                  {(searchName || searchCategory || searchPersonnel || (searchStatus && searchStatus !== 'All') || (searchHealth && searchHealth !== 'All') || searchDueDate) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchName('');
+                        setSearchCategory('');
+                        setSearchPersonnel('');
+                        setSearchStatus('All');
+                        setSearchHealth('All');
+                        setSearchDueDate('');
+                      }}
+                      className="px-2.5 py-1 text-xs text-rose-600 hover:bg-rose-50 rounded-lg font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset Filters</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  {/* Red & Slate Table Header with Search/Filter row on TOP and Column Labels on SECOND row */}
-                  <thead className="text-white font-semibold">
-                    {/* Row 1: Search & Filter Controls Row */}
-                    <tr className="bg-red-800 text-slate-800 border-b border-red-900">
-                      <th className="py-2 px-3 text-center text-white/70 font-bold text-[10px]">
-                        <Search className="w-3.5 h-3.5 mx-auto text-white/80" />
-                      </th>
-                      <th className="py-1.5 px-3">
-                        <input
-                          type="text"
-                          placeholder="Search Project..."
-                          value={searchName}
-                          onChange={(e) => setSearchName(e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded-md bg-white text-slate-800 text-[11px] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400 shadow-2xs font-normal"
-                        />
-                      </th>
-                      <th className="py-1.5 px-3">
-                        <input
-                          type="text"
-                          placeholder="Filter Category..."
-                          value={searchCategory}
-                          onChange={(e) => setSearchCategory(e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded-md bg-white text-slate-800 text-[11px] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400 shadow-2xs font-normal"
-                        />
-                      </th>
-                      <th className="py-1.5 px-3">
-                        <input
-                          type="text"
-                          placeholder="Filter Personnel..."
-                          value={searchPersonnel}
-                          onChange={(e) => setSearchPersonnel(e.target.value)}
-                          className="w-full px-2.5 py-1.5 rounded-md bg-white text-slate-800 text-[11px] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-red-400 shadow-2xs font-normal"
-                        />
-                      </th>
-                      <th className="py-1.5 px-3 min-w-[125px]">
-                        <CustomSelect
-                          value={searchStatus}
-                          onChange={(val) => setSearchStatus(val)}
-                          options={['All', 'Ongoing', 'Not Started', 'Onhold', 'Completed']}
-                          triggerClassName="py-1 px-2.5 text-[11px] rounded-md shadow-2xs"
-                        />
-                      </th>
-                      <th className="py-1.5 px-3 min-w-[110px]">
-                        <CustomSelect
-                          value={searchHealth}
-                          onChange={(val) => setSearchHealth(val)}
-                          options={['All', 'Normal', 'At Risk']}
-                          triggerClassName="py-1 px-2.5 text-[11px] rounded-md shadow-2xs"
-                        />
-                      </th>
-                      {/* Target Due Date Interactive Filter with Custom Calendar Card Input */}
-                      <th className="py-1.5 px-3 min-w-[145px]">
-                        <CustomDatePicker
-                          value={searchDueDate}
-                          onChange={(d) => setSearchDueDate(d)}
-                          placeholder="Target Date"
-                          align="right"
-                          title="Click to filter projects by Target Due Date"
-                          inputClassName="px-2 py-1 rounded-md text-[11px] shadow-2xs font-normal"
-                        />
-                      </th>
-                    </tr>
+              {/* Dedicated Filter Command Bar (Above the Table) */}
+              <div className="p-3.5 sm:p-4 bg-slate-50/70 border-b border-slate-200/80">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+                  {/* 1. Search Project Name */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search project..."
+                      value={searchName}
+                      onChange={(e) => setSearchName(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100 shadow-2xs transition-colors"
+                    />
+                  </div>
 
-                    {/* Row 2: Column Titles Row */}
-                    <tr className="bg-red-700 text-white">
-                      <th className="py-3 px-4 w-28 text-center whitespace-nowrap">Serial Number</th>
-                      <th className="py-3 px-4">Project Name</th>
-                      <th className="py-3 px-4">Project Category</th>
-                      <th className="py-3 px-4">Key Personnel</th>
-                      <th className="py-3 px-4">Project Status</th>
-                      <th className="py-3 px-4">Project Health</th>
-                      <th className="py-3 px-4 text-right whitespace-nowrap">Target Due Date</th>
+                  {/* 2. Filter Category */}
+                  <div className="relative">
+                    <Layers className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Filter category..."
+                      value={searchCategory}
+                      onChange={(e) => setSearchCategory(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100 shadow-2xs transition-colors"
+                    />
+                  </div>
+
+                  {/* 3. Filter Personnel */}
+                  <div className="relative">
+                    <Users className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Filter personnel..."
+                      value={searchPersonnel}
+                      onChange={(e) => setSearchPersonnel(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs placeholder-slate-400 focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-100 shadow-2xs transition-colors"
+                    />
+                  </div>
+
+                  {/* 4. Filter Status */}
+                  <div>
+                    <CustomSelect
+                      value={searchStatus}
+                      onChange={(val) => setSearchStatus(val)}
+                      options={['All', 'Ongoing', 'Not Started', 'Onhold', 'Completed']}
+                      triggerClassName="w-full !rounded-xl !py-1.5 !px-3 text-xs font-semibold border border-slate-200 bg-white shadow-2xs text-slate-700"
+                    />
+                  </div>
+
+                  {/* 5. Filter Health */}
+                  <div>
+                    <CustomSelect
+                      value={searchHealth}
+                      onChange={(val) => setSearchHealth(val)}
+                      options={['All', 'Normal', 'At Risk']}
+                      triggerClassName="w-full !rounded-xl !py-1.5 !px-3 text-xs font-semibold border border-slate-200 bg-white shadow-2xs text-slate-700"
+                    />
+                  </div>
+
+                  {/* 6. Target Due Date */}
+                  <div>
+                    <CustomDatePicker
+                      value={searchDueDate}
+                      onChange={(d) => setSearchDueDate(d)}
+                      placeholder="Target Date"
+                      align="right"
+                      inputClassName="w-full !rounded-xl !py-1.5 !px-3 text-xs font-semibold border border-slate-200 bg-white shadow-2xs text-slate-700"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modern Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#f8fafc] text-slate-600 font-bold border-b border-slate-200/90 uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-4 w-16 text-center text-slate-500 font-bold">S.No.</th>
+                      <th className="py-3 px-4 text-slate-700 font-bold">Project Name</th>
+                      <th className="py-3 px-4 text-slate-700 font-bold">Project Category</th>
+                      <th className="py-3 px-4 text-slate-700 font-bold">Key Personnel</th>
+                      <th className="py-3 px-4 text-slate-700 font-bold">Project Status</th>
+                      <th className="py-3 px-4 text-slate-700 font-bold">Project Health</th>
+                      <th className="py-3 px-4 text-right text-slate-700 font-bold whitespace-nowrap">Target Due Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-700 bg-white">
                     {filteredSummary.map((p, idx) => (
-                      <tr key={p.id} className="hover:bg-red-50/25 transition-colors">
-                        <td className="py-3 px-4 text-center tracking-tight text-slate-500 font-bold">{idx + 1}</td>
-                        <td className="py-3 px-4 font-bold text-slate-900">{p.name}</td>
-                        <td className="py-3 px-4 text-slate-600">{p.category}</td>
-                        <td className="py-3 px-4 text-slate-600">{p.personnel}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status === 'Ongoing' ? 'bg-emerald-100 text-emerald-800' :
-                            p.status === 'Not Started' ? 'bg-red-100 text-red-800' :
-                            p.status === 'Onhold' ? 'bg-amber-100 text-amber-800' :
-                            'bg-slate-100 text-slate-700'
+                      <tr 
+                        key={p.id} 
+                        className={`hover:bg-slate-50/80 transition-colors group ${
+                          p.status === 'Ongoing' ? 'border-l-[3px] border-l-emerald-500' :
+                          p.status === 'Not Started' ? 'border-l-[3px] border-l-rose-500' :
+                          p.status === 'Onhold' ? 'border-l-[3px] border-l-amber-500' :
+                          'border-l-[3px] border-l-blue-600'
+                        }`}
+                      >
+                        <td className="py-3.5 px-4 text-center text-slate-400 font-bold">{idx + 1}</td>
+                        <td className="py-3.5 px-4 font-bold text-slate-900 group-hover:text-red-600 transition-colors">{p.name}</td>
+                        <td className="py-3.5 px-4 text-slate-600">{p.category}</td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-[9px] shrink-0 border border-slate-200">
+                              {p.personnel.slice(0, 2).toUpperCase()}
+                            </span>
+                            <span>{p.personnel}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${
+                            p.status === 'Ongoing' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/70' :
+                            p.status === 'Not Started' ? 'bg-rose-50 text-rose-700 border-rose-200/70' :
+                            p.status === 'Onhold' ? 'bg-amber-50 text-amber-700 border-amber-200/70' :
+                            'bg-blue-50 text-blue-700 border-blue-200/70'
                           }`}>
-                            {p.status}
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              p.status === 'Ongoing' ? 'bg-emerald-500' :
+                              p.status === 'Not Started' ? 'bg-rose-500' :
+                              p.status === 'Onhold' ? 'bg-amber-500' :
+                              'bg-blue-500'
+                            }`} />
+                            <span>{p.status}</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.health === 'At Risk' ? 'bg-red-100 text-red-800 animate-pulse' : 'bg-blue-100 text-blue-800'
+                        <td className="py-3.5 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${
+                            p.health === 'At Risk' 
+                              ? 'bg-rose-50 text-rose-700 border-rose-200/70 animate-pulse' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200/70'
                           }`}>
-                            {p.health}
+                            <span className={`w-1.5 h-1.5 rounded-full ${p.health === 'At Risk' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                            <span>{p.health}</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right tracking-tight text-slate-600 font-semibold">{p.date}</td>
+                        <td className="py-3.5 px-4 text-right tracking-tight text-slate-600 font-medium whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{p.date}</span>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                     {filteredSummary.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
-                          No projects found matching the selected filter criteria.
+                        <td colSpan={7} className="py-16 text-center">
+                          <div className="flex flex-col items-center justify-center max-w-md mx-auto">
+                            <div className="relative mb-3.5">
+                              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-slate-100 to-slate-200/80 border border-slate-200 flex items-center justify-center text-slate-500 shadow-inner">
+                                <FolderKanban className="w-8 h-8 text-slate-400 stroke-[1.6]" />
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-white border border-slate-200 shadow-xs flex items-center justify-center text-emerald-600">
+                                <Sparkles className="w-3.5 h-3.5" />
+                              </div>
+                            </div>
+                            <h4 className="text-base font-bold text-slate-900 font-display">
+                              {summaryProjects.length === 0 ? 'No Active Projects in Portfolio' : 'No Projects Match Current Filters'}
+                            </h4>
+                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed text-center max-w-sm">
+                              {summaryProjects.length === 0 
+                                ? 'New construction sites and commercial projects created in Site Operations will automatically sync here with real-time milestone progress and health telemetry.'
+                                : 'Try adjusting your search query, status filters, or date range to inspect matching portfolio records.'}
+                            </p>
+                            {(searchName || searchCategory || searchPersonnel || (searchStatus && searchStatus !== 'All') || (searchHealth && searchHealth !== 'All') || searchDueDate) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSearchName('');
+                                  setSearchCategory('');
+                                  setSearchPersonnel('');
+                                  setSearchStatus('All');
+                                  setSearchHealth('All');
+                                  setSearchDueDate('');
+                                }}
+                                className="mt-4 px-4 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Reset All Filters</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )}

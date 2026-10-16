@@ -317,7 +317,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           </button>
 
           {showNotificationDropdown && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-[5px] shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in select-none max-h-[85vh] flex flex-col">
+            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 p-3.5 z-50 animate-in fade-in select-none max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900">Notifications</span>
@@ -474,7 +474,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         </button>
 
         {showProfileDropdown && (
-          <div className="absolute right-0 mt-2 w-68 bg-white rounded-[5px] shadow-2xl border border-slate-200 p-3.5 z-50 select-none animate-in fade-in">
+          <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-3.5 z-50 select-none animate-in fade-in">
             <div className="flex items-center gap-3 p-1">
               <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm overflow-hidden">
                 {currentUser.avatar_url ? (

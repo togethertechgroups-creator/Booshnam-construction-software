@@ -2095,7 +2095,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       {/* ============================================================== */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-in slide-in-from-right duration-200">
+          <div className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden flex flex-col justify-between animate-in slide-in-from-right duration-200">
             
             {/* Drawer Header (Exact Match to Screenshot) */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white shrink-0">
@@ -2815,7 +2815,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 flex flex-col justify-between animate-in slide-in-from-right duration-200 cursor-default"
+            className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden flex flex-col justify-between animate-in slide-in-from-right duration-200 cursor-default"
           >
             {/* Header: ✕ SALES INVOICE, Entry by Bagyavathi Accountant, Mail, Download, Edit, 3-dots */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-white relative">
@@ -3137,7 +3137,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 cursor-default animate-in slide-in-from-right duration-200 flex flex-col justify-between"
+            className="bg-white max-w-lg w-full h-full shadow-2xl border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden cursor-default animate-in slide-in-from-right duration-200 flex flex-col justify-between"
           >
             {/* Header */}
             <div className="p-4 flex items-center justify-between">

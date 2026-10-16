@@ -148,7 +148,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-white ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
     }`}>
       {/* Edge-to-edge Header */}
-      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10">
+      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <div>
             <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
@@ -424,7 +424,7 @@ export const TasksView: React.FC<TasksViewProps> = ({
       {/* Task Details Drawer */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex justify-end">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col p-6 space-y-5 overflow-y-auto animate-in slide-in-from-right duration-200">
+          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col p-6 space-y-5 overflow-y-auto overflow-x-hidden border-l border-slate-200 rounded-l-3xl rounded-l-drawer animate-in slide-in-from-right duration-200">
             {/* Drawer Header */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>

@@ -96,7 +96,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [selectedStaffForOverview, setSelectedStaffForOverview] = useState<StaffMember | null>(null);
-  const [overviewInitialTab, setOverviewInitialTab] = useState<'details' | 'access' | 'leave_dashboard'>('details');
+  const [overviewInitialTab, setOverviewInitialTab] = useState<'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays'>('people');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
   // Live Photo Verification Proof Modal State
@@ -181,7 +181,10 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     return [];
   }, [staffList]);
 
-  const handleOpenStaffOverview = (staff: StaffMember, defaultTab: 'details' | 'access' | 'leave_dashboard' = 'details') => {
+  const handleOpenStaffOverview = (
+    staff: StaffMember,
+    defaultTab: 'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays' = 'people'
+  ) => {
     setSelectedStaffForOverview(staff);
     setOverviewInitialTab(defaultTab);
   };
@@ -488,6 +491,32 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     };
   }, [departmentStaffList, staffCategoryFilter, attendanceRecords, staffAttendanceStatus]);
 
+  const liveVerifiedCount = useMemo(() => {
+    return departmentStaffList.filter(s => {
+      const rec = attendanceRecords.find(r => r.staff_id === s.id && r.date === getTodayDateString()) || getStaffLatestRecordToday(s.id);
+      return rec && rec.verification_photo;
+    }).length;
+  }, [departmentStaffList, attendanceRecords]);
+
+  const departmentAttendanceBreakdown = useMemo(() => {
+    const depts = getIndividualDepartments();
+    return depts.map(d => {
+      const dStaff = staffList.filter(s => isStaffInDepartment(s, d.id));
+      const present = dStaff.filter(s => {
+        const st = getAttendanceStatus(s.id);
+        return st === 'Present' || st === 'Late' || st === 'Half-day' || st === 'Overtime';
+      }).length;
+      return {
+        id: d.id,
+        name: d.name,
+        shortName: d.shortName,
+        total: dStaff.length,
+        present,
+        rate: dStaff.length > 0 ? Math.round((present / dStaff.length) * 100) : 0
+      };
+    });
+  }, [staffList, attendanceRecords, staffAttendanceStatus]);
+
   const totalPresent = attendance.filter(a => a.status !== 'ABSENT').length;
   const insideGeofenceCount = attendance.filter(a => a.is_inside_geofence).length;
 
@@ -510,68 +539,6 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     <div className={`flex-1 flex flex-col min-w-0 bg-slate-50/50 pb-16 transition-all duration-300 ${
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
     }`}>
-      {/* Top Header Bar */}
-      <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-10 shadow-2xs">
-        <div className="flex items-center gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              {selectedStaffForOverview && (
-                <button
-                  type="button"
-                  onClick={() => setSelectedStaffForOverview(null)}
-                  className="mr-2 p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer transition-colors flex items-center shadow-xs bg-white"
-                  title="Back to Directory"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
-              <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
-                {selectedStaffForOverview ? `Staff Profile: ${selectedStaffForOverview.name}` : "Staff & Payroll Management"}
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Tab Navigation: Payroll | Staff Management */}
-        <div className="flex items-center gap-3 flex-wrap mt-2 md:mt-0">
-          {!selectedStaffForOverview && (
-            <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
-              <button
-                onClick={() => setMainTab('payroll')}
-                className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'payroll'
-                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                  }`}
-              >
-                Payroll
-              </button>
-              <button
-                onClick={() => setMainTab('staff')}
-                className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'staff'
-                    ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
-                    : 'text-slate-500 hover:text-slate-900'
-                  }`}
-              >
-                Staff Management
-              </button>
-            </div>
-          )}
-          <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-              isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-            }`}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
-            aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
-          >
-            {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
-          </button>
-          <UserProfileDropdown showBell={true} onShowToast={triggerToast} />
-        </div>
-      </div>
-
       {/* ── SELECTED STAFF OVERVIEW OR MAIN CONTENT ── */}
       {selectedStaffForOverview ? (
         <StaffOverviewView
@@ -586,6 +553,53 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         />
       ) : (
         <>
+          {/* Top Header Bar */}
+          <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-30 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div>
+                <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
+                  Staff & Payroll Management
+                </h1>
+              </div>
+            </div>
+
+            {/* Main Tab Navigation: Payroll | Staff Management */}
+            <div className="flex items-center gap-3 flex-wrap mt-2 md:mt-0">
+              <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
+                <button
+                  onClick={() => setMainTab('payroll')}
+                  className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'payroll'
+                      ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                >
+                  Payroll
+                </button>
+                <button
+                  onClick={() => setMainTab('staff')}
+                  className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'staff'
+                      ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
+                      : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                >
+                  Staff Management
+                </button>
+              </div>
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                  isFullscreen ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' : 'border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100'
+                }`}
+                title={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+                aria-label={isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+              <UserProfileDropdown showBell={true} onShowToast={triggerToast} />
+            </div>
+          </div>
           {/* ── SECTION 1: STAFF & ACCESS ── */}
           {mainTab === 'staff' && (
             <div className="p-4 sm:p-6 space-y-6 flex-1">
@@ -869,42 +883,54 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 2: PAYROLL TABS ── */}
           {mainTab === 'payroll' && (
             <div className="bg-white border-b border-slate-200 sticky top-[73px] z-10 shadow-xs">
-              <div className="flex items-center text-sm font-semibold max-w-7xl mx-auto px-6">
+              <div className="flex items-center justify-between text-sm font-semibold max-w-7xl mx-auto px-6">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setPayrollTab('attendance')}
+                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'attendance'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    Attendance
+                  </button>
+                  <button
+                    onClick={() => setPayrollTab('team_leaves')}
+                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'team_leaves'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    Team Leaves
+                  </button>
+                  <button
+                    onClick={() => setPayrollTab('my_leaves')}
+                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'my_leaves'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    My Leaves
+                  </button>
+                  <button
+                    onClick={() => setPayrollTab('holidays')}
+                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'holidays'
+                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
+                        : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                  >
+                    Holidays
+                  </button>
+                </div>
+
+                {/* Right Side: + Add Staff Button */}
                 <button
-                  onClick={() => setPayrollTab('attendance')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'attendance'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
+                  type="button"
+                  onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
+                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-md shrink-0"
                 >
-                  Attendance
-                </button>
-                <button
-                  onClick={() => setPayrollTab('team_leaves')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'team_leaves'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  Team Leaves
-                </button>
-                <button
-                  onClick={() => setPayrollTab('my_leaves')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'my_leaves'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  My Leaves
-                </button>
-                <button
-                  onClick={() => setPayrollTab('holidays')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'holidays'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  Holidays
+                  <UserPlus className="w-4 h-4" />
+                  <span>+ Add Staff</span>
                 </button>
               </div>
             </div>
@@ -913,8 +939,63 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 2.1: ATTENDANCE ── */}
           {mainTab === 'payroll' && payrollTab === 'attendance' && (
             <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
-              {/* Action Toolbar: Filter Pills + Search + Summary Counter + Add Staff Button */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+              {/* ── SUPER ADMIN DEPARTMENT BREAKDOWN BAR (IF OVERVIEW) ── */}
+              {isOverview && (
+                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Department-Wise Attendance (Click department to filter):</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDepartmentIds(['ALL'])}
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-lg transition cursor-pointer ${
+                        selectedDepartmentIds.includes('ALL')
+                          ? 'bg-slate-900 text-white'
+                          : 'text-indigo-600 hover:bg-indigo-50'
+                      }`}
+                    >
+                      All Departments ({staffList.length})
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+                    {departmentAttendanceBreakdown.map((dept) => {
+                      const isFiltered = selectedDepartmentIds.includes(dept.id);
+                      return (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          onClick={() => setSelectedDepartmentIds([dept.id])}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            isFiltered
+                              ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200 shadow-xs'
+                              : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200'
+                          }`}
+                        >
+                          <div className="text-[11px] font-bold text-slate-800 truncate" title={dept.name}>
+                            {dept.shortName || dept.name}
+                          </div>
+                          <div className="flex items-baseline justify-between mt-1">
+                            <span className="text-sm font-black text-slate-900">
+                              {dept.present} <span className="text-[10px] text-slate-400 font-normal">/ {dept.total}</span>
+                            </span>
+                            <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
+                              dept.rate >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                            }`}>
+                              {dept.rate}%
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Toolbar: Filter Pills + Search + Summary Stats */}
+              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                 {/* Left Side: Category Pills + Active Filter + Department Filter */}
                 <div className="flex flex-wrap items-center gap-2.5">
                   <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
@@ -978,10 +1059,29 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   )}
                 </div>
 
-                {/* Right Side: Search + Summary Stats + Add Staff Button */}
-                <div className="flex flex-wrap items-center gap-3 justify-start lg:justify-end">
+                {/* Right Side: Compact Stats (Present, Absent) + Search Bar */}
+                <div className="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+                  {/* Present Today */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>
+                      {attendanceStats.present} <span className="text-emerald-700 font-normal">Present</span>
+                      <span className="text-[10px] text-emerald-700 font-bold ml-1.5 bg-emerald-100/90 px-1.5 py-0.2 rounded">
+                        {departmentStaffList.length > 0 ? Math.round((attendanceStats.present / departmentStaffList.length) * 100) : 0}%
+                      </span>
+                    </span>
+                  </div>
+
+                  {/* 3. Absent & Leaves */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-2xs">
+                    <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-red-600 font-bold">{attendanceStats.absent} <span className="text-slate-400 font-normal">Absent</span></span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-teal-700 font-bold">{attendanceStats.leave} <span className="text-slate-400 font-normal">Leave</span></span>
+                  </div>
+
                   {/* Search Bar */}
-                  <div className="relative w-full sm:w-56">
+                  <div className="relative w-full sm:w-48">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
                     <input
                       type="text"
@@ -1000,56 +1100,24 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       </button>
                     )}
                   </div>
-
-                  {/* Attendance Stats Pill */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-right shrink-0">
-                    <div className="text-xs font-bold text-slate-900">
-                      {attendanceStats.present} Present / {attendanceStats.total} Total
-                    </div>
-                    <div className="text-[10px] font-medium text-slate-500 flex items-center justify-end gap-2 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
-                        {attendanceStats.absent} Absent
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-full"></span>
-                        {attendanceStats.leave} Leave
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                        {attendanceStats.weekoff} Weekoff
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* + Add Staff Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
-                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-md shrink-0"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    <span>+ Add {staffCategoryFilter === 'SITE' ? 'Site Staff' : staffCategoryFilter === 'OFFICE' ? 'Office Staff' : 'Staff'}</span>
-                  </button>
                 </div>
               </div>
 
               <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200 font-bold text-[11px] uppercase tracking-wider">
                       <tr>
                         <th className="py-3.5 px-6">Staff Member</th>
-                        <th className="py-3.5 px-6">Live Verification Photo</th>
-                        <th className="py-3.5 px-6">Punch Time (In / Out)</th>
-                        <th className="py-3.5 px-6">GPS Geofence Location</th>
-                        <th className="py-3.5 px-6 text-right">Attendance Status</th>
+                        <th className="py-3.5 px-6 w-44">Punch In</th>
+                        <th className="py-3.5 px-6 w-48">Punch Out</th>
+                        <th className="py-3.5 px-6 text-right w-52">Attendance Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {attendanceStaffList.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-12 text-center text-slate-400 text-xs">
+                          <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
                             No {staffCategoryFilter === 'SITE' ? 'site' : staffCategoryFilter === 'OFFICE' ? 'office' : ''} staff members found in {isOverview ? 'Booshnam Associates' : activeDept.name}.
                           </td>
                         </tr>
@@ -1062,7 +1130,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                           return (
                             <tr key={staff.id} className="hover:bg-slate-50 transition-colors group">
                               {/* 1. Staff Member Info */}
-                              <td className="py-4 px-6">
+                              <td className="py-4 px-6 align-middle">
                                 <div className="flex items-center gap-3">
                                   <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
                                     {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
@@ -1071,16 +1139,12 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                     <div className="flex items-center gap-2">
                                       <span
                                         className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors"
-                                        onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
+                                        onClick={() => handleOpenStaffOverview(staff, 'people')}
                                       >
                                         {staff.name}
                                       </span>
-                                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                                        getStaffCategory(staff) === 'SITE'
-                                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                          : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                      }`}>
-                                        {getStaffCategory(staff) === 'SITE' ? 'Site' : 'Office'}
+                                      <span className="text-[11px] font-normal text-slate-400">
+                                        ({getStaffCategory(staff) === 'SITE' ? 'Site' : 'Office'})
                                       </span>
                                     </div>
                                     <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -1094,141 +1158,90 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                                 </div>
                               </td>
 
-                            {/* 2. Live Verification Photo */}
-                            <td className="py-4 px-6">
-                              {staffRecord?.verification_photo ? (
-                                <div className="flex items-center gap-2.5">
+                              {/* 2. Punch In Time (Clean text without tag background) */}
+                              <td className="py-4 px-6 align-middle whitespace-nowrap">
+                                {staffRecord?.clock_in_time ? (
+                                  <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 font-mono">
+                                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span>{staffRecord.clock_in_time}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400 font-mono">--:--</span>
+                                )}
+                              </td>
+
+                              {/* 3. Punch Out Time (Clean text without tag background) */}
+                              <td className="py-4 px-6 align-middle whitespace-nowrap">
+                                {staffRecord?.clock_out_time ? (
+                                  <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 font-mono">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span>{staffRecord.clock_out_time}</span>
+                                  </div>
+                                ) : staffRecord ? (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>On Duty</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-400 font-mono">--:--</span>
+                                )}
+                              </td>
+
+                              {/* 5. Attendance Status & Actions */}
+                              <td className="py-4 px-6 align-middle text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-2.5">
+                                  {/* Attendance Status Dropdown */}
                                   <div
-                                    onClick={() => setViewPhotoRecord(staffRecord)}
-                                    className="relative group/photo cursor-pointer shrink-0 w-11 h-11 rounded-lg overflow-hidden border-2 border-emerald-400 shadow-2xs hover:scale-105 transition-transform"
-                                    title="Click to view full photo proof"
+                                    className="relative"
+                                    onMouseDown={(e) => e.stopPropagation()}
                                   >
-                                    <img
-                                      src={staffRecord.verification_photo}
-                                      alt={`${staff.name} live punch`}
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover/photo:opacity-100 transition-opacity flex items-center justify-center">
-                                      <Eye className="w-3.5 h-3.5 text-white" />
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <button
-                                      type="button"
-                                      onClick={() => setViewPhotoRecord(staffRecord)}
-                                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded transition cursor-pointer border border-emerald-200"
-                                    >
-                                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                                      <span>Live Verified</span>
-                                    </button>
-                                    <div className="text-[10px] text-slate-400 mt-0.5">Click photo to view</div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 text-slate-400 border border-slate-200/80 rounded-lg text-[11px] font-medium">
-                                  <Smartphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                  <span>Punch via Mobile</span>
-                                </div>
-                              )}
-                            </td>
-
-                            {/* 3. Punch Time (In / Out) */}
-                            <td className="py-4 px-6">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-slate-700 font-semibold text-xs tracking-tight">
-                                  <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                  <span>In: {staffRecord?.clock_in_time || '--:--'}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-slate-500 text-[11px] tracking-tight">
-                                  <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                                  <span>Out: {staffRecord?.clock_out_time || (staffRecord ? 'On Duty (Active)' : '--:--')}</span>
-                                </div>
-                              </div>
-                            </td>
-
-                            {/* 4. GPS Geofence Location */}
-                            <td className="py-4 px-6">
-                              {staffRecord ? (
-                                <div className="space-y-0.5">
-                                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
-                                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                    <span>
-                                      {staffRecord.distance_from_site_meters}m from {
-                                        (staffRecord.location_name && (staffRecord.location_name.toLowerCase().includes('office') || staffRecord.location_name.toLowerCase().includes('pammal')))
-                                          ? 'Head Office'
-                                          : 'Site'
-                                      }
-                                    </span>
-                                  </div>
-                                  <div className="text-[10px] text-emerald-600 font-medium truncate max-w-[210px]" title={staffRecord.location_name || 'Geofence Verified'}>
-                                    {(staffRecord.location_name && (staffRecord.location_name.toLowerCase().includes('pammal') || staffRecord.location_name.toLowerCase().includes('office')))
-                                      ? 'Office Geofence (Pammal, Chennai)'
-                                      : 'Inside Geofence Verified'}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-slate-400 text-xs flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-300" />
-                                  <span>Pending Check-in</span>
-                                </div>
-                              )}
-                            </td>
-
-                            {/* 5. Attendance Status & Actions */}
-                            <td className="py-4 px-6">
-                              <div className="flex items-center justify-end gap-2.5">
-                                {/* Attendance Status Dropdown */}
-                                <div
-                                  className="relative"
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                >
-                                  {(() => {
-                                    const status = getAttendanceStatus(staff.id);
-                                    const opt = attendanceOptions.find(o => o.label === status) ?? attendanceOptions[0];
-                                    return (
-                                      <>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => handleToggleAttendanceDropdown(staff.id, e)}
-                                          className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90'}
-                                        >
-                                          {status}
-                                          <span className="text-[10px]">▼</span>
-                                        </button>
-
-                                        {openAttendanceDropdown === staff.id && dropdownPos && (
-                                          <div
-                                            className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
-                                            style={{ top: dropdownPos.top, right: dropdownPos.right }}
-                                            onMouseDown={(e) => e.stopPropagation()}
+                                    {(() => {
+                                      const status = getAttendanceStatus(staff.id);
+                                      const opt = attendanceOptions.find(o => o.label === status) ?? attendanceOptions[0];
+                                      return (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleToggleAttendanceDropdown(staff.id, e)}
+                                            className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90 shadow-2xs'}
                                           >
-                                            {attendanceOptions.map((option) => (
-                                              <button
-                                                key={option.label}
-                                                type="button"
-                                                onClick={() => setAttendanceStatus(staff.id, option.label)}
-                                                className={'w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 transition-colors hover:bg-slate-50 ' + (status === option.label ? option.bg + ' ' + option.color : 'text-slate-700')}
-                                              >
-                                                <span className={'w-2 h-2 rounded-full ' + option.bg.replace('100', '500')} />
-                                                {option.label}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </>
-                                    );
-                                  })()}
-                                </div>
+                                            {status}
+                                            <span className="text-[10px]">▼</span>
+                                          </button>
 
-                                <button
-                                  onClick={() => handleOpenStaffOverview(staff, 'leave_dashboard')}
-                                  title="Staff Profile & Leave Dashboard"
-                                  className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer"
-                                >
-                                  <ArrowRight className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
+                                          {openAttendanceDropdown === staff.id && dropdownPos && (
+                                            <div
+                                              className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
+                                              style={{ top: dropdownPos.top, right: dropdownPos.right }}
+                                              onMouseDown={(e) => e.stopPropagation()}
+                                            >
+                                              {attendanceOptions.map((option) => (
+                                                <button
+                                                  key={option.label}
+                                                  type="button"
+                                                  onClick={() => setAttendanceStatus(staff.id, option.label)}
+                                                  className={'w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 transition-colors hover:bg-slate-50 ' + (status === option.label ? option.bg + ' ' + option.color : 'text-slate-700')}
+                                                >
+                                                  <span className={'w-2 h-2 rounded-full ' + option.bg.replace('100', '500')} />
+                                                  {option.label}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+
+                                  <button
+                                    onClick={() => handleOpenStaffOverview(staff, 'people')}
+                                    title="View Staff Profile & Attendance"
+                                    className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                  >
+                                    <ArrowRight className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
                           </tr>
                         );
                       })

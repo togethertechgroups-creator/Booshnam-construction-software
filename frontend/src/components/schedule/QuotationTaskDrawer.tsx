@@ -154,7 +154,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 overflow-hidden"
+        className="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Purple/Brand Line matching screenshot */}

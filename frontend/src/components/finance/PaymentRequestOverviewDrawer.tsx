@@ -86,7 +86,7 @@ export const PaymentRequestOverviewDrawer: React.FC<PaymentRequestOverviewDrawer
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-200 overflow-y-auto"
+        className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col justify-between border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-y-auto overflow-x-hidden animate-in slide-in-from-right duration-200"
         onClick={e => e.stopPropagation()}
       >
         {/* TOP SECTION */}

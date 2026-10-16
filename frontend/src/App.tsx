@@ -22,6 +22,7 @@ import { LoginView } from './views/LoginView';
 import { NotFound404View } from './components/common/NotFound404View';
 import { globalErrorService, Http404Details, clear404Error, trigger404Error } from './lib/errorService';
 import { MobileSiteSimulatorModal } from './components/MobileSiteSimulatorModal';
+import { WhatsAppChatModal } from './components/chat/WhatsAppChatModal';
 import { GlobalConfirmationModal } from './components/GlobalConfirmationModal';
 import { GlobalToastNotification } from './components/GlobalToastNotification';
 import { confirmNavigationIfDirty, getIsFormDirty, clearFormDirty } from './lib/dialogService';
@@ -88,7 +89,8 @@ const KNOWN_VIEWS = new Set([
   'expenses',
   'account_transfer',
   'account-transfer',
-  'payments'
+  'payments',
+  'chat'
 ]);
 
 const isKnownView = (view: string) => {
@@ -100,6 +102,9 @@ export function App() {
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
   const [global404Error, setGlobal404Error] = useState<Http404Details | null>(null);
 
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInitialContactId, setChatInitialContactId] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     // Expose helpers globally for testing/debugging
     (window as any).trigger404Error = trigger404Error;
@@ -108,7 +113,19 @@ export function App() {
     const unsubscribe = globalErrorService.subscribe((err) => {
       setGlobal404Error(err);
     });
-    return () => unsubscribe();
+
+    const handleOpenChat = (e: any) => {
+      if (e?.detail?.contactId) {
+        setChatInitialContactId(e.detail.contactId);
+      }
+      setIsChatOpen(true);
+    };
+    window.addEventListener('booshnam_open_chat', handleOpenChat);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('booshnam_open_chat', handleOpenChat);
+    };
   }, []);
 
   // If clients, crm, tasks, or snags view is requested, route appropriately
@@ -358,9 +375,21 @@ export function App() {
   const [projects, setProjects] = useState<Project[]>(() => getOrInitializeProjects());
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isMobileSimOpen, setIsMobileSimOpen] = useState(false);
+  const [mobileSimStaffId, setMobileSimStaffId] = useState<string | undefined>(undefined);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenMobileSim = (e: any) => {
+      if (e.detail?.staffId) {
+        setMobileSimStaffId(e.detail.staffId);
+      }
+      setIsMobileSimOpen(true);
+    };
+    window.addEventListener('booshnam_open_mobile_sim', handleOpenMobileSim);
+    return () => window.removeEventListener('booshnam_open_mobile_sim', handleOpenMobileSim);
+  }, []);
 
   // Save projects to localStorage
   useEffect(() => {
@@ -951,8 +980,27 @@ export function App() {
       {/* Mobile Companion Simulator Modal */}
       <MobileSiteSimulatorModal
         isOpen={isMobileSimOpen}
-        onClose={() => setIsMobileSimOpen(false)}
+        onClose={() => {
+          setIsMobileSimOpen(false);
+          setMobileSimStaffId(undefined);
+        }}
         project={selectedProject}
+        initialStaffId={mobileSimStaffId}
+      />
+
+      {/* Real-time WhatsApp-style Chat Modal */}
+      <WhatsAppChatModal
+        isOpen={isChatOpen || currentView === 'chat'}
+        onClose={() => {
+          setIsChatOpen(false);
+          setChatInitialContactId(undefined);
+          if (currentView === 'chat') {
+            setCurrentView('company_dashboard');
+          }
+        }}
+        projects={projects}
+        initialContactId={chatInitialContactId}
+        onShowToast={showToast}
       />
 
       {/* Global In-App Custom Confirmation & Alert Dialog System */}

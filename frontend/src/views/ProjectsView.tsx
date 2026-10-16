@@ -49,6 +49,7 @@ import { getCurrentUserAccount, UserAccount } from '../lib/authService';
 import { DepartmentLogo } from '../components/DepartmentLogo';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { syncAllProjectsFinancials } from '../lib/projectFinanceUtils';
+import StatsAndButton from '../components/StatsAndButton';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -2711,6 +2712,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   // VIEW 1: Projects List / Hub (Matching Screenshot 1)
   // ==========================================
+  const handleOpenNewProjectWizard = () => {
+    const curDept = getActiveDepartmentId();
+    setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
+    setNewProjectName('');
+    setNewClientName('');
+    setNewAddress('');
+    setNewCity('');
+    setNewEstimatedBudget('');
+    setSelectedPM('');
+    setSelectedEngineer('');
+    setSelectedSupervisor('');
+    setSelectedAccounts('');
+    setWizardError('');
+    setWizardStep(1);
+    setViewMode('create');
+  };
+
   return (
     <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
@@ -2762,132 +2780,34 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       {/* Main Single Card Content Body */}
       <div className="p-4 sm:p-6 space-y-6 flex-1">
 
-        {/* Top 4 Summary Cards (Matching Reference UI) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Approval (Pending) */}
-          <div
-            onClick={() => {
-              if (activeProject) setWorkspaceTab('dashboard');
-              else onShowToast?.(`Pending Approvals: ${deptPendingApprovals}`);
-            }}
-            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
-          >
-            {/* Squircle Icon */}
-            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#FDEEEC] text-[#D9383A] flex items-center justify-center shrink-0 shadow-2xs">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <path d="m9 15 2 2 4-4" />
-              </svg>
-            </div>
-
-            {/* Info Stack */}
-            <div className="flex-1 min-w-0 z-10">
-              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
-                Approval (Pending)
-              </div>
-              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
-                {deptPendingApprovals}
-              </div>
-
-            </div>
-
-            {/* Wave Decoration */}
-            <SummaryCardWave className="text-[#D9383A]" />
-          </div>
-
-          {/* Card 2: Material (Pending) */}
-          <div
-            onClick={() => {
-              if (activeProject) setWorkspaceTab('material');
-              else onShowToast?.(`Pending Materials: ${deptPendingMaterials}`);
-            }}
-            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
-          >
-            {/* Squircle Icon */}
-            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#FEF5E7] text-[#E88915] flex items-center justify-center shrink-0 shadow-2xs">
-              <ShoppingCart className="w-6 h-6" strokeWidth={2.2} />
-            </div>
-
-            {/* Info Stack */}
-            <div className="flex-1 min-w-0 z-10">
-              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
-                Material (Pending)
-              </div>
-              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
-                {deptPendingMaterials}
-              </div>
-
-            </div>
-
-            {/* Wave Decoration */}
-            <SummaryCardWave className="text-[#E88915]" />
-          </div>
-
-          {/* Card 3: To Do (Pending) */}
-          <div
-            onClick={() => {
-              if (activeProject) setWorkspaceTab('todo');
-              else onShowToast?.(`Pending To Do: ${deptPendingTodos}`);
-            }}
-            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
-          >
-            {/* Squircle Icon */}
-            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#E8F1FD] text-[#2563EB] flex items-center justify-center shrink-0 shadow-2xs">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="6" cy="8" r="2.2" />
-                <line x1="11" y1="8" x2="20" y2="8" />
-                <circle cx="6" cy="16" r="2.2" />
-                <line x1="11" y1="16" x2="20" y2="16" />
-              </svg>
-            </div>
-
-            {/* Info Stack */}
-            <div className="flex-1 min-w-0 z-10">
-              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
-                To Do (Pending)
-              </div>
-              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
-                {deptPendingTodos}
-              </div>
-
-            </div>
-
-            {/* Wave Decoration */}
-            <SummaryCardWave className="text-[#2563EB]" />
-          </div>
-
-          {/* Card 4: Total Projects */}
-          <div
-            onClick={() => {
-              setStatusFilter('All');
-              setStageFilter('All');
-              setCategoryFilter('All');
-              setSearchQuery('');
-              onShowToast?.(`Showing all ${filteredProjects.length} projects`);
-            }}
-            className="group bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md hover:border-slate-300 transition-all duration-200 relative overflow-hidden p-4 sm:p-5 flex items-start gap-3.5 sm:gap-4 cursor-pointer"
-          >
-            {/* Squircle Icon */}
-            <div className="w-[50px] h-[50px] sm:w-[52px] sm:h-[52px] rounded-2xl bg-[#E6F7EC] text-[#1E8349] flex items-center justify-center shrink-0 shadow-2xs">
-              <CheckCircle2 className="w-6 h-6" strokeWidth={2.2} />
-            </div>
-
-            {/* Info Stack */}
-            <div className="flex-1 min-w-0 z-10">
-              <div className="text-xs sm:text-[13px] font-semibold text-slate-600 tracking-tight leading-snug">
-                Total Projects
-              </div>
-              <div className="text-2xl sm:text-[28px] font-black text-slate-900 tracking-tight leading-tight my-0.5">
-                {filteredProjects.length}
-              </div>
-
-            </div>
-
-            {/* Wave Decoration */}
-            <SummaryCardWave className="text-[#1E8349]" />
-          </div>
-        </div>
+        {/* 1. Modern KPI Stat Cards */}
+        <StatsAndButton
+          onNewProjectClick={handleOpenNewProjectWizard}
+          pendingApprovals={deptPendingApprovals}
+          pendingMaterials={deptPendingMaterials}
+          pendingTodos={deptPendingTodos}
+          totalProjects={filteredProjects.length}
+          showButton={false}
+          onApprovalClick={() => {
+            if (activeProject) setWorkspaceTab('dashboard');
+            else onShowToast?.(`Pending Approvals: ${deptPendingApprovals}`);
+          }}
+          onMaterialClick={() => {
+            if (activeProject) setWorkspaceTab('material');
+            else onShowToast?.(`Pending Materials: ${deptPendingMaterials}`);
+          }}
+          onTodoClick={() => {
+            if (activeProject) setWorkspaceTab('todo');
+            else onShowToast?.(`Pending To Do: ${deptPendingTodos}`);
+          }}
+          onProjectsClick={() => {
+            setStatusFilter('All');
+            setStageFilter('All');
+            setCategoryFilter('All');
+            setSearchQuery('');
+            onShowToast?.(`Showing all ${filteredProjects.length} projects`);
+          }}
+        />
 
       {/* ── UNIFIED FILTER & ACTION TOOLBAR ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -2971,25 +2891,16 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
           {/* + New Project Button */}
           <button
-            onClick={() => {
-              const curDept = getActiveDepartmentId();
-              setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
-              setNewProjectName('');
-              setNewClientName('');
-              setNewAddress('');
-              setNewCity('');
-              setNewEstimatedBudget('');
-              setSelectedPM('');
-              setSelectedEngineer('');
-              setSelectedSupervisor('');
-              setSelectedAccounts('');
-              setWizardError('');
-              setWizardStep(1);
-              setViewMode('create');
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            onClick={handleOpenNewProjectWizard}
+            className="new-project-btn"
+            type="button"
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span className="plus-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </span>
             <span>New Project</span>
           </button>
         </div>

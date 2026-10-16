@@ -106,7 +106,7 @@ export const AddAccountDrawer: React.FC<AddAccountDrawerProps> = ({
       />
 
       {/* Slide-over Drawer Panel */}
-      <div className="relative w-full max-w-[480px] sm:max-w-[520px] bg-white shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-200 ease-out border-l border-slate-200">
+      <div className="relative w-full max-w-[480px] sm:max-w-[520px] bg-white shadow-2xl z-10 flex flex-col h-full transform transition-transform duration-200 ease-out border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden">
         
         {/* Top Header with increased height and comfortable breathing room */}
         <div className="px-6 sm:px-8 py-5 sm:py-6 bg-white flex items-center justify-between border-b border-slate-100 shrink-0">

@@ -69,6 +69,15 @@
     border-radius: 5px;
   }
 
+  /* Premium Curved Side Drawer Utility (Ensures curved corners on slide-over drawers) */
+  .rounded-l-drawer,
+  .drawer-curved {
+    border-top-left-radius: 28px !important;
+    border-bottom-left-radius: 28px !important;
+    border-top-right-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+  }
+
   /* Soft, visible card border / margin lines across all pages */
   .border-slate-200 {
     border-color: #cbd5e1 !important; /* slate-300 */

@@ -213,6 +213,7 @@ export function resetRolePermissions(): Record<string, RoleAccessPermission> {
 }
 
 export function isPageAllowedForRole(roleCode: string, pageId: string): boolean {
+  if (pageId === 'chat') return true;
   if (roleCode === 'SUPER_ADMIN' || roleCode === 'ADMIN') return true;
 
   let targetId = pageId;

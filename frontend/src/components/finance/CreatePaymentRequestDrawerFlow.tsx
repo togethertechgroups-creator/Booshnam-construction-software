@@ -370,7 +370,7 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
           {/* Drawer Panel */}
           <div 
             onClick={e => e.stopPropagation()}
-            className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200"
+            className="relative w-full max-w-lg bg-white h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-200"
           >
             {/* 1. Header Bar matching Image 2 */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">

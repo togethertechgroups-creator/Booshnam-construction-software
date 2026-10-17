@@ -40,8 +40,43 @@ export function setUserProfilePhoto(userId: string, photoUri: string): void {
   USER_PROFILE_PHOTOS[userId] = photoUri;
 }
 
-// In-memory / shared state for mobile session - starts empty each day so card appears until punched
-let ATTENDANCE_STORE: MobileAttendancePunch[] = [];
+// In-memory / shared state for mobile session with default team records for admin review
+let ATTENDANCE_STORE: MobileAttendancePunch[] = [
+  {
+    id: 'att-team-1',
+    staffId: 'usr-suresh',
+    staffName: 'Suresh Kumar',
+    staffCode: 'EMP-0104',
+    department: 'Civil Engineering',
+    role: 'Site Supervisor',
+    date: getTodayDateString(),
+    clockInTime: '08:45 AM',
+    status: 'Present',
+    verificationPhoto: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop',
+    distanceMeters: 8.5,
+    isInsideGeofence: true,
+    locationName: 'Cumbum Runway Site (Theni)',
+    punchType: 'IN',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'att-team-2',
+    staffId: 'usr-arumugam',
+    staffName: 'Arumugam P',
+    staffCode: 'EMP-0108',
+    department: 'Quality Assurance',
+    role: 'QA / Safety Officer',
+    date: getTodayDateString(),
+    clockInTime: '09:05 AM',
+    status: 'Present',
+    verificationPhoto: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop',
+    distanceMeters: 14.2,
+    isInsideGeofence: true,
+    locationName: 'Booshnam Head Office (Pammal, Chennai)',
+    punchType: 'IN',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export function getTodayDateString(): string {
   const d = new Date();
@@ -150,6 +185,47 @@ export function saveMobileAttendancePunch(params: {
     });
   } catch (e) {
     // Ignore offline network errors
+  }
+
+  // Sync to web portal localStorage if running in browser / simulator context
+  try {
+    const g = globalThis as any;
+    if (typeof g.window !== 'undefined' && typeof g.localStorage !== 'undefined') {
+      const KEY = 'booshnam_staff_attendance_v3';
+      const raw = g.localStorage.getItem(KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      const itemIndex = list.findIndex((x: any) => x.staff_id === params.staffId && x.date === today);
+      const webRecord = {
+        id: record.id,
+        staff_id: params.staffId,
+        staff_name: params.staffName,
+        staff_code: params.staffCode || 'EMP-MOB',
+        department: params.department || 'Operations',
+        role_name: params.role || 'Staff',
+        date: today,
+        clock_in_time: record.clockInTime,
+        clock_out_time: record.clockOutTime,
+        status: 'Present',
+        verification_photo: params.photo,
+        location_name: record.locationName,
+        distance_from_site_meters: record.distanceMeters,
+        is_inside_geofence: true,
+        notes: 'Mobile App Punch - Live Photo & GPS Verified',
+        punch_mode: 'MOBILE_APP',
+        created_at: new Date().toISOString(),
+      };
+      if (itemIndex >= 0) {
+        list[itemIndex] = { ...list[itemIndex], ...webRecord };
+      } else {
+        list.unshift(webRecord);
+      }
+      g.localStorage.setItem(KEY, JSON.stringify(list));
+      if (typeof g.CustomEvent === 'function') {
+        g.window.dispatchEvent(new g.CustomEvent('booshnam_staff_attendance_updated', { detail: list }));
+      }
+    }
+  } catch (err) {
+    // Native React Native environment - localStorage unavailable
   }
 
   return record;

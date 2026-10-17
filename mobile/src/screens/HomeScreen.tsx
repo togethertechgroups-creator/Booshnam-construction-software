@@ -47,6 +47,8 @@ import {
   Clock,
   Sparkles,
   RotateCcw,
+  Fingerprint,
+  Calendar,
 } from 'lucide-react-native';
 import { COLORS, SHADOWS } from '../theme';
 import { Project, User as UserType } from '../types';
@@ -55,6 +57,7 @@ import {
   saveMobileAttendancePunch,
   getTodayMobileAttendancePunch,
   getStaffAttendanceHistory,
+  getAllMobileAttendancePunches,
   resetTodayMobileAttendancePunch,
   MobileAttendancePunch,
   formatTime12h,
@@ -76,7 +79,7 @@ interface HomeScreenProps {
   onLogout: () => void;
 }
 
-type BottomNavTab = 'projects' | 'reports' | 'finance';
+type BottomNavTab = 'projects' | 'reports' | 'attendance' | 'finance';
 
 export default function HomeScreen({
   user,
@@ -301,8 +304,11 @@ export default function HomeScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Quick Pending Metrics Strip (from reference screen) ── */}
-        <View style={styles.pendingStrip}>
+        {/* ── Dynamic Tab View: PROJECTS ── */}
+        {activeTab === 'projects' && (
+          <>
+            {/* ── Quick Pending Metrics Strip (from reference screen) ── */}
+            <View style={styles.pendingStrip}>
           <View style={[styles.pendingCard, SHADOWS.sm]}>
             <Text style={styles.pendingCardHeader}>APPROVALS</Text>
             <View style={styles.pendingCardBottom}>
@@ -499,9 +505,7 @@ export default function HomeScreen({
           </TouchableOpacity>
         </View>
 
-        {/* ── Dynamic Tab View: PROJECTS ── */}
-        {activeTab === 'projects' && (
-          <>
+        {/* Projects Tab Body */}
             {/* Admin Management Shortcut (Visible only to Admin / Super Admin) */}
             {isAdmin && onOpenUserManagement && (
               <View style={[styles.adminBannerCard, SHADOWS.sm]}>
@@ -709,6 +713,296 @@ export default function HomeScreen({
 
 
 
+        {/* ── Dynamic Tab View: ATTENDANCE & PUNCH IN HUB ── */}
+        {activeTab === 'attendance' && (
+          <View style={styles.attendanceHubContainer}>
+            {/* Header Title & Live Status */}
+            <View style={styles.attHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.attMainTitle}>Staff Attendance & Punch</Text>
+                <Text style={styles.attMainSubtitle}>
+                  Live GPS Geofence & Selfie Biometric Verification
+                </Text>
+              </View>
+              <View style={[
+                styles.attLiveStatusBadge,
+                todayPunch?.punchType === 'IN' ? styles.attLiveBadgePresent : styles.attLiveBadgePending
+              ]}>
+                <View style={[
+                  styles.attLiveStatusDot,
+                  todayPunch?.punchType === 'IN' ? styles.attLiveDotPresent : styles.attLiveDotPending
+                ]} />
+                <Text style={[
+                  styles.attLiveStatusText,
+                  todayPunch?.punchType === 'IN' ? styles.attLiveTextPresent : styles.attLiveTextPending
+                ]}>
+                  {todayPunch?.punchType === 'IN' ? 'PRESENT' : 'NOT PUNCHED'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Profile & Current Status Hero Card */}
+            <View style={[styles.attUserHeroCard, SHADOWS.sm]}>
+              <View style={styles.attUserTopRow}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleChangeProfilePhoto}
+                  style={styles.attAvatarWrap}
+                >
+                  <Image source={{ uri: userProfilePhoto }} style={styles.attAvatarImg} />
+                  <View style={styles.attAvatarBadge}>
+                    <Camera size={11} color="#ffffff" strokeWidth={2.4} />
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.attUserInfoCol}>
+                  <Text style={styles.attUserNameText}>{user.name || 'Velmurugan'}</Text>
+                  <Text style={styles.attUserRoleText}>
+                    {user.role || (isSiteStaff ? 'Site Engineer' : 'Office Staff')} • {user.department || 'Operations'}
+                  </Text>
+                  <View style={styles.metaInline}>
+                    <MapPin size={12} color="#dc2626" strokeWidth={2.2} style={{ marginRight: 4 }} />
+                    <Text style={styles.attUserSiteText} numberOfLines={1}>{assignedSiteName}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Status Banner */}
+              <View style={[
+                styles.attBannerStrip,
+                todayPunch?.punchType === 'IN' ? styles.attBannerStripPresent : styles.attBannerStripPending
+              ]}>
+                <View style={styles.metaInline}>
+                  {todayPunch?.punchType === 'IN' ? (
+                    <CheckCircle2 size={16} color="#15803d" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                  ) : (
+                    <AlertTriangle size={16} color="#dc2626" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                  )}
+                  <Text style={[
+                    styles.attBannerStripText,
+                    todayPunch?.punchType === 'IN' ? styles.attBannerTextPresent : styles.attBannerTextPending
+                  ]}>
+                    {todayPunch?.punchType === 'IN'
+                      ? `Punched In at ${todayPunch.clockInTime} • Status: PRESENT`
+                      : todayPunch?.punchType === 'OUT'
+                      ? `Shift Completed (In: ${todayPunch.clockInTime} • Out: ${todayPunch.clockOutTime})`
+                      : 'Today’s Attendance Pending • Tap Punch In Below'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Main Punch Action Button */}
+              <View style={styles.attActionRow}>
+                {!todayPunch ? (
+                  <TouchableOpacity
+                    style={[styles.attBigPunchBtn, SHADOWS.md]}
+                    activeOpacity={0.85}
+                    onPress={() => openAttendanceModal('IN')}
+                  >
+                    <Fingerprint size={24} color="#ffffff" strokeWidth={2.4} style={{ marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.attBigPunchBtnText}>PUNCH IN NOW (LIVE SELFIE & GPS)</Text>
+                      <Text style={styles.attBigPunchBtnSub}>Camera photo & GPS geofence verified</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : todayPunch.punchType === 'IN' ? (
+                  <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                    <TouchableOpacity
+                      style={[styles.attPunchOutBtn, SHADOWS.sm, { flex: 1 }]}
+                      activeOpacity={0.85}
+                      onPress={() => openAttendanceModal('OUT')}
+                    >
+                      <LogOut size={16} color="#ffffff" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                      <Text style={styles.attPunchOutBtnText}>PUNCH OUT (END SHIFT)</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.attUpdatePunchBtn, { flex: 0.9 }]}
+                      activeOpacity={0.8}
+                      onPress={() => openAttendanceModal('IN')}
+                    >
+                      <RefreshCw size={14} color="#dc2626" strokeWidth={2.2} style={{ marginRight: 5 }} />
+                      <Text style={styles.attUpdatePunchBtnText}>Update Photo</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                    <View style={styles.attCompletedBox}>
+                      <CheckCircle2 size={18} color="#15803d" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                      <Text style={styles.attCompletedText}>Daily Attendance Completed & Synchronized</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* GPS Telemetry & Geofence Card */}
+            <View style={[styles.attGeofenceCard, SHADOWS.sm]}>
+              <View style={styles.attGeofenceTopRow}>
+                <View style={styles.metaInline}>
+                  <MapPin size={16} color="#dc2626" strokeWidth={2.4} style={{ marginRight: 6 }} />
+                  <Text style={styles.attGeofenceHeading}>Live GPS Geofence</Text>
+                </View>
+                <View style={styles.attGeofenceVerifiedPill}>
+                  <Check size={11} color="#15803d" strokeWidth={3} style={{ marginRight: 3 }} />
+                  <Text style={styles.attGeofenceVerifiedText}>VERIFIED</Text>
+                </View>
+              </View>
+              <Text style={styles.attGeofenceSub}>{assignedSiteName}</Text>
+              <View style={styles.attTelemetryGrid}>
+                <View style={styles.attTelemetryItem}>
+                  <Text style={styles.attTelemetryLabel}>Geofence Radius</Text>
+                  <Text style={styles.attTelemetryValue}>100 meters</Text>
+                </View>
+                <View style={styles.attTelemetryItem}>
+                  <Text style={styles.attTelemetryLabel}>Your Distance</Text>
+                  <Text style={[styles.attTelemetryValue, { color: '#16a34a' }]}>
+                    {isSiteStaff ? '12.4m Inside' : '11.8m Inside'}
+                  </Text>
+                </View>
+                <View style={styles.attTelemetryItem}>
+                  <Text style={styles.attTelemetryLabel}>Portal Sync</Text>
+                  <Text style={styles.attTelemetryValue}>Instant Realtime</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Quick Metrics (Present, Days, Punctuality) */}
+            <View style={styles.attMetricsRow}>
+              <View style={[styles.attMetricCard, SHADOWS.sm]}>
+                <Calendar size={18} color="#dc2626" strokeWidth={2.2} />
+                <Text style={styles.attMetricNum}>24</Text>
+                <Text style={styles.attMetricLabel}>Days Present</Text>
+              </View>
+              <View style={[styles.attMetricCard, SHADOWS.sm]}>
+                <Clock size={18} color="#16a34a" strokeWidth={2.2} />
+                <Text style={[styles.attMetricNum, { color: '#16a34a' }]}>
+                  {todayPunch?.clockInTime || '08:30 AM'}
+                </Text>
+                <Text style={styles.attMetricLabel}>Punch Time</Text>
+              </View>
+              <View style={[styles.attMetricCard, SHADOWS.sm]}>
+                <ShieldCheck size={18} color="#2563eb" strokeWidth={2.2} />
+                <Text style={[styles.attMetricNum, { color: '#2563eb' }]}>
+                  {todayPunch ? 'Present' : 'Pending'}
+                </Text>
+                <Text style={styles.attMetricLabel}>Today's Status</Text>
+              </View>
+            </View>
+
+            {/* Admin Team Attendance Oversight (Visible to Admin & Super Admin) */}
+            {isAdmin && (
+              <View style={[styles.attAdminCard, SHADOWS.sm]}>
+                <View style={styles.attAdminHeader}>
+                  <View style={styles.adminIconBox}>
+                    <ShieldCheck size={20} color="#dc2626" strokeWidth={2.2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.adminTitleRow}>
+                      <Text style={styles.attAdminTitle}>Team Attendance Oversight</Text>
+                      <View style={styles.adminControlBadge}>
+                        <Text style={styles.adminControlBadgeText}>ADMIN / SUPER ADMIN</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.attAdminSub}>
+                      Live GPS & selfie records submitted by site & office team
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Team Punches List */}
+                <View style={styles.attAdminList}>
+                  {getAllMobileAttendancePunches().map((p) => (
+                    <View key={p.id} style={styles.attAdminStaffItem}>
+                      <Image source={{ uri: p.verificationPhoto }} style={styles.attAdminThumb} />
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={styles.attAdminStaffName}>{p.staffName}</Text>
+                          <View style={styles.attAdminPresentPill}>
+                            <Text style={styles.attAdminPresentText}>{p.status.toUpperCase()}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.attAdminStaffRole}>
+                          {p.role} • {p.department}
+                        </Text>
+                        <View style={styles.metaInline}>
+                          <Clock size={11} color="#64748b" strokeWidth={2} style={{ marginRight: 3 }} />
+                          <Text style={styles.attAdminTimeText}>
+                            Clock In: {p.clockInTime} {p.clockOutTime ? `• Out: ${p.clockOutTime}` : ''}
+                          </Text>
+                        </View>
+                        <View style={styles.metaInline}>
+                          <MapPin size={11} color="#dc2626" strokeWidth={2} style={{ marginRight: 3 }} />
+                          <Text style={styles.attAdminSiteText} numberOfLines={1}>
+                            {p.locationName} ({p.distanceMeters.toFixed(1)}m Inside)
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.attAdminSyncedNote}>
+                  <CheckCircle2 size={13} color="#16a34a" strokeWidth={2.4} style={{ marginRight: 5 }} />
+                  <Text style={styles.attAdminSyncedText}>
+                    Synced automatically with Web Portal Super Admin Attendance Register
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* My Punch Records History */}
+            <View style={styles.attHistorySection}>
+              <View style={styles.attHistoryTitleRow}>
+                <Text style={styles.tasksSectionTitle}>My Attendance History</Text>
+                <TouchableOpacity
+                  style={styles.attSimulateBtn}
+                  activeOpacity={0.8}
+                  onPress={handleResetAttendance}
+                >
+                  <RotateCcw size={12} color="#dc2626" strokeWidth={2.2} style={{ marginRight: 4 }} />
+                  <Text style={styles.attSimulateBtnText}>Reset / Simulate</Text>
+                </TouchableOpacity>
+              </View>
+
+              {getStaffAttendanceHistory(userKey).length === 0 ? (
+                <View style={styles.attEmptyHistoryBox}>
+                  <HardHat size={32} color="#94a3b8" strokeWidth={1.5} />
+                  <Text style={styles.attEmptyHistoryTitle}>No Punch Recorded Yet</Text>
+                  <Text style={styles.attEmptyHistorySub}>
+                    Tap 'Punch In Now' above with selfie camera to log your first record today.
+                  </Text>
+                </View>
+              ) : (
+                getStaffAttendanceHistory(userKey).map((punch) => (
+                  <View key={punch.id} style={[styles.historyCard, SHADOWS.sm]}>
+                    <Image source={{ uri: punch.verificationPhoto }} style={styles.historyThumb} />
+                    <View style={styles.historyInfo}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={styles.historyDate}>{punch.date}</Text>
+                        <View style={[styles.historyTypeBadge, punch.punchType === 'IN' ? styles.badgeIn : styles.badgeOut]}>
+                          <Text style={[styles.historyTypeText, punch.punchType === 'IN' ? styles.badgeInText : styles.badgeOutText]}>
+                            {punch.punchType === 'IN' ? 'PRESENT' : 'SHIFT OUT'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.historyTime}>
+                        Clock: {punch.clockInTime} {punch.clockOutTime ? `• Out: ${punch.clockOutTime}` : ''}
+                      </Text>
+                      <View style={styles.metaInline}>
+                        <MapPin size={11} color="#dc2626" strokeWidth={2} style={{ marginRight: 3 }} />
+                        <Text style={styles.historySite}>
+                          {punch.locationName} ({punch.distanceMeters.toFixed(1)}m Inside)
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        )}
+
         {/* ── Dynamic Tab View: FINANCE ── */}
         {activeTab === 'finance' && (
           <View style={styles.financeContainer}>
@@ -822,8 +1116,6 @@ export default function HomeScreen({
           </Text>
         </TouchableOpacity>
 
-
-
         <TouchableOpacity
           style={styles.navItem}
           activeOpacity={0.7}
@@ -844,6 +1136,31 @@ export default function HomeScreen({
             Reports (DPR)
           </Text>
         </TouchableOpacity>
+
+        {/* ── CENTER PROMINENT ROUND PUNCH IN BUTTON (AVAILABLE FOR ALL LOGINS) ── */}
+        <View style={styles.centerPunchWrap}>
+          <TouchableOpacity
+            style={[
+              styles.centerPunchBtn,
+              todayPunch?.punchType === 'IN' ? styles.centerPunchBtnPunched : styles.centerPunchBtnActive,
+              SHADOWS.md,
+            ]}
+            activeOpacity={0.85}
+            onPress={() => {
+              setActiveTab('attendance');
+            }}
+          >
+            <Fingerprint size={26} color="#ffffff" strokeWidth={2.4} />
+          </TouchableOpacity>
+          <Text
+            style={[
+              styles.centerPunchText,
+              activeTab === 'attendance' && styles.centerPunchTextActive,
+            ]}
+          >
+            {todayPunch?.punchType === 'IN' ? 'Punched' : 'Punch In'}
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={styles.navItem}
@@ -3150,5 +3467,504 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748b',
     marginTop: 2,
+  },
+
+  // ── Center Round Punch Button (Bottom Nav) ──
+  centerPunchWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -22,
+    width: 68,
+  },
+  centerPunchBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#ffffff',
+    elevation: 8,
+    shadowColor: '#dc2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+  },
+  centerPunchBtnActive: {
+    backgroundColor: '#dc2626',
+  },
+  centerPunchBtnPunched: {
+    backgroundColor: '#16a34a',
+    shadowColor: '#16a34a',
+  },
+  centerPunchText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 3,
+    letterSpacing: 0.2,
+  },
+  centerPunchTextActive: {
+    color: '#dc2626',
+    fontWeight: '900',
+  },
+
+  // ── Dynamic Attendance Hub Page Styles ──
+  attendanceHubContainer: {
+    marginBottom: 20,
+  },
+  attHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 8,
+  },
+  attMainTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: 0.2,
+  },
+  attMainSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  attLiveStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1.2,
+  },
+  attLiveBadgePresent: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#86efac',
+  },
+  attLiveBadgePending: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  attLiveStatusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 6,
+  },
+  attLiveDotPresent: {
+    backgroundColor: '#16a34a',
+  },
+  attLiveDotPending: {
+    backgroundColor: '#dc2626',
+  },
+  attLiveStatusText: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  attLiveTextPresent: {
+    color: '#15803d',
+  },
+  attLiveTextPending: {
+    color: '#dc2626',
+  },
+
+  // ── User Hero Status Card ──
+  attUserHeroCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#fee2e2',
+  },
+  attUserTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  attAvatarWrap: {
+    position: 'relative',
+    marginRight: 14,
+  },
+  attAvatarImg: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    borderColor: '#dc2626',
+    backgroundColor: '#f1f5f9',
+  },
+  attAvatarBadge: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    backgroundColor: '#dc2626',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  attUserInfoCol: {
+    flex: 1,
+  },
+  attUserNameText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  attUserRoleText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#475569',
+    marginTop: 1,
+  },
+  attUserSiteText: {
+    fontSize: 11.5,
+    color: '#dc2626',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  attBannerStrip: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  attBannerStripPresent: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  attBannerStripPending: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fecaca',
+  },
+  attBannerStripText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  attBannerTextPresent: {
+    color: '#16a34a',
+  },
+  attBannerTextPending: {
+    color: '#b91c1c',
+  },
+  attActionRow: {
+    width: '100%',
+  },
+  attBigPunchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dc2626',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  attBigPunchBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  attBigPunchBtnSub: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  attPunchOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dc2626',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  attPunchOutBtnText: {
+    color: '#ffffff',
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  attUpdatePunchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1.5,
+    borderColor: '#fecaca',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  attUpdatePunchBtnText: {
+    color: '#dc2626',
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  attCompletedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#86efac',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    width: '100%',
+  },
+  attCompletedText: {
+    color: '#15803d',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  // ── Geofence Telemetry Card ──
+  attGeofenceCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  attGeofenceTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  attGeofenceHeading: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  attGeofenceVerifiedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  attGeofenceVerifiedText: {
+    color: '#15803d',
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  attGeofenceSub: {
+    fontSize: 11.5,
+    color: '#64748b',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  attTelemetryGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 10,
+  },
+  attTelemetryItem: {
+    flex: 1,
+  },
+  attTelemetryLabel: {
+    fontSize: 10,
+    color: '#94a3b8',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  attTelemetryValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+
+  // ── Metrics Row ──
+  attMetricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  attMetricCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  attMetricNum: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0f172a',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  attMetricLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '700',
+  },
+
+  // ── Admin Oversight Card ──
+  attAdminCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#fecaca',
+  },
+  attAdminHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fee2e2',
+    paddingBottom: 10,
+  },
+  attAdminTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  attAdminSub: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  attAdminList: {
+    gap: 10,
+  },
+  attAdminStaffItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  attAdminThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#dc2626',
+    marginRight: 10,
+    backgroundColor: '#e2e8f0',
+  },
+  attAdminStaffName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  attAdminStaffRole: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  attAdminTimeText: {
+    fontSize: 10.5,
+    color: '#64748b',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  attAdminSiteText: {
+    fontSize: 10.5,
+    color: '#dc2626',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  attAdminPresentPill: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#86efac',
+  },
+  attAdminPresentText: {
+    color: '#15803d',
+    fontSize: 9,
+    fontWeight: '900',
+  },
+  attAdminSyncedNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginTop: 10,
+  },
+  attAdminSyncedText: {
+    color: '#15803d',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  // ── History Section ──
+  attHistorySection: {
+    marginTop: 4,
+  },
+  attHistoryTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  attSimulateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  attSimulateBtnText: {
+    color: '#dc2626',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  attEmptyHistoryBox: {
+    paddingVertical: 28,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 20,
+  },
+  attEmptyHistoryTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#475569',
+    marginTop: 8,
+  },
+  attEmptyHistorySub: {
+    fontSize: 11,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
   },
 });

@@ -90,6 +90,7 @@ const KNOWN_VIEWS = new Set([
   'account_transfer',
   'account-transfer',
   'payments',
+  'payment_requests',
   'chat'
 ]);
 
@@ -100,6 +101,7 @@ const isKnownView = (view: string) => {
 export function App() {
   const [currentUserAccount, setCurrentUserAccountState] = useState<UserAccount | null>(() => getCurrentUserAccount());
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
+  const [financeInitialTab, setFinanceInitialTab] = useState<string | undefined>(undefined);
   const [global404Error, setGlobal404Error] = useState<Http404Details | null>(null);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -128,13 +130,17 @@ export function App() {
     };
   }, []);
 
-  // If clients, crm, tasks, or snags view is requested, route appropriately
+  // If clients, crm, tasks, snags, or payment_requests view is requested, route appropriately
   useEffect(() => {
     if (currentView === 'clients' || currentView === 'crm') {
       setCurrentView('quotation');
     }
     if (currentView === 'tasks' || currentView === 'snags') {
       setCurrentView('projects');
+    }
+    if (currentView === 'payment_requests') {
+      setFinanceInitialTab('payment_requests');
+      setCurrentView('finance');
     }
   }, [currentView]);
 
@@ -387,6 +393,67 @@ export function App() {
     return () => window.removeEventListener('booshnam_open_mobile_sim', handleOpenMobileSim);
   }, []);
 
+  const projectsRef = useRef(projects);
+  useEffect(() => {
+    projectsRef.current = projects;
+  }, [projects]);
+
+  // Global Navigation Listener (e.g. from Notification dropdown clicks)
+  useEffect(() => {
+    const handleGlobalNavigate = (e: any) => {
+      const detail = e?.detail;
+      if (!detail) return;
+
+      const { view, financeTab, requestCode, projectId, projectName, workspaceTab } = detail;
+
+      const currentProjList = projectsRef.current && projectsRef.current.length > 0 ? projectsRef.current : getOrInitializeProjects();
+
+      if (projectId || projectName) {
+        const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normTarget = projectName ? normalize(projectName) : '';
+        const found = currentProjList.find(p => 
+          (projectId && p.id === projectId) || 
+          (normTarget && (normalize(p.name || '').includes(normTarget) || normTarget.includes(normalize(p.name || ''))))
+        );
+        if (found) {
+          setSelectedProject(found);
+          try {
+            sessionStorage.setItem('booshnam_auto_open_project_id', found.id);
+          } catch {}
+          window.dispatchEvent(new CustomEvent('booshnam_select_project', {
+            detail: { projectId: found.id, projectName: found.name, workspaceTab }
+          }));
+        }
+      }
+
+      if (requestCode) {
+        try {
+          (window as any).__booshnam_pending_req_code = requestCode;
+          sessionStorage.setItem('booshnam_pending_req_code', requestCode);
+        } catch {}
+      }
+
+      if (financeTab) {
+        setFinanceInitialTab(financeTab);
+        window.dispatchEvent(new CustomEvent('booshnam_open_finance_tab', {
+          detail: { tab: financeTab, requestCode, projectName }
+        }));
+      }
+
+      if (view) {
+        let destView = view;
+        if (destView === 'payment_requests') {
+          destView = 'finance';
+          setFinanceInitialTab('payment_requests');
+        }
+        setCurrentView(destView);
+      }
+    };
+
+    window.addEventListener('booshnam_navigate', handleGlobalNavigate);
+    return () => window.removeEventListener('booshnam_navigate', handleGlobalNavigate);
+  }, []);
+
   // Save projects to localStorage
   useEffect(() => {
     try {
@@ -402,17 +469,60 @@ export function App() {
   // Sync projects from external updates (e.g. from TaskTab or ProjectsView)
   useEffect(() => {
     const handleProjectsUpdated = (e: any) => {
+      let deletedSet = new Set<string>();
+      try {
+        const rawDel = localStorage.getItem('booshnam_deleted_project_ids');
+        if (rawDel) {
+          const parsedDel = JSON.parse(rawDel);
+          if (Array.isArray(parsedDel)) deletedSet = new Set(parsedDel.map(s => String(s).toLowerCase().trim()));
+        }
+      } catch {}
+
       if (e.detail && Array.isArray(e.detail)) {
-        const clean = e.detail.filter((p: any) => 
-          !p.id?.startsWith('proj-') &&
-          !p.id?.startsWith('bn-') &&
-          !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-        );
+        const clean = e.detail.filter((p: any) => {
+          if (!p) return false;
+          if (p.is_deleted === true || p.deleted === true || p.status === 'DELETED') return false;
+          const pId = (p.id || '').toLowerCase().trim();
+          const pCode = (p.code || '').toLowerCase().trim();
+          const pName = (p.name || '').toLowerCase().trim();
+          if (pId && deletedSet.has(pId)) return false;
+          if (pCode && deletedSet.has(pCode)) return false;
+          if (pName && deletedSet.has(pName)) return false;
+          return !p.id?.startsWith('proj-') &&
+            !p.id?.startsWith('bn-') &&
+            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t));
+        });
         setProjects(clean);
       }
     };
+    const handleProjectsDeleted = () => {
+      setProjects(prev => {
+        let deletedSet = new Set<string>();
+        try {
+          const rawDel = localStorage.getItem('booshnam_deleted_project_ids');
+          if (rawDel) {
+            const parsedDel = JSON.parse(rawDel);
+            if (Array.isArray(parsedDel)) deletedSet = new Set(parsedDel.map(s => String(s).toLowerCase().trim()));
+          }
+        } catch {}
+        return (prev || []).filter((p: any) => {
+          if (!p) return false;
+          const pId = (p.id || '').toLowerCase().trim();
+          const pCode = (p.code || '').toLowerCase().trim();
+          const pName = (p.name || '').toLowerCase().trim();
+          if (pId && deletedSet.has(pId)) return false;
+          if (pCode && deletedSet.has(pCode)) return false;
+          if (pName && deletedSet.has(pName)) return false;
+          return true;
+        });
+      });
+    };
     window.addEventListener('booshnam_projects_updated', handleProjectsUpdated);
-    return () => window.removeEventListener('booshnam_projects_updated', handleProjectsUpdated);
+    window.addEventListener('booshnam_projects_deleted', handleProjectsDeleted);
+    return () => {
+      window.removeEventListener('booshnam_projects_updated', handleProjectsUpdated);
+      window.removeEventListener('booshnam_projects_deleted', handleProjectsDeleted);
+    };
   }, []);
 
   // Automatically hide sidebar & hamburger when Profile Settings Modal is opened,
@@ -943,13 +1053,18 @@ export function App() {
                 />
               )}
 
-              {(currentView === 'finance' || currentView === 'accounts_finance' || currentView === 'expenses' || currentView === 'account_transfer' || currentView === 'account-transfer') && (
+              {(currentView === 'finance' || currentView === 'accounts_finance' || currentView === 'expenses' || currentView === 'account_transfer' || currentView === 'account-transfer' || currentView === 'payment_requests') && (
                 <AccountsFinanceView
                   projects={projects}
                   isSidebarOpen={isSidebarOpen}
                   onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                   onShowToast={showToast}
-                  initialTab={currentView === 'expenses' ? 'expenses' : (currentView === 'account_transfer' || currentView === 'account-transfer') ? 'account_transfer' : undefined}
+                  initialTab={
+                    currentView === 'expenses' ? 'expenses' : 
+                    (currentView === 'account_transfer' || currentView === 'account-transfer') ? 'account_transfer' : 
+                    currentView === 'payment_requests' ? 'payment_requests' :
+                    (financeInitialTab as any) || undefined
+                  }
                 />
               )}
 

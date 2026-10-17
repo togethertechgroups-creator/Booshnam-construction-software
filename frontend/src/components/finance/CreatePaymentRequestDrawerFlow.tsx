@@ -6,6 +6,64 @@ import {
 } from 'lucide-react';
 import { Project } from '../../types';
 import { PartyRecord, getFinanceParties } from '../../lib/financeSyncService';
+import { getCurrentUserAccount } from '../../lib/authService';
+import { MOCK_USER } from '../../lib/mockData';
+import { getUserAccessibleProjects } from '../../lib/projectAccessService';
+
+export function getLoggedInUserPartyName(directoryParties?: PartyRecord[]): string {
+  try {
+    let candidate = '';
+    // 1. Check active session account
+    const active = getCurrentUserAccount();
+    if (active) {
+      if (active.staff_name && active.staff_name.trim()) {
+        candidate = active.staff_name.trim();
+      } else if (active.username && active.username.trim()) {
+        candidate = active.username.trim();
+      }
+    }
+
+    // 2. Check siteops_user in localStorage
+    if (!candidate && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('siteops_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const fullName = `${parsed.first_name || ''} ${parsed.last_name || ''}`.trim();
+        if (fullName) {
+          candidate = fullName;
+        } else if (parsed.name && parsed.name.trim()) {
+          candidate = parsed.name.trim();
+        } else if (parsed.username && parsed.username.trim()) {
+          candidate = parsed.username.trim();
+        }
+      }
+    }
+
+    // 3. Fallback to MOCK_USER
+    if (!candidate && typeof MOCK_USER !== 'undefined') {
+      const mockFull = `${MOCK_USER.first_name || ''} ${MOCK_USER.last_name || ''}`.trim();
+      candidate = mockFull || MOCK_USER.username || '';
+    }
+
+    if (!candidate) return '';
+
+    // 4. If directory parties exist, match canonical name (e.g. cvh, bala)
+    if (Array.isArray(directoryParties) && directoryParties.length > 0) {
+      const clean = candidate.toLowerCase().trim();
+      const matched = directoryParties.find(p => 
+        p.name.toLowerCase().trim() === clean ||
+        clean.includes(p.name.toLowerCase().trim()) ||
+        p.name.toLowerCase().trim().includes(clean)
+      );
+      if (matched) return matched.name;
+    }
+
+    return candidate;
+  } catch (err) {
+    console.error('Error resolving logged-in party name', err);
+    return '';
+  }
+}
 
 export interface PaymentRequestSubmitData {
   requestCode: string;
@@ -13,10 +71,12 @@ export interface PaymentRequestSubmitData {
   partyName: string;
   projectName: string;
   category: string;
+  requestType?: string;
   amount: number;
   dueDate?: string;
   notes?: string;
   files?: File[];
+  routedTo?: 'ADMIN' | 'ADMIN_AND_SUPER_ADMIN';
 }
 
 interface CreatePaymentRequestDrawerFlowProps {
@@ -62,7 +122,7 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
     const today = new Date();
     return today.toISOString().split('T')[0];
   });
-  const [partyName, setPartyName] = useState('');
+  const [partyName, setPartyName] = useState(() => getLoggedInUserPartyName(parties));
   const [isPartyDropdownOpen, setIsPartyDropdownOpen] = useState(false);
   const [partySearchQuery, setPartySearchQuery] = useState('');
   const [requestType, setRequestType] = useState('');
@@ -83,25 +143,29 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
     return (parties && parties.length > 0) ? parties : getFinanceParties();
   }, [parties]);
 
-  // Available Projects (from props or localStorage or sample construction projects matching Image 1)
-  const availableProjects = useMemo(() => {
-    if (projects && projects.length > 0) return projects;
-    try {
-      const stored = localStorage.getItem('booshnam_projects_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
+  // Real-time synchronization on project updates, deletions, or session user switch
+  const [projectsSyncTick, setProjectsSyncTick] = useState(0);
 
-    // Default sample projects matching the user's reference screenshot (Image 1)
-    return [
-      { id: 'p-1802', code: 'RA11-A-1802', name: 'RA11-A-1802-(2026-2027)-Arun kodambakkam', initials: 'RK', client_name: 'Arun kodambakkam' },
-      { id: 'p-2571', code: 'RA11-BAGJ-2571', name: 'RA11-BAGJ-2571-(2026-2027)-Sathya Nagar', initials: 'RV', client_name: 'Sathya' },
-      { id: 'p-2570', code: 'RA11-BAGJ-2570', name: 'RA11-BAGJ-2570-(2026-2027)-Jd Subak', initials: 'RS', client_name: 'Jd Subak' },
-      { id: 'p-2569', code: 'LO14-BAGJ-2569', name: 'LO14-BAGJ-2569-(2026-2027)-Zahur Gu', initials: 'LG', client_name: 'Zahur' }
-    ] as Project[];
-  }, [projects]);
+  useEffect(() => {
+    const handleSync = () => setProjectsSyncTick(t => t + 1);
+    window.addEventListener('booshnam_projects_updated', handleSync);
+    window.addEventListener('booshnam_projects_deleted', handleSync);
+    window.addEventListener('booshnam_session_changed', handleSync);
+    window.addEventListener('siteops_user_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('booshnam_projects_updated', handleSync);
+      window.removeEventListener('booshnam_projects_deleted', handleSync);
+      window.removeEventListener('booshnam_session_changed', handleSync);
+      window.removeEventListener('siteops_user_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
+  // Available Projects: strictly filtered to active non-deleted projects accessible by the logged-in user
+  const availableProjects = useMemo(() => {
+    return getUserAccessibleProjects(projects);
+  }, [projects, projectsSyncTick]);
 
   // Compute initials for project avatar
   const getProjectInitials = (p: Project) => {
@@ -136,14 +200,14 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
 
   // Filter parties for Step 2 party search
   const filteredParties = useMemo(() => {
-    const q = (partySearchQuery || partyName).toLowerCase().trim();
+    const q = partySearchQuery.toLowerCase().trim();
     if (!q) return directoryParties;
     return directoryParties.filter(p => 
       p.name.toLowerCase().includes(q) || 
       (p.type && p.type.toLowerCase().includes(q)) ||
       (p.phone && p.phone.includes(q))
     );
-  }, [directoryParties, partySearchQuery, partyName]);
+  }, [directoryParties, partySearchQuery]);
 
   // Reset fields when opening modal
   const resetAllFields = () => {
@@ -152,7 +216,8 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
     setIsEditingRequestCode(false);
     const today = new Date();
     setPaymentDate(today.toISOString().split('T')[0]);
-    setPartyName('');
+    const defaultParty = getLoggedInUserPartyName(directoryParties);
+    setPartyName(defaultParty);
     setIsPartyDropdownOpen(false);
     setPartySearchQuery('');
     setRequestType('');
@@ -198,6 +263,9 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
   // Step 1: Project Selection
   const handleSelectProject = (proj: Project) => {
     setSelectedProject(proj);
+    if (!partyName.trim()) {
+      setPartyName(getLoggedInUserPartyName(directoryParties));
+    }
     setStep('drawer');
   };
 
@@ -232,16 +300,21 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
       return;
     }
 
+    const isAboveThreshold = numAmt > 2000;
+    const routedTo = isAboveThreshold ? 'ADMIN_AND_SUPER_ADMIN' : 'ADMIN';
+
     onSaveSuccess({
       requestCode: requestCode || `#-${Date.now().toString().slice(-2)}`,
       date: paymentDate,
       partyName: partyName.trim(),
       projectName: selectedProject?.name || availableProjects[0]?.name || 'Booshnam Project',
       category: requestType || 'Other',
+      requestType: requestType || 'Other',
       amount: numAmt,
       dueDate: dueDate || undefined,
       notes: notes.trim() || undefined,
-      files: uploadedFiles
+      files: uploadedFiles,
+      routedTo
     });
 
     handleClose();
@@ -306,8 +379,12 @@ export const CreatePaymentRequestDrawerFlow: React.FC<CreatePaymentRequestDrawer
               {filteredProjects.length === 0 ? (
                 <div className="py-8 text-center text-slate-400">
                   <Building2 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                  <p className="text-xs font-semibold text-slate-600">No matching projects found</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Try searching with a different project code or name</p>
+                  <p className="text-xs font-semibold text-slate-600">No projects available</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {projectSearchQuery.trim()
+                      ? 'No projects match your search query.'
+                      : 'No active projects are allocated to your login account.'}
+                  </p>
                 </div>
               ) : (
                 filteredProjects.map((p, idx) => {

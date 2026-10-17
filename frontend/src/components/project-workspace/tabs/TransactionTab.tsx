@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Project, ProjectTransaction, PaymentRequest, BOQRecord, SalesInvoice, ProjectExpenseRecord, SubconWorkOrder } from '../../../types';
 import { getProjectSubconOrders } from '../../../lib/subconService';
-import { addNotification } from '../../../lib/notificationService';
+import { addNotification, formatDynamicPaymentRequestNotification } from '../../../lib/notificationService';
 import { 
   getFinanceParties, 
   syncProjectTransactionToFinance, 
@@ -1243,11 +1243,19 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       }
     } catch (e) {}
 
+    const notifData = formatDynamicPaymentRequestNotification({
+      requestCode: newPr.request_number,
+      amount: finalAmount,
+      partyName: prPartyName.trim(),
+      projectName: project.name,
+      senderName,
+      requestType: newPr.request_type,
+    });
     addNotification({
-      title: `Payment Request: ${newPr.request_number}`,
-      message: `${senderName} submitted payment request of ₹${finalAmount.toLocaleString('en-IN')} for "${prPartyName.trim()}" (${newPr.request_type}) in project "${project.name}".`,
+      title: notifData.title,
+      message: notifData.message,
       type: 'PAYMENT_REQUEST',
-      recipient: 'ADMIN',
+      recipient: notifData.recipient,
       sender: senderName,
       projectName: project.name,
       projectId: project.id,
@@ -1255,7 +1263,7 @@ export const TransactionTab: React.FC<TransactionTabProps> = ({ project, onShowT
       requestCode: newPr.request_number
     });
 
-    onShowToast?.(`Payment Request ${newPr.request_number} of ₹${finalAmount.toLocaleString('en-IN')} created & synced to Accounts & Finance!`);
+    onShowToast?.(`Payment Request ${newPr.request_number} of ₹${finalAmount.toLocaleString('en-IN')} created & routed to ${finalAmount > 2000 ? 'Admin & Super Admin' : 'Admin only'}!`);
     setIsPaymentRequestModalOpen(false);
   };
 

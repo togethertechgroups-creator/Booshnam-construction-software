@@ -274,6 +274,25 @@ export const PaymentRequestOverviewDrawer: React.FC<PaymentRequestOverviewDrawer
               </span>
             </div>
 
+            {/* Row 4.5: Approval Routing & Authorization */}
+            <div className="pb-4 border-b border-slate-100">
+              <span className="text-xs text-slate-400 font-medium block">Approval Routing</span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${
+                  request.amount > 2000
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}>
+                  {request.amount > 2000 ? 'Admin & Super Admin (> ₹2,000)' : 'Admin Only (≤ ₹2,000)'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {request.amount > 2000
+                  ? 'High-value request automatically routed to both Admin and Super Admin for dual authorization.'
+                  : 'Standard payment request routed only to Admin. Super Admin notification bypassed.'}
+              </p>
+            </div>
+
             {/* Row 5: Entry by Details (Image 4) */}
             <div className="pt-1 text-xs space-y-1">
               <div className="font-semibold text-slate-800">

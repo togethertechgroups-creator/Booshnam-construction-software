@@ -11,8 +11,9 @@ import { MOCK_PAYMENT_REQUESTS, MOCK_PROJECT_TRANSACTIONS, MOCK_PROJECTS } from 
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { CustomSelect } from '../components/CustomSelect';
-import { addNotification } from '../lib/notificationService';
+import { addNotification, formatDynamicPaymentRequestNotification } from '../lib/notificationService';
 import { CreatePaymentRequestDrawerFlow, PaymentRequestSubmitData } from '../components/finance/CreatePaymentRequestDrawerFlow';
+import { getUserAccessibleProjects } from '../lib/projectAccessService';
 
 interface PaymentsViewProps {
   projects?: Project[];
@@ -33,6 +34,21 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [projectFilter, setProjectFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const handleOpenTab = (e: any) => {
+      const { tab } = e?.detail || {};
+      if (tab === 'payment_requests' || tab === 'requests') {
+        setActiveTab('requests');
+      }
+    };
+    window.addEventListener('booshnam_open_finance_tab', handleOpenTab);
+    return () => window.removeEventListener('booshnam_open_finance_tab', handleOpenTab);
+  }, []);
+
+  const accessibleProjects = useMemo(() => {
+    return getUserAccessibleProjects(projects);
+  }, [projects]);
 
   // Modals
   const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
@@ -186,12 +202,20 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
 
     setPaymentRequests(prev => [newReq, ...prev]);
 
-    // Notify Admin
+    const isAboveTwoThousand = amountVal > 2000;
+    // Notify based on amount routing
+    const notifData = formatDynamicPaymentRequestNotification({
+      requestCode: newReq.request_code,
+      amount: amountVal,
+      partyName: newReq.vendor_name,
+      senderName: newReq.requested_by_name || 'Site Staff',
+      requestType: newReq.category,
+    });
     addNotification({
-      title: `Payment Request: ${newReq.request_code}`,
-      message: `${newReq.requested_by_name || 'Site Staff'} requested ₹${amountVal.toLocaleString('en-IN')} for "${newReq.vendor_name}" (${newReq.category}).`,
+      title: notifData.title,
+      message: notifData.message,
       type: 'PAYMENT_REQUEST',
-      recipient: 'ADMIN',
+      recipient: notifData.recipient,
       sender: newReq.requested_by_name || 'Site Staff',
       amount: amountVal,
       requestCode: newReq.request_code
@@ -201,12 +225,13 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     setReqAmount('');
     setReqVendor('');
     setReqPurpose('');
-    onShowToast?.(`Payment request ${newReq.request_code} submitted for supervisory audit!`);
+    onShowToast?.(`Payment request ${newReq.request_code} submitted (${isAboveTwoThousand ? 'Routed to Admin & Super Admin' : 'Routed to Admin only'})!`);
   };
 
   // 2-Step Payment Request Flow handler
   const handleSavePaymentRequestFromFlow = (reqData: PaymentRequestSubmitData) => {
     const matchedProj = projects.find(p => p.name === reqData.projectName);
+    const isAboveTwoThousand = reqData.amount > 2000;
     const newReq: ProjectPaymentRequest = {
       id: `pay-${Date.now()}`,
       project_id: matchedProj?.id || (projects[0]?.id || ''),
@@ -227,7 +252,28 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
     setPaymentRequests(prev => [newReq, ...prev]);
     setIsNewRequestModalOpen(false);
 
-    onShowToast?.(`Payment Request ${reqData.requestCode} submitted for supervisory audit!`);
+    // Automatic Routing & Notification based on amount
+    const notifData = formatDynamicPaymentRequestNotification({
+      requestCode: reqData.requestCode,
+      amount: reqData.amount,
+      partyName: reqData.partyName,
+      projectName: reqData.projectName,
+      senderName: 'Site Engineer',
+      requestType: reqData.requestType,
+      dueDate: reqData.dueDate,
+    });
+    addNotification({
+      title: notifData.title,
+      message: notifData.message,
+      type: 'PAYMENT_REQUEST',
+      recipient: notifData.recipient,
+      sender: 'Site Engineer',
+      projectName: reqData.projectName,
+      amount: reqData.amount,
+      requestCode: reqData.requestCode
+    });
+
+    onShowToast?.(`Payment Request ${reqData.requestCode} of ₹${reqData.amount.toLocaleString('en-IN')} routed to ${isAboveTwoThousand ? 'Admin & Super Admin' : 'Admin only'}!`);
   };
 
   // Submit Record Transaction
@@ -565,7 +611,7 @@ export const PaymentsView: React.FC<PaymentsViewProps> = ({
       <CreatePaymentRequestDrawerFlow
         isOpen={isNewRequestModalOpen}
         onClose={() => setIsNewRequestModalOpen(false)}
-        projects={projects}
+        projects={accessibleProjects}
         existingRequestsCount={paymentRequests.length}
         onSaveSuccess={handleSavePaymentRequestFromFlow}
       />

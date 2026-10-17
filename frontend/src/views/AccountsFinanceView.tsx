@@ -26,6 +26,11 @@ import { FinanceDashboardTab } from '../components/finance/FinanceDashboardTab';
 import { ProjectFinanceTab } from '../components/finance/ProjectFinanceTab';
 import { FinancialReportsTab } from '../components/finance/FinancialReportsTab';
 import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../lib/timestampUtils';
+import { getCurrentUserAccount } from '../lib/authService';
+import { addNotification, formatDynamicPaymentRequestNotification } from '../lib/notificationService';
+import { getLoggedInUserPartyName } from '../components/finance/CreatePaymentRequestDrawerFlow';
+import { UserProfileDropdown } from '../components/UserProfileDropdown';
+import { getUserAccessibleProjects, isProjectDeleted } from '../lib/projectAccessService';
 
 export interface PaymentRequestItem {
   id: string;
@@ -44,6 +49,9 @@ export interface PaymentRequestItem {
   notes?: string;
   invoiceFile?: string;
   entryBy?: string;
+  routedTo?: 'ADMIN' | 'ADMIN_AND_SUPER_ADMIN';
+  routedToText?: string;
+  approverRoles?: string[];
 }
 
 export interface PartyRecord {
@@ -299,6 +307,26 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  // Logged-in User Account State for Role & Routing
+  const [currentUserAccount, setCurrentUserAccount] = useState(() => getCurrentUserAccount());
+
+  useEffect(() => {
+    const handleAccountSync = () => {
+      setCurrentUserAccount(getCurrentUserAccount());
+    };
+    window.addEventListener('booshnam_session_changed', handleAccountSync);
+    window.addEventListener('siteops_user_updated', handleAccountSync);
+    return () => {
+      window.removeEventListener('booshnam_session_changed', handleAccountSync);
+      window.removeEventListener('siteops_user_updated', handleAccountSync);
+    };
+  }, []);
+
+  // Filter projects accessible to the logged-in user and not deleted
+  const accessibleProjects = useMemo(() => {
+    return getUserAccessibleProjects(projects);
+  }, [projects, currentUserAccount]);
 
   // Parties State with LocalStorage Persistence
   const [parties, setParties] = useState<PartyRecord[]>(() => {
@@ -833,6 +861,70 @@ const toIsoDate = (displayStr: string) => {
   // Modals State
   const [isNewRequestModalOpen, setIsNewRequestModalOpen] = useState(false);
   const [selectedRequestDetails, setSelectedRequestDetails] = useState<PaymentRequestItem | null>(null);
+
+  // Helper to match payment requests by requestCode, id, or numeric suffix (e.g. "#-1", "Payment Request # - 1")
+  const matchesPaymentRequestCode = (req: PaymentRequestItem, codeToMatch: string): boolean => {
+    if (!codeToMatch || !req) return false;
+    const cleanTarget = codeToMatch.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanReqCode = (req.requestCode || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cleanId = (req.id || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    if (cleanReqCode && cleanTarget && (cleanReqCode.includes(cleanTarget) || cleanTarget.includes(cleanReqCode))) return true;
+    if (cleanId && cleanTarget && (cleanId.includes(cleanTarget) || cleanTarget.includes(cleanId))) return true;
+
+    const targetDigits = codeToMatch.replace(/\D/g, '');
+    const reqDigits = (req.requestCode || '').replace(/\D/g, '');
+    if (targetDigits && reqDigits && targetDigits === reqDigits) return true;
+
+    return false;
+  };
+
+  // Handle external tab switch or direct notification jump (e.g. from Notification dropdown)
+  useEffect(() => {
+    const handleOpenFinanceTab = (e: any) => {
+      const { tab, requestCode } = e?.detail || {};
+      if (tab) {
+        setActiveTab(tab);
+      }
+      const codeToFind = requestCode || (window as any).__booshnam_pending_req_code;
+      if (codeToFind) {
+        delete (window as any).__booshnam_pending_req_code;
+        try {
+          sessionStorage.removeItem('booshnam_pending_req_code');
+        } catch {}
+        const matched = paymentRequests.find(r => matchesPaymentRequestCode(r, codeToFind));
+        if (matched) {
+          setSelectedRequestDetails(matched);
+        }
+      }
+    };
+
+    window.addEventListener('booshnam_open_finance_tab', handleOpenFinanceTab);
+    return () => window.removeEventListener('booshnam_open_finance_tab', handleOpenFinanceTab);
+  }, [paymentRequests]);
+
+  // Check pending request code on initial mount or updates
+  useEffect(() => {
+    const pendingCode = (window as any).__booshnam_pending_req_code || (() => {
+      try {
+        return sessionStorage.getItem('booshnam_pending_req_code');
+      } catch {
+        return null;
+      }
+    })();
+
+    if (pendingCode && paymentRequests.length > 0) {
+      delete (window as any).__booshnam_pending_req_code;
+      try {
+        sessionStorage.removeItem('booshnam_pending_req_code');
+      } catch {}
+      const matched = paymentRequests.find(r => matchesPaymentRequestCode(r, pendingCode));
+      if (matched) {
+        setActiveTab('payment_requests');
+        setSelectedRequestDetails(matched);
+      }
+    }
+  }, [paymentRequests]);
   const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
   const [isTallyModalOpen, setIsTallyModalOpen] = useState(false);
   const [isReferModalOpen, setIsReferModalOpen] = useState(false);
@@ -1461,9 +1553,28 @@ const toIsoDate = (displayStr: string) => {
   const [newTxnAccount, setNewTxnAccount] = useState('');
   const [newTxnRef, setNewTxnRef] = useState('');
 
-  // Filtered Payment Requests
+  // Filtered Payment Requests with amount-based routing logic:
+  // - Requests > ₹2,000: sent to both Admin and Super Admin
+  // - Requests <= ₹2,000: sent strictly only to Admin (Super Admin should not receive these)
   const filteredPaymentRequests = useMemo(() => {
+    const isSuperAdminUser = currentUserAccount?.role_code === 'SUPER_ADMIN' ||
+      currentUserAccount?.username === 'superadmin' ||
+      currentUserAccount?.role_name?.toLowerCase() === 'super admin';
+
+    const isStrictSuperAdminOnly = isSuperAdminUser && currentUserAccount?.role_code !== 'ADMIN';
+    const currentName = (currentUserAccount?.staff_name || currentUserAccount?.username || '').toLowerCase().trim();
+
     return paymentRequests.filter(req => {
+      // Routing rule: Requests <= ₹2,000 are sent ONLY to Admin (not to Super Admin unless Super Admin is creator/party)
+      if (isStrictSuperAdminOnly && req.amount <= 2000) {
+        const isOwn = currentName && (
+          req.partyName.toLowerCase().includes(currentName) ||
+          currentName.includes(req.partyName.toLowerCase()) ||
+          (req.entryBy || '').toLowerCase().includes(currentName)
+        );
+        if (!isOwn) return false;
+      }
+
       if (statusFilter !== 'All') {
         if (statusFilter === 'Unpaid') {
           if (req.status !== 'Unpaid' && req.status !== 'Pending') return false;
@@ -1486,7 +1597,7 @@ const toIsoDate = (displayStr: string) => {
       }
       return true;
     });
-  }, [paymentRequests, statusFilter, selectedProjectFilter, searchQuery]);
+  }, [paymentRequests, statusFilter, selectedProjectFilter, searchQuery, currentUserAccount]);
 
   // Financial summary metrics
   const totalPaidAmount = paymentRequests.filter(r => r.status === 'Paid').reduce((sum, r) => sum + r.amount, 0);
@@ -1505,6 +1616,23 @@ const toIsoDate = (displayStr: string) => {
       return;
     }
 
+    const isAboveTwoThousand = parsedAmt > 2000;
+    const routedTo: 'ADMIN' | 'ADMIN_AND_SUPER_ADMIN' = isAboveTwoThousand ? 'ADMIN_AND_SUPER_ADMIN' : 'ADMIN';
+    const routedToText = isAboveTwoThousand ? 'Admin & Super Admin' : 'Admin Only';
+    const approverRoles = isAboveTwoThousand ? ['ADMIN', 'SUPER_ADMIN'] : ['ADMIN'];
+
+    let currentUserName = currentUserAccount?.staff_name || currentUserAccount?.username || '';
+    if (!currentUserName) {
+      try {
+        const raw = localStorage.getItem('siteops_user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          currentUserName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || u.username || '';
+        }
+      } catch {}
+    }
+    if (!currentUserName) currentUserName = newPartyName.trim() || 'Staff Member';
+
     const nextCode = `Payment Request # - ${paymentRequests.length + 1}`;
     const newReq: PaymentRequestItem = {
       id: `pr-${Date.now()}`,
@@ -1517,11 +1645,40 @@ const toIsoDate = (displayStr: string) => {
       status: newStatus,
       category: newCategory,
       notes: newNotes,
-      paidDate: newStatus === 'Paid' ? newDate : undefined
+      paidDate: newStatus === 'Paid' ? newDate : undefined,
+      entryBy: currentUserName,
+      routedTo,
+      routedToText,
+      approverRoles
     };
 
-    setPaymentRequests(prev => [newReq, ...prev]);
+    setPaymentRequests(prev => {
+      const updated = [newReq, ...prev];
+      try {
+        localStorage.setItem('booshnam_finance_payment_requests', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
     setIsNewRequestModalOpen(false);
+
+    // Automatic Routing & Notification
+    const notifData = formatDynamicPaymentRequestNotification({
+      requestCode: nextCode,
+      amount: parsedAmt,
+      partyName: newPartyName,
+      projectName: newProjectName,
+      senderName: currentUserName,
+    });
+    addNotification({
+      title: notifData.title,
+      message: notifData.message,
+      type: 'PAYMENT_REQUEST',
+      recipient: notifData.recipient,
+      sender: currentUserName,
+      projectName: newProjectName,
+      amount: parsedAmt,
+      requestCode: nextCode,
+    });
 
     // Reset fields
     setNewPartyName('');
@@ -1529,7 +1686,7 @@ const toIsoDate = (displayStr: string) => {
     setNewNotes('');
 
     if (onShowToast) {
-      onShowToast(`Created ${nextCode} for ₹${parsedAmt.toLocaleString('en-IN')}`);
+      onShowToast(`Created ${nextCode} for ₹${parsedAmt.toLocaleString('en-IN')} (Routed to ${routedToText})`);
     }
   };
 
@@ -1557,6 +1714,23 @@ const toIsoDate = (displayStr: string) => {
       }
     }
 
+    const isAboveTwoThousand = reqData.amount > 2000;
+    const routedTo: 'ADMIN' | 'ADMIN_AND_SUPER_ADMIN' = isAboveTwoThousand ? 'ADMIN_AND_SUPER_ADMIN' : 'ADMIN';
+    const routedToText = isAboveTwoThousand ? 'Admin & Super Admin' : 'Admin Only';
+    const approverRoles = isAboveTwoThousand ? ['ADMIN', 'SUPER_ADMIN'] : ['ADMIN'];
+
+    let currentUserName = currentUserAccount?.staff_name || currentUserAccount?.username || '';
+    if (!currentUserName) {
+      try {
+        const raw = localStorage.getItem('siteops_user');
+        if (raw) {
+          const u = JSON.parse(raw);
+          currentUserName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || u.username || '';
+        }
+      } catch {}
+    }
+    if (!currentUserName) currentUserName = reqData.partyName || 'Staff Member';
+
     const newReq: PaymentRequestItem = {
       id: `pr-${Date.now()}`,
       requestCode: reqData.requestCode,
@@ -1570,7 +1744,10 @@ const toIsoDate = (displayStr: string) => {
       dueDate: formattedDueDate,
       notes: reqData.notes,
       paidDate: undefined,
-      entryBy: 'Managing Director - 3 - Nivedhitha Arumugam'
+      entryBy: currentUserName,
+      routedTo,
+      routedToText,
+      approverRoles
     };
 
     setPaymentRequests(prev => {
@@ -1582,8 +1759,29 @@ const toIsoDate = (displayStr: string) => {
     });
     setIsNewRequestModalOpen(false);
 
+    // Automatic Routing and Notifications based on amount:
+    const notifData = formatDynamicPaymentRequestNotification({
+      requestCode: reqData.requestCode,
+      amount: reqData.amount,
+      partyName: reqData.partyName,
+      projectName: reqData.projectName,
+      senderName: currentUserName,
+      requestType: reqData.requestType,
+      dueDate: reqData.dueDate,
+    });
+    addNotification({
+      title: notifData.title,
+      message: notifData.message,
+      type: 'PAYMENT_REQUEST',
+      recipient: notifData.recipient,
+      sender: currentUserName,
+      projectName: reqData.projectName,
+      amount: reqData.amount,
+      requestCode: reqData.requestCode,
+    });
+
     if (onShowToast) {
-      onShowToast(`Created Payment Request ${reqData.requestCode} for ₹${reqData.amount.toLocaleString('en-IN')}`);
+      onShowToast(`Created Payment Request ${reqData.requestCode} for ₹${reqData.amount.toLocaleString('en-IN')} (Routed to ${routedToText})`);
     }
   };
 
@@ -3219,10 +3417,13 @@ const toIsoDate = (displayStr: string) => {
             {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
           </button>
 
-          {/* User Profile Avatar */}
-          <div className="w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs shadow-sm ring-2 ring-red-100 select-none cursor-pointer">
-            <User className="w-3.5 h-3.5 text-white" />
-          </div>
+          {/* User Profile Avatar & Dropdown */}
+          <UserProfileDropdown 
+            showBell={false} 
+            onShowToast={onShowToast} 
+            avatarSizeClass="w-7 h-7"
+            avatarBgClass="bg-red-600 hover:bg-red-700 text-white ring-2 ring-red-100 focus:ring-red-400"
+          />
         </div>
       </header>
 
@@ -3533,7 +3734,7 @@ const toIsoDate = (displayStr: string) => {
                         <div className="text-sm font-bold text-slate-900">
                           ₹ {req.amount.toLocaleString('en-IN')}
                         </div>
-                        <div className="mt-1">
+                        <div className="mt-1 flex items-center justify-end">
                           <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded ${
                             req.status === 'Paid'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -6163,7 +6364,7 @@ const toIsoDate = (displayStr: string) => {
       <CreatePaymentRequestDrawerFlow
         isOpen={isNewRequestModalOpen}
         onClose={() => setIsNewRequestModalOpen(false)}
-        projects={projects}
+        projects={accessibleProjects}
         parties={parties}
         existingRequestsCount={paymentRequests.length}
         onSaveSuccess={handleSavePaymentRequestFromFlow}
@@ -6751,7 +6952,7 @@ const toIsoDate = (displayStr: string) => {
         isOpen={isCreateTxnFlowOpen}
         currentStep={createTxnFlowStep}
         onClose={() => setIsCreateTxnFlowOpen(false)}
-        projects={projects}
+        projects={accessibleProjects}
         parties={parties}
         bankAccounts={bankAccounts}
         existingTransactionsCount={transactions.length}

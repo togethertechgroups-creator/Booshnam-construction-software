@@ -221,7 +221,9 @@ export async function sendMaterialRequestPushToAdmin(
 }
 
 /**
- * 4. Send Push Notification to Admin when Site Engineer submits a Payment Request
+ * 4. Send Push Notification for Payment Request based on Amount Routing:
+ * - If amount > ₹2,000: sent to both Admin and Super Admin
+ * - If amount <= ₹2,000: sent strictly only to Admin (Super Admin bypassed)
  */
 export async function sendPaymentRequestPushToAdmin(
   requesterName: string,
@@ -230,11 +232,50 @@ export async function sendPaymentRequestPushToAdmin(
   projectName: string,
   requestCode: string
 ) {
+  const isAboveThreshold = amount > 2000;
+
+  if (isAboveThreshold) {
+    // Dispatch to Admin
+    await sendPushNotification({
+      recipientType: 'ROLE',
+      recipientRole: 'ADMIN',
+      title: `Payment Request: ${requestCode} (> ₹2,000)`,
+      body: `${requesterName} requested ₹${amount.toLocaleString('en-IN')} for "${vendorName}" on "${projectName}". Routed to Admin and Super Admin.`,
+      category: 'PAYMENT_REQUEST',
+      data: {
+        requestCode,
+        amount,
+        vendorName,
+        projectName,
+        senderName: requesterName,
+        screen: 'PaymentApproval',
+      }
+    });
+
+    // Dispatch to Super Admin
+    return sendPushNotification({
+      recipientType: 'ROLE',
+      recipientRole: 'SUPER_ADMIN',
+      title: `Payment Request: ${requestCode} (> ₹2,000)`,
+      body: `${requesterName} requested ₹${amount.toLocaleString('en-IN')} for "${vendorName}" on "${projectName}". Dual-level authorization required.`,
+      category: 'PAYMENT_REQUEST',
+      data: {
+        requestCode,
+        amount,
+        vendorName,
+        projectName,
+        senderName: requesterName,
+        screen: 'PaymentApproval',
+      }
+    });
+  }
+
+  // If amount <= ₹2,000: dispatched ONLY to Admin!
   return sendPushNotification({
     recipientType: 'ROLE',
     recipientRole: 'ADMIN',
-    title: `Payment Request: ${requestCode}`,
-    body: `${requesterName} requested ₹${amount.toLocaleString('en-IN')} for "${vendorName}" on "${projectName}".`,
+    title: `Payment Request: ${requestCode} (≤ ₹2,000)`,
+    body: `${requesterName} requested ₹${amount.toLocaleString('en-IN')} for "${vendorName}" on "${projectName}". Routed to Admin.`,
     category: 'PAYMENT_REQUEST',
     data: {
       requestCode,

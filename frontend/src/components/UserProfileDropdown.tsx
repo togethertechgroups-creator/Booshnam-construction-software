@@ -13,12 +13,14 @@ import { confirmSignOut } from '../lib/dialogService';
 import { 
   getNotifications, markAllNotificationsRead, markNotificationRead, AppNotification 
 } from '../lib/notificationService';
+import { isPageAllowedForRole } from '../lib/roleAccess';
 
 interface UserProfileDropdownProps {
   showBell?: boolean;
   user?: User;
   onShowToast?: (msg: string) => void;
   avatarSizeClass?: string;
+  avatarBgClass?: string;
 }
 
 export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
@@ -26,6 +28,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   user: initialUser,
   onShowToast,
   avatarSizeClass = 'w-8 h-8',
+  avatarBgClass = 'bg-red-600 hover:bg-red-700 text-white ring-2 ring-red-100 focus:ring-red-400',
 }) => {
   const resolveActiveUser = (): User => {
     try {
@@ -100,6 +103,146 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
     } else {
       window.dispatchEvent(new CustomEvent('siteops_toast', { detail: msg }));
     }
+  };
+
+  const handleNotificationClick = (n: AppNotification) => {
+    // 1. Mark notification as read
+    markNotificationRead(n.id);
+    setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+
+    // 2. Dismiss dropdown immediately
+    setShowNotificationDropdown(false);
+
+    const roleCode = currentUser.role_code || 'SITE_ENGINEER';
+
+    // PAYMENT REQUEST notification
+    if (
+      n.type === 'PAYMENT_REQUEST' ||
+      n.requestCode ||
+      (n.title && n.title.toLowerCase().includes('payment request'))
+    ) {
+      const allowedFinance = isPageAllowedForRole(roleCode, 'finance');
+      const targetView = allowedFinance ? 'finance' : 'payments';
+
+      if (n.requestCode) {
+        try {
+          (window as any).__booshnam_pending_req_code = n.requestCode;
+          sessionStorage.setItem('booshnam_pending_req_code', n.requestCode);
+        } catch {}
+      }
+
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: targetView,
+          financeTab: 'payment_requests',
+          requestCode: n.requestCode,
+          projectName: n.projectName,
+          projectId: n.projectId,
+        }
+      }));
+
+      window.dispatchEvent(new CustomEvent('booshnam_open_finance_tab', {
+        detail: {
+          tab: 'payment_requests',
+          requestCode: n.requestCode,
+          projectName: n.projectName
+        }
+      }));
+
+      triggerToast(allowedFinance ? 'Opening Payment Requests...' : 'Opening Payments...');
+      return;
+    }
+
+    // PROJECT_ASSIGNED or general project notification
+    if (
+      n.type === 'PROJECT_ASSIGNED' ||
+      (n.title && n.title.toLowerCase().includes('assigned to project'))
+    ) {
+      if (n.projectId) {
+        try {
+          sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+        } catch {}
+      }
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: 'projects',
+          projectId: n.projectId,
+          projectName: n.projectName
+        }
+      }));
+      triggerToast(`Opening project: ${n.projectName || 'Projects'}`);
+      return;
+    }
+
+    // TASK_ASSIGNED or TASK_COMPLETED
+    if (n.type === 'TASK_ASSIGNED' || n.type === 'TASK_COMPLETED') {
+      if (n.projectId) {
+        try {
+          sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+        } catch {}
+      }
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: 'projects',
+          projectId: n.projectId,
+          projectName: n.projectName,
+          taskName: n.taskName,
+          workspaceTab: 'task'
+        }
+      }));
+      triggerToast(`Opening task on ${n.projectName || 'Project'}`);
+      return;
+    }
+
+    // MATERIAL REQUEST
+    if (n.type === 'MATERIAL_REQUEST') {
+      const allowedProc = isPageAllowedForRole(roleCode, 'procurement');
+      const targetView = allowedProc ? 'procurement' : 'projects';
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: targetView,
+          projectId: n.projectId,
+          projectName: n.projectName
+        }
+      }));
+      triggerToast(allowedProc ? 'Opening Procurement...' : 'Opening Projects...');
+      return;
+    }
+
+    // Schedule / Timesheet / Reminders
+    if (
+      n.title?.includes("Pending Tasks") ||
+      n.id?.startsWith('notif-pending-tasks-') ||
+      n.title?.includes("Today's Tasks") ||
+      n.id?.startsWith('notif-today-tasks-')
+    ) {
+      const allowedSched = isPageAllowedForRole(roleCode, 'schedule');
+      const targetView = allowedSched ? 'schedule' : 'projects';
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: targetView,
+          projectId: n.projectId,
+          projectName: n.projectName
+        }
+      }));
+      triggerToast('Opening Schedule & Tasks...');
+      return;
+    }
+
+    // Fallback if project is mentioned
+    if (n.projectId || n.projectName) {
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: 'projects',
+          projectId: n.projectId,
+          projectName: n.projectName
+        }
+      }));
+      triggerToast(`Opening ${n.projectName || 'Projects'}`);
+      return;
+    }
+
+    triggerToast('Notification marked as read');
   };
 
   useEffect(() => {
@@ -361,18 +504,16 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                   notifications.map((n) => (
                     <div
                       key={n.id}
-                      onClick={() => {
-                        markNotificationRead(n.id);
-                        setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
-                      }}
-                      className={`p-2.5 rounded-[5px] border transition-all cursor-pointer ${
+                      onClick={() => handleNotificationClick(n)}
+                      className={`group p-2.5 rounded-[6px] border transition-all cursor-pointer relative hover:shadow-xs ${
                         !n.read 
-                          ? 'bg-red-50/40 border-red-150 hover:bg-red-50/70' 
-                          : 'bg-slate-50/60 border-slate-100 hover:bg-slate-100/60'
+                          ? 'bg-red-50/50 border-red-200/90 hover:bg-red-50/90 hover:border-red-300' 
+                          : 'bg-slate-50/60 border-slate-100 hover:bg-slate-100/80 hover:border-slate-200'
                       }`}
+                      title="Click to view details"
                     >
                       <div className="flex items-start gap-2.5">
-                        <div className={`w-7 h-7 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 ${
+                        <div className={`w-7 h-7 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5 transition-transform group-hover:scale-105 ${
                           n.type === 'TASK_COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
                           n.type === 'PROJECT_ASSIGNED' ? 'bg-blue-100 text-blue-700' :
                           n.type === 'PAYMENT_REQUEST' ? 'bg-red-100 text-red-700' :
@@ -389,7 +530,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-1">
-                            <h5 className="font-bold text-[11px] text-slate-900 truncate">{n.title}</h5>
+                            <h5 className="font-bold text-[11px] text-slate-900 truncate group-hover:text-red-700 transition-colors flex items-center gap-1">
+                              <span>{n.title}</span>
+                              <ArrowRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-red-600 shrink-0" />
+                            </h5>
                             <span className="text-[9px] text-slate-400 shrink-0 font-medium">{n.timestamp}</span>
                           </div>
                           <p className="text-slate-600 text-[10px] mt-0.5 leading-snug">{n.message}</p>
@@ -410,26 +554,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                             </div>
                           )}
 
-                          {/* Payment Request details pill */}
-                          {n.type === 'PAYMENT_REQUEST' && (n.amount !== undefined || n.requestCode) && (
-                            <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                              {n.amount !== undefined && (
-                                <span className="px-1.5 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded text-[9px] font-bold">
-                                  ₹{n.amount.toLocaleString('en-IN')}
-                                </span>
-                              )}
-                              {n.requestCode && (
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200 rounded text-[9px] tracking-tight font-semibold">
-                                  {n.requestCode}
-                                </span>
-                              )}
-                              {n.projectName && (
-                                <span className="text-[9px] text-slate-400 font-medium truncate max-w-[150px]">
-                                  {n.projectName}
-                                </span>
-                              )}
-                            </div>
-                          )}
 
                           {/* Proof thumbnail if attached */}
                           {n.proofUrl && (
@@ -469,7 +593,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           }}
           title="User Profile"
           aria-label="User Profile"
-          className={`${avatarSizeClass} rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center font-bold text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 cursor-pointer shrink-0 overflow-hidden`}
+          className={`${avatarSizeClass} rounded-full ${avatarBgClass} flex items-center justify-center font-bold text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer shrink-0 overflow-hidden`}
         >
           {currentUser.avatar_url ? (
             <img 
@@ -485,7 +609,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         {showProfileDropdown && (
           <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-3.5 z-50 select-none animate-in fade-in">
             <div className="flex items-center gap-3 p-1">
-              <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center text-white shrink-0 shadow-sm overflow-hidden">
+              <div className="w-11 h-11 rounded-full bg-red-600 flex items-center justify-center text-white shrink-0 shadow-sm overflow-hidden">
                 {currentUser.avatar_url ? (
                   <img 
                     src={currentUser.avatar_url} 

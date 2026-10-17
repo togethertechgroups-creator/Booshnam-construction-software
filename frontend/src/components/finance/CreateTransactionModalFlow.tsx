@@ -8,6 +8,7 @@ import {
 import { Project } from '../../types';
 import { PartyRecord, BankAccountRecord, getFinanceParties } from '../../lib/financeSyncService';
 import { getCurrentUploadTimestamp } from '../../lib/timestampUtils';
+import { getUserAccessibleProjects } from '../../lib/projectAccessService';
 
 // All Transaction Option definitions matching Image 1
 export interface TransactionTypeOption {
@@ -205,24 +206,9 @@ export const CreateTransactionModalFlow: React.FC<CreateTransactionModalFlowProp
     }
   }, [isPartyDropdownOpen]);
 
-  // Fallback demo projects if none passed
+  // Available Projects: strictly filtered to active non-deleted projects accessible by the logged-in user
   const availableProjects = useMemo(() => {
-    if (projects && projects.length > 0) return projects;
-    try {
-      const stored = localStorage.getItem('booshnam_projects_v2');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-
-    // Default sample projects matching the user's reference screenshot
-    return [
-      { id: 'p-1', code: 'RA11-A-1802', name: 'RA11-A-1802-(2026-2027)-Arun kodam...', initials: 'Rk', client_name: 'Arun Kodambakkam' },
-      { id: 'p-2', code: 'RA11-BAGJ-2571', name: 'RA11-BAGJ-2571-(2026-2027)-Sathya ...', initials: 'RV', client_name: 'Sathya Builders' },
-      { id: 'p-3', code: 'RA11-BAGJ-2570', name: 'RA11-BAGJ-2570-(2026-2027)-Jd Subak...', initials: 'RS', client_name: 'Jd Subak Constructions' },
-      { id: 'p-4', code: 'LO14-BAGJ-2569', name: 'LO14-BAGJ-2569-(2026-2027)-Zahur Gu...', initials: 'LG', client_name: 'Zahur Guntur Project' }
-    ] as Project[];
+    return getUserAccessibleProjects(projects);
   }, [projects]);
 
   // Filter projects by search query

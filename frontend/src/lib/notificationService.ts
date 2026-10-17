@@ -2,7 +2,6 @@ import {
   sendProjectAssignedPush,
   sendTaskAssignedPush,
   sendMaterialRequestPushToAdmin,
-  sendPaymentRequestPushToAdmin,
 } from './pushNotificationService';
 
 export interface AppNotification {
@@ -26,12 +25,96 @@ const NOTIFICATIONS_STORAGE_KEY = 'siteops_notifications_v4';
 
 export const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
+export interface DynamicPaymentRequestNotificationParams {
+  requestCode: string;
+  amount: number;
+  partyName?: string;
+  projectName?: string;
+  senderName?: string;
+  requestType?: string;
+  dueDate?: string;
+}
+
+/**
+ * Generates a clean, dynamic, context-aware notification title and message for payment requests.
+ * Avoids redundant text (e.g. "for bala" when bala is requester), strips awkward threshold tags,
+ * and dynamically explains workflow routing.
+ */
+export function formatDynamicPaymentRequestNotification(params: DynamicPaymentRequestNotificationParams): {
+  title: string;
+  message: string;
+  recipient: 'ADMIN' | 'ADMIN_AND_SUPER_ADMIN';
+  amount: number;
+  requestCode: string;
+  projectName?: string;
+  sender?: string;
+} {
+  const { requestCode, amount, partyName, projectName, senderName, requestType } = params;
+  const isAboveThreshold = amount > 2000;
+  const recipient = isAboveThreshold ? 'ADMIN_AND_SUPER_ADMIN' : 'ADMIN';
+  const routedText = isAboveThreshold ? 'Admin & Super Admin' : 'Admin';
+  
+  const sender = (senderName || 'Staff Member').trim();
+  const party = (partyName || '').trim();
+  const project = (projectName || '').trim();
+  const reqType = (requestType || '').trim();
+  const formattedAmt = `₹${amount.toLocaleString('en-IN')}`;
+
+  // Dynamic Title: clean, professional, includes project name if available
+  const title = project 
+    ? `Payment Request: ${requestCode} • ${project}`
+    : `Payment Request: ${requestCode}`;
+
+  // Smart phrasing: if party is same as sender, avoid awkward "for <sender>"
+  let partyPhrase = '';
+  if (party && party.toLowerCase() !== sender.toLowerCase()) {
+    partyPhrase = ` for "${party}"`;
+  }
+  const typePhrase = reqType ? ` (${reqType})` : '';
+  const projectPhrase = project ? ` on project "${project}"` : '';
+
+  const message = `${sender} requested ${formattedAmt}${typePhrase}${partyPhrase}${projectPhrase}. Routed to ${routedText} for approval.`;
+
+  return {
+    title,
+    message,
+    recipient,
+    amount,
+    requestCode,
+    projectName: project,
+    sender
+  };
+}
+
 export function getAllRawNotifications(): AppNotification[] {
   if (typeof window === 'undefined') return INITIAL_NOTIFICATIONS;
   try {
     const raw = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed: AppNotification[] = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map(n => {
+          if (n.type === 'PAYMENT_REQUEST') {
+            let cleanTitle = (n.title || '').replace(/\s*\([><≤≥=].*?\)/g, '').trim();
+            if (n.projectName && !cleanTitle.includes(n.projectName)) {
+              cleanTitle = `${cleanTitle} • ${n.projectName}`;
+            }
+            let cleanMsg = (n.message || '')
+              .replace(/\s*Routed to Admin and Super Admin\./gi, ' Routed to Admin & Super Admin for approval.')
+              .replace(/\s*Routed to Admin\./gi, ' Routed to Admin for approval.');
+            if (n.sender && cleanMsg.includes(`for "${n.sender}"`)) {
+              cleanMsg = cleanMsg.replace(`for "${n.sender}" on `, 'on ').replace(`for "${n.sender}" in `, 'in ');
+            }
+            return {
+              ...n,
+              title: cleanTitle || n.title,
+              message: cleanMsg
+            };
+          }
+          return n;
+        });
+      }
+      return parsed;
     }
     // Clean any legacy storage keys so old dummy notifications are purged
     localStorage.removeItem('siteops_notifications_v3');
@@ -55,8 +138,11 @@ export function isNotificationForUser(
   const cleanRoleName = (roleName || '').toLowerCase().trim();
   const rec = (n.recipient || '').toLowerCase().trim();
 
-  const isAdmin = !roleCode || cleanRole === 'super_admin' || cleanRole === 'admin' || cleanRole === 'owner_director' ||
-    cleanRoleName.includes('admin') || cleanRoleName.includes('owner') || cleanName === 'admin' || cleanName === 'superadmin' || cleanName === 'priya' || cleanName === 'rajesh' || cleanName === 'super administrator';
+  const isSuperAdmin = cleanRole === 'super_admin' || cleanRoleName === 'super admin' || cleanName === 'superadmin' || cleanName === 'super administrator';
+  const isRegularAdmin = !isSuperAdmin && (cleanRole === 'admin' || cleanRoleName.includes('admin') || cleanName === 'admin');
+  const isOwnerDirector = cleanRole === 'owner_director' || cleanRoleName.includes('owner') || cleanRoleName.includes('director') || cleanName === 'priya' || cleanName === 'rajesh';
+
+  const isAdmin = !roleCode || isSuperAdmin || isRegularAdmin || isOwnerDirector;
 
   // 0. Today's Tasks & Pending Tasks Reminder:
   // Must NEVER appear on Super Admin dashboard or notifications! Only for staff members and project assignees.
@@ -91,12 +177,52 @@ export function isNotificationForUser(
     return false;
   }
 
-  // 2. Payment Requests & Material Requests:
-  // Primary operational notifications for Admin / Super Admin, Accounts, and Procurement
-  if (n.type === 'PAYMENT_REQUEST' || n.type === 'MATERIAL_REQUEST') {
+  // 2. Payment Requests:
+  // Amount-based routing:
+  // - If amount > ₹2,000: notification sent to both Admin and Super Admin.
+  // - If amount <= ₹2,000: notification sent ONLY to Admin. Super Admin MUST NOT receive any notification.
+  if (n.type === 'PAYMENT_REQUEST') {
+    // If targeted explicitly to ADMIN only:
+    if (rec === 'admin') {
+      if (isSuperAdmin && !isRegularAdmin) return false;
+      if (isRegularAdmin || (!roleCode && !isSuperAdmin)) return true;
+    }
+
+    // If targeted to both Admin & Super Admin:
+    if (rec === 'admin_and_super_admin' || rec === 'super_admin' || rec === 'superadmin') {
+      if (isSuperAdmin || isRegularAdmin || isOwnerDirector || !roleCode) return true;
+    }
+
+    // Amount-based rule evaluation:
+    if (typeof n.amount === 'number') {
+      if (n.amount <= 2000) {
+        // ₹2,000 or below: strictly Admin only! No notification sent to Super Admin.
+        if (isSuperAdmin && !isRegularAdmin) return false;
+        if (isRegularAdmin || (!roleCode && !isSuperAdmin)) return true;
+        if (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance')) return true;
+        if (cleanName && (rec === cleanName || n.sender?.toLowerCase().trim() === cleanName)) return true;
+        return false;
+      } else {
+        // Above ₹2,000: sent to both Admin and Super Admin
+        if (isSuperAdmin || isRegularAdmin || isOwnerDirector || !roleCode) return true;
+        if (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance')) return true;
+        if (cleanName && (rec === cleanName || n.sender?.toLowerCase().trim() === cleanName)) return true;
+        return false;
+      }
+    }
+
+    // Fallback if amount is not specified on notification
+    if (isSuperAdmin && !isRegularAdmin) return false;
     if (isAdmin) return true;
-    if (n.type === 'PAYMENT_REQUEST' && (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance'))) return true;
-    if (n.type === 'MATERIAL_REQUEST' && (cleanRole.includes('procure') || cleanRoleName.includes('procure') || cleanRoleName.includes('purchase'))) return true;
+    if (cleanRole.includes('account') || cleanRoleName.includes('account') || cleanRoleName.includes('finance')) return true;
+    if (cleanName && rec === cleanName) return true;
+    return false;
+  }
+
+  // Material Requests
+  if (n.type === 'MATERIAL_REQUEST') {
+    if (isAdmin) return true;
+    if (cleanRole.includes('procure') || cleanRoleName.includes('procure') || cleanRoleName.includes('purchase')) return true;
     if (cleanName && rec === cleanName) return true;
     return false;
   }
@@ -500,8 +626,26 @@ export function addNotification(
   notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'> & { timestamp?: string; silentToast?: boolean }
 ): AppNotification {
   const current = getAllRawNotifications();
+
+  let formattedTitle = notif.title;
+  let formattedMessage = notif.message;
+  if (notif.type === 'PAYMENT_REQUEST') {
+    formattedTitle = (notif.title || '').replace(/\s*\([><≤≥=].*?\)/g, '').trim();
+    if (notif.projectName && !formattedTitle.includes(notif.projectName)) {
+      formattedTitle = `${formattedTitle} • ${notif.projectName}`;
+    }
+    formattedMessage = (notif.message || '')
+      .replace(/\s*Routed to Admin and Super Admin\./gi, ' Routed to Admin & Super Admin for approval.')
+      .replace(/\s*Routed to Admin\./gi, ' Routed to Admin for approval.');
+    if (notif.sender && formattedMessage.includes(`for "${notif.sender}"`)) {
+      formattedMessage = formattedMessage.replace(`for "${notif.sender}" on `, 'on ').replace(`for "${notif.sender}" in `, 'in ');
+    }
+  }
+
   const newNotif: AppNotification = {
     ...notif,
+    title: formattedTitle,
+    message: formattedMessage,
     id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     timestamp: notif.timestamp || 'Just now',
     read: false,
@@ -571,13 +715,8 @@ export function addNotification(
         newNotif.requestCode || 'MR'
       );
     } else if (newNotif.type === 'PAYMENT_REQUEST') {
-      sendPaymentRequestPushToAdmin(
-        newNotif.sender || 'Site Engineer',
-        newNotif.amount || 0,
-        newNotif.taskName || 'Vendor',
-        newNotif.projectName || 'Project',
-        newNotif.requestCode || 'PR'
-      );
+      // Kept strictly within in-app bell notification dropdown (Image 1).
+      // External push / secondary black notification card (Image 2) is disabled per user request.
     }
   } catch (err) {
     console.error('Failed to trigger mobile push notification', err);

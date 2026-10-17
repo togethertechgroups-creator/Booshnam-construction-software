@@ -52,6 +52,7 @@ import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/ful
 import { syncAllProjectsFinancials } from '../lib/projectFinanceUtils';
 import StatsAndButton from '../components/StatsAndButton';
 import { ensurePartyExists, getFinanceParties } from '../lib/financeSyncService';
+import { markProjectDeleted, isProjectDeleted } from '../lib/projectAccessService';
 
 interface ProjectsViewProps {
   projects?: Project[];
@@ -505,6 +506,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const allProjects = useMemo(() => {
     const list = (propProjects && propProjects.length > 0) ? propProjects : localProjects;
     return list.filter((p: any) => 
+      !isProjectDeleted(p) &&
       !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
     );
   }, [propProjects, localProjects]);
@@ -523,6 +525,30 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         return;
       }
     }
+  }, [allProjects, onSelectProject]);
+
+  // Handle direct project select event (e.g. from Notification dropdown click)
+  useEffect(() => {
+    const handleSelectProject = (e: any) => {
+      const { projectId, projectName, workspaceTab: targetTab } = e?.detail || {};
+      const normalize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normTarget = projectName ? normalize(projectName) : '';
+
+      const found = allProjects.find(p => 
+        (projectId && p.id === projectId) || 
+        (normTarget && (normalize(p.name || '').includes(normTarget) || normTarget.includes(normalize(p.name || ''))))
+      );
+      if (found) {
+        setActiveProject(found);
+        setViewMode('details');
+        if (targetTab) {
+          setWorkspaceTab(targetTab);
+        }
+        onSelectProject?.(found);
+      }
+    };
+    window.addEventListener('booshnam_select_project', handleSelectProject);
+    return () => window.removeEventListener('booshnam_select_project', handleSelectProject);
   }, [allProjects, onSelectProject]);
 
   // Synchronize all project financial totals on mount & listen for updates
@@ -721,7 +747,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setIsDeletingProject(true);
     try {
       const targetId = targetProj.id;
-      const updated = (allProjects || []).filter(p => p && p.id !== targetId);
+      markProjectDeleted(targetProj.id, targetProj.code, targetProj.name);
+      const updated = (allProjects || []).filter(p => p && p.id !== targetId && !isProjectDeleted(p));
 
       // Clean up project-specific local storage
       const cleanupKeys = [

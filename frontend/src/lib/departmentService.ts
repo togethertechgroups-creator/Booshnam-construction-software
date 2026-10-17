@@ -448,14 +448,32 @@ export const INITIAL_DEPARTMENT_PROJECTS: Project[] = [];
 export const getOrInitializeProjects = (): Project[] => {
   try {
     const saved = localStorage.getItem('booshnam_projects_v2');
+    let deletedSet = new Set<string>();
+    try {
+      const rawDel = localStorage.getItem('booshnam_deleted_project_ids');
+      if (rawDel) {
+        const parsedDel = JSON.parse(rawDel);
+        if (Array.isArray(parsedDel)) {
+          deletedSet = new Set(parsedDel.map(s => String(s).toLowerCase().trim()));
+        }
+      }
+    } catch {}
     let projs: Project[] = [];
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
         projs = parsed
-          .filter((p: any) => 
-            !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t))
-          )
+          .filter((p: any) => {
+            if (!p) return false;
+            if (p.is_deleted === true || p.deleted === true || p.status === 'DELETED') return false;
+            const pId = (p.id || '').toLowerCase().trim();
+            const pCode = (p.code || '').toLowerCase().trim();
+            const pName = (p.name || '').toLowerCase().trim();
+            if (pId && deletedSet.has(pId)) return false;
+            if (pCode && deletedSet.has(pCode)) return false;
+            if (pName && deletedSet.has(pName)) return false;
+            return !['Prestige Boulevard', 'Royal Palm', 'Green Valley', 'Sunrise Industrial', 'Urban Metro', 'Skyline Contemporary', 'Heritage Courtyard', 'Highway Overpass', 'Government Medical College', 'High-Rise Commercial', 'Coastal Highway'].some(t => (p.name || p.title || p.client_name || '').includes(t));
+          })
           .map((p: any) => {
             if (p && p.name && p.client_name) {
               const escapedClient = p.client_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

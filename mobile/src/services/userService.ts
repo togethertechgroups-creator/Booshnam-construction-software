@@ -130,8 +130,8 @@ export const SYSTEM_ROLES: RoleInfo[] = [
     code: 'SITE_ENGINEER',
     name: 'Site Engineer',
     defaultDepartment: 'Civil Engineering',
-    description: 'On-site execution, task updates, daily DPR, attendance & material requests',
-    defaultModules: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'mom', 'files', 'dpr'],
+    description: 'Site progress monitoring, subcontractor bills, site expense entries & material stock control',
+    defaultModules: ['dashboard', 'projects', 'tasks', 'attendance', 'materials', 'equipment', 'finance', 'mom', 'files', 'dpr'],
     defaultPermissions: { can_view: true, can_create: true, can_edit: true, can_delete: false, can_approve: false, approval_limit: 0 },
   },
   {

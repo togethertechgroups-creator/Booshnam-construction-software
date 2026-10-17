@@ -26,6 +26,7 @@ export interface RoleAccessPermission {
   roleCode: string;
   roleName: string;
   description: string;
+  responsibilities?: string[];
   allowedPages: string[];
   department?: string;
   isSystemRole?: boolean;
@@ -64,8 +65,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
   SITE_ENGINEER: {
     roleCode: 'SITE_ENGINEER',
     roleName: 'Site Engineer',
-    description: 'Assigned project execution, daily DPR updates, material tracking & payment requests',
-    allowedPages: ['projects', 'schedule', 'site_ops', 'finance', 'payments', 'documents', 'approvals', 'setting'],
+    description: 'Site progress monitoring, subcontractor bills, site expense entries & material stock control',
+    responsibilities: [
+      'Site Progress Monitoring: Monitor and update all site activities regularly and ensure the work is completed as per the planned schedule.',
+      'Subcontractor Bills: Prepare and submit subcontractor bills based on the actual work progress completed at the site, with proper measurements and supporting details.',
+      'Site Expense Entries: Record all site expenses incurred by the Site Engineers and update the expense entries with supporting bills and payment details.',
+      'Material Stock Control: Maintain site-wise material stock records and regularly update material receipts, material consumption, and closing stock details.'
+    ],
+    allowedPages: ['projects', 'schedule', 'site_ops', 'procurement', 'finance', 'payments', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   ARCHITECT: {
@@ -122,9 +129,14 @@ export function getStoredRolePermissions(): Record<string, RoleAccessPermission>
       if (code !== 'CLIENT' && !pages.includes('schedule')) {
         pages.push('schedule');
       }
+      if (code === 'SITE_ENGINEER' && !pages.includes('procurement')) {
+        pages.push('procurement');
+      }
       sanitized[code] = {
+        ...DEFAULT_ROLE_PERMISSIONS[code],
         ...perm,
-        allowedPages: pages
+        allowedPages: pages,
+        responsibilities: DEFAULT_ROLE_PERMISSIONS[code]?.responsibilities || perm.responsibilities,
       };
     }
     return sanitized;

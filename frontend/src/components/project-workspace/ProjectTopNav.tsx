@@ -120,8 +120,8 @@ export function getAllowedTabsForRole(roleCode?: string, roleName?: string, proj
     // Project Manager
     tabs = ['dashboard', 'boq', 'party', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
   } else if (code === 'SITE_ENGINEER' || name.includes('site engineer') || name.includes('engineer')) {
-    // Site Engineer
-    tabs = ['dashboard', 'design', 'boq', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];
+    // Site Engineer: 1. Site Progress (task, todo), 2. Subcontractor Bills (subcon), 3. Site Expense Entries (transaction), 4. Material Stock Control (material)
+    tabs = ['dashboard', 'design', 'boq', 'transaction', 'todo', 'task', 'attendance', 'material', 'subcon', 'equipment', 'files', 'mom'];
   } else if (code === 'SUPERVISOR' || code === 'SITE_SUPERVISOR' || name.includes('supervisor')) {
     // Site Supervisor
     tabs = ['dashboard', 'todo', 'task', 'attendance', 'material', 'equipment', 'files', 'mom'];

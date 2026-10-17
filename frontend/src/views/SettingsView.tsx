@@ -161,7 +161,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
     if (roleCode === 'ACCOUNTS') return ['finance', 'payments', 'procurement', 'approvals', 'setting'];
     if (roleCode === 'ARCHITECT') return ['projects', 'departments', 'approvals', 'documents', 'setting'];
-    if (roleCode === 'SITE_ENGINEER') return ['projects', 'site_ops', 'payments', 'documents', 'approvals', 'setting'];
+    if (roleCode === 'SITE_ENGINEER') return ['projects', 'schedule', 'site_ops', 'procurement', 'finance', 'payments', 'documents', 'approvals', 'setting'];
     if (roleCode === 'SUPERVISOR') return ['projects', 'workforce', 'site_ops', 'documents', 'approvals', 'setting'];
     return ['projects', 'site_ops', 'documents', 'setting'];
   };
@@ -2327,6 +2327,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                                   {role.description}
                                 </p>
+                                {role.responsibilities && role.responsibilities.length > 0 && (
+                                  <div className="mt-2.5 pt-2 border-t border-slate-100 space-y-1.5">
+                                    <div className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                      <ClipboardCheck className="w-3.5 h-3.5 text-red-600" />
+                                      <span>Core Roles & Responsibilities (Construction):</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                      {role.responsibilities.map((resp, idx) => {
+                                        const [title, ...rest] = resp.split(':');
+                                        return (
+                                          <div key={idx} className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200/80 rounded-lg p-2 leading-snug">
+                                            <div className="font-bold text-slate-800 text-[11px] flex items-center gap-1 text-red-700">
+                                              <span>{idx + 1}.</span>
+                                              <span>{title}</span>
+                                            </div>
+                                            {rest.length > 0 && (
+                                              <p className="text-[10.5px] text-slate-500 mt-0.5 pl-3.5">
+                                                {rest.join(':').trim()}
+                                              </p>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -2967,6 +2993,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Roles & Responsibilities Overview (if defined for role) */}
+                {rolePermissions[modalRoleCode]?.responsibilities && rolePermissions[modalRoleCode].responsibilities!.length > 0 && (
+                  <div className="p-3.5 bg-red-50/50 border border-red-200/80 rounded-xl space-y-2">
+                    <div className="text-xs font-bold text-red-900 flex items-center gap-1.5">
+                      <ClipboardCheck className="w-4 h-4 text-red-600" />
+                      <span>{rolePermissions[modalRoleCode]?.roleName} Roles & Responsibilities</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {rolePermissions[modalRoleCode].responsibilities!.map((resp, idx) => {
+                        const [title, ...rest] = resp.split(':');
+                        return (
+                          <div key={idx} className="bg-white p-2.5 rounded-lg border border-red-100 text-[11px] leading-snug">
+                            <span className="font-bold text-red-700">{idx + 1}. {title}:</span>{' '}
+                            <span className="text-slate-600">{rest.join(':').trim()}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Section 2: Page & Module Permissions with Checkboxes */}
                 <div className="space-y-3">

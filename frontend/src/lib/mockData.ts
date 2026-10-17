@@ -11,7 +11,7 @@ export const MOCK_ROLES: Role[] = [
   { id: '2', name: 'Admin', code: 'ADMIN', description: 'Full operational access, project & staff management' },
   { id: '3', name: 'Project Manager', code: 'PROJECT_MANAGER', description: 'Overall project leadership, team delegation, budget & schedule execution' },
   { id: '4', name: 'Supervisor', code: 'SUPERVISOR', description: 'Assigned project supervision, daily progress, & site operations' },
-  { id: '5', name: 'Site Engineer', code: 'SITE_ENGINEER', description: 'Assigned project execution, daily DPR updates, & payment requests' },
+  { id: '5', name: 'Site Engineer', code: 'SITE_ENGINEER', description: 'Site progress monitoring, subcontractor bills, site expense entries & material stock control' },
   { id: '6', name: 'Architect', code: 'ARCHITECT', description: 'Drawings, 3D models, version management, & client revisions' },
   { id: '7', name: 'Client', code: 'CLIENT', description: 'Dedicated Client Portal: view project, approve designs, & payment milestones' },
   { id: '8', name: 'Accounts', code: 'ACCOUNTS', description: 'Financial ledger, payment processing, invoices, BOQ, & payroll' },

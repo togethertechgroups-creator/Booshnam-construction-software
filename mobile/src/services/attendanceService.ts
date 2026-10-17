@@ -1,4 +1,5 @@
 // Mobile Attendance Service with Live Photo & Telemetry
+import { BACKEND_URL, BACKEND_LAN_URL } from '../config';
 
 export interface MobileAttendancePunch {
   id: string;
@@ -168,24 +169,30 @@ export function saveMobileAttendancePunch(params: {
     setUserProfilePhoto(params.staffId, params.photo);
   }
 
-  // Attempt backend API sync if backend is accessible
-  try {
-    fetch('http://10.0.2.2:8000/api/v1/workforce/attendance/clock_in/', {
+  // Attempt backend API sync if backend is accessible (ADB reverse or LAN)
+  const attendancePayload = JSON.stringify({
+    worker_id: params.staffId,
+    latitude: 12.9716,
+    longitude: 80.2437,
+    punch_type: params.punchType,
+    photo_url: params.photo,
+  });
+  const headers = { 'Content-Type': 'application/json' };
+
+  fetch(`${BACKEND_URL}/workforce/attendance/clock_in/`, {
+    method: 'POST',
+    headers,
+    body: attendancePayload,
+  }).catch(() => {
+    // If loopback fails, try LAN Wi-Fi direct fallback
+    fetch(`${BACKEND_LAN_URL}/workforce/attendance/clock_in/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        worker_id: params.staffId,
-        latitude: 12.9716,
-        longitude: 80.2437,
-        punch_type: params.punchType,
-        photo_url: params.photo,
-      })
+      headers,
+      body: attendancePayload,
     }).catch(() => {
       // Backend offline or running in mock mode - local store remains primary
     });
-  } catch (e) {
-    // Ignore offline network errors
-  }
+  });
 
   // Sync to web portal localStorage if running in browser / simulator context
   try {

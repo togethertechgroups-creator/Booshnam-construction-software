@@ -7,8 +7,7 @@ import {
   subscribeToTopic,
 } from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform, Alert } from 'react-native';
-
-const BACKEND_URL = 'http://192.168.1.6:8000/api/v1';
+import { BACKEND_URL, BACKEND_LAN_URL } from '../config';
 
 /**
  * Request notification permissions (required for Android 13+ and iOS)
@@ -47,21 +46,33 @@ export async function registerDeviceToken(userPhone?: string, roleCode?: string)
       await subscribeToTopic(messaging, 'role_admin');
     }
 
-    // Register with backend
+    // Register with backend (ADB reverse loopback or direct Wi-Fi LAN)
+    const payload = JSON.stringify({
+      fcm_token: fcmToken,
+      phone: userPhone || '',
+      role_code: roleCode || 'SITE_ENGINEER',
+      platform: Platform.OS,
+    });
+    const headers = { 'Content-Type': 'application/json' };
+
     try {
       await fetch(`${BACKEND_URL}/notifications/register-device/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fcm_token: fcmToken,
-          phone: userPhone || '',
-          role_code: roleCode || 'SITE_ENGINEER',
-          platform: Platform.OS,
-        }),
+        headers,
+        body: payload,
       });
-      console.log('[PushNotification] Device registered successfully with backend!');
+      console.log('[PushNotification] Device registered successfully with backend (primary URL)!');
     } catch (apiErr) {
-      console.log('[PushNotification] Backend register attempt finished');
+      try {
+        await fetch(`${BACKEND_LAN_URL}/notifications/register-device/`, {
+          method: 'POST',
+          headers,
+          body: payload,
+        });
+        console.log('[PushNotification] Device registered successfully with backend (LAN fallback)!');
+      } catch (lanErr) {
+        console.log('[PushNotification] Backend register attempt finished (offline/mock mode)');
+      }
     }
 
     return fcmToken;

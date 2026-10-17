@@ -8,6 +8,17 @@
   "theme_color": "#ED1C24",
   "icons": [
     {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/booshnam-app-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/favicon.svg",
       "sizes": "192x192 512x512",
       "type": "image/svg+xml"

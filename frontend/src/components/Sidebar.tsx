@@ -411,9 +411,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="pt-3 pb-2 px-2 bg-white flex flex-col items-center gap-2 shrink-0">
             <img
-              src="/booshnam-app-icon.png"
+              src="/booshnam-sidebar-icon.png"
               alt="Booshnam Associates"
-              className="w-10 h-10 object-contain drop-shadow-2xs select-none"
+              className="w-10 h-10 object-contain select-none"
             />
             {onToggle && (
               <button

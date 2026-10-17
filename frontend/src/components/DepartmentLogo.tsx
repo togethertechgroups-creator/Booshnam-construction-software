@@ -18,7 +18,7 @@ export const DepartmentLogo: React.FC<DepartmentLogoProps> = ({
 
   return (
     <img 
-      src="/booshnam-app-icon.png" 
+      src="/booshnam-sidebar-icon.png" 
       alt="Booshnam Associates" 
       className={`${sizeClasses[size]} object-contain shrink-0 ${className}`}
       title="Booshnam Associates"

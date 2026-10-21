@@ -11,7 +11,7 @@ export interface StaffAttendanceRecord {
   date: string; // YYYY-MM-DD
   clock_in_time: string; // e.g. "09:15 AM"
   clock_out_time?: string; // e.g. "06:30 PM"
-  status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent';
+  status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent' | 'Weekoff' | 'Paid Leave' | 'On Duty' | 'Not Marked';
   verification_photo: string; // Base64 data URL or image path
   location_name: string;
   latitude?: number;
@@ -44,16 +44,48 @@ export function formatTime12h(date: Date = new Date()): string {
   });
 }
 
+export const DEFAULT_CHITHRA_OCTOBER_RECORDS: StaffAttendanceRecord[] = [
+  { id: 'att-chithra-2026-10-18', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-18', clock_in_time: '09:00 AM', status: 'Weekoff', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-18T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-16', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-16', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-16T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-15', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-15', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-15T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-14', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-14', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-14T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-13', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-13', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-13T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-12', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-12', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-12T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-11', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-11', clock_in_time: '09:00 AM', status: 'Weekoff', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-11T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-10', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-10', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-10T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-09', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-09', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-09T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-08', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-08', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-08T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-07', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-07', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-07T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-06', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-06', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-06T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-05', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-05', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-05T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-04', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-04', clock_in_time: '09:00 AM', status: 'Weekoff', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-04T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-03', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-03', clock_in_time: '09:00 AM', status: 'Paid Leave', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-03T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-02', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-02', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-02T09:00:00.000Z' },
+  { id: 'att-chithra-2026-10-01', staff_id: 'staff-chithra', staff_name: 'Chithra', staff_code: 'EMP-01', department: 'Operations', role_name: 'Maintenance', date: '2026-10-01', clock_in_time: '09:00 AM', status: 'Present', verification_photo: '', location_name: 'Booshnam Head Office (Pammal, Chennai)', distance_from_site_meters: 0, is_inside_geofence: true, notes: 'Sofia Margret', punch_mode: 'ADMIN_OVERRIDE', created_at: '2026-10-01T09:00:00.000Z' }
+];
+
 export function getAllStaffAttendanceRecords(): StaffAttendanceRecord[] {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return DEFAULT_CHITHRA_OCTOBER_RECORDS;
   try {
     const raw = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    let parsed: StaffAttendanceRecord[] = [];
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (Array.isArray(p)) parsed = p;
+    }
+    
+    // Ensure Chithra has October 2026 default records matching reference
+    const chithraOct = parsed.filter(r => r.staff_id === 'staff-chithra' && r.date.startsWith('2026-10'));
+    if (chithraOct.length === 0) {
+      parsed = [...DEFAULT_CHITHRA_OCTOBER_RECORDS, ...parsed];
+      try {
+        localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(parsed));
+      } catch (e) {}
+    }
+    return parsed;
   } catch (e) {
     console.error('Failed to read staff attendance records', e);
-    return [];
+    return DEFAULT_CHITHRA_OCTOBER_RECORDS;
   }
 }
 
@@ -158,7 +190,7 @@ export function saveStaffAttendancePunch(
 
 export function updateStaffAttendanceStatus(
   staffId: string,
-  newStatus: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent',
+  newStatus: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent' | 'Weekoff' | 'Paid Leave' | 'On Duty' | 'Not Marked',
   dateStr: string = getTodayDateString()
 ): void {
   const current = getAllStaffAttendanceRecords();

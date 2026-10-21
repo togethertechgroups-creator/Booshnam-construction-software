@@ -6,7 +6,8 @@ import {
   Settings, Shield, ArrowRight, Calendar, 
   Phone, Mail, Briefcase, Building2, AlertCircle,
   Download, X, Image as ImageIcon, ChevronDown, ChevronLeft, ChevronRight,
-  ShieldCheck, Smartphone, CheckCircle, Clock, MapPin, Plus, FileSpreadsheet
+  ShieldCheck, Smartphone, CheckCircle, Clock, MapPin, Plus, FileSpreadsheet,
+  Gift, Bell, User
 } from 'lucide-react';
 import { 
   StaffMember, 
@@ -35,86 +36,41 @@ import {
 
 interface StaffOverviewViewProps {
   staff: StaffMember;
-  initialTab?: 'people' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access' | 'leave_dashboard';
+  initialTab?: 'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access' | 'leave_dashboard';
   onBack: () => void;
+  onNavigateTab?: (tab: 'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays') => void;
   onUpdateStaff: (updated: StaffMember) => void;
   onShowToast: (msg: string) => void;
+  allStaff?: StaffMember[];
+  onSelectStaff?: (staff: StaffMember) => void;
 }
 
-// Exact Blue Document Empty State Illustration from User's Reference Image
-const EmptyAttendanceDocumentIllustration: React.FC<{
-  onToggleSheet: () => void;
-  onOpenMobilePunch: () => void;
-}> = ({ onToggleSheet, onOpenMobilePunch }) => (
-  <div className="flex flex-col items-center justify-center py-20 px-4 select-none">
-    <div className="relative group hover:scale-105 transition-transform duration-300">
-      <svg 
-        width="110" 
-        height="136" 
-        viewBox="0 0 110 136" 
-        fill="none" 
-        xmlns="http://www.w3.org/2000/svg"
-        className="filter drop-shadow-md"
-      >
-        {/* Document sheet body with rounded bottom and folded top corner */}
-        <path 
-          d="M16 12 C16 7.6 19.6 4 24 4 H74 L98 28 V124 C98 128.4 94.4 132 90 132 H24 C19.6 132 16 128.4 16 124 Z" 
-          fill="#bdf2f8" 
-        />
-        {/* Folded Top-Right Corner */}
-        <path 
-          d="M74 4 V24 C74 26.2 75.8 28 78 28 H98 Z" 
-          fill="#83e0ee" 
-        />
-        {/* Document Horizontal Lines */}
-        <rect x="28" y="44" width="54" height="5" rx="2.5" fill="#38bdf8" />
-        <rect x="28" y="58" width="54" height="5" rx="2.5" fill="#38bdf8" />
-        <rect x="28" y="72" width="54" height="5" rx="2.5" fill="#38bdf8" />
-        <rect x="28" y="86" width="40" height="5" rx="2.5" fill="#38bdf8" />
-        {/* Bottom subtle shadow/curl */}
-        <path 
-          d="M20 130 C45 130 65 135 94 130 C94 134 90 136 86 136 H24 C19 136 20 132 20 130 Z" 
-          fill="#7dd3fc" 
-          opacity="0.45" 
-        />
-      </svg>
-    </div>
-
-    <div className="mt-6 text-center space-y-2 max-w-sm">
-      <p className="text-xs font-semibold text-slate-400">
-        No attendance records found for this month yet.
-      </p>
-      <div className="flex items-center justify-center gap-2.5 pt-1">
-        <button
-          type="button"
-          onClick={onToggleSheet}
-          className="px-3.5 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer"
-        >
-          View 31-Day Calendar Sheet
-        </button>
-        <button
-          type="button"
-          onClick={onOpenMobilePunch}
-          className="px-3.5 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
-        >
-          <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Punch via Mobile</span>
-        </button>
-      </div>
-    </div>
-  </div>
-);
+import { Loader } from './kokonutui/loader';
 
 export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
   staff,
-  initialTab = 'people',
+  initialTab = 'attendance',
   onBack,
+  onNavigateTab,
   onUpdateStaff,
-  onShowToast
+  onShowToast,
+  allStaff = [],
+  onSelectStaff
 }) => {
-  // Normalize initial tab: 'leave_dashboard' maps to 'people'
-  const normalizedInitial = (initialTab === 'leave_dashboard' || !initialTab) ? 'people' : initialTab;
-  const [activeTab, setActiveTab] = useState<'people' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access'>(normalizedInitial);
+  // Normalize initial tab: default to 'attendance'
+  const normalizedInitial = (initialTab === 'leave_dashboard' || !initialTab || initialTab === 'people') ? 'attendance' : initialTab;
+  const [activeTab, setActiveTab] = useState<'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access'>(normalizedInitial);
+
+  // 2-second initial loading state for Kokonut UI loader animation
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+
+  useEffect(() => {
+    setIsProfileLoading(true);
+    const timer = setTimeout(() => {
+      setIsProfileLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [staff.id]);
 
   // Selected Month (Default: '2026-10' as in user reference image)
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -211,32 +167,90 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
     const absent = staffRecordsForMonth.filter(r => r.status === 'Absent').length;
 
     // Paid Leaves (PL) and Week Offs (WO)
-    // Sundays in this month count as WO
-    let weekOffCount = 0;
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dayDate = new Date(selectedYear, selectedMonthIndex, d);
-      if (dayDate.getDay() === 0) { // Sunday
-        weekOffCount++;
-      }
-    }
+    const pl = staffRecordsForMonth.filter(r => r.status === 'Paid Leave').length;
+    const wo = staffRecordsForMonth.filter(r => r.status === 'Weekoff').length;
 
-    const paidLeavesCount = 0; // Standard month default
+    const salary = Number(staff.salary || 10000);
+    const dailyRate = salary / daysInMonth;
 
-    // Pro-rata Monthly Salary Amount
-    const salary = Number(staff.salary || 33000);
-    const amount = (effectivePresent > 0 || paidLeavesCount > 0)
-      ? Math.round(((effectivePresent + paidLeavesCount) / 30) * salary)
-      : 0;
+    // Total Paid Days: Present + PL + WO
+    const totalPaidDays = effectivePresent + pl + wo;
+    const amount = totalPaidDays > 0 ? (totalPaidDays * dailyRate) : 0;
 
     return {
       records: staffRecordsForMonth,
       present: effectivePresent,
       absent,
-      pl: paidLeavesCount,
-      wo: weekOffCount,
-      amount
+      pl,
+      wo,
+      amount,
+      dailyRate
     };
   }, [attendanceRecords, staff.id, staff.salary, currentMonthCode, daysInMonth, selectedYear, selectedMonthIndex]);
+
+  const [openRowStatusDropdown, setOpenRowStatusDropdown] = useState<string | null>(null);
+  const [selectedDayRecordForDetail, setSelectedDayRecordForDetail] = useState<any | null>(null);
+
+  const displayRows = useMemo(() => {
+    const records = attendanceRecords.filter(
+      r => r.staff_id === staff.id && r.date.startsWith(currentMonthCode)
+    );
+
+    if (records.length > 0) {
+      return [...records].sort((a, b) => b.date.localeCompare(a.date)).map(rec => {
+        const [y, m, d] = rec.date.split('-').map(Number);
+        const dayDate = new Date(y, m - 1, d);
+        const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
+        const monthShort = dayDate.toLocaleDateString('en-US', { month: 'short' });
+        return {
+          dateStr: rec.date,
+          dayFormatted: `${d} ${monthShort}, ${dayName}`,
+          entryBy: 'Sofia Margret',
+          dailyAmount: monthStats.dailyRate,
+          shift: '1 Shift',
+          status: rec.status,
+          record: rec
+        };
+      });
+    }
+
+    const rows = [];
+    const maxDay = (selectedYear === 2026 && selectedMonthIndex === 9) ? 18 : daysInMonth;
+    for (let dayNum = maxDay; dayNum >= 1; dayNum--) {
+      const dateStr = `${currentMonthCode}-${String(dayNum).padStart(2, '0')}`;
+      const dayDate = new Date(selectedYear, selectedMonthIndex, dayNum);
+      const isSunday = dayDate.getDay() === 0;
+      const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const monthShort = dayDate.toLocaleDateString('en-US', { month: 'short' });
+      rows.push({
+        dateStr,
+        dayFormatted: `${dayNum} ${monthShort}, ${dayName}`,
+        entryBy: 'Sofia Margret',
+        dailyAmount: monthStats.dailyRate,
+        shift: '1 Shift',
+        status: isSunday ? 'Weekoff' : 'Present',
+        record: undefined
+      });
+    }
+    return rows;
+  }, [attendanceRecords, staff.id, currentMonthCode, daysInMonth, selectedYear, selectedMonthIndex, monthStats.dailyRate]);
+
+  const getStatusBadgeClasses = (status: string) => {
+    switch (status) {
+      case 'Present':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200/70';
+      case 'Weekoff':
+        return 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs';
+      case 'Absent':
+        return 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200/70';
+      case 'Paid Leave':
+        return 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200/70';
+      case 'Half-day':
+        return 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200/70';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
 
   // Fast Attendance Marking on any calendar day
   const handleMarkDayAttendance = (dayNum: number, status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent') => {
@@ -408,57 +422,130 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
   const pfDeduction = Math.round(basicSalary * 0.12);
   const netTakeHome = monthlySalary - pfDeduction;
 
+  if (isProfileLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-[75vh] bg-white animate-in fade-in duration-200">
+        <Loader
+          size="lg"
+          title={`Loading ${staff.name}'s Profile...`}
+          subtitle="Fetching attendance records, salary breakup and leaves"
+          className="text-red-600"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white min-h-screen">
       {/* ══════════════════════════════════════════════════════════════════
-          1. TOP NAVIGATION TABS (MATCHING USER REFERENCE IMAGE 1)
-          [People]   [Team leaves]   [My leaves]   [Holidays]
+          1. TOP APP BAR (MATCHING USER REFERENCE IMAGE)
+          Payroll      [Book Demo] [Integrate Tally/Zoho] [Refer & Earn] Leaderboard (🔔) (👤)
          ══════════════════════════════════════════════════════════════════ */}
-      <div className="border-b border-slate-200/80 px-6 sm:px-8 bg-white sticky top-0 z-20 flex items-center justify-between">
+      <div className="bg-white border-b border-slate-100 px-6 sm:px-8 py-3.5 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Payroll</h1>
+
+        <div className="flex items-center gap-5 sm:gap-6 text-xs">
+          <button
+            type="button"
+            onClick={() => onShowToast('Book Demo scheduled with product specialist')}
+            className="text-purple-700 hover:text-purple-900 font-medium flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-purple-600" />
+            <span>Book Demo</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onShowToast('Tally / Zoho integration sync active')}
+            className="text-purple-700 hover:text-purple-900 font-medium flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-purple-600" />
+            <span>Integrate Tally/Zoho</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onShowToast('Referral program link copied!')}
+            className="text-purple-700 hover:text-purple-900 font-medium flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <Gift className="w-3.5 h-3.5 text-purple-600" />
+            <span>Refer & Earn</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onShowToast('Staff Leaderboard opened')}
+            className="text-slate-700 hover:text-slate-900 font-medium transition cursor-pointer hidden sm:block"
+          >
+            Leaderboard
+          </button>
+          <div className="relative cursor-pointer" onClick={() => onShowToast('No unread payroll notifications')}>
+            <Bell className="w-4 h-4 text-slate-700 hover:text-slate-900 transition" />
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+          </div>
+          <div className="w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-xs shadow-2xs select-none">
+            <User className="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          2. NAVIGATION TABS (MATCHING USER REFERENCE IMAGE)
+          People   Attendance (active)   Team Leaves   My Leaves   Holidays
+         ══════════════════════════════════════════════════════════════════ */}
+      <div className="border-b border-slate-200/80 px-6 sm:px-8 bg-white flex items-center justify-between">
         <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto text-sm font-semibold">
           <button
             type="button"
-            onClick={() => setActiveTab('people')}
-            className={`py-3.5 px-1 transition-all cursor-pointer relative whitespace-nowrap ${
-              activeTab === 'people'
-                ? 'text-[#5825d1] font-bold border-b-2 border-[#5825d1]'
-                : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
-            }`}
+            onClick={() => {
+              if (onNavigateTab) onNavigateTab('people');
+              else onBack();
+            }}
+            className="py-3 px-1 transition-all cursor-pointer whitespace-nowrap text-slate-600 hover:text-slate-900 border-b-2 border-transparent font-medium"
           >
             People
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('team_leaves')}
-            className={`py-3.5 px-1 transition-all cursor-pointer relative whitespace-nowrap ${
-              activeTab === 'team_leaves'
-                ? 'text-[#5825d1] font-bold border-b-2 border-[#5825d1]'
-                : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
+            onClick={() => setActiveTab('attendance')}
+            className={`py-3 px-1 transition-all cursor-pointer whitespace-nowrap border-b-2 font-bold ${
+              activeTab === 'attendance'
+                ? 'text-[#5833ea] border-[#5833ea]'
+                : 'text-slate-600 hover:text-slate-900 border-transparent'
             }`}
           >
-            Team leaves
+            Attendance
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('team_leaves')}
+            className={`py-3 px-1 transition-all cursor-pointer whitespace-nowrap border-b-2 font-medium ${
+              activeTab === 'team_leaves'
+                ? 'text-[#5833ea] border-[#5833ea] font-bold'
+                : 'text-slate-600 hover:text-slate-900 border-transparent'
+            }`}
+          >
+            Team Leaves
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('my_leaves')}
-            className={`py-3.5 px-1 transition-all cursor-pointer relative whitespace-nowrap ${
+            className={`py-3 px-1 transition-all cursor-pointer whitespace-nowrap border-b-2 font-medium ${
               activeTab === 'my_leaves'
-                ? 'text-[#5825d1] font-bold border-b-2 border-[#5825d1]'
-                : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
+                ? 'text-[#5833ea] border-[#5833ea] font-bold'
+                : 'text-slate-600 hover:text-slate-900 border-transparent'
             }`}
           >
-            My leaves
+            My Leaves
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('holidays')}
-            className={`py-3.5 px-1 transition-all cursor-pointer relative whitespace-nowrap ${
+            className={`py-3 px-1 transition-all cursor-pointer whitespace-nowrap border-b-2 font-medium ${
               activeTab === 'holidays'
-                ? 'text-[#5825d1] font-bold border-b-2 border-[#5825d1]'
-                : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
+                ? 'text-[#5833ea] border-[#5833ea] font-bold'
+                : 'text-slate-600 hover:text-slate-900 border-transparent'
             }`}
           >
             Holidays
@@ -466,13 +553,13 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
         </div>
 
         {/* Administration quick tools (Profile & Permissions) */}
-        <div className="flex items-center gap-2 py-2">
+        <div className="flex items-center gap-2 py-1.5">
           <button
             type="button"
-            onClick={() => setActiveTab(activeTab === 'details' ? 'people' : 'details')}
+            onClick={() => setActiveTab(activeTab === 'details' ? 'attendance' : 'details')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
               activeTab === 'details'
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                ? 'bg-purple-50 text-purple-700 border-purple-200'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -480,25 +567,25 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab(activeTab === 'access' ? 'people' : 'access')}
+            onClick={() => setActiveTab(activeTab === 'access' ? 'attendance' : 'access')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer flex items-center gap-1 ${
               activeTab === 'access'
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                ? 'bg-purple-50 text-purple-700 border-purple-200'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
             <span>Login Access</span>
           </button>
         </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          2. STAFF HEADER HERO (MATCHING USER REFERENCE IMAGE 1)
-          ←  (IM) ILAIYA MURUGAN SITE SUPERVISOR
-                  Monthly Salary: ₹ 33,000
-                  [Site Engineer] [Active ▾] [Apply latest Salary breakup ▾]
-          Right:  Download ↓   < [Oct 2026] >   [ Amount ₹0 | Present 0 | Absent 0 | PL/WO 0/0 ]
+          3. STAFF HERO (MATCHING USER REFERENCE IMAGE)
+          ←  (C) Chithra
+                 Monthly Salary: ₹ 10,000
+                 [Maintanance] [Active ▾] [Apply latest Salary breakup ▾]
+          Right: Download ⇣   < [Oct 2026] >   [ Amount ₹ 5,161.28 | Present 12 | Absent 0 | PL/WO 1/3 ]
          ══════════════════════════════════════════════════════════════════ */}
       <div className="px-6 sm:px-8 py-5 border-b border-slate-100 bg-white">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
@@ -508,34 +595,50 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
             <button
               type="button"
               onClick={onBack}
-              className="p-1.5 -ml-1 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
+              className="p-1 -ml-1 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
               title="Back to Staff Directory"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-600" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* Circular Purple Avatar (IM) */}
-            <div className="w-13 h-13 rounded-full bg-[#5825d1] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs uppercase tracking-tight">
+            {/* Circular Purple Avatar */}
+            <div className="w-12 h-12 rounded-full bg-[#5833ea] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-2xs">
               {staffInitials}
             </div>
 
             {/* Staff Titles & Metadata */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-sm sm:text-base font-extrabold text-slate-900 uppercase tracking-tight">
-                  {staff.name} {staff.designation}
-                </h1>
+                <h2 className="text-base font-bold text-slate-900">
+                  {staff.name}
+                </h2>
+                {allStaff && allStaff.length > 1 && onSelectStaff && (
+                  <div className="relative inline-block">
+                    <select
+                      value={staff.id}
+                      onChange={(e) => {
+                        const target = allStaff.find(s => s.id === e.target.value);
+                        if (target) onSelectStaff(target);
+                      }}
+                      className="text-[11px] font-semibold text-slate-500 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 cursor-pointer hover:border-slate-300"
+                    >
+                      {allStaff.map(s => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.designation || 'Staff'})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              <div className="text-xs text-slate-500 font-medium">
-                Monthly Salary: <span className="font-semibold text-slate-700">₹ {monthlySalary.toLocaleString('en-IN')}</span>
+              <div className="text-xs text-slate-500 font-normal">
+                Monthly Salary: <span className="font-semibold text-slate-700">₹ {Number(staff.salary || 10000).toLocaleString('en-IN')}</span>
               </div>
 
               {/* Badges / Pill Buttons */}
               <div className="flex items-center gap-2 pt-0.5 flex-wrap">
-                {/* Role/Designation Pill */}
-                <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium border border-indigo-200 text-indigo-700 bg-indigo-50/50">
-                  {staff.role_name || staff.designation || 'Site Engineer'}
+                {/* Maintanance Pill */}
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-normal border border-purple-200 text-purple-700 bg-purple-50/50">
+                  {staff.designation || 'Maintanance'}
                 </span>
 
                 {/* Status Dropdown Pill (Active ▾) */}
@@ -543,7 +646,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                    className="px-2.5 py-0.5 rounded-md text-[11px] font-semibold border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/70 transition flex items-center gap-1 cursor-pointer"
+                    className="px-2 py-0.5 rounded-md text-xs font-normal border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100/70 transition flex items-center gap-1 cursor-pointer"
                   >
                     <span>{staff.status === 'ACTIVE' ? 'Active' : staff.status || 'Active'}</span>
                     <ChevronDown className="w-3 h-3 text-emerald-600" />
@@ -576,7 +679,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsSalaryBreakupModalOpen(true)}
-                  className="px-2.5 py-0.5 rounded-md text-[11px] font-medium border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                  className="px-2.5 py-0.5 rounded-md text-xs font-normal border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 transition flex items-center gap-1 cursor-pointer"
                 >
                   <span>Apply latest Salary breakup</span>
                   <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -587,12 +690,12 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 
           {/* Right: Download + Month Navigation + KPI Summary Card */}
           <div className="flex items-center gap-4 sm:gap-6 flex-wrap self-end lg:self-center">
-            {/* Download Button (with Tray Icon) */}
+            {/* Download Button */}
             <div ref={downloadRef} className="relative">
               <button
                 type="button"
                 onClick={() => setIsDownloadOpen(!isDownloadOpen)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-600 transition cursor-pointer px-2 py-1.5 rounded-lg hover:bg-slate-50"
+                className="inline-flex items-center gap-1 text-xs font-normal text-slate-500 hover:text-slate-800 transition cursor-pointer"
               >
                 <span>Download</span>
                 <Download className="w-3.5 h-3.5 text-slate-500" />
@@ -658,29 +761,29 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
             </div>
 
             {/* Month-Year Navigator: < [ Oct 2026 ] > */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 cursor-pointer transition"
+                className="text-slate-500 hover:text-slate-800 cursor-pointer"
                 title="Previous Month"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              {/* Green Rounded Month Button from Screenshot */}
+              {/* Green Rounded Month Card */}
               <div 
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg text-center leading-tight shadow-2xs select-none cursor-pointer transition active:scale-95"
-                title="Current Selected Attendance Month"
+                className="bg-[#0f8c66] hover:bg-[#0c7555] text-white px-3.5 py-1 rounded-lg text-center leading-tight shadow-2xs select-none cursor-pointer transition"
+                title="Selected Attendance Month"
               >
                 <div className="text-xs font-bold">{currentMonthShort}</div>
-                <div className="text-[10px] font-bold opacity-90">{selectedYear}</div>
+                <div className="text-[10px] opacity-90">{selectedYear}</div>
               </div>
 
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 cursor-pointer transition"
+                className="text-slate-500 hover:text-slate-800 cursor-pointer"
                 title="Next Month"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -688,36 +791,36 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
             </div>
 
             {/* KPI Summary Metrics Box: Amount | Present | Absent | PL/WO */}
-            <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 flex items-center shadow-2xs divide-x divide-slate-200">
+            <div className="bg-white border border-slate-200 rounded-xl px-5 py-2 flex items-center shadow-2xs divide-x divide-slate-100">
               {/* Amount */}
-              <div className="pr-4 text-left">
-                <div className="text-[11px] font-medium text-slate-500">Amount</div>
+              <div className="pr-5 text-left">
+                <div className="text-[11px] font-normal text-slate-500">Amount</div>
                 <div className="text-sm font-bold text-slate-900 mt-0.5">
-                  ₹ {monthStats.amount.toLocaleString('en-IN')}
+                  ₹ {monthStats.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
 
               {/* Present */}
-              <div className="px-4 text-left">
-                <div className="text-[11px] font-medium text-slate-500">Present</div>
+              <div className="px-5 text-left">
+                <div className="text-[11px] font-normal text-slate-500">Present</div>
                 <div className="text-sm font-bold text-slate-900 mt-0.5">
                   {monthStats.present}
                 </div>
               </div>
 
               {/* Absent */}
-              <div className="px-4 text-left">
-                <div className="text-[11px] font-medium text-slate-500">Absent</div>
+              <div className="px-5 text-left">
+                <div className="text-[11px] font-normal text-slate-500">Absent</div>
                 <div className="text-sm font-bold text-slate-900 mt-0.5">
                   {monthStats.absent}
                 </div>
               </div>
 
               {/* PL/WO */}
-              <div className="pl-4 text-left">
-                <div className="text-[11px] font-medium text-slate-500">PL/WO</div>
+              <div className="pl-5 text-left">
+                <div className="text-[11px] font-normal text-slate-500">PL/WO</div>
                 <div className="text-sm font-bold text-slate-900 mt-0.5">
-                  {monthStats.pl} / {monthStats.wo}
+                  {monthStats.pl}/{monthStats.wo}
                 </div>
               </div>
             </div>
@@ -726,163 +829,167 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          3. TAB CONTENT: PEOPLE (ATTENDANCE)
-          Matches Image 1 Header Bar:
-          [ Date ]                                  [ Attendance Status ]
-          Empty Illustration (Document with lines) OR Daily Calendar Rows
+          4. ATTENDANCE TABLE (MATCHING USER REFERENCE IMAGE)
+          Date                                  Attendance Status
+          18 Oct, Sun   ₹ 322.58          1 Shift   [ Weekoff ▾ ]   [ > ]
+          16 Oct, Fri   ₹ 322.58          1 Shift   [ Present ▾ ]   [ > ]
          ══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'people' && (
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* Sub-header Bar: Date ---------------- Attendance Status */}
-          <div className="w-full bg-[#f8f9fc] border-b border-slate-200/80 px-6 sm:px-8 py-3 flex items-center justify-between text-xs font-semibold text-slate-700">
-            <span>Date</span>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowFullSheet(!showFullSheet)}
-                className="text-[11px] text-indigo-600 hover:text-indigo-800 font-bold transition cursor-pointer"
-              >
-                {showFullSheet ? 'Hide Day-by-Day Sheet' : 'Expand Month Sheet'}
-              </button>
+      {(activeTab === 'attendance' || activeTab === 'people') && (
+        <div className="px-6 sm:px-8 py-6 flex-1 bg-white">
+          <div className="rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+            {/* Table Header: Date ---------------- Attendance Status */}
+            <div className="bg-[#f8f9fc] px-6 py-3 flex items-center justify-between text-xs font-semibold text-slate-600 border-b border-slate-200">
+              <span>Date</span>
               <span>Attendance Status</span>
             </div>
-          </div>
 
-          {/* Body Content */}
-          <div className="flex-1">
-            {!showFullSheet && monthStats.records.length === 0 ? (
-              /* EXACT EMPTY STATE ILLUSTRATION FROM USER REFERENCE IMAGE 1 */
-              <EmptyAttendanceDocumentIllustration 
-                onToggleSheet={() => setShowFullSheet(true)}
-                onOpenMobilePunch={() => {
-                  window.dispatchEvent(new CustomEvent('booshnam_open_mobile_sim', {
-                    detail: { staffId: staff.id }
-                  }));
-                }}
-              />
-            ) : (
-              /* Interactive Day-by-Day Calendar Sheet */
-              <div className="divide-y divide-slate-100">
-                {Array.from({ length: daysInMonth }, (_, i) => {
-                  const dayNum = i + 1;
-                  const dateStr = `${currentMonthCode}-${String(dayNum).padStart(2, '0')}`;
-                  const dayDate = new Date(selectedYear, selectedMonthIndex, dayNum);
-                  const isSunday = dayDate.getDay() === 0;
-                  const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
-                  const record = attendanceRecords.find(r => r.staff_id === staff.id && r.date === dateStr);
-                  const isToday = dateStr === getTodayDateString();
-
-                  return (
-                    <div 
-                      key={dateStr}
-                      className={`px-6 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                        isToday ? 'bg-indigo-50/30' : isSunday ? 'bg-slate-50/50' : 'hover:bg-slate-50/60'
-                      }`}
-                    >
-                      {/* Left: Date Details */}
-                      <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-xl flex flex-col items-center justify-center font-bold text-xs shrink-0 ${
-                          isSunday 
-                            ? 'bg-amber-100/70 text-amber-800'
-                            : isToday
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          <span className="text-[10px] font-medium leading-none">{dayName}</span>
-                          <span className="text-xs font-black">{dayNum}</span>
-                        </div>
-
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                            <span>{dayNum} {currentMonthShort} {selectedYear}, {dayName}</span>
-                            {isToday && (
-                              <span className="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-indigo-100 text-indigo-700">
-                                TODAY
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                            <span>General Shift (09:00 AM - 06:00 PM)</span>
-                            {record && (
-                              <>
-                                <span>•</span>
-                                <span className="text-slate-600">In: <strong>{record.clock_in_time}</strong></span>
-                                {record.clock_out_time && <span>Out: <strong>{record.clock_out_time}</strong></span>}
-                              </>
-                            )}
-                          </div>
-                        </div>
+            {/* Table Rows */}
+            <div className="divide-y divide-slate-100 bg-white">
+              {displayRows.map((row) => {
+                const isDropdownOpen = openRowStatusDropdown === row.dateStr;
+                return (
+                  <div
+                    key={row.dateStr}
+                    className="px-6 py-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
+                  >
+                    {/* Left: Date + Entry By */}
+                    <div className="min-w-[180px]">
+                      <div className="text-xs sm:text-sm font-semibold text-slate-800">
+                        {row.dayFormatted}
                       </div>
-
-                      {/* Right: Verification Photo + Status Badge + Quick Action Buttons */}
-                      <div className="flex items-center gap-3 self-end sm:self-center">
-                        {/* Live Photo Proof thumbnail if available */}
-                        {record?.verification_photo && (
-                          <div
-                            onClick={() => setViewPhotoUrl(record.verification_photo)}
-                            className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-400 shrink-0 cursor-pointer hover:scale-105 transition shadow-2xs"
-                            title="Click to view full photo proof"
-                          >
-                            <img src={record.verification_photo} alt="Punch" className="w-full h-full object-cover" />
-                          </div>
-                        )}
-
-                        {/* Status Badge */}
-                        {isSunday && !record ? (
-                          <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                            Week Off
-                          </span>
-                        ) : record ? (
-                          <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${
-                            record.status === 'Present'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : record.status === 'Absent'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : record.status === 'Half-day'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          }`}>
-                            {record.status}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">
-                            Not Marked
-                          </span>
-                        )}
-
-                        {/* Quick Action P/A/PL/WO Buttons */}
-                        <div className="flex items-center gap-1 border border-slate-200 rounded-lg p-0.5 bg-white shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Present')}
-                            title="Mark Present"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition cursor-pointer"
-                          >
-                            P
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Absent')}
-                            title="Mark Absent"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
-                          >
-                            A
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Half-day')}
-                            title="Mark Half-day"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition cursor-pointer"
-                          >
-                            HD
-                          </button>
-                        </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        Entry By {row.entryBy}
                       </div>
                     </div>
-                  );
-                })}
+
+                    {/* Middle: Daily Rate */}
+                    <div className="text-xs sm:text-sm font-semibold text-slate-800">
+                      ₹ {row.dailyAmount.toFixed(2)}
+                    </div>
+
+                    {/* Right: 1 Shift + Status Pill Dropdown + Action Arrow */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-500 font-normal">
+                        {row.shift}
+                      </span>
+
+                      {/* Status Dropdown Pill */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setOpenRowStatusDropdown(isDropdownOpen ? null : row.dateStr)}
+                          className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-normal transition cursor-pointer border ${getStatusBadgeClasses(row.status)}`}
+                        >
+                          <span>{row.status}</span>
+                          <ChevronDown className="w-3 h-3 text-slate-500" />
+                        </button>
+
+                        {isDropdownOpen && (
+                          <div className="absolute right-0 top-full mt-1.5 w-36 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 py-1 text-xs text-slate-700 animate-in fade-in duration-100">
+                            {['Present', 'Weekoff', 'Absent', 'Paid Leave', 'Half-day'].map((st) => (
+                              <button
+                                key={st}
+                                type="button"
+                                onClick={() => {
+                                  updateStaffAttendanceStatus(staff.id, st as any, row.dateStr);
+                                  setAttendanceRecords(getAllStaffAttendanceRecords());
+                                  setOpenRowStatusDropdown(null);
+                                  onShowToast(`Marked ${st} for ${row.dayFormatted}`);
+                                }}
+                                className={`w-full px-3 py-2 text-left hover:bg-slate-50 text-xs flex items-center justify-between cursor-pointer ${
+                                  row.status === st ? 'font-bold text-slate-900 bg-slate-50' : 'text-slate-600'
+                                }`}
+                              >
+                                <span>{st}</span>
+                                {row.status === st && <Check className="w-3 h-3 text-emerald-600" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* [ > ] Detail Chevron Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDayRecordForDetail(row)}
+                        title="View Day Punch Details"
+                        className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition cursor-pointer shadow-2xs"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Day Detail Modal */}
+      {selectedDayRecordForDetail && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">{selectedDayRecordForDetail.dayFormatted}</h3>
+                <p className="text-[11px] text-slate-500">Attendance & Shift Breakdown</p>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => setSelectedDayRecordForDetail(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="text-slate-500">Status</span>
+                <span className={`px-2.5 py-1 rounded-md font-semibold border ${getStatusBadgeClasses(selectedDayRecordForDetail.status)}`}>
+                  {selectedDayRecordForDetail.status}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Shift</div>
+                  <div className="text-sm font-bold text-slate-800 mt-1">1 Shift (General)</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">09:00 AM - 06:00 PM</div>
+                </div>
+                <div className="p-3 rounded-xl border border-slate-200">
+                  <div className="text-slate-400 text-[10px] uppercase font-bold">Daily Wage</div>
+                  <div className="text-sm font-bold text-slate-800 mt-1">₹ {selectedDayRecordForDetail.dailyAmount.toFixed(2)}</div>
+                  <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Calculated</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>Entry Supervisor:</span>
+                  <span className="font-bold text-slate-800">{selectedDayRecordForDetail.entryBy}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>Punch Mode:</span>
+                  <span className="font-semibold text-slate-800">Biometric / Verified</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>Site / Location:</span>
+                  <span className="font-semibold text-slate-800">Booshnam Head Office</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-3.5 bg-slate-50/70 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedDayRecordForDetail(null)}
+                className="px-4 py-2 bg-[#5833ea] hover:bg-[#4828c4] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

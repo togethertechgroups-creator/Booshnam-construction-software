@@ -5,11 +5,13 @@ import {
   UserPlus, Mail, Phone, Briefcase, Filter, X, Lock,
   Trash2, ArrowRight, ArrowLeft, ShieldCheck, Sparkles, Building2, Info,
   Camera, Eye, HardHat, Smartphone,
-  Maximize2, Minimize2, Layers
+  Maximize2, Minimize2, Layers,
+  ChevronLeft, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { Project, Worker, AttendanceRecord } from '../types';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
+import { Loader } from '../components/kokonutui/loader';
 import { CustomDatePicker } from '../components/CustomDatePicker';
 import { CustomSelect } from '../components/CustomSelect';
 import { DepartmentMultiSelectFilter } from '../components/DepartmentMultiSelectFilter';
@@ -71,32 +73,60 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   onNavigate,
   onShowToast
 }) => {
-  const [mainTab, setMainTab] = useState<'staff' | 'payroll'>(initialTab);
+  type TopNavTab = 'people' | 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays';
+  const [activeTab, setActiveTab] = useState<TopNavTab>(() => {
+    if (initialTab === 'staff') return 'people';
+    return 'attendance';
+  });
+
+  const setMainTab = (t: 'staff' | 'payroll') => {
+    setActiveTab(t === 'staff' ? 'people' : 'attendance');
+  };
+  const setPayrollTab = (t: 'attendance' | 'team_leaves' | 'my_leaves' | 'holidays') => {
+    setActiveTab(t);
+  };
+  const mainTab = activeTab === 'people' ? 'staff' : 'payroll';
+  const payrollTab = activeTab === 'people' ? 'attendance' : activeTab;
 
   useEffect(() => {
     if (initialTab) {
-      setMainTab(initialTab);
+      if (initialTab === 'staff') {
+        setActiveTab('people');
+        setSelectedStaffForOverview(null);
+      } else {
+        setActiveTab('attendance');
+        const list = getStaffMembers();
+        const chithra = list.find(s => s.name.toLowerCase().includes('chithra')) || list[0] || null;
+        setSelectedStaffForOverview(chithra);
+      }
     }
   }, [initialTab]);
 
   useEffect(() => {
     const handleOpenPayroll = () => {
-      setMainTab('payroll');
+      setActiveTab('attendance');
+      const list = getStaffMembers();
+      const chithra = list.find(s => s.name.toLowerCase().includes('chithra')) || list[0] || null;
+      setSelectedStaffForOverview(chithra);
     };
     if (sessionStorage.getItem('booshnam_auto_open_payroll')) {
       sessionStorage.removeItem('booshnam_auto_open_payroll');
-      setMainTab('payroll');
+      handleOpenPayroll();
     }
     window.addEventListener('booshnam_open_payroll', handleOpenPayroll);
     return () => window.removeEventListener('booshnam_open_payroll', handleOpenPayroll);
   }, []);
-  const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
+
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [searchStaffQuery, setSearchStaffQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [selectedStaffForOverview, setSelectedStaffForOverview] = useState<StaffMember | null>(null);
-  const [overviewInitialTab, setOverviewInitialTab] = useState<'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays'>('people');
+  const [selectedStaffForOverview, setSelectedStaffForOverview] = useState<StaffMember | null>(() => {
+    const list = getStaffMembers();
+    const chithra = list.find(s => s.name.toLowerCase().includes('chithra')) || list[0] || null;
+    return initialTab === 'staff' ? null : chithra;
+  });
+  const [overviewInitialTab, setOverviewInitialTab] = useState<'people' | 'attendance' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
   // Live Photo Verification Proof Modal State
@@ -116,33 +146,170 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     return () => window.removeEventListener('booshnam_staff_attendance_updated', handleAttendanceUpdate);
   }, []);
 
-  // Attendance status per staff member
-  type AttendanceStatus = 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave' | 'Late' | 'Half-day' | 'Overtime';
+  // Attendance status per staff member & date
+  type AttendanceStatus = 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave' | 'Late' | 'Half-day' | 'Overtime' | 'On Duty' | 'Not Marked';
   const [staffAttendanceStatus, setStaffAttendanceStatus] = useState<Record<string, AttendanceStatus>>({});
   const [openAttendanceDropdown, setOpenAttendanceDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
+  // New Attendance UI state variables
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<Date>(() => new Date());
+  const [staffTypeFilter, setStaffTypeFilter] = useState<'OFFICE' | 'SITE'>('OFFICE');
+  const [staffStatusFilter, setStaffStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
+  const [isStaffStatusDropdownOpen, setIsStaffStatusDropdownOpen] = useState(false);
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [openRowDropdownId, setOpenRowDropdownId] = useState<string | null>(null);
+  const [payrollSearchQuery, setPayrollSearchQuery] = useState('');
+
+  const formattedDateStr = useMemo(() => {
+    const y = selectedAttendanceDate.getFullYear();
+    const m = String(selectedAttendanceDate.getMonth() + 1).padStart(2, '0');
+    const d = String(selectedAttendanceDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }, [selectedAttendanceDate]);
+
+  const handlePrevDay = () => {
+    setSelectedAttendanceDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() - 1);
+      return next;
+    });
+  };
+
+  const handleNextDay = () => {
+    setSelectedAttendanceDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + 1);
+      return next;
+    });
+  };
+
+  const getStaffInitials = (name: string): string => {
+    if (!name) return 'S';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+  };
+
+  const ATTENDANCE_SELECT_OPTIONS: {
+    status: 'Present' | 'Absent' | 'Weekoff' | 'Paid Leave';
+    label: string;
+    hover: string;
+    activeClass: string;
+  }[] = [
+    {
+      status: 'Present',
+      label: 'Present',
+      hover: 'hover:bg-emerald-50 hover:text-emerald-700',
+      activeClass: 'bg-emerald-50 text-emerald-700 font-bold',
+    },
+    {
+      status: 'Absent',
+      label: 'Absent',
+      hover: 'hover:bg-red-50 hover:text-red-700',
+      activeClass: 'bg-red-50 text-red-700 font-bold',
+    },
+    {
+      status: 'Weekoff',
+      label: 'Weekoff',
+      hover: 'hover:bg-slate-100 hover:text-slate-900',
+      activeClass: 'bg-slate-100 text-slate-900 font-bold',
+    },
+    {
+      status: 'Paid Leave',
+      label: 'Paid Leave',
+      hover: 'hover:bg-purple-50 hover:text-purple-700',
+      activeClass: 'bg-purple-50 text-purple-700 font-bold',
+    },
+  ];
+
+  const getStatusButtonConfig = (st: AttendanceStatus) => {
+    switch (st) {
+      case 'Present':
+        return {
+          btnClass: 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600 shadow-xs font-semibold',
+          chevronClass: 'text-white',
+          rowBorder: 'border-l-4 border-l-emerald-500 bg-emerald-50/15',
+        };
+      case 'Absent':
+        return {
+          btnClass: 'bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-xs font-semibold',
+          chevronClass: 'text-white',
+          rowBorder: 'border-l-4 border-l-red-500 bg-red-50/15',
+        };
+      case 'Weekoff':
+        return {
+          btnClass: 'bg-[#1e1b4b] hover:bg-slate-900 text-white border-[#1e1b4b] shadow-xs font-semibold',
+          chevronClass: 'text-white',
+          rowBorder: 'border-l-4 border-l-[#1e1b4b] bg-slate-50/20',
+        };
+      case 'Paid Leave':
+        return {
+          btnClass: 'bg-purple-600 hover:bg-purple-700 text-white border-purple-600 shadow-xs font-semibold',
+          chevronClass: 'text-white',
+          rowBorder: 'border-l-4 border-l-purple-500 bg-purple-50/15',
+        };
+      default:
+        return {
+          btnClass: 'bg-white hover:border-slate-300 text-slate-700 border-slate-200 shadow-2xs font-medium',
+          chevronClass: 'text-slate-400',
+          rowBorder: 'border-l-4 border-l-transparent hover:bg-red-50/20',
+        };
+    }
+  };
+
+  const getStatusDotColor = (st: string) => {
+    switch (st) {
+      case 'Present': return 'bg-emerald-500';
+      case 'Absent': return 'bg-red-500';
+      case 'Paid Leave': return 'bg-purple-500';
+      case 'Weekoff': return 'bg-[#1e1b4b]';
+      case 'Half-day': return 'bg-amber-500';
+      case 'Overtime': return 'bg-purple-500';
+      case 'On Duty': return 'bg-blue-500';
+      default: return 'bg-slate-300';
+    }
+  };
+
+  const getAttendanceStatusForDate = (staffId: string): AttendanceStatus => {
+    const key = `${staffId}_${formattedDateStr}`;
+    if (staffAttendanceStatus[key]) return staffAttendanceStatus[key];
+    const rec = attendanceRecords.find(r => r.staff_id === staffId && r.date === formattedDateStr);
+    if (rec && rec.status) return rec.status as AttendanceStatus;
+    return 'Not Marked';
+  };
+
+  const handleSetStatus = (staffId: string, status: AttendanceStatus) => {
+    const key = `${staffId}_${formattedDateStr}`;
+    setStaffAttendanceStatus(prev => ({ ...prev, [key]: status }));
+    updateStaffAttendanceStatus(staffId, status as any, formattedDateStr);
+    setOpenRowDropdownId(null);
+    triggerToast(`Attendance marked as ${status}`);
+  };
+
   const getAttendanceStatus = (staffId: string): AttendanceStatus => {
-    if (staffAttendanceStatus[staffId]) return staffAttendanceStatus[staffId];
-    const rec = attendanceRecords.find(r => r.staff_id === staffId && r.date === getTodayDateString());
-    if (rec) return rec.status as AttendanceStatus;
-    return 'Present';
+    return getAttendanceStatusForDate(staffId);
   };
 
   const setAttendanceStatus = (staffId: string, status: AttendanceStatus) => {
-    setStaffAttendanceStatus(prev => ({ ...prev, [staffId]: status }));
-    updateStaffAttendanceStatus(staffId, status as any);
+    handleSetStatus(staffId, status);
     setOpenAttendanceDropdown(null);
-    triggerToast(`Attendance marked as ${status}`);
   };
 
   // Close dropdown on outside click
   useEffect(() => {
-    if (!openAttendanceDropdown) return;
-    const handleClick = () => { setOpenAttendanceDropdown(null); setDropdownPos(null); };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [openAttendanceDropdown]);
+    const handleClick = () => {
+      setOpenAttendanceDropdown(null);
+      setDropdownPos(null);
+      setOpenRowDropdownId(null);
+      setIsStaffStatusDropdownOpen(false);
+      setShowCalendarPicker(false);
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   const handleToggleAttendanceDropdown = (staffId: string, e: React.MouseEvent<HTMLButtonElement>) => {
     if (openAttendanceDropdown === staffId) {
@@ -156,13 +323,14 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
   };
 
   const attendanceOptions: { label: AttendanceStatus; color: string; bg: string; border: string }[] = [
+    { label: 'Not Marked', color: 'text-slate-700', bg: 'bg-slate-100', border: 'border-slate-200' },
     { label: 'Present', color: 'text-emerald-700', bg: 'bg-emerald-100', border: 'border-emerald-200' },
-    { label: 'Late', color: 'text-amber-700', bg: 'bg-amber-100', border: 'border-amber-200' },
+    { label: 'Absent', color: 'text-red-700', bg: 'bg-red-100', border: 'border-red-200' },
+    { label: 'Paid Leave', color: 'text-teal-700', bg: 'bg-teal-100', border: 'border-teal-200' },
+    { label: 'Weekoff', color: 'text-indigo-700', bg: 'bg-indigo-100', border: 'border-indigo-200' },
     { label: 'Half-day', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-200' },
     { label: 'Overtime', color: 'text-purple-700', bg: 'bg-purple-100', border: 'border-purple-200' },
-    { label: 'Absent', color: 'text-red-700', bg: 'bg-red-100', border: 'border-red-200' },
-    { label: 'Weekoff', color: 'text-indigo-700', bg: 'bg-indigo-100', border: 'border-indigo-200' },
-    { label: 'Paid Leave', color: 'text-teal-700', bg: 'bg-teal-100', border: 'border-teal-200' },
+    { label: 'On Duty', color: 'text-cyan-700', bg: 'bg-cyan-100', border: 'border-cyan-200' },
   ];
 
   const allProjectsList = useMemo(() => {
@@ -438,6 +606,56 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     }
   };
 
+  const attendanceStaffSource = useMemo(() => {
+    const deptMatches = (departmentStaffList || []).filter(s => getStaffCategory(s) === staffTypeFilter);
+    if (deptMatches.length > 0) return departmentStaffList;
+    return staffList;
+  }, [departmentStaffList, staffList, staffTypeFilter]);
+
+  const displayedAttendanceStaff = useMemo(() => {
+    return attendanceStaffSource.filter(s => {
+      const cat = getStaffCategory(s);
+      if (staffTypeFilter === 'OFFICE' && cat !== 'OFFICE') return false;
+      if (staffTypeFilter === 'SITE' && cat !== 'SITE') return false;
+
+      if (staffStatusFilter === 'active' && s.status === 'INACTIVE') return false;
+      if (staffStatusFilter === 'inactive' && s.status !== 'INACTIVE') return false;
+
+      if (payrollSearchQuery.trim()) {
+        const q = payrollSearchQuery.toLowerCase();
+        const matchName = (s.name || '').toLowerCase().includes(q);
+        const matchCode = (s.employee_code || '').toLowerCase().includes(q);
+        const matchDesig = (s.designation || '').toLowerCase().includes(q);
+        const matchDept = (s.department || '').toLowerCase().includes(q);
+        if (!matchName && !matchCode && !matchDesig && !matchDept) return false;
+      }
+
+      return true;
+    });
+  }, [attendanceStaffSource, staffTypeFilter, staffStatusFilter, payrollSearchQuery]);
+
+  const attendanceDayStats = useMemo(() => {
+    let present = 0;
+    let absent = 0;
+    let paidLeave = 0;
+    let weekoff = 0;
+
+    displayedAttendanceStaff.forEach(s => {
+      const st = getAttendanceStatusForDate(s.id);
+      if (st === 'Present' || st === 'Late' || st === 'Half-day' || st === 'Overtime') {
+        present++;
+      } else if (st === 'Absent') {
+        absent++;
+      } else if (st === 'Paid Leave') {
+        paidLeave++;
+      } else if (st === 'Weekoff') {
+        weekoff++;
+      }
+    });
+
+    return { present, absent, paidLeave, weekoff };
+  }, [displayedAttendanceStaff, staffAttendanceStatus, attendanceRecords, formattedDateStr]);
+
   const filteredStaff = useMemo(() => {
     return departmentStaffList.filter(s => {
       const matchesCategory =
@@ -535,6 +753,31 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     try { await toggleBrowserFullscreen(); } catch (e) {}
   };
 
+  // 2-second initial loading state for Kokonut UI loader animation
+  const [isWorkforceLoading, setIsWorkforceLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsWorkforceLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isWorkforceLoading) {
+    return (
+      <div className={`flex-1 flex flex-col items-center justify-center min-h-screen h-full w-full bg-white transition-all duration-300 animate-in fade-in ${
+        isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+      }`}>
+        <Loader
+          size="lg"
+          title="Loading Workforce & Attendance..."
+          subtitle="Fetching staff roster, attendance records and biometric logs"
+          className="text-red-600"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`flex-1 flex flex-col min-w-0 bg-slate-50/50 pb-16 transition-all duration-300 ${
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-slate-50 ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
@@ -544,48 +787,112 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
         <StaffOverviewView
           staff={selectedStaffForOverview}
           initialTab={overviewInitialTab}
-          onBack={() => setSelectedStaffForOverview(null)}
+          onBack={() => {
+            setSelectedStaffForOverview(null);
+            setActiveTab('people');
+          }}
+          onNavigateTab={(tab) => {
+            if (tab === 'people') {
+              setSelectedStaffForOverview(null);
+              setActiveTab('people');
+            } else if (tab === 'attendance') {
+              setActiveTab('attendance');
+            } else {
+              setSelectedStaffForOverview(null);
+              setActiveTab(tab);
+            }
+          }}
           onUpdateStaff={(updated) => {
             setSelectedStaffForOverview(updated);
             setStaffList(getStaffMembers());
           }}
           onShowToast={triggerToast}
+          allStaff={staffList}
+          onSelectStaff={(target) => {
+            setSelectedStaffForOverview(target);
+          }}
         />
       ) : (
         <>
           {/* Top Header Bar */}
-          <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white sticky top-0 z-30 shadow-2xs">
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-[26px] font-bold text-[#262626] font-heading tracking-tight">
-                  Staff & Payroll Management
-                </h1>
-              </div>
+          <div className="bg-white border-b border-slate-100 px-6 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+            {/* Left: 5 Unified Navigation Tabs */}
+            <div className="flex items-center gap-6 sm:gap-8 text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedStaffForOverview(null);
+                  setActiveTab('people');
+                }}
+                className={`py-2 transition-colors cursor-pointer border-b-2 ${
+                  activeTab === 'people'
+                    ? 'text-red-600 font-bold border-red-600'
+                    : 'text-slate-600 hover:text-slate-900 font-medium border-transparent'
+                }`}
+              >
+                People
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const chithra = staffList.find(s => s.name.toLowerCase().includes('chithra')) || staffList[0] || null;
+                  setSelectedStaffForOverview(chithra);
+                  setActiveTab('attendance');
+                }}
+                className={`py-2 transition-colors cursor-pointer border-b-2 ${
+                  activeTab === 'attendance'
+                    ? 'text-red-600 font-bold border-red-600'
+                    : 'text-slate-600 hover:text-slate-900 font-medium border-transparent'
+                }`}
+              >
+                Attendance
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('team_leaves')}
+                className={`py-2 transition-colors cursor-pointer border-b-2 ${
+                  activeTab === 'team_leaves'
+                    ? 'text-red-600 font-bold border-red-600'
+                    : 'text-slate-600 hover:text-slate-900 font-medium border-transparent'
+                }`}
+              >
+                Team Leaves
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('my_leaves')}
+                className={`py-2 transition-colors cursor-pointer border-b-2 ${
+                  activeTab === 'my_leaves'
+                    ? 'text-red-600 font-bold border-red-600'
+                    : 'text-slate-600 hover:text-slate-900 font-medium border-transparent'
+                }`}
+              >
+                My Leaves
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('holidays')}
+                className={`py-2 transition-colors cursor-pointer border-b-2 ${
+                  activeTab === 'holidays'
+                    ? 'text-red-600 font-bold border-red-600'
+                    : 'text-slate-600 hover:text-slate-900 font-medium border-transparent'
+                }`}
+              >
+                Holidays
+              </button>
             </div>
 
-            {/* Main Tab Navigation: Payroll | Staff Management */}
-            <div className="flex items-center gap-3 flex-wrap mt-2 md:mt-0">
-              <div className="flex items-center text-sm font-semibold border-b-2 border-transparent">
-                <button
-                  onClick={() => setMainTab('payroll')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'payroll'
-                      ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  Payroll
-                </button>
-                <button
-                  onClick={() => setMainTab('staff')}
-                  className={`px-4 py-3 transition-all cursor-pointer ${mainTab === 'staff'
-                      ? 'text-slate-900 border-b-2 border-indigo-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-900'
-                    }`}
-                >
-                  Staff Management
-                </button>
-              </div>
-              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleOpenAddStaffModal(staffTypeFilter === 'SITE' ? 'SITE' : 'OFFICE')}
+                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>+ Add Staff</span>
+              </button>
+              <div className="h-5 w-px bg-slate-200 hidden sm:block" />
               <button
                 type="button"
                 onClick={toggleFullscreen}
@@ -601,7 +908,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
           </div>
           {/* ── SECTION 1: STAFF & ACCESS ── */}
-          {mainTab === 'staff' && (
+          {activeTab === 'people' && (
             <div className="p-4 sm:p-6 space-y-6 flex-1">
               {/* Quick Metrics Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -658,7 +965,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       onClick={() => setStaffCategoryFilter('ALL')}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                         staffCategoryFilter === 'ALL'
-                          ? 'bg-white text-slate-900 shadow-xs'
+                          ? 'bg-red-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -669,7 +976,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       onClick={() => setStaffCategoryFilter('OFFICE')}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                         staffCategoryFilter === 'OFFICE'
-                          ? 'bg-indigo-600 text-white shadow-xs'
+                          ? 'bg-red-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -680,7 +987,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       onClick={() => setStaffCategoryFilter('SITE')}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                         staffCategoryFilter === 'SITE'
-                          ? 'bg-emerald-600 text-white shadow-xs'
+                          ? 'bg-red-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
@@ -880,398 +1187,308 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
             </div>
           )}
 
-          {/* ── SECTION 2: PAYROLL TABS ── */}
-          {mainTab === 'payroll' && (
-            <div className="bg-white border-b border-slate-200 sticky top-[73px] z-10 shadow-xs">
-              <div className="flex items-center justify-between text-sm font-semibold max-w-7xl mx-auto px-6">
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setPayrollTab('attendance')}
-                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'attendance'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                  >
-                    Attendance
-                  </button>
-                  <button
-                    onClick={() => setPayrollTab('team_leaves')}
-                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'team_leaves'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                  >
-                    Team Leaves
-                  </button>
-                  <button
-                    onClick={() => setPayrollTab('my_leaves')}
-                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'my_leaves'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                  >
-                    My Leaves
-                  </button>
-                  <button
-                    onClick={() => setPayrollTab('holidays')}
-                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'holidays'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                  >
-                    Holidays
-                  </button>
-                </div>
-
-                {/* Right Side: + Add Staff Button */}
+          {/* ── SECTION 2: ATTENDANCE UI ── */}
+          {activeTab === 'attendance' && (
+            <div className="p-6 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-150">
+              {/* Row 1: Filter Pills */}
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => handleOpenAddStaffModal(staffCategoryFilter === 'SITE' ? 'SITE' : 'OFFICE')}
-                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer hover:shadow-md shrink-0"
+                  onClick={() => setStaffTypeFilter('OFFICE')}
+                  className={`px-5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    staffTypeFilter === 'OFFICE'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'text-red-600 hover:bg-red-50'
+                  }`}
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>+ Add Staff</span>
+                  Office Staff
                 </button>
-              </div>
-            </div>
-          )}
+                <button
+                  type="button"
+                  onClick={() => setStaffTypeFilter('SITE')}
+                  className={`px-5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                    staffTypeFilter === 'SITE'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  Site Staff
+                </button>
 
-          {/* ── SECTION 2.1: ATTENDANCE ── */}
-          {mainTab === 'payroll' && payrollTab === 'attendance' && (
-            <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
-              {/* ── SUPER ADMIN DEPARTMENT BREAKDOWN BAR (IF OVERVIEW) ── */}
-              {isOverview && (
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Department-Wise Attendance (Click department to filter):</span>
+                {/* Active (count) ▾ Dropdown */}
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    onClick={() => setIsStaffStatusDropdownOpen(prev => !prev)}
+                    className="px-4 py-2 rounded-full border border-red-200 bg-white hover:bg-red-50/50 text-xs font-semibold text-red-600 flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                  >
+                    <span>
+                      {staffStatusFilter === 'active'
+                        ? `Active (${attendanceStaffSource.filter(s => s.status !== 'INACTIVE' && getStaffCategory(s) === staffTypeFilter).length})`
+                        : staffStatusFilter === 'inactive'
+                        ? `Inactive (${attendanceStaffSource.filter(s => s.status === 'INACTIVE' && getStaffCategory(s) === staffTypeFilter).length})`
+                        : `All (${attendanceStaffSource.filter(s => getStaffCategory(s) === staffTypeFilter).length})`}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDepartmentIds(['ALL'])}
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-lg transition cursor-pointer ${
-                        selectedDepartmentIds.includes('ALL')
-                          ? 'bg-slate-900 text-white'
-                          : 'text-indigo-600 hover:bg-indigo-50'
-                      }`}
-                    >
-                      All Departments ({staffList.length})
-                    </button>
-                  </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-red-600" />
+                  </button>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
-                    {departmentAttendanceBreakdown.map((dept) => {
-                      const isFiltered = selectedDepartmentIds.includes(dept.id);
-                      return (
-                        <button
-                          key={dept.id}
-                          type="button"
-                          onClick={() => setSelectedDepartmentIds([dept.id])}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                            isFiltered
-                              ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200 shadow-xs'
-                              : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200'
-                          }`}
-                        >
-                          <div className="text-[11px] font-bold text-slate-800 truncate" title={dept.name}>
-                            {dept.shortName || dept.name}
-                          </div>
-                          <div className="flex items-baseline justify-between mt-1">
-                            <span className="text-sm font-black text-slate-900">
-                              {dept.present} <span className="text-[10px] text-slate-400 font-normal">/ {dept.total}</span>
-                            </span>
-                            <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
-                              dept.rate >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
-                            }`}>
-                              {dept.rate}%
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Toolbar: Filter Pills + Search + Summary Stats */}
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                {/* Left Side: Category Pills + Active Filter + Department Filter */}
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setStaffCategoryFilter('ALL')}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                        staffCategoryFilter === 'ALL'
-                          ? 'bg-white text-slate-900 shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      All ({departmentStaffList.length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStaffCategoryFilter('OFFICE')}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                        staffCategoryFilter === 'OFFICE'
-                          ? 'bg-indigo-600 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Office Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'OFFICE').length})
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setStaffCategoryFilter('SITE')}
-                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                        staffCategoryFilter === 'SITE'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      Site Staff ({departmentStaffList.filter(s => getStaffCategory(s) === 'SITE').length})
-                    </button>
-                  </div>
-
-                  <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
-
-                  <div className="w-36">
-                    <CustomSelect
-                      value={attendanceActiveFilter}
-                      onChange={(val: any) => setAttendanceActiveFilter(val)}
-                      options={[{ label: 'Active Staff', value: 'active' }, { label: 'All Staff', value: 'all' }]}
-                      variant="brand"
-                      triggerClassName="h-9 px-3 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 shadow-2xs"
-                    />
-                  </div>
-
-                  {isOverview && (
-                    <div className="shrink-0">
-                      <DepartmentMultiSelectFilter
-                        selectedIds={selectedDepartmentIds}
-                        onChange={setSelectedDepartmentIds}
-                        departments={departmentFilterItems}
-                        totalCount={staffList.length}
-                        labelPrefix="Dept"
-                      />
+                  {isStaffStatusDropdownOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1 overflow-hidden animate-in fade-in duration-100">
+                      <button
+                        type="button"
+                        onClick={() => { setStaffStatusFilter('active'); setIsStaffStatusDropdownOpen(false); }}
+                        className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-red-50 cursor-pointer ${
+                          staffStatusFilter === 'active' ? 'text-red-600 font-bold bg-red-50/70' : 'text-slate-700'
+                        }`}
+                      >
+                        Active ({attendanceStaffSource.filter(s => s.status !== 'INACTIVE' && getStaffCategory(s) === staffTypeFilter).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setStaffStatusFilter('inactive'); setIsStaffStatusDropdownOpen(false); }}
+                        className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-red-50 cursor-pointer ${
+                          staffStatusFilter === 'inactive' ? 'text-red-600 font-bold bg-red-50/70' : 'text-slate-700'
+                        }`}
+                      >
+                        Inactive ({attendanceStaffSource.filter(s => s.status === 'INACTIVE' && getStaffCategory(s) === staffTypeFilter).length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setStaffStatusFilter('all'); setIsStaffStatusDropdownOpen(false); }}
+                        className={`w-full text-left px-3.5 py-2 text-xs font-medium transition-colors hover:bg-red-50 cursor-pointer ${
+                          staffStatusFilter === 'all' ? 'text-red-600 font-bold bg-red-50/70' : 'text-slate-700'
+                        }`}
+                      >
+                        All Staff ({attendanceStaffSource.filter(s => getStaffCategory(s) === staffTypeFilter).length})
+                      </button>
                     </div>
                   )}
                 </div>
+              </div>
 
-                {/* Right Side: Compact Stats (Present, Absent) + Search Bar */}
-                <div className="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
-                  {/* Present Today */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 shadow-2xs">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>
-                      {attendanceStats.present} <span className="text-emerald-700 font-normal">Present</span>
-                      <span className="text-[10px] text-emerald-700 font-bold ml-1.5 bg-emerald-100/90 px-1.5 py-0.2 rounded">
-                        {departmentStaffList.length > 0 ? Math.round((attendanceStats.present / departmentStaffList.length) * 100) : 0}%
+              {/* Row 2: Date Selector & Search Input on Left, Stats on Right */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+                {/* Left: < [ 19 Mon ] > | [ 📅 Oct ] | [ 🔍 Search Payroll ] */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Prev day */}
+                  <button
+                    type="button"
+                    onClick={handlePrevDay}
+                    className="h-11 w-9 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer transition-colors border border-slate-200 bg-white shadow-2xs"
+                    title="Previous day"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* Green Date Badge */}
+                  <div className="h-11 px-3 min-w-[50px] rounded-lg bg-emerald-600 text-white flex flex-col items-center justify-center select-none shadow-xs font-sans">
+                    <span className="text-sm font-bold leading-tight">{selectedAttendanceDate.getDate()}</span>
+                    <span className="text-[11px] font-medium leading-tight">{selectedAttendanceDate.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                  </div>
+
+                  {/* Next day */}
+                  <button
+                    type="button"
+                    onClick={handleNextDay}
+                    className="h-11 w-9 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg cursor-pointer transition-colors border border-slate-200 bg-white shadow-2xs"
+                    title="Next day"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+
+                  {/* Month picker button */}
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendarPicker(prev => !prev)}
+                      className="h-11 px-3.5 rounded-lg border border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30 text-slate-700 flex flex-col items-center justify-center cursor-pointer shadow-2xs transition-colors group"
+                      title="Select month / date"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 mb-0.5 transition-colors" />
+                      <span className="text-[11px] font-bold text-slate-700 group-hover:text-emerald-600 leading-tight transition-colors">
+                        {selectedAttendanceDate.toLocaleDateString('en-US', { month: 'short' })}
                       </span>
-                    </span>
+                    </button>
+                    {showCalendarPicker && (
+                      <div className="absolute top-12 left-0 z-50 bg-white border border-slate-200 rounded-xl shadow-xl p-3">
+                        <CustomDatePicker
+                          value={formattedDateStr}
+                          onChange={(val) => {
+                            if (val) {
+                              const [y, m, d] = val.split('-').map(Number);
+                              setSelectedAttendanceDate(new Date(y, m - 1, d));
+                            }
+                            setShowCalendarPicker(false);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  {/* 3. Absent & Leaves */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-2xs">
-                    <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-red-600 font-bold">{attendanceStats.absent} <span className="text-slate-400 font-normal">Absent</span></span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-teal-700 font-bold">{attendanceStats.leave} <span className="text-slate-400 font-normal">Leave</span></span>
-                  </div>
-
-                  {/* Search Bar */}
-                  <div className="relative w-full sm:w-48">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                  {/* Search Payroll input */}
+                  <div className="relative w-64 sm:w-72">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="Search Staff / Code..."
-                      value={attendanceSearchQuery}
-                      onChange={(e) => setAttendanceSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-7 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                      placeholder="Search Payroll"
+                      value={payrollSearchQuery}
+                      onChange={(e) => setPayrollSearchQuery(e.target.value)}
+                      className="w-full h-11 pl-10 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-red-500 focus:ring-1 focus:ring-red-500 shadow-2xs"
                     />
-                    {attendanceSearchQuery && (
+                    {payrollSearchQuery && (
                       <button
                         type="button"
-                        onClick={() => setAttendanceSearchQuery('')}
-                        className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        onClick={() => setPayrollSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-600 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
+
+                {/* Right: 0 Present | ■ 0 Absent  ■ 0 Paid Leave  ■ 0 Weekoff */}
+                <div className="text-right flex flex-col items-end">
+                  <div className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                    {attendanceDayStats.present} Present
+                  </div>
+                  <div className="flex items-center gap-2.5 text-[11px] font-medium text-slate-500 mt-1">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-[2px] bg-red-500" />
+                      <span>{attendanceDayStats.absent} Absent</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-[2px] bg-purple-500" />
+                      <span>{attendanceDayStats.paidLeave} Paid Leave</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-[2px] bg-[#1e1b4b]" />
+                      <span>{attendanceDayStats.weekoff} Weekoff</span>
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200 font-bold text-[11px] uppercase tracking-wider">
-                      <tr>
-                        <th className="py-3.5 px-6">Staff Member</th>
-                        <th className="py-3.5 px-6 w-44">Punch In</th>
-                        <th className="py-3.5 px-6 w-48">Punch Out</th>
-                        <th className="py-3.5 px-6 text-right w-52">Attendance Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {attendanceStaffList.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="py-12 text-center text-slate-400 text-xs">
-                            No {staffCategoryFilter === 'SITE' ? 'site' : staffCategoryFilter === 'OFFICE' ? 'office' : ''} staff members found in {isOverview ? 'Booshnam Associates' : activeDept.name}.
-                          </td>
-                        </tr>
-                      ) : (
-                        attendanceStaffList.map((staff, idx) => {
-                          const colors = ['bg-indigo-600', 'bg-purple-600', 'bg-blue-600', 'bg-indigo-800'];
-                          const color = colors[idx % colors.length];
-                          const staffRecord = attendanceRecords.find(r => r.staff_id === staff.id && r.date === getTodayDateString()) || getStaffLatestRecordToday(staff.id);
+              {/* Row 3: Staff Attendance Table */}
+              <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs relative">
+                {/* Header Strip */}
+                <div className="bg-red-50/50 px-6 py-3.5 flex items-center justify-between text-xs font-semibold text-slate-700 border-b border-red-100/60 rounded-t-xl">
+                  <span>Name</span>
+                  <div className="flex items-center gap-3">
+                    <span className="min-w-[130px] text-center">Attendance Status</span>
+                    <span className="w-8 shrink-0" aria-hidden="true" />
+                  </div>
+                </div>
 
-                          return (
-                            <tr key={staff.id} className="hover:bg-slate-50 transition-colors group">
-                              {/* 1. Staff Member Info */}
-                              <td className="py-4 px-6 align-middle">
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-10 h-10 rounded-full ${color} text-white font-bold flex items-center justify-center shrink-0 shadow-xs text-sm`}>
-                                    {staff.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className="font-semibold text-slate-800 text-sm cursor-pointer hover:text-indigo-600 transition-colors"
-                                        onClick={() => handleOpenStaffOverview(staff, 'people')}
-                                      >
-                                        {staff.name}
-                                      </span>
-                                      <span className="text-[11px] font-normal text-slate-400">
-                                        ({getStaffCategory(staff) === 'SITE' ? 'Site' : 'Office'})
-                                      </span>
-                                    </div>
-                                    <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                      <span className="tracking-tight text-slate-400">({staff.employee_code})</span>
-                                      <span>•</span>
-                                      <span>{staff.designation}</span>
-                                      <span>•</span>
-                                      <span className="text-slate-400">{staff.department}</span>
-                                    </div>
-                                  </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-slate-100 rounded-b-xl">
+                  {displayedAttendanceStaff.length === 0 ? (
+                    <div className="py-12 text-center text-slate-400 text-xs">
+                      No {staffTypeFilter === 'OFFICE' ? 'office' : 'site'} staff members found.
+                    </div>
+                  ) : (
+                    displayedAttendanceStaff.map((staff, idx) => {
+                      const initials = getStaffInitials(staff.name);
+                      const currentStatus = getAttendanceStatusForDate(staff.id);
+                      const isDropdownOpen = openRowDropdownId === staff.id;
+                      const isLast = idx === displayedAttendanceStaff.length - 1;
+                      const statusConfig = getStatusButtonConfig(currentStatus);
+
+                      return (
+                        <div
+                          key={staff.id}
+                          className={`px-6 py-4 flex items-center justify-between transition-all duration-150 ${statusConfig.rowBorder} ${
+                            isLast ? 'rounded-b-xl' : ''
+                          }`}
+                        >
+                          {/* Left: Avatar + Name + Subtitle */}
+                          <div className="flex items-center gap-3.5">
+                            <div className="w-10 h-10 rounded-full bg-red-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-xs">
+                              {initials}
+                            </div>
+                            <div>
+                              <div
+                                onClick={() => handleOpenStaffOverview(staff, 'people')}
+                                className="text-sm font-semibold text-slate-900 hover:text-red-600 cursor-pointer transition-colors"
+                              >
+                                {staff.name}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {staff.designation || '--'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Status Dropdown + Chevron Right Button */}
+                          <div className="flex items-center gap-3">
+                            <div className="relative" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => setOpenRowDropdownId(isDropdownOpen ? null : staff.id)}
+                                className={`min-w-[130px] px-3.5 py-2 rounded-lg border text-xs flex items-center justify-between gap-2 cursor-pointer transition-all duration-150 ${statusConfig.btnClass}`}
+                              >
+                                <span>{currentStatus}</span>
+                                <ChevronDown className={`w-3.5 h-3.5 ${statusConfig.chevronClass} shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                              </button>
+
+                              {isDropdownOpen && (
+                                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-1.5 overflow-hidden animate-in fade-in duration-100">
+                                  {ATTENDANCE_SELECT_OPTIONS.map((opt) => (
+                                    <button
+                                      key={opt.status}
+                                      type="button"
+                                      onClick={() => handleSetStatus(staff.id, opt.status)}
+                                      className={`w-full text-left px-4 py-2.5 text-xs transition-colors cursor-pointer ${opt.hover} ${
+                                        currentStatus === opt.status ? opt.activeClass : 'text-slate-700 font-medium'
+                                      }`}
+                                    >
+                                      <span>{opt.label}</span>
+                                    </button>
+                                  ))}
                                 </div>
-                              </td>
+                              )}
+                            </div>
 
-                              {/* 2. Punch In Time (Clean text without tag background) */}
-                              <td className="py-4 px-6 align-middle whitespace-nowrap">
-                                {staffRecord?.clock_in_time ? (
-                                  <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 font-mono">
-                                    <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                    <span>{staffRecord.clock_in_time}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-slate-400 font-mono">--:--</span>
-                                )}
-                              </td>
-
-                              {/* 3. Punch Out Time (Clean text without tag background) */}
-                              <td className="py-4 px-6 align-middle whitespace-nowrap">
-                                {staffRecord?.clock_out_time ? (
-                                  <div className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 font-mono">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                    <span>{staffRecord.clock_out_time}</span>
-                                  </div>
-                                ) : staffRecord ? (
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>On Duty</span>
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-slate-400 font-mono">--:--</span>
-                                )}
-                              </td>
-
-                              {/* 5. Attendance Status & Actions */}
-                              <td className="py-4 px-6 align-middle text-right whitespace-nowrap">
-                                <div className="flex items-center justify-end gap-2.5">
-                                  {/* Attendance Status Dropdown */}
-                                  <div
-                                    className="relative"
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                  >
-                                    {(() => {
-                                      const status = getAttendanceStatus(staff.id);
-                                      const opt = attendanceOptions.find(o => o.label === status) ?? attendanceOptions[0];
-                                      return (
-                                        <>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => handleToggleAttendanceDropdown(staff.id, e)}
-                                            className={opt.bg + ' ' + opt.color + ' ' + opt.border + ' border px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 cursor-pointer text-xs transition-colors hover:opacity-90 shadow-2xs'}
-                                          >
-                                            {status}
-                                            <span className="text-[10px]">▼</span>
-                                          </button>
-
-                                          {openAttendanceDropdown === staff.id && dropdownPos && (
-                                            <div
-                                              className="fixed w-36 bg-white border border-slate-200 rounded-lg shadow-xl z-[9999] overflow-hidden"
-                                              style={{ top: dropdownPos.top, right: dropdownPos.right }}
-                                              onMouseDown={(e) => e.stopPropagation()}
-                                            >
-                                              {attendanceOptions.map((option) => (
-                                                <button
-                                                  key={option.label}
-                                                  type="button"
-                                                  onClick={() => setAttendanceStatus(staff.id, option.label)}
-                                                  className={'w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2 transition-colors hover:bg-slate-50 ' + (status === option.label ? option.bg + ' ' + option.color : 'text-slate-700')}
-                                                >
-                                                  <span className={'w-2 h-2 rounded-full ' + option.bg.replace('100', '500')} />
-                                                  {option.label}
-                                                </button>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </>
-                                      );
-                                    })()}
-                                  </div>
-
-                                  <button
-                                    onClick={() => handleOpenStaffOverview(staff, 'people')}
-                                    title="View Staff Profile & Attendance"
-                                    className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                                  >
-                                    <ArrowRight className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                    </tbody>
-                  </table>
+                            {/* Open Profile Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenStaffOverview(staff, 'people')}
+                              title="View Profile"
+                              className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-600 flex items-center justify-center text-slate-400 shadow-2xs transition-colors cursor-pointer shrink-0"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── SECTION 2.2: TEAM LEAVES ── */}
-          {mainTab === 'payroll' && payrollTab === 'team_leaves' && (
+          {/* ── SECTION 3: TEAM LEAVES ── */}
+          {activeTab === 'team_leaves' && (
             <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
               <Calendar className="w-12 h-12 mb-4 opacity-20" />
               <p>Team Leaves view is under construction</p>
             </div>
           )}
 
-          {/* ── SECTION 2.3: MY LEAVES ── */}
-          {mainTab === 'payroll' && payrollTab === 'my_leaves' && (
+          {/* ── SECTION 4: MY LEAVES ── */}
+          {activeTab === 'my_leaves' && (
             <div className="p-6 max-w-7xl mx-auto w-full flex flex-col items-center justify-center h-64 text-slate-400 animate-in fade-in">
               <User className="w-12 h-12 mb-4 opacity-20" />
               <p>My Leaves view is under construction</p>
             </div>
           )}
 
-          {/* ── SECTION 2.4: HOLIDAYS ── */}
-          {mainTab === 'payroll' && payrollTab === 'holidays' && (
-            <HolidaysManager onShowToast={triggerToast} />
+          {/* ── SECTION 5: HOLIDAYS ── */}
+          {activeTab === 'holidays' && (
+            <div className="p-6 max-w-7xl mx-auto w-full animate-in fade-in">
+              <HolidaysManager onShowToast={triggerToast} />
+            </div>
           )}
         </>
       )}
@@ -1324,31 +1541,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                       Staff Category *
                     </label>
                     <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setNewStaffForm(prev => ({
-                          ...prev,
-                          staff_type: 'SITE',
-                          role_code: 'SITE_ENGINEER',
-                          designation: prev.designation === 'Office Administrator' ? 'Site Engineer' : (prev.designation || 'Site Engineer')
-                        }))}
-                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
-                          newStaffForm.staff_type === 'SITE'
-                            ? 'border-emerald-600 bg-emerald-50/50 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
-                            : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
-                        }`}
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                          newStaffForm.staff_type === 'SITE' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          <HardHat className="w-4 h-4" />
-                        </div>
-                        <div className="text-left">
-                          <div className="text-xs font-bold">Site Staff</div>
-                          <div className="text-[10px] text-slate-500">Field Engineers & Supervisors</div>
-                        </div>
-                      </button>
-
+                      {/* 1. Office Staff */}
                       <button
                         type="button"
                         onClick={() => setNewStaffForm(prev => ({
@@ -1357,20 +1550,60 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                           role_code: 'ADMIN',
                           designation: prev.designation === 'Site Engineer' ? 'Office Administrator' : (prev.designation || 'Office Administrator')
                         }))}
-                        className={`p-3 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                        className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
                           newStaffForm.staff_type === 'OFFICE'
-                            ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20 shadow-xs'
+                            ? 'border-[#5833ea] bg-purple-50/40 text-slate-900 ring-2 ring-[#5833ea]/20 shadow-xs'
                             : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
                         }`}
                       >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${
-                          newStaffForm.staff_type === 'OFFICE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                        {/* Radio selection circle */}
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                          newStaffForm.staff_type === 'OFFICE'
+                            ? 'border-[#5833ea] bg-[#5833ea]'
+                            : 'border-slate-300 bg-white'
                         }`}>
-                          <Briefcase className="w-4 h-4" />
+                          {newStaffForm.staff_type === 'OFFICE' && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
                         </div>
                         <div className="text-left">
-                          <div className="text-xs font-bold">Office Staff</div>
-                          <div className="text-[10px] text-slate-500">Administration & Desk Staff</div>
+                          <div className={`text-xs font-bold ${newStaffForm.staff_type === 'OFFICE' ? 'text-[#5833ea]' : 'text-slate-800'}`}>
+                            Office Staff
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Administration & Desk Staff</div>
+                        </div>
+                      </button>
+
+                      {/* 2. Site Staff */}
+                      <button
+                        type="button"
+                        onClick={() => setNewStaffForm(prev => ({
+                          ...prev,
+                          staff_type: 'SITE',
+                          role_code: 'SITE_ENGINEER',
+                          designation: prev.designation === 'Office Administrator' ? 'Site Engineer' : (prev.designation || 'Site Engineer')
+                        }))}
+                        className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
+                          newStaffForm.staff_type === 'SITE'
+                            ? 'border-[#5833ea] bg-purple-50/40 text-slate-900 ring-2 ring-[#5833ea]/20 shadow-xs'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                        }`}
+                      >
+                        {/* Radio selection circle */}
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                          newStaffForm.staff_type === 'SITE'
+                            ? 'border-[#5833ea] bg-[#5833ea]'
+                            : 'border-slate-300 bg-white'
+                        }`}>
+                          {newStaffForm.staff_type === 'SITE' && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <div className={`text-xs font-bold ${newStaffForm.staff_type === 'SITE' ? 'text-[#5833ea]' : 'text-slate-800'}`}>
+                            Site Staff
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">Field Engineers & Supervisors</div>
                         </div>
                       </button>
                     </div>

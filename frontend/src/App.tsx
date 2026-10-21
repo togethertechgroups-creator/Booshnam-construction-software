@@ -20,6 +20,7 @@ import { QuotationView } from './views/QuotationView';
 import { TeamScheduleView } from './views/TeamScheduleView';
 import { LoginView } from './views/LoginView';
 import { NotFound404View } from './components/common/NotFound404View';
+import { Loader } from './components/kokonutui/loader';
 import { globalErrorService, Http404Details, clear404Error, trigger404Error } from './lib/errorService';
 import { MobileSiteSimulatorModal } from './components/MobileSiteSimulatorModal';
 import { WhatsAppChatModal } from './components/chat/WhatsAppChatModal';
@@ -103,6 +104,17 @@ export function App() {
   const [currentView, setCurrentView] = useState<string>('company_dashboard');
   const [financeInitialTab, setFinanceInitialTab] = useState<string | undefined>(undefined);
   const [global404Error, setGlobal404Error] = useState<Http404Details | null>(null);
+
+  // 2-second Kokonut UI loading animation on initial startup and page transitions
+  const [isViewLoading, setIsViewLoading] = useState(true);
+
+  useEffect(() => {
+    setIsViewLoading(true);
+    const timer = setTimeout(() => {
+      setIsViewLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [currentView]);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInitialContactId, setChatInitialContactId] = useState<string | undefined>(undefined);
@@ -818,6 +830,50 @@ export function App() {
   const pendingApprovalsCount = approvals.filter(a => a.status === 'PENDING').length;
   const canViewCost = api.canViewCost();
 
+  const getLoaderInfo = () => {
+    switch (currentView) {
+      case 'company_dashboard':
+      case 'dashboard':
+        return {
+          title: 'Loading Company Dashboard...',
+          subtitle: 'Gathering real-time project metrics, workforce and financials'
+        };
+      case 'projects':
+        return {
+          title: 'Loading Projects...',
+          subtitle: 'Fetching active project milestones, tasks and WBS trackers'
+        };
+      case 'quotation':
+        return {
+          title: 'Loading Leads & Quotation...',
+          subtitle: 'Loading client enquiries, proposals and cost estimations'
+        };
+      case 'workforce':
+      case 'payroll':
+        return {
+          title: 'Loading Staff & Payroll...',
+          subtitle: 'Fetching workforce roster, attendance records and biometric logs'
+        };
+      case 'finance':
+      case 'accounts_finance':
+        return {
+          title: 'Loading Accounts & Finance...',
+          subtitle: 'Syncing bank ledgers, revenue and cashflow statements'
+        };
+      case 'procurement':
+      case 'warehouse':
+        return {
+          title: 'Loading Procurement & Stock...',
+          subtitle: 'Checking purchase orders, material requests and inventory'
+        };
+      default:
+        return {
+          title: 'Loading Booshnam Associates...',
+          subtitle: 'Preparing real-time construction management data'
+        };
+    }
+  };
+
   if (!currentUserAccount) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
@@ -845,7 +901,7 @@ export function App() {
         isProfileModalOpen ? 'pl-0' : isSidebarOpen ? 'pl-64' : 'pl-[72px]'
       } ${currentView === 'quotation' ? 'h-screen max-h-screen overflow-hidden' : ''}`}>
         {/* View Router */}
-        <main className={`flex-1 w-full min-w-0 bg-[#f8fafc] ${
+        <main className={`flex-1 w-full min-w-0 ${isViewLoading ? 'bg-white h-screen flex flex-col justify-center' : 'bg-[#f8fafc]'} ${
           currentView === 'quotation' ? 'h-full flex flex-col overflow-hidden' : ''
         }`}>
           {/* Active 404 Error State (Shown until cleared) */}
@@ -868,6 +924,15 @@ export function App() {
               onClearError={() => setCurrentView('company_dashboard')}
               onNavigateHome={() => setCurrentView('company_dashboard')}
             />
+          ) : isViewLoading ? (
+            <div className="flex-1 w-full h-full min-h-screen flex flex-col items-center justify-center bg-white p-6">
+              <Loader
+                size="lg"
+                title={getLoaderInfo().title}
+                subtitle={getLoaderInfo().subtitle}
+                className="text-[#C61D45]"
+              />
+            </div>
           ) : (
             <>
               {currentView === 'company_dashboard' && (

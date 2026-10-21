@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, Search, Calendar, ChevronDown, ChevronRight, ChevronUp, GitBranch, RefreshCw, 
   Download, MessageSquare, Clock, User, Users, Check, CheckCircle2, 
@@ -17,6 +18,7 @@ import { CustomSelect } from '../../CustomSelect';
 import { PREDEFINED_TASKS_TEMPLATE } from '../../../lib/mockData';
 import { syncQuotationTaskToProject, QuotationScheduleTask } from '../../../lib/quotationScheduleService';
 import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../../lib/timestampUtils';
+import { getCurrentUserAccount } from '../../../lib/authService';
 
 interface TaskTabProps {
   project: Project;
@@ -580,34 +582,33 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const primaryStorageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
   const legacyStorageKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
 
-  const [taskList, setTaskList] = useState<WBSTask[]>(() => {
+  // Helper to load current tasks for a project safely without destructively resetting completed tasks
+  const loadProjectTasks = (pId: string): WBSTask[] => {
+    const pKey = `booshnam_wbs_tasks_v2_${pId}`;
+    const lKey = `booshnam_wbs_tasks_v10_${pId}`;
     try {
-      const saved = localStorage.getItem(primaryStorageKey) || localStorage.getItem(legacyStorageKey);
+      const saved = localStorage.getItem(pKey) || localStorage.getItem(lKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          let lastMainId: string | null = null;
           return parsed.map((t: WBSTask) => {
             let isSub = Boolean(t.is_subtask);
             if (t.title === 'Site Visit' && !t.parent_id) {
               isSub = false;
             }
-            const hasUserCompletion = Boolean(t.completion_remarks || t.completion_proof_url);
-            if (t.status === 'COMPLETED' && !hasUserCompletion) {
-              return {
-                ...t,
-                status: 'TODO' as const,
-                progress_percentage: 0,
-                progress_label: '0/1 lumpsum',
-                delay_status: 'On Time',
-                actual_start: '',
-                actual_end: '',
-                forecast_end: 'On schedule',
-                is_subtask: isSub
-              };
+            if (!isSub) {
+              lastMainId = t.id;
+            }
+            let cleanLabel = t.progress_label;
+            if (cleanLabel && cleanLabel.toLowerCase().includes('lumpsum')) {
+              cleanLabel = `${t.progress_percentage || 0} %`;
             }
             return {
               ...t,
-              is_subtask: isSub
+              is_subtask: isSub,
+              parent_id: isSub ? (t.parent_id || lastMainId || undefined) : undefined,
+              progress_label: cleanLabel || `${t.progress_percentage || 0} %`
             };
           });
         }
@@ -615,7 +616,6 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     } catch {
       // ignore
     }
-    const pId = project?.id || 'default';
     return DEFAULT_WORKFLOW_TASKS.map((t, idx) => ({
       ...t,
       id: `tsk-${pId}-${idx + 1}-${Date.now()}`,
@@ -630,11 +630,55 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       is_subtask: false,
       delay_status: 'On Time' as const
     })) as WBSTask[];
+  };
+
+  const [taskList, setTaskList] = useState<WBSTask[]>(() => {
+    return loadProjectTasks(project?.id || 'default');
   });
+
+  const isSelfSavingRef = useRef(false);
+
+  // Synchronize taskList when project changes
+  useEffect(() => {
+    const pId = project?.id || 'default';
+    setTaskList(loadProjectTasks(pId));
+  }, [project?.id]);
+
+  // Real-time synchronization: listen for task updates across the app (Site Engineers, Admins, Schedules)
+  useEffect(() => {
+    const handleSyncTasks = () => {
+      if (isSelfSavingRef.current) return;
+      const pId = project?.id || 'default';
+      const fresh = loadProjectTasks(pId);
+      setTaskList(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(fresh)) return prev;
+        return fresh;
+      });
+    };
+
+    window.addEventListener('booshnam_wbs_tasks_updated', handleSyncTasks);
+    window.addEventListener('booshnam_projects_updated', handleSyncTasks);
+    window.addEventListener('booshnam_quotation_schedule_updated', handleSyncTasks);
+    window.addEventListener('booshnam_active_session_v2', handleSyncTasks);
+    window.addEventListener('booshnam_user_accounts_updated', handleSyncTasks);
+    window.addEventListener('booshnam_session_changed', handleSyncTasks);
+    window.addEventListener('storage', handleSyncTasks);
+
+    return () => {
+      window.removeEventListener('booshnam_wbs_tasks_updated', handleSyncTasks);
+      window.removeEventListener('booshnam_projects_updated', handleSyncTasks);
+      window.removeEventListener('booshnam_quotation_schedule_updated', handleSyncTasks);
+      window.removeEventListener('booshnam_active_session_v2', handleSyncTasks);
+      window.removeEventListener('booshnam_user_accounts_updated', handleSyncTasks);
+      window.removeEventListener('booshnam_session_changed', handleSyncTasks);
+      window.removeEventListener('storage', handleSyncTasks);
+    };
+  }, [project?.id]);
 
   // Save changes to localStorage and synchronize project progress
   useEffect(() => {
     try {
+      isSelfSavingRef.current = true;
       localStorage.setItem(primaryStorageKey, JSON.stringify(taskList));
       localStorage.setItem(legacyStorageKey, JSON.stringify(taskList));
       window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
@@ -679,6 +723,10 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       }
     } catch {
       // ignore
+    } finally {
+      setTimeout(() => {
+        isSelfSavingRef.current = false;
+      }, 60);
     }
   }, [taskList, primaryStorageKey, legacyStorageKey, project?.id]);
 
@@ -757,13 +805,37 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const [progressNoteInput, setProgressNoteInput] = useState('');
   const [progressIsCompleted, setProgressIsCompleted] = useState(true);
 
+  // Complete Process Modal (Audio Requirement: 50% Ongoing or 100% Completed)
+  const [isCompleteProcessModalOpen, setIsCompleteProcessModalOpen] = useState(false);
+  const [completeProcessChoice, setCompleteProcessChoice] = useState<50 | 100>(100);
+  const [completeProcessRemarks, setCompleteProcessRemarks] = useState('');
+  const [completeProcessTask, setCompleteProcessTask] = useState<WBSTask | null>(null);
+
   // Assignee Modal
   const [isAssigneeModalOpen, setIsAssigneeModalOpen] = useState(false);
 
   // Subtask Addition Modal
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [parentTaskId, setParentTaskId] = useState<string | null>(null);
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(() => {
+    const set = new Set<string>();
+    try {
+      const pKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+      const lKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
+      const saved = localStorage.getItem(pKey) || localStorage.getItem(lKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          let lastMain: string | null = null;
+          parsed.forEach((t: any) => {
+            if (!t.is_subtask) lastMain = t.id;
+            else if (t.parent_id || lastMain) set.add(t.parent_id || lastMain);
+          });
+        }
+      }
+    } catch {}
+    return set;
+  });
 
   // Task Extra Meta persistent storage
   const [taskMetadataMap, setTaskMetadataMap] = useState<Record<string, TaskExtraMeta>>(() => {
@@ -787,13 +859,74 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     });
   };
 
+  const [currentUserAccount, setCurrentUserAccount] = useState(() => getCurrentUserAccount());
+
+  useEffect(() => {
+    const handleUserSync = () => {
+      setCurrentUserAccount(getCurrentUserAccount());
+    };
+    window.addEventListener('siteops_user_updated', handleUserSync);
+    window.addEventListener('booshnam_session_changed', handleUserSync);
+    window.addEventListener('booshnam_active_session_v2', handleUserSync);
+    window.addEventListener('booshnam_user_accounts_updated', handleUserSync);
+    window.addEventListener('storage', handleUserSync);
+    return () => {
+      window.removeEventListener('siteops_user_updated', handleUserSync);
+      window.removeEventListener('booshnam_session_changed', handleUserSync);
+      window.removeEventListener('booshnam_active_session_v2', handleUserSync);
+      window.removeEventListener('booshnam_user_accounts_updated', handleUserSync);
+      window.removeEventListener('storage', handleUserSync);
+    };
+  }, []);
+
   const currentUser = useMemo(() => {
+    if (currentUserAccount) {
+      return {
+        first_name: currentUserAccount.staff_name || currentUserAccount.username,
+        username: currentUserAccount.username,
+        role_name: currentUserAccount.role_name,
+        role_code: currentUserAccount.role_code
+      };
+    }
     try {
       const stored = localStorage.getItem('siteops_user');
       if (stored) return JSON.parse(stored);
     } catch (e) {}
-    return { first_name: 'Priya', username: 'admin', role_name: 'Owner / Director', role_code: 'SUPER_ADMIN' };
-  }, [isTaskDrawerOpen]);
+    return { first_name: 'Staff', username: 'staff', role_name: 'Site Engineer', role_code: 'SITE_ENGINEER' };
+  }, [currentUserAccount, isTaskDrawerOpen]);
+
+  const isAdminOrSuperAdmin = useMemo(() => {
+    const roleCode = (currentUser?.role_code || '').toUpperCase().trim();
+    const roleName = (currentUser?.role_name || '').toLowerCase().trim();
+    const name = (currentUser?.first_name || currentUser?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SUPER_ADMIN' ||
+      roleCode === 'ADMIN' ||
+      roleCode === 'OWNER_DIRECTOR' ||
+      roleName.includes('super admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('owner') ||
+      roleName.includes('director') ||
+      name === 'admin' ||
+      name === 'superadmin' ||
+      name === 'priya' ||
+      name === 'rajesh'
+    );
+  }, [currentUser]);
+
+  const isSuperAdmin = useMemo(() => {
+    const roleCode = (currentUser?.role_code || '').toUpperCase().trim();
+    const roleName = (currentUser?.role_name || '').toLowerCase().trim();
+    const name = (currentUser?.first_name || currentUser?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SUPER_ADMIN' ||
+      roleName.includes('super admin') ||
+      name === 'superadmin' ||
+      name === 'priya'
+    );
+  }, [currentUser]);
 
   // New Comment input
   const [commentInput, setCommentInput] = useState('');
@@ -863,6 +996,42 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     };
     reader.readAsDataURL(file);
   };
+
+  // Compute hierarchical serial numbers for tasks & subtasks (1, 2, 3, 4 -> 4.1, 4.2 -> 5)
+  const taskSerialNumbers = useMemo(() => {
+    const sNoMap = new Map<string, string>();
+    let mainIndex = 1;
+    const subtaskCounters = new Map<string, number>();
+
+    // Pass 1: Assign sequential integer serial numbers (1, 2, 3...) to all main tasks
+    taskList.forEach((t) => {
+      if (!t.is_subtask) {
+        sNoMap.set(t.id, String(mainIndex));
+        subtaskCounters.set(t.id, 0);
+        mainIndex++;
+      }
+    });
+
+    // Pass 2: Assign hierarchical subtask numbers (e.g. 4.1, 4.2)
+    let lastMainTaskId: string | null = null;
+    taskList.forEach((t) => {
+      if (!t.is_subtask) {
+        lastMainTaskId = t.id;
+      } else {
+        const resolvedParentId = t.parent_id || lastMainTaskId;
+        if (resolvedParentId && sNoMap.has(resolvedParentId)) {
+          const parentSNo = sNoMap.get(resolvedParentId)!;
+          const currentCount = (subtaskCounters.get(resolvedParentId) || 0) + 1;
+          subtaskCounters.set(resolvedParentId, currentCount);
+          sNoMap.set(t.id, `${parentSNo}.${currentCount}`);
+        } else {
+          sNoMap.set(t.id, `${Math.max(1, mainIndex - 1)}.1`);
+        }
+      }
+    });
+
+    return sNoMap;
+  }, [taskList]);
 
   // Filter tasks
   const filteredTasks = taskList.filter((item) => {
@@ -1203,64 +1372,90 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     onShowToast?.(`Task status updated to ${isDone ? 'Completed' : isOngoing ? 'Ongoing' : 'Start'}`);
   };
 
-  // Complete Process Handler (Audio Requirement):
-  // User attaches photo/proof and clicks "Complete Process" -> Status becomes COMPLETED (100%),
-  // Completion date is set to TODAY's date, and synchronizes to Schedule Gantt view!
-  const handleCompleteProcess = () => {
+  // Open Complete Process Modal (Audio Requirement: Close drawer sidebar immediately and show modal centered)
+  const handleOpenCompleteProcessModal = () => {
     if (!editingTask) return;
+    const target = { ...editingTask };
+    setCompleteProcessTask(target);
+    if (target.status === 'IN_PROGRESS' || target.progress_percentage === 50) {
+      setCompleteProcessChoice(100);
+    } else if (target.status === 'COMPLETED' || target.progress_percentage === 100) {
+      setCompleteProcessChoice(100);
+    } else {
+      setCompleteProcessChoice(50);
+    }
+    setCompleteProcessRemarks(formRemarks || '');
+    clearFormDirty();
+    setIsTaskDrawerOpen(false); // Close task drawer sidebar immediately as requested!
+    setIsCompleteProcessModalOpen(true);
+  };
+
+  // Apply Complete Process Choice (50% or 100%)
+  const handleApplyCompleteProcess = (percentage: 50 | 100, customRemarks?: string) => {
+    const targetTask = completeProcessTask || editingTask;
+    if (!targetTask) return;
+    const isComp = percentage === 100;
     const todayIso = new Date().toISOString().split('T')[0];
     const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const todayTimeStr = `${todayStr}, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    const proofUrlToSave = formProofUrl || editingTask.completion_proof_url;
+    const proofUrlToSave = formProofUrl || targetTask.completion_proof_url;
+    const noteText = (customRemarks !== undefined ? customRemarks : completeProcessRemarks).trim() || 
+      (isComp ? 'Quotation completed via Complete Process with attached proof.' : 'Quotation progress updated to 50% (Ongoing).');
 
-    const completedTask: WBSTask = {
-      ...editingTask,
-      status: 'COMPLETED',
-      progress_percentage: 100,
-      progress_label: '1/1 lumpsum',
-      start_date: formStartDate || editingTask.start_date || project?.start_date || todayIso,
-      end_date: todayIso, // Completion date as required by user!
-      actual_start: formActualStart || editingTask.actual_start || formStartDate || editingTask.start_date || todayIso,
-      actual_end: todayIso, // Completion date!
+    const updatedTask: WBSTask = {
+      ...targetTask,
+      status: isComp ? 'COMPLETED' : 'IN_PROGRESS',
+      progress_percentage: percentage,
+      progress_label: `${percentage} %`,
+      start_date: formStartDate || targetTask.start_date || project?.start_date || todayIso,
+      end_date: isComp ? todayIso : (formEndDate || targetTask.end_date || todayIso),
+      actual_start: formActualStart || targetTask.actual_start || formStartDate || targetTask.start_date || todayIso,
+      actual_end: isComp ? todayIso : (targetTask.actual_end || undefined),
       delay_status: 'On Time',
       completion_proof_url: proofUrlToSave,
-      completion_remarks: formRemarks || 'Quotation process completed with attached proof.',
-      completed_by: currentUser.first_name || currentUser.username || 'Staff',
-      completed_at: todayTimeStr
+      completion_remarks: noteText,
+      completed_by: isComp ? (currentUser.first_name || currentUser.username || 'Staff') : targetTask.completed_by,
+      completed_at: isComp ? todayTimeStr : targetTask.completed_at
     };
 
-    setFormActualEnd(todayIso);
-    setEditingTask(completedTask);
-    const updatedTaskList = taskList.map(t => t.id === completedTask.id ? completedTask : t);
+    setFormActualStart(updatedTask.actual_start || todayIso);
+    if (isComp) {
+      setFormActualEnd(todayIso);
+    }
+    setEditingTask(null);
+    setCompleteProcessTask(null);
+    const updatedTaskList = taskList.map(t => t.id === updatedTask.id ? updatedTask : t);
     setTaskList(updatedTaskList);
 
     // Save to localStorage
     try {
       const storageKey = `booshnam_wbs_tasks_v2_${project?.id || 'default'}`;
+      const legacyKey = `booshnam_wbs_tasks_v10_${project?.id || 'default'}`;
       localStorage.setItem(storageKey, JSON.stringify(updatedTaskList));
+      localStorage.setItem(legacyKey, JSON.stringify(updatedTaskList));
     } catch (e) {}
 
-    // Save metadata
-    saveTaskMeta(completedTask.id, prev => ({
+    // Save metadata: progress updates log and status logs
+    saveTaskMeta(updatedTask.id, prev => ({
       ...prev,
       progressUpdates: [
         {
           id: `prog-${Date.now()}`,
-          user: currentUser.first_name || 'Staff',
-          amount: '1 lumpsum ✓ (100%)',
+          user: currentUser.first_name || currentUser.username || 'Staff',
+          amount: isComp ? '100% ✓ (Completed)' : '50% (Ongoing)',
           date: todayStr,
-          note: formRemarks || 'Quotation completed via Complete Process with attached proof.',
+          note: noteText,
           proof_url: proofUrlToSave
         },
-        ...(prev.progressUpdates || []).filter(p => p.proof_url !== proofUrlToSave)
+        ...(prev.progressUpdates || []).filter(p => !proofUrlToSave || p.proof_url !== proofUrlToSave)
       ],
       statusLogs: [
         {
           id: `log-${Date.now()}`,
-          text: `Task marked as Completed on ${todayStr}`,
+          text: isComp ? `Task marked as Completed (100%) on ${todayStr}` : `Task progress set to 50% (Ongoing) on ${todayStr}`,
           timestamp: todayTimeStr,
-          user: currentUser.first_name || 'Staff'
+          user: currentUser.first_name || currentUser.username || 'Staff'
         },
         ...(prev.statusLogs || [])
       ]
@@ -1269,52 +1464,86 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     // Synchronize to Quotation Schedule
     try {
       const quotationScheduleTask: QuotationScheduleTask = {
-        id: `proj-task-${completedTask.id}`,
-        wbs_task_id: completedTask.id,
-        task_name: completedTask.title,
+        id: `proj-task-${updatedTask.id}`,
+        wbs_task_id: updatedTask.id,
+        task_name: updatedTask.title,
         project_id: project?.id || '',
         project_name: project?.name || 'Project',
-        assignee: completedTask.assigned_to_name || 'Staff',
-        status: 'COMPLETED',
-        start_date: completedTask.start_date || project?.start_date || todayIso,
-        end_date: todayIso,
-        actual_start: completedTask.actual_start || todayIso,
-        actual_end: todayIso,
-        forecast_end: todayIso,
-        completed_at: todayTimeStr,
-        duration_days: completedTask.duration_days || 1,
-        progress_percentage: 100,
+        assignee: updatedTask.assigned_to_name || 'Staff',
+        status: isComp ? 'COMPLETED' : 'IN_PROGRESS',
+        start_date: updatedTask.start_date || project?.start_date || todayIso,
+        end_date: isComp ? todayIso : (updatedTask.end_date || todayIso),
+        actual_start: updatedTask.actual_start || todayIso,
+        actual_end: isComp ? todayIso : undefined,
+        forecast_end: isComp ? todayIso : undefined,
+        completed_at: isComp ? todayTimeStr : undefined,
+        duration_days: updatedTask.duration_days || 1,
+        progress_percentage: percentage,
         milestone_date: new Date(todayIso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
-        remarks: completedTask.completion_remarks || 'Completed with attached proof.',
-        tag: completedTask.tag || '--',
+        remarks: noteText,
+        tag: updatedTask.tag || '--',
         group_name: project?.name || 'Unassigned',
         image_url: proofUrlToSave,
-        progress_user: completedTask.completed_by || 'Staff',
+        progress_user: currentUser.first_name || currentUser.username || 'Staff',
         progress_date: todayStr,
-        stage_label: 'Completed',
-        color_theme: 'green'
+        stage_label: isComp ? 'Completed' : 'Ongoing',
+        color_theme: isComp ? 'green' : 'blue'
       };
       syncQuotationTaskToProject(quotationScheduleTask);
     } catch (e) {}
 
-    // Sync attached photo to Centralized Project Photos
+    // Sync attached photo to Centralized Project Photos if uploaded
     if (proofUrlToSave) {
       try {
         addProjectPhoto(project.id || project.code, {
           url: proofUrlToSave,
-          title: `Task Proof: ${completedTask.title}`,
+          title: `Task Proof: ${updatedTask.title}`,
           source: 'Task',
-          category: completedTask.tag || 'Execution',
-          details: `Completed by ${completedTask.completed_by} on ${todayStr}. Remarks: ${formRemarks || 'Completed'}`
+          category: updatedTask.tag || 'Execution',
+          details: `Updated by ${currentUser.first_name || 'Staff'} on ${todayStr}. Remarks: ${noteText}`
         });
       } catch (e) {}
     }
 
+    // Update project summary in booshnam_projects_v2
+    try {
+      const rawProjs = localStorage.getItem('booshnam_projects_v2');
+      if (rawProjs) {
+        const parsedProjs = JSON.parse(rawProjs);
+        if (Array.isArray(parsedProjs)) {
+          const total = updatedTaskList.length;
+          const completed = updatedTaskList.filter(item => item.status === 'COMPLETED').length;
+          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+          const newStatus = progress === 100 ? 'COMPLETED' : 'ACTIVE';
+          const newProjs = parsedProjs.map((p: any) => {
+            if (p.id === project?.id) {
+              return {
+                ...p,
+                progress_percentage: progress,
+                completed_tasks_count: completed,
+                tasks_count: total,
+                status: newStatus
+              };
+            }
+            return p;
+          });
+          localStorage.setItem('booshnam_projects_v2', JSON.stringify(newProjs));
+        }
+      }
+    } catch (err) {}
+
+    // Dispatch global events so Super Admin, Admin, and all assigned staff receive live update
     window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
     window.dispatchEvent(new Event('booshnam_projects_updated'));
     window.dispatchEvent(new Event('booshnam_quotation_schedule_updated'));
 
-    onShowToast?.(`Task "${completedTask.title}" marked as Completed on ${todayStr}!`);
+    setIsCompleteProcessModalOpen(false);
+    setCompleteProcessTask(null);
+    setEditingTask(null);
+    onShowToast?.(isComp 
+      ? `Task "${updatedTask.title}" marked as Completed (100%)!` 
+      : `Task "${updatedTask.title}" updated to Ongoing (50%)!`
+    );
   };
 
   // Save Changes button in Task Drawer (Audio Requirement: Commit image, updated dates, and sync to Schedule)
@@ -1460,6 +1689,11 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
   // Inline Title Save
   const handleSaveInlineTitle = () => {
+    if (!isAdminOrSuperAdmin) {
+      onShowToast?.('Permission Denied: Only Admin or Super Admin can rename tasks.');
+      setIsEditingTitleInline(false);
+      return;
+    }
     if (!editingTask || !inlineTitleValue.trim()) return;
     const updated = { ...editingTask, title: inlineTitleValue.trim() };
     setEditingTask(updated);
@@ -1858,6 +2092,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         delay_status: formDelayStatus,
         is_milestone: false,
         is_subtask: isAddingSubtask,
+        parent_id: isAddingSubtask && parentTaskId ? parentTaskId : undefined,
         assigned_to_name: formAssigned,
         assigned_team: [{ name: formAssigned, initials: formAssigned.slice(0, 2).toUpperCase() }],
         dependencies: [],
@@ -1871,13 +2106,25 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         if (isAddingSubtask && parentTaskId) {
           const parentIndex = prev.findIndex((t) => t.id === parentTaskId);
           if (parentIndex !== -1) {
+            let insertIndex = parentIndex + 1;
+            while (
+              insertIndex < prev.length &&
+              prev[insertIndex].is_subtask &&
+              (prev[insertIndex].parent_id === parentTaskId || !prev[insertIndex].parent_id)
+            ) {
+              insertIndex++;
+            }
             const nextList = [...prev];
-            nextList.splice(parentIndex + 1, 0, newTask);
+            nextList.splice(insertIndex, 0, newTask);
             return nextList;
           }
         }
         return [...prev, newTask];
       });
+
+      if (isAddingSubtask && parentTaskId) {
+        setExpandedTasks((prev) => new Set(prev).add(parentTaskId));
+      }
 
       if (formAssigned) {
         addNotification({
@@ -1902,16 +2149,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
   const handleDeleteTask = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
 
-    const isSuperAdmin = !currentUser?.role_code || 
-      currentUser?.role_code === 'SUPER_ADMIN' || 
-      currentUser?.role_code === 'ADMIN' || 
-      currentUser?.role_name?.toLowerCase() === 'super admin' ||
-      currentUser?.role_name?.toLowerCase().includes('admin') ||
-      currentUser?.role_name === 'Owner / Director' ||
-      currentUser?.first_name?.toLowerCase() === 'priya' ||
-      currentUser?.first_name?.toLowerCase() === 'rajesh';
-
-    if (!isSuperAdmin) {
+    if (!isAdminOrSuperAdmin) {
       onShowToast?.('Permission Denied: Only Admin or Super Admin can delete tasks.');
       return;
     }
@@ -2102,8 +2340,27 @@ export const TaskTab: React.FC<TaskTabProps> = ({
     handleCloseStartModal();
   };
 
-  // Helper to render progress pill with bold red numerator and regular slate denominator
+  // Helper to render progress pill without 'lumpsum' - showing completed progress number / percentage
   const renderProgressPillContent = (label?: string, percentage?: number) => {
+    // 1. If label contains "lumpsum" (e.g. "100/100 lumpsum", "50/100 lumpsum", "0/1 lumpsum", "0.5/1 lumpsum")
+    if (label && label.toLowerCase().includes('lumpsum')) {
+      let numVal: number = percentage !== undefined ? percentage : 0;
+      if (percentage === undefined || percentage === null) {
+        const parts = label.split('/');
+        const firstNum = parseFloat(parts[0].trim());
+        if (!isNaN(firstNum)) {
+          numVal = firstNum <= 1 && firstNum > 0 ? Math.round(firstNum * 100) : Math.round(firstNum);
+        }
+      }
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          <span className="font-bold text-red-600">{numVal}</span>
+          <span className="text-slate-600 font-medium"> %</span>
+        </span>
+      );
+    }
+
+    // 2. If label contains '/' and is NOT lumpsum (e.g. custom units like "20/50 m")
     if (label && label.includes('/')) {
       const parts = label.split('/');
       const firstNum = parts[0].trim();
@@ -2115,6 +2372,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         </span>
       );
     }
+
+    // 3. If label contains '%'
     if (label && label.includes('%')) {
       const parts = label.split('%');
       return (
@@ -2124,7 +2383,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
         </span>
       );
     }
-    return <span className="font-bold text-red-600">{label || `${percentage || 0} %`}</span>;
+
+    // 4. Fallback to percentage or clean number
+    const finalVal = percentage !== undefined && percentage !== null ? percentage : (label || 0);
+    return (
+      <span className="inline-flex items-center gap-0.5">
+        <span className="font-bold text-red-600">{finalVal}</span>
+        <span className="text-slate-600 font-medium"> %</span>
+      </span>
+    );
   };
 
   // Close dropdown on click outside
@@ -2366,14 +2633,16 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                 <th className="py-3 px-3.5 w-24 border-r border-slate-200/80 text-center font-bold text-slate-600">DURATION</th>
                 <th className="py-3 px-4 w-28 border-r border-slate-200/80 text-center font-bold text-slate-600"></th>
                 <th className="py-3 px-2 w-10 text-center">
-                  <button
-                    type="button"
-                    onClick={handleOpenCreate}
-                    className="p-1 text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
-                    title="Add Task"
-                  >
-                    <PlusCircle className="w-4 h-4 stroke-[1.6]" />
-                  </button>
+                  {isAdminOrSuperAdmin && (
+                    <button
+                      type="button"
+                      onClick={handleOpenCreate}
+                      className="p-1 text-slate-500 hover:text-red-600 transition-colors cursor-pointer"
+                      title="Add Task"
+                    >
+                      <PlusCircle className="w-4 h-4 stroke-[1.6]" />
+                    </button>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -2422,8 +2691,12 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <td className="py-3.5 px-3 border-r border-slate-200/70 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-2">
                           <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 cursor-grab active:cursor-grabbing shrink-0" />
-                          <span className="font-medium text-slate-800 text-[13px] w-4 text-left">
-                            {t.is_subtask ? '' : (t.s_no || idx + 1)}
+                          <span className={`text-[13px] text-left ${
+                            t.is_subtask 
+                              ? 'text-red-600 font-bold min-w-[28px]' 
+                              : 'font-medium text-slate-800 w-4'
+                          }`}>
+                            {taskSerialNumbers.get(t.id) || (t.is_subtask ? '' : (t.s_no || idx + 1))}
                           </span>
                         </div>
                       </td>
@@ -2454,7 +2727,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                               {t.title}
                             </span>
                           </div>
-                          {!t.is_subtask && (
+                          {!t.is_subtask && isAdminOrSuperAdmin && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2469,28 +2742,35 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         </div>
                       </td>
 
-                      {/* 3. Status (Green circle dot + "Completed", Blue dot + "Ongoing", or red plain text "Start" button - NO TAG/BOX) */}
+                      {/* 3. Status (For Super Admin: read-only status indicator. For others: clean status badge or Start button) */}
                       <td className="py-3.5 px-4 border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        {isDone ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(t.id)}
-                            className="flex items-center gap-2 text-left cursor-pointer group/st hover:opacity-80 transition-opacity"
-                            title="Status: Completed (click to toggle)"
-                          >
+                        {isSuperAdmin ? (
+                          isDone ? (
+                            <div className="flex items-center gap-2 text-left select-none" title="Status: Completed">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="text-emerald-600 font-semibold text-xs">Completed</span>
+                            </div>
+                          ) : isOngoing ? (
+                            <div className="flex items-center gap-2 text-left select-none" title="Status: Ongoing">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                              <span className="text-blue-600 font-semibold text-xs">Ongoing</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-left select-none" title="Status: Pending">
+                              <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                              <span className="text-slate-500 font-semibold text-xs">Pending</span>
+                            </div>
+                          )
+                        ) : isDone ? (
+                          <div className="flex items-center gap-2 text-left select-none" title="Status: Completed">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                             <span className="text-emerald-600 font-semibold text-xs">Completed</span>
-                          </button>
+                          </div>
                         ) : isOngoing ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(t.id)}
-                            className="flex items-center gap-2 text-left cursor-pointer group/st hover:opacity-80 transition-opacity"
-                            title="Status: Ongoing (click to toggle)"
-                          >
+                          <div className="flex items-center gap-2 text-left select-none" title="Status: Ongoing">
                             <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
                             <span className="text-blue-600 font-semibold text-xs">Ongoing</span>
-                          </button>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -2534,7 +2814,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         </span>
                       </td>
 
-                      {/* 6. ASSIGNED TO (Circular avatar badges: G, SM, R, +6) */}
+                      {/* 6. ASSIGNED TO (Circular avatar badges: G, SM, R, +6 or assignee badge) */}
                       <td className="py-3.5 px-4 text-center border-r border-slate-200/70 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {t.assigned_team && t.assigned_team.length > 0 ? (
                           <div className="flex items-center justify-center -space-x-1.5">
@@ -2554,6 +2834,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                                 </div>
                               );
                             })}
+                          </div>
+                        ) : (t.assigned_to_name || t.assigned_to) ? (
+                          <div className="flex items-center justify-center">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-100 shadow-2xs">
+                              <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                                {(t.assigned_to_name || t.assigned_to || '').substring(0, 1).toUpperCase()}
+                              </span>
+                              <span className="truncate max-w-[90px]">{t.assigned_to_name || t.assigned_to}</span>
+                            </span>
                           </div>
                         ) : (
                           <span className="text-slate-400 font-semibold text-xs">—</span>
@@ -2594,9 +2883,20 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       {/* ========================================================================= */}
       {/* 3. TASK SLIDE-OVER DRAWER (EXACT RECREATION OF SCREENSHOTS 2 & 3)        */}
       {/* ========================================================================= */}
-      {isTaskDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl flex flex-col border-l border-slate-200 rounded-l-3xl rounded-l-drawer overflow-hidden animate-in slide-in-from-right duration-200">
+      {isTaskDrawerOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[120] overflow-hidden bg-slate-900/60 backdrop-blur-2xs flex justify-end animate-in fade-in duration-150"
+          style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+          onClick={handleCloseTaskDrawer}
+        >
+          <div 
+            className="bg-white w-full max-w-xl md:max-w-2xl h-full shadow-2xl flex flex-col border-l border-slate-200 overflow-hidden animate-in slide-in-from-right duration-200"
+            style={{ top: 0, bottom: 0, height: '100%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Red Gradient Brand Accent Line flush with absolute top edge */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-rose-500 to-red-600 shrink-0" />
+
             {editingTask ? (
               /* ================================================================= */
               /* A. TASK DETAIL VIEW (SCREENSHOT 2 & 3)                           */
@@ -2614,7 +2914,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       <X className="w-5 h-5" />
                     </button>
 
-                    {/* Status Indicator (Screenshot 2: ● 1/1 lumpsum (Completed)) */}
+                    {/* Status Indicator (Just status name, no lumpsum, no percentage) */}
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${
                         editingTask.status === 'COMPLETED' ? 'bg-emerald-500' :
@@ -2622,88 +2922,22 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         'bg-amber-500'
                       }`} />
                       <span>
-                        {editingTask.progress_label || (editingTask.status === 'COMPLETED' ? '1/1 lumpsum' : '0/1 lumpsum')} ({
-                          editingTask.status === 'COMPLETED' ? 'Completed' :
-                          editingTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Start'
-                        })
+                        {editingTask.status === 'COMPLETED' ? 'Completed' :
+                         editingTask.status === 'IN_PROGRESS' ? 'Ongoing' : 'Start'}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Options ⋮ */}
-                    <div className="relative" data-task-dropdown>
-                      <button
-                        type="button"
-                        onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                        className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
-                        title="Task Actions"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {isMoreMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1 text-xs animate-in fade-in">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsEditingTitleInline(true);
-                              setIsMoreMenuOpen(false);
-                            }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Rename Task</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              proofFileInputRef.current?.click();
-                              setIsMoreMenuOpen(false);
-                            }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                          >
-                            <Camera className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Attach Proof / Photo</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsAssigneeModalOpen(true);
-                              setIsMoreMenuOpen(false);
-                            }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                          >
-                            <Users className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Change Assignee</span>
-                          </button>
-                          <div className="border-t border-slate-100 my-1" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDeleteTask(editingTask.id);
-                              setIsMoreMenuOpen(false);
-                              setIsTaskDrawerOpen(false);
-                            }}
-                            className="w-full text-left px-3.5 py-2 hover:bg-red-50 text-red-600 flex items-center gap-2 font-semibold"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete Task</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Options ⋮ removed as requested */}
                   </div>
                 </div>
-
-                {/* Red Accent Stripe */}
-                <div className="h-0.5 bg-red-600 w-full shrink-0" />
 
                 {/* Scrollable Upper Area: Title, 6-Box Grid, Dates Card */}
                 <div className="shrink-0 bg-white">
                   {/* Task Title (Screenshot 2: Quotation) */}
                   <div className="px-6 pt-4 pb-2">
-                    {isEditingTitleInline ? (
+                    {isEditingTitleInline && isAdminOrSuperAdmin ? (
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
@@ -2735,17 +2969,23 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       </div>
                     ) : (
                       <div className="flex items-start justify-between gap-3">
-                        <h2 
-                          onClick={() => {
-                            setInlineTitleValue(editingTask.title);
-                            setIsEditingTitleInline(true);
-                          }}
-                          className="text-2xl font-extrabold text-slate-900 tracking-tight hover:text-red-600 transition-colors cursor-pointer group flex items-center gap-2"
-                          title="Click to rename task"
-                        >
-                          <span>{editingTask.title}</span>
-                          <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 text-red-500 transition-opacity" />
-                        </h2>
+                        {isAdminOrSuperAdmin ? (
+                          <h2 
+                            onClick={() => {
+                              setInlineTitleValue(editingTask.title);
+                              setIsEditingTitleInline(true);
+                            }}
+                            className="text-2xl font-extrabold text-slate-900 tracking-tight hover:text-red-600 transition-colors cursor-pointer group flex items-center gap-2"
+                            title="Click to rename task"
+                          >
+                            <span>{editingTask.title}</span>
+                            <Edit3 className="w-4 h-4 opacity-0 group-hover:opacity-100 text-red-500 transition-opacity" />
+                          </h2>
+                        ) : (
+                          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                            <span>{editingTask.title}</span>
+                          </h2>
+                        )}
                         <button
                           type="button"
                           onClick={() => proofFileInputRef.current?.click()}
@@ -2763,8 +3003,16 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     <div className="grid grid-cols-3 gap-2.5 p-3 bg-slate-50/70 border border-slate-200/90 rounded-2xl">
                       {/* Box 1: ASSIGN TO */}
                       <div 
-                        onClick={() => setIsAssigneeModalOpen(true)}
-                        className="p-2.5 bg-white border border-slate-200/80 rounded-xl hover:border-red-300 hover:shadow-2xs transition-all cursor-pointer group"
+                        onClick={() => {
+                          if (!isAdminOrSuperAdmin) {
+                            onShowToast?.('Permission Denied: Only Admin or Super Admin can change task assignee.');
+                            return;
+                          }
+                          setIsAssigneeModalOpen(true);
+                        }}
+                        className={`p-2.5 bg-white border border-slate-200/80 rounded-xl transition-all group ${
+                          isAdminOrSuperAdmin ? 'hover:border-red-300 hover:shadow-2xs cursor-pointer' : 'cursor-default'
+                        }`}
                       >
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                           ASSIGN TO
@@ -2797,7 +3045,9 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                               </span>
                             </div>
                           )}
-                          <Plus className="w-3 h-3 text-slate-400 group-hover:text-red-600 ml-auto transition-colors" />
+                          {isAdminOrSuperAdmin && (
+                            <Plus className="w-3 h-3 text-slate-400 group-hover:text-red-600 ml-auto transition-colors" />
+                          )}
                         </div>
                       </div>
 
@@ -3370,22 +3620,20 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {editingTask.status !== 'COMPLETED' && (
-                        <button
-                          type="button"
-                          onClick={handleCompleteProcess}
-                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-                          title="Mark task as completed, set today as completion date and synchronize"
-                        >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>Complete Process</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleOpenCompleteProcessModal}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Complete Process (Choose 50% Ongoing or 100% Completed)"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Complete Process</span>
+                      </button>
 
                       <button
                         type="button"
                         onClick={handleSaveTaskDrawer}
-                        className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
                         title="Save updated dates, photos and sync with Schedule"
                       >
                         <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -3396,18 +3644,6 @@ export const TaskTab: React.FC<TaskTabProps> = ({
 
                   {/* Message & Attachments Input Bar */}
                   <div className="p-3.5 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setProgressAmountInput(editingTask.status === 'COMPLETED' ? '1 lumpsum' : '1 lumpsum');
-                        setProgressIsCompleted(true);
-                        setIsProgressModalOpen(true);
-                      }}
-                      className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-98 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>Progress</span>
-                    </button>
 
                     <div className="relative flex-1">
                       <input
@@ -3425,16 +3661,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       />
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => proofFileInputRef.current?.click()}
-                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 rounded-xl cursor-pointer transition-colors shrink-0"
-                      title="Attach photo/proof"
-                    >
-                      <Camera className="w-4 h-4" />
-                    </button>
-
-                    {messageInput.trim() ? (
+                    {messageInput.trim() && (
                       <button
                         type="button"
                         onClick={handleSendMessage}
@@ -3442,15 +3669,6 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                         title="Send Message"
                       >
                         <Send className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                        className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-slate-200 shrink-0"
-                        title="Options"
-                      >
-                        <MoreVertical className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -3659,7 +3877,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Hidden File Input for proof / camera upload */}
@@ -3672,91 +3891,173 @@ export const TaskTab: React.FC<TaskTabProps> = ({
       />
 
       {/* ========================================================================= */}
-      {/* 3A. MODAL: UPDATE PROGRESS (+ Progress Button)                            */}
+      {/* 3A. MODAL: COMPLETE PROCESS (Audio Requirement: 50% Ongoing / 100% Completed) */}
       {/* ========================================================================= */}
-      {isProgressModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-red-600" />
-                <h4 className="text-sm font-bold text-slate-900">Record Task Progress</h4>
+      {isCompleteProcessModalOpen && (completeProcessTask || editingTask) && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 leading-tight">Complete Process</h4>
+                  <p className="text-[11px] text-slate-500 truncate max-w-[260px]">{(completeProcessTask || editingTask)?.title}</p>
+                </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsProgressModalOpen(false)}
-                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg cursor-pointer"
+                onClick={() => {
+                  setIsCompleteProcessModalOpen(false);
+                  setCompleteProcessTask(null);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Progress Amount / Percentage
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1 lumpsum or 100%"
-                  value={progressAmountInput}
-                  onChange={(e) => setProgressAmountInput(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 text-slate-900"
-                />
-              </div>
+            {/* Selection Options: 50% vs 100% */}
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Select Completion Stage
+              </label>
 
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  Update Note / Remarks
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="e.g. Quotation estimation submitted and approved by client."
-                  value={progressNoteInput}
-                  onChange={(e) => setProgressNoteInput(e.target.value)}
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 resize-none text-slate-900"
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* 50% Ongoing Option */}
+                <button
+                  type="button"
+                  onClick={() => setCompleteProcessChoice(50)}
+                  className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
+                    completeProcessChoice === 50
+                      ? 'border-blue-500 bg-blue-50/70 shadow-xs ring-2 ring-blue-500/20'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-full bg-blue-600 text-white">
+                      50 %
+                    </span>
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                      completeProcessChoice === 50 ? 'border-blue-600 bg-blue-600' : 'border-slate-300'
+                    }`}>
+                      {completeProcessChoice === 50 && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                      <span>Ongoing</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      50% progress completed. Status becomes Ongoing.
+                    </p>
+                  </div>
+                </button>
 
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center gap-2 cursor-pointer"
-                   onClick={() => setProgressIsCompleted(!progressIsCompleted)}>
-                <input
-                  type="checkbox"
-                  checked={progressIsCompleted}
-                  onChange={(e) => setProgressIsCompleted(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded cursor-pointer"
-                />
-                <span className="text-xs font-bold text-emerald-800">
-                  Mark task status as Completed (100%)
-                </span>
+                {/* 100% Completed Option */}
+                <button
+                  type="button"
+                  onClick={() => setCompleteProcessChoice(100)}
+                  className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all flex flex-col justify-between ${
+                    completeProcessChoice === 100
+                      ? 'border-emerald-500 bg-emerald-50/70 shadow-xs ring-2 ring-emerald-500/20'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                      100 %
+                    </span>
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                      completeProcessChoice === 100 ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'
+                    }`}>
+                      {completeProcessChoice === 100 && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span>Completed</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-snug">
+                      100% fully complete. Status becomes Completed.
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
 
+            {/* Proof Attachment Status */}
+            {(formProofUrl || (completeProcessTask || editingTask)?.completion_proof_url) && (
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <img
+                    src={formProofUrl || (completeProcessTask || editingTask)?.completion_proof_url}
+                    alt="Proof"
+                    className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-700 truncate">
+                    Attached proof photo will be submitted
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 shrink-0">
+                  Attached
+                </span>
+              </div>
+            )}
+
+            {/* Remarks / Notes */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                Remarks / Completion Note (Optional)
+              </label>
+              <textarea
+                rows={2}
+                placeholder={completeProcessChoice === 100 ? 'e.g. Quotation estimation verified and approved.' : 'e.g. 50% initial review completed.'}
+                value={completeProcessRemarks}
+                onChange={(e) => setCompleteProcessRemarks(e.target.value)}
+                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-red-600 resize-none text-slate-900"
+              />
+            </div>
+
+            {/* Action Buttons */}
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setIsProgressModalOpen(false)}
-                className="px-3.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 rounded-xl"
+                onClick={() => {
+                  setIsCompleteProcessModalOpen(false);
+                  setCompleteProcessTask(null);
+                }}
+                className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={handleSaveProgressUpdate}
-                className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer"
+                onClick={() => handleApplyCompleteProcess(completeProcessChoice, completeProcessRemarks)}
+                className={`px-4 py-2 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5 ${
+                  completeProcessChoice === 100
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
-                Save Progress
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Confirm {completeProcessChoice}% ({completeProcessChoice === 100 ? 'Completed' : 'Ongoing'})</span>
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* 3B. MODAL: ADD RESOURCE (MATERIAL / WORKFORCE / EQUIPMENT)                 */}
       {/* ========================================================================= */}
-      {activeResourceModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+      {activeResourceModal && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -3907,14 +4208,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* 3C. MODAL: ASSIGN STAFF MEMBER                                            */}
       {/* ========================================================================= */}
-      {isAssigneeModalOpen && editingTask && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
+      {isAssigneeModalOpen && editingTask && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-2xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -3965,14 +4267,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* 4. TASK COMMENTS POPUP (TRIGGERED FROM 💬 ICON)                           */}
       {/* ========================================================================= */}
-      {activeCommentTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
+      {activeCommentTask && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -4020,14 +4323,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* 5. DEPENDENCIES POPUP (TRIGGERED FROM ⑂ ICON)                             */}
       {/* ========================================================================= */}
-      {activeDependencyTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
+      {activeDependencyTask && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-2xs animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -4063,7 +4367,7 @@ export const TaskTab: React.FC<TaskTabProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="tracking-tight text-slate-400 text-[10px]">#{other.s_no}</span>
+                        <span className="tracking-tight text-slate-400 text-[10px]">#{taskSerialNumbers.get(other.id) || other.s_no}</span>
                         <span className="truncate max-w-[240px]">{other.title}</span>
                       </div>
                       {isLinked && <Check className="w-4 h-4 text-red-600" />}
@@ -4082,14 +4386,15 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 5. LIGHTBOX MODAL FOR COMPLETION PROOF */}
-      {previewProofModal && (
+      {previewProofModal && typeof document !== 'undefined' && createPortal(
         <div 
           onClick={() => setPreviewProofModal(null)}
-          className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs cursor-pointer animate-in fade-in"
+          className="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xs cursor-pointer animate-in fade-in"
         >
           <div 
             onClick={e => e.stopPropagation()}
@@ -4116,16 +4421,17 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* 6. "CHANGE TO ONGOING" MODAL (TRIGGERED FROM "START" BUTTON)              */}
       {/* ========================================================================= */}
-      {startingTask && (
+      {startingTask && typeof document !== 'undefined' && createPortal(
         <div 
           onClick={handleCloseStartModal}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
@@ -4195,7 +4501,8 @@ export const TaskTab: React.FC<TaskTabProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

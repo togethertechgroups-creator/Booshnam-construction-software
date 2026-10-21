@@ -287,3 +287,42 @@ export async function sendPaymentRequestPushToAdmin(
     }
   });
 }
+
+/**
+ * 5. Send Push Notification to Staff when a Lead is assigned
+ */
+export async function sendLeadAssignedPush(params: {
+  leadId: string;
+  leadNumber: string;
+  clientName: string;
+  leadType: string;
+  assigneeName: string;
+  phone?: string;
+  category?: string;
+  assignedBy?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  payload: PushNotificationPayload;
+}> {
+  const { leadNumber, clientName, leadType, assigneeName, assignedBy } = params;
+
+  return sendPushNotification({
+    recipientType: 'USER',
+    recipientId: assigneeName,
+    recipientPhone: params.phone,
+    title: `New Lead Assigned: ${clientName}`,
+    body: `Lead ${leadNumber} (${leadType}) has been assigned to you by ${assignedBy || 'Admin'}.`,
+    category: 'GENERAL',
+    data: {
+      type: 'LEAD_ASSIGNED',
+      leadId: params.leadId,
+      leadNumber,
+      clientName,
+      screen: 'Notifications',
+      tab: 'leads'
+    }
+  });
+}
+
+

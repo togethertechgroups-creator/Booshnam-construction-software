@@ -21,6 +21,8 @@ export interface StaffMember {
   username?: string;
   created_at: string;
   staff_type?: 'OFFICE' | 'SITE';
+  custom_allowed_pages?: string[];
+  has_custom_permissions?: boolean;
 }
 
 export function getStaffDepartmentNames(staff: StaffMember): string[] {

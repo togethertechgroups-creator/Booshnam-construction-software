@@ -27,7 +27,7 @@ import { SubconTab } from '../components/project-workspace/tabs/SubconTab';
 import { EquipmentTab } from '../components/project-workspace/tabs/EquipmentTab';
 import { FilesTab } from '../components/project-workspace/tabs/FilesTab';
 import { MOMTab } from '../components/project-workspace/tabs/MOMTab';
-import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department, SubconWorkOrder } from '../types';
+import { Project, WBSTask, ApprovalRequest, MaterialRequest, ProjectTeamMember, PredefinedTaskTemplate, Department, SubconWorkOrder, Quotation } from '../types';
 import { SelectOrTypeInput, SelectOption } from '../components/SelectOrTypeInput';
 import { CustomSelect } from '../components/CustomSelect';
 import { DepartmentMultiSelectFilter } from '../components/DepartmentMultiSelectFilter';
@@ -129,7 +129,12 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   onToggleSidebar,
 }) => {
   // Navigation / View Modes: 'list' | 'create' | 'details'
-  const [viewMode, setViewMode] = useState<'list' | 'create' | 'details'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'create' | 'details'>(() => {
+    if (typeof window !== 'undefined' && (sessionStorage.getItem('booshnam_auto_open_create_project') || sessionStorage.getItem('booshnam_convert_quotation_data'))) {
+      return 'create';
+    }
+    return propSelectedProject ? 'details' : 'list';
+  });
   const [activeProject, setActiveProject] = useState<Project | null>(propSelectedProject || null);
   const [detailTab, setDetailTab] = useState<'overview' | 'wbs' | 'gantt' | 'drawings'>('overview');
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTabId>('dashboard');
@@ -148,6 +153,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
   // Sync propSelectedProject changes into activeProject
   useEffect(() => {
+    if (typeof window !== 'undefined' && (sessionStorage.getItem('booshnam_auto_open_create_project') || sessionStorage.getItem('booshnam_convert_quotation_data'))) {
+      return;
+    }
     if (propSelectedProject) {
       setActiveProject(propSelectedProject);
       setViewMode('details');
@@ -160,6 +168,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // Listen for explicit show all projects event (e.g. from sidebar Projects click)
   useEffect(() => {
     const handleShowAll = () => {
+      if (typeof window !== 'undefined' && (sessionStorage.getItem('booshnam_auto_open_create_project') || sessionStorage.getItem('booshnam_convert_quotation_data'))) {
+        return;
+      }
       setActiveProject(null);
       setViewMode('list');
       onSelectProject?.(null);
@@ -200,6 +211,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // Listen for reset projects view event (e.g. when clicking Projects in the sidebar navigation)
   useEffect(() => {
     const handleResetView = () => {
+      if (typeof window !== 'undefined' && (sessionStorage.getItem('booshnam_auto_open_create_project') || sessionStorage.getItem('booshnam_convert_quotation_data'))) {
+        return;
+      }
       setViewMode('list');
       setActiveProject(null);
     };
@@ -256,42 +270,98 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [selectedEngineer, setSelectedEngineer] = useState('');
   const [selectedSupervisor, setSelectedSupervisor] = useState('');
   const [selectedAccounts, setSelectedAccounts] = useState('');
+  const [convertingQuoteInfo, setConvertingQuoteInfo] = useState<{ id?: string; leadId?: string; number: string; items?: any[] } | null>(null);
 
-  // Auto-open Create Project Wizard when triggered from Quick Access
+  // Auto-open Create Project Wizard when triggered from Quick Access, Quotation Conversion, or Lead Conversion
   useEffect(() => {
-    const handleOpenCreateProject = () => {
+    const handleOpenCreateProject = (e?: any) => {
+      let convertData: any = null;
+      if (e?.detail && typeof e.detail === 'object' && (e.detail.clientName || e.detail.quotationNumber || e.detail.leadNumber)) {
+        convertData = e.detail;
+      } else {
+        try {
+          const raw = sessionStorage.getItem('booshnam_convert_quotation_data');
+          if (raw) convertData = JSON.parse(raw);
+        } catch {}
+      }
+
       const curDept = getActiveDepartmentId();
-      setNewDepartment(curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
-      setNewProjectName('');
-      setNewClientName('');
-      setNewAddress('');
-      setNewCity('');
-      setNewEstimatedBudget('');
+      const initialDept = convertData?.department || (curDept === 'booshnam_associates' ? 'SOIL_INVESTIGATION' : curDept);
+      setNewDepartment(initialDept);
+      setNewProjectName(convertData?.projectName || '');
+      setNewClientName(convertData?.clientName || '');
+      setNewAddress(convertData?.address || '');
+      setNewCity(convertData?.city || 'Chennai');
+      setNewEstimatedBudget(convertData?.estimatedBudget ? String(convertData.estimatedBudget) : '');
       setNewStartDate(new Date().toISOString().split('T')[0]);
-      setNewEndDate(new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]);
-      setNewScope('');
-      setSelectedPM('');
-      setSelectedEngineer('');
-      setSelectedSupervisor('');
-      setSelectedAccounts('');
+      setNewEndDate(new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0]);
+      setNewScope(convertData?.scope || '');
+
+      let prePM = '';
+      let preEng = '';
+      let preSup = '';
+      let preAcc = '';
+
+      if (convertData?.assigneeName) {
+        const assignee = String(convertData.assigneeName).trim();
+        const role = (convertData.assigneeRole || '').toLowerCase();
+        if (role.includes('manager') || role.includes('pm')) {
+          prePM = assignee;
+        } else if (role.includes('supervisor')) {
+          preSup = assignee;
+        } else if (role.includes('account')) {
+          preAcc = assignee;
+        } else {
+          preEng = assignee;
+        }
+      }
+
+      setSelectedPM(prePM);
+      setSelectedEngineer(preEng);
+      setSelectedSupervisor(preSup);
+      setSelectedAccounts(preAcc);
       setStaffAssignmentDate(new Date().toISOString().split('T')[0]);
       setSelectedSubcontractorName('');
       setSubcontractorTrade('Civil Works');
       setSubcontractorDate(new Date().toISOString().split('T')[0]);
       setAssignedSubcontractors([]);
       setWizardError('');
+      setActiveProject(null);
+      onSelectProject?.(null);
       setWizardStep(1);
       setViewMode('create');
+
+      if (convertData?.quotationId || convertData?.leadId) {
+        setConvertingQuoteInfo({
+          id: convertData.quotationId,
+          leadId: convertData.leadId,
+          number: convertData.quotationNumber || convertData.leadNumber || '',
+          items: convertData.items || []
+        });
+      } else {
+        setConvertingQuoteInfo(null);
+      }
+      try {
+        sessionStorage.removeItem('booshnam_convert_quotation_data');
+        sessionStorage.removeItem('booshnam_auto_open_create_project');
+      } catch (e) {}
     };
 
-    if (sessionStorage.getItem('booshnam_auto_open_create_project')) {
-      sessionStorage.removeItem('booshnam_auto_open_create_project');
-      handleOpenCreateProject();
-    }
+    const triggerIfPending = () => {
+      if (typeof window !== 'undefined' && (sessionStorage.getItem('booshnam_auto_open_create_project') || sessionStorage.getItem('booshnam_convert_quotation_data'))) {
+        handleOpenCreateProject();
+      }
+    };
+
+    triggerIfPending();
+    const timer = setTimeout(triggerIfPending, 80);
 
     window.addEventListener('booshnam_open_create_project', handleOpenCreateProject);
-    return () => window.removeEventListener('booshnam_open_create_project', handleOpenCreateProject);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('booshnam_open_create_project', handleOpenCreateProject);
+    };
+  }, [onSelectProject]);
   const [wizardTasks, setWizardTasks] = useState<PredefinedTaskTemplate[]>(() => [...PREDEFINED_TASKS_TEMPLATE]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>(() =>
     PREDEFINED_TASKS_TEMPLATE.map(t => t.id)
@@ -514,13 +584,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   // Handle explicit project auto-open request (e.g. from TodayTasksReminderBanner, WBS Schedule link, or Lead conversion)
   useEffect(() => {
     const autoOpenId = sessionStorage.getItem('booshnam_auto_open_project_id');
+    const autoOpenTab = sessionStorage.getItem('booshnam_auto_open_workspace_tab');
     if (autoOpenId) {
       sessionStorage.removeItem('booshnam_auto_open_project_id');
+      if (autoOpenTab) sessionStorage.removeItem('booshnam_auto_open_workspace_tab');
       const matched = allProjects.find(p => p.id === autoOpenId || p.code === autoOpenId);
       if (matched) {
         setActiveProject(matched);
         onSelectProject?.(matched);
-        setWorkspaceTab('dashboard');
+        setWorkspaceTab((autoOpenTab as any) || 'task');
         setViewMode('details');
         return;
       }
@@ -706,14 +778,40 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     });
   };
 
-  const isSuperAdmin = !currentUser?.role_code || 
-    currentUser?.role_code === 'SUPER_ADMIN' || 
-    currentUser?.role_code === 'ADMIN' || 
-    currentUser?.role_name?.toLowerCase() === 'super admin' ||
-    currentUser?.role_name?.toLowerCase().includes('admin') ||
-    currentUser?.role_name === 'Owner / Director' ||
-    currentUser?.first_name?.toLowerCase() === 'priya' ||
-    currentUser?.first_name?.toLowerCase() === 'rajesh';
+  const isSuperAdmin = useMemo(() => {
+    const acc = activeAccount || getCurrentUserAccount();
+    if (acc) {
+      const rCode = (acc.role_code || '').toUpperCase().trim();
+      const rName = (acc.role_name || '').toLowerCase().trim();
+      const uName = (acc.username || '').toLowerCase().trim();
+      return (
+        rCode === 'SUPER_ADMIN' ||
+        rCode === 'ADMIN' ||
+        rCode === 'DIRECTOR' ||
+        rCode === 'OWNER' ||
+        rCode === 'OWNER_DIRECTOR' ||
+        rName.includes('super admin') ||
+        rName.includes('admin') ||
+        rName.includes('owner') ||
+        rName.includes('director') ||
+        uName === 'superadmin' ||
+        uName === 'admin'
+      );
+    }
+    const rCode = (currentUser?.role_code || '').toUpperCase().trim();
+    const rName = (currentUser?.role_name || '').toLowerCase().trim();
+    return (
+      rCode === 'SUPER_ADMIN' ||
+      rCode === 'ADMIN' ||
+      rCode === 'DIRECTOR' ||
+      rCode === 'OWNER' ||
+      rCode === 'OWNER_DIRECTOR' ||
+      rName.includes('super admin') ||
+      rName.includes('admin') ||
+      rName.includes('owner') ||
+      rName.includes('director')
+    );
+  }, [activeAccount, currentUser]);
 
   // Booshnam Master Super Admin identification
   const isBooshnamMasterSuperAdmin = Boolean(
@@ -753,6 +851,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       // Clean up project-specific local storage
       const cleanupKeys = [
         `booshnam_wbs_tasks_v2_${targetId}`,
+        `booshnam_wbs_tasks_v10_${targetId}`,
+        `booshnam_task_meta_${targetId}`,
+        `siteops_boq_items_${targetId}`,
+        `siteops_boq_items_${targetProj.code || ''}`,
+        `booshnam_subcontractors_v1_${targetId}`,
         `booshnam_cost_plan_v2_${targetId}`,
         `booshnam_material_req_v2_${targetId}`,
         `booshnam_purchase_orders_v2_${targetId}`,
@@ -1107,6 +1210,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     setSubcontractorTrade('Civil Works');
     setSubcontractorDate(new Date().toISOString().split('T')[0]);
     setAssignedSubcontractors([]);
+    setConvertingQuoteInfo(null);
     setWizardError('');
     setWizardStep(1);
     setViewMode('list');
@@ -1361,6 +1465,55 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
     onSelectProject?.(newProj);
     onShowToast?.(`Project "${newProjectName}" created with ${generatedTasks.length} tasks!`);
 
+    // If converted from a quotation or lead, link quotation/lead and save initial BOQ items
+    if (convertingQuoteInfo) {
+      if (convertingQuoteInfo.items && convertingQuoteInfo.items.length > 0) {
+        const boqItems = convertingQuoteInfo.items.map((it: any, idx: number) => ({
+          id: `boq-${Date.now()}-${idx}`,
+          item_code: it.item_code || `BOQ-${idx + 1}`,
+          description: it.description,
+          unit: it.unit || 'Nos',
+          quantity: it.quantity || 1,
+          rate: it.unit_rate || 0,
+          amount: it.amount || 0,
+          category: it.category || 'Civil'
+        }));
+        try {
+          localStorage.setItem(`siteops_boq_items_${newProjId}`, JSON.stringify(boqItems));
+          localStorage.setItem(`siteops_boq_items_${code}`, JSON.stringify(boqItems));
+        } catch (e) {}
+      }
+
+      if (convertingQuoteInfo.id) {
+        try {
+          const rawQ = localStorage.getItem('booshnam_quotations_v2');
+          if (rawQ) {
+            const parsedQ: Quotation[] = JSON.parse(rawQ);
+            const updatedQ = parsedQ.map(q => q.id === convertingQuoteInfo.id ? { ...q, status: 'Client Confirmed', project_id: newProjId } : q);
+            localStorage.setItem('booshnam_quotations_v2', JSON.stringify(updatedQ));
+          }
+        } catch (e) {}
+      }
+
+      if (convertingQuoteInfo.leadId) {
+        try {
+          const rawLeads = localStorage.getItem('booshnam_leads_v2');
+          if (rawLeads) {
+            const parsedLeads = JSON.parse(rawLeads);
+            const updatedLeads = parsedLeads.map((l: any) =>
+              l.id === convertingQuoteInfo.leadId
+                ? { ...l, stage: 'WON', status_label: 'Client Confirmed', project_id: newProjId }
+                : l
+            );
+            localStorage.setItem('booshnam_leads_v2', JSON.stringify(updatedLeads));
+            window.dispatchEvent(new CustomEvent('booshnam_leads_updated'));
+          }
+        } catch (e) {}
+      }
+
+      setConvertingQuoteInfo(null);
+    }
+
     // Notify all assigned team members (one notification per assigned member)
     assignedTeam.forEach(member => {
       addNotification({
@@ -1501,6 +1654,29 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       <div className="p-2.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
                         <span className="font-semibold">{wizardError}</span>
+                      </div>
+                    )}
+
+                    {convertingQuoteInfo && (
+                      <div className="p-3 bg-emerald-50/90 border border-emerald-200 text-emerald-900 text-xs rounded-2xl flex items-center justify-between gap-3 shadow-2xs animate-in fade-in">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold">
+                            <Briefcase className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate">
+                              {convertingQuoteInfo.leadId ? `Converting Lead ${convertingQuoteInfo.number}` : `Converting Quotation ${convertingQuoteInfo.number}`}
+                            </p>
+                            <p className="text-[11px] text-emerald-700">
+                              {convertingQuoteInfo.leadId
+                                ? 'Lead details, client & budget pre-filled. You can add extra details and assign your team.'
+                                : 'Quotation details, client & budget pre-filled. You can add extra details and assign your team.'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full shrink-0">
+                          {convertingQuoteInfo.leadId ? 'From Lead' : 'From Quotation'}
+                        </span>
                       </div>
                     )}
 
@@ -1887,7 +2063,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-indigo-600" />
+                          <Building2 className="w-3.5 h-3.5 text-red-600" />
                           Subcontractor Assignment ({assignedSubcontractors.length})
                         </span>
                         <p className="text-[11px] text-slate-500">
@@ -1912,7 +2088,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                     </div>
 
                     {/* Subcontractor Input Card */}
-                    <div className="p-4 bg-indigo-50/40 border border-indigo-100 rounded-2xl space-y-3">
+                    <div className="p-4 bg-red-50/30 border border-red-100 rounded-2xl space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 mb-1">
@@ -1940,7 +2116,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
                         <div>
                           <label className="block text-[11px] font-bold text-slate-600 mb-1 flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-indigo-600" />
+                            <Calendar className="w-3 h-3 text-red-600" />
                             <span>Commencement Date</span>
                           </label>
                           <input
@@ -1957,7 +2133,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                           type="button"
                           onClick={handleAddSubcontractor}
                           disabled={!selectedSubcontractorName.trim()}
-                          className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-98"
+                          className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-98"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           <span>Add Subcontractor</span>
@@ -1965,19 +2141,19 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                       </div>
 
                       {assignedSubcontractors.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-indigo-100">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-red-100">
                           {assignedSubcontractors.map((sc, idx) => (
-                            <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-indigo-200/80 rounded-xl text-xs shadow-2xs">
+                            <div key={idx} className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-red-200/80 rounded-xl text-xs shadow-2xs">
                               <div className="flex items-center gap-2.5 min-w-0">
-                                <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[11px] flex items-center justify-center shrink-0">
+                                <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-bold text-[11px] flex items-center justify-center shrink-0">
                                   <Building2 className="w-3.5 h-3.5" />
                                 </div>
                                 <div className="min-w-0">
                                   <span className="font-bold text-slate-800 block truncate leading-tight">
                                     {sc.name}
                                   </span>
-                                  <div className="flex items-center gap-1.5 text-[10px] text-indigo-600 font-medium mt-0.5">
-                                    <span className="bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">{sc.trade_scope}</span>
+                                  <div className="flex items-center gap-1.5 text-[10px] text-red-600 font-medium mt-0.5">
+                                    <span className="bg-red-50 px-1.5 py-0.2 rounded border border-red-100">{sc.trade_scope}</span>
                                     <span className="text-slate-400">•</span>
                                     <span className="text-slate-500 flex items-center gap-0.5">
                                       <Calendar className="w-2.5 h-2.5" />
@@ -3149,21 +3325,23 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             {isFullscreen ? <Minimize2 className="w-4 h-4 text-red-600" /> : <Maximize2 className="w-4 h-4" />}
           </button>
 
-          {/* Settings Cog */}
-          <button 
-            type="button"
-            onClick={() => {
-              if (!activeProject && allProjects.length > 0) {
-                setActiveProject(allProjects[0]);
-              }
-              setIsSettingsModalOpen(true);
-            }}
-            className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            title="Project Settings"
-            aria-label="Project Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+          {/* Settings Cog (Admin & Super Admin ONLY) */}
+          {isSuperAdmin && (
+            <button 
+              type="button"
+              onClick={() => {
+                if (!activeProject && allProjects.length > 0) {
+                  setActiveProject(allProjects[0]);
+                }
+                setIsSettingsModalOpen(true);
+              }}
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              title="Project Settings"
+              aria-label="Project Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
 
           {/* User Profile & Notifications */}
           <UserProfileDropdown showBell={true} onShowToast={onShowToast} />
@@ -3305,6 +3483,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider select-none">
               <tr>
+                <th className="py-3.5 px-4 w-14 text-center">S.No</th>
                 <th className="py-3.5 px-6 w-[35%]">Name</th>
                 <th className="py-3.5 px-4 w-36 text-center">Status</th>
                 <th className="py-3.5 px-5 w-44 text-center">Progress</th>
@@ -3315,7 +3494,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredProjects.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-14 text-center">
+                  <td colSpan={6} className="py-14 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto">
                       <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shadow-2xs">
                         <Layers className="w-6 h-6" />
@@ -3346,7 +3525,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredProjects.map((p) => {
+                filteredProjects.map((p, index) => {
                   const isPinned = pinnedIds.has(p.id);
                   const stats = getProjectLiveStats(p);
                   const progressVal = stats.progress;
@@ -3360,6 +3539,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                         isPinned ? 'bg-red-50/20' : ''
                       }`}
                     >
+                      {/* S.No Column */}
+                      <td className="py-4 px-4 text-center align-middle font-bold text-slate-400 text-xs select-none">
+                        {index + 1}
+                      </td>
+
                       {/* Name Column with Clean Subtitle */}
                       <td className="py-4 px-6 align-middle">
                         <div className="flex items-center gap-3.5">
@@ -3471,22 +3655,20 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                             <Pin className={`w-4 h-4 transition-transform ${isPinned ? 'fill-red-600 rotate-45' : 'group-hover:scale-110'}`} />
                           </button>
 
-                          {/* Delete Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!isSuperAdmin) {
-                                onShowToast?.('Permission Denied: Only Admin or Super Admin can delete projects.');
-                                return;
-                              }
-                              setProjectToDelete(p);
-                            }}
-                            className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
-                            title="Delete Project"
-                          >
-                            <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          </button>
+                          {/* Delete Button (Admin & Super Admin ONLY) */}
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setProjectToDelete(p);
+                              }}
+                              className="p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer inline-flex items-center justify-center group"
+                              title="Delete Project"
+                            >
+                              <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            </button>
+                          )}
 
                           {/* Add Staff (+) Button */}
                           <button

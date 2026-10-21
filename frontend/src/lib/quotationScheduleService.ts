@@ -1,5 +1,6 @@
 import { WBSTask, Project } from '../types';
 import { QuotationScheduleTask } from './timesheetService';
+import { getDeletedProjectIds, isProjectDeleted } from './projectAccessService';
 export type { QuotationScheduleTask };
 
 const QUOTATION_SCHEDULE_STORAGE_KEY = 'booshnam_quotation_schedule_tasks_v3';
@@ -36,12 +37,26 @@ export function isDummyQuotationTask(t: { task_name?: string; title?: string; pr
   const projId = (t.project_id || '').trim().toLowerCase();
   const id = (t.id || '').trim().toLowerCase();
 
+  const deletedSet = getDeletedProjectIds();
+  if (projId && deletedSet.has(projId)) return true;
+  if (projName && deletedSet.has(projName)) return true;
+
   // 1. Explicit dummy task names
   if (taskName === 'collect client details') return true;
   if (taskName === 'quotation' && (projName === 'project' || projId === 'proj-01' || projId === 'proj-02' || !projId)) return true;
 
   // 2. Placeholder mock project names and IDs
   if (projName === 'project' || projName === 'overhead' || projName === 'over heads') return true;
+  if (projName === '001') {
+    try {
+      const raw = localStorage.getItem('booshnam_projects_v2');
+      if (!raw || !raw.toLowerCase().includes('"001"')) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+  }
   if (projId === 'proj-01' || projId === 'proj-02' || projId === 'default') return true;
 
   // 3. Known dummy IDs from previous fixtures
@@ -72,14 +87,56 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     return false;
   };
 
+  const deletedProjSet = getDeletedProjectIds();
+  const isProjDeleted = (pid?: string, pname?: string, gname?: string) => {
+    const cleanPid = (pid || '').toLowerCase().trim();
+    const cleanPname = (pname || '').toLowerCase().trim();
+    const cleanGname = (gname || '').toLowerCase().trim();
+    if (cleanPid && (deletedProjSet.has(cleanPid) || cleanPid === 'proj-01' || cleanPid === 'proj-02' || cleanPid === 'default')) return true;
+    if (cleanPname && (deletedProjSet.has(cleanPname) || cleanPname === 'project' || cleanPname === 'overhead')) return true;
+    if (cleanGname && (deletedProjSet.has(cleanGname) || cleanGname === 'project' || cleanGname === 'overhead')) return true;
+    return false;
+  };
+
+  // 1. Gather all active projects from passed props and localStorage booshnam_projects_v2
+  const allProjectsMap = new Map<string, Project>();
+  const allProjectsNameSet = new Set<string>();
+
+  const registerProject = (p: Project) => {
+    if (!p || !p.id || isProjectDeleted(p) || isProjDeleted(p.id, p.name)) return;
+    if (p.name === 'Project' || p.id === 'proj-01' || p.id === 'proj-02') return;
+    allProjectsMap.set(p.id, p);
+    if (p.name) allProjectsNameSet.add(p.name.toLowerCase().trim());
+    if (p.code) allProjectsNameSet.add(p.code.toLowerCase().trim());
+  };
+
+  projects.forEach(registerProject);
+  try {
+    const rawProjs = localStorage.getItem('booshnam_projects_v2');
+    if (rawProjs) {
+      const parsedProjs: Project[] = JSON.parse(rawProjs);
+      if (Array.isArray(parsedProjs)) {
+        parsedProjs.forEach(registerProject);
+      }
+    }
+  } catch (e) {}
+
   let stored: QuotationScheduleTask[] = [];
   try {
     const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Strip out any legacy dummy/mock tasks and deleted tasks
-        stored = parsed.filter(t => !isDummyQuotationTask(t) && !isDeleted(t.id, t.wbs_task_id));
+        // Strip out any legacy dummy/mock tasks, deleted tasks, and tasks from deleted/orphaned projects
+        stored = parsed.filter(t => {
+          if (isDummyQuotationTask(t) || isDeleted(t.id, t.wbs_task_id) || isProjDeleted(t.project_id, t.project_name, t.group_name)) {
+            return false;
+          }
+          const hasProject = 
+            (t.project_id && allProjectsMap.has(t.project_id)) ||
+            (t.project_name && allProjectsNameSet.has(t.project_name.toLowerCase().trim()));
+          return Boolean(hasProject);
+        });
         if (stored.length !== parsed.length) {
           localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(stored));
         }
@@ -89,35 +146,14 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     console.error('Failed to load quotation schedule tasks', e);
   }
 
-  // 1. Gather all projects from passed props, localStorage booshnam_projects_v2, and storage keys
-  const allProjectsMap = new Map<string, Project>();
-  projects.forEach(p => { 
-    if (p?.id && p.name !== 'Project' && p.id !== 'proj-01' && p.id !== 'proj-02') {
-      allProjectsMap.set(p.id, p); 
-    }
-  });
-  try {
-    const rawProjs = localStorage.getItem('booshnam_projects_v2');
-    if (rawProjs) {
-      const parsedProjs: Project[] = JSON.parse(rawProjs);
-      if (Array.isArray(parsedProjs)) {
-        parsedProjs.forEach(p => { 
-          if (p?.id && p.name !== 'Project' && p.id !== 'proj-01' && p.id !== 'proj-02' && !allProjectsMap.has(p.id)) {
-            allProjectsMap.set(p.id, p); 
-          }
-        });
-      }
-    }
-  } catch (e) {}
-
-  // Also collect any project IDs from booshnam_wbs_tasks_v2_* keys
+  // Also collect any project IDs from active projects only
   const projectIds = new Set<string>(allProjectsMap.keys());
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
       if (k && k.startsWith('booshnam_wbs_tasks_v2_')) {
         const pid = k.replace('booshnam_wbs_tasks_v2_', '');
-        if (pid && pid !== 'proj-01' && pid !== 'proj-02' && pid !== 'default') {
+        if (pid && pid !== 'proj-01' && pid !== 'proj-02' && pid !== 'default' && allProjectsMap.has(pid) && !isProjDeleted(pid)) {
           projectIds.add(pid);
         }
       }
@@ -319,12 +355,62 @@ export function getQuotationScheduleTasks(projects: Project[] = []): QuotationSc
     }
   });
 
-  const finalFiltered = combined.filter(t => !isDummyQuotationTask(t) && !isDeleted(t.id, t.wbs_task_id));
+  const finalFiltered = combined.filter(t => {
+    if (isDummyQuotationTask(t) || isDeleted(t.id, t.wbs_task_id) || isProjDeleted(t.project_id, t.project_name, t.group_name)) {
+      return false;
+    }
+    const hasProject = 
+      (t.project_id && allProjectsMap.has(t.project_id)) ||
+      (t.project_name && allProjectsNameSet.has(t.project_name.toLowerCase().trim()));
+    return Boolean(hasProject);
+  });
+
   try {
     localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(finalFiltered));
   } catch (e) {}
 
   return finalFiltered;
+}
+
+// Delete all quotation schedule tasks for a specific project
+export function deleteQuotationTasksForProject(projectId?: string, projectCode?: string, projectName?: string): void {
+  try {
+    const raw = localStorage.getItem(QUOTATION_SCHEDULE_STORAGE_KEY);
+    if (!raw) return;
+    const list: QuotationScheduleTask[] = JSON.parse(raw);
+    if (!Array.isArray(list)) return;
+
+    const pId = (projectId || '').toLowerCase().trim();
+    const pCode = (projectCode || '').toLowerCase().trim();
+    const pName = (projectName || '').toLowerCase().trim();
+
+    const idsToBlacklist: string[] = [];
+    const remaining = list.filter(t => {
+      const tPid = (t.project_id || '').toLowerCase().trim();
+      const tPname = (t.project_name || '').toLowerCase().trim();
+      const tGname = (t.group_name || '').toLowerCase().trim();
+
+      const matches = 
+        (pId && tPid === pId) ||
+        (pCode && tPid === pCode) ||
+        (pName && (tPname === pName || tGname === pName));
+
+      if (matches) {
+        if (t.id) idsToBlacklist.push(t.id);
+        if (t.wbs_task_id) idsToBlacklist.push(t.wbs_task_id);
+        return false;
+      }
+      return true;
+    });
+
+    if (idsToBlacklist.length > 0) {
+      markQuotationTaskDeleted(idsToBlacklist);
+    }
+    localStorage.setItem(QUOTATION_SCHEDULE_STORAGE_KEY, JSON.stringify(remaining));
+    window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated'));
+  } catch (e) {
+    console.error('Failed to delete quotation tasks for project', e);
+  }
 }
 
 // Delete a quotation task permanently from storage, WBS tasks, and blacklist
@@ -498,15 +584,21 @@ export function syncQuotationTaskToProject(task: QuotationScheduleTask): void {
         const tasks: WBSTask[] = JSON.parse(rawTasks);
         if (Array.isArray(tasks)) {
           const targetWbsId = task.wbs_task_id || task.id.replace('proj-task-', '');
+          const normTargetName = (task.task_name || '').trim().toLowerCase();
           let taskFound = false;
           const updatedTasks = tasks.map(t => {
-            if (t.id === targetWbsId || t.title === task.task_name) {
+            const normTitle = (t.title || '').trim().toLowerCase();
+            const isMatch = t.id === targetWbsId || normTitle === normTargetName || (normTargetName.includes('quotation') && normTitle.includes('quotation'));
+            if (isMatch) {
               taskFound = true;
+              const isComp = task.status === 'COMPLETED' || (task.progress_percentage !== undefined && task.progress_percentage >= 100);
+              const isProg = !isComp && (task.status === 'IN_PROGRESS' || (task.progress_percentage !== undefined && task.progress_percentage > 0));
+              const finalProgress = isComp ? 100 : isProg ? (task.progress_percentage || 50) : 0;
               return {
                 ...t,
-                status: task.status === 'COMPLETED' ? ('COMPLETED' as const) : task.status === 'IN_PROGRESS' ? ('IN_PROGRESS' as const) : ('TODO' as const),
-                progress_percentage: task.progress_percentage,
-                progress_label: `${task.progress_percentage}/100 lumpsum`,
+                status: isComp ? ('COMPLETED' as const) : isProg ? ('IN_PROGRESS' as const) : ('TODO' as const),
+                progress_percentage: finalProgress,
+                progress_label: `${finalProgress}/100 lumpsum`,
                 completion_proof_url: task.image_url || t.completion_proof_url,
                 completion_remarks: task.remarks || t.completion_remarks,
                 assigned_to_name: task.assignee || t.assigned_to_name,
@@ -527,6 +619,33 @@ export function syncQuotationTaskToProject(task: QuotationScheduleTask): void {
           if (taskFound) {
             localStorage.setItem(taskStorageKey, JSON.stringify(updatedTasks));
             localStorage.setItem(legacyStorageKey, JSON.stringify(updatedTasks));
+
+            // Also update project summary in booshnam_projects_v2
+            try {
+              const rawProjs = localStorage.getItem('booshnam_projects_v2');
+              if (rawProjs) {
+                const parsedProjs = JSON.parse(rawProjs);
+                if (Array.isArray(parsedProjs)) {
+                  const total = updatedTasks.length;
+                  const completed = updatedTasks.filter(item => item.status === 'COMPLETED').length;
+                  const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+                  const newStatus = progress === 100 ? 'COMPLETED' : 'ACTIVE';
+                  const newProjs = parsedProjs.map((p: any) => {
+                    if (p.id === task.project_id) {
+                      return {
+                        ...p,
+                        progress_percentage: progress,
+                        completed_tasks_count: completed,
+                        tasks_count: total,
+                        status: newStatus
+                      };
+                    }
+                    return p;
+                  });
+                  localStorage.setItem('booshnam_projects_v2', JSON.stringify(newProjs));
+                }
+              }
+            } catch (err) {}
           }
         }
       }
@@ -550,8 +669,10 @@ export function syncQuotationTaskToProject(task: QuotationScheduleTask): void {
       };
       localStorage.setItem(metaKey, JSON.stringify(metaMap));
 
-      // Dispatch event to inform Project view
+      // Dispatch events to inform Project view & Task tab
+      window.dispatchEvent(new Event('booshnam_wbs_tasks_updated'));
       window.dispatchEvent(new Event('booshnam_projects_updated'));
+      window.dispatchEvent(new Event('booshnam_quotation_schedule_updated'));
     } catch (e) {
       console.error('Error syncing quotation task to project', e);
     }

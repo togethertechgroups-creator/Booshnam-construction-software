@@ -28,6 +28,8 @@ import { TimeLogDetailView } from './TimeLogDetailView';
 import { UserProfileDropdown } from '../components/UserProfileDropdown';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
 import { confirmAction } from '../lib/dialogService';
+import { getCurrentUserAccount } from '../lib/authService';
+import { getUserAccessibleProjects, getDeletedProjectIds, isProjectDeleted } from '../lib/projectAccessService';
 
 interface TeamScheduleViewProps {
   projects?: Project[];
@@ -52,6 +54,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   projects = [],
+  tasks = [],
   activeRole,
   isSidebarOpen = true,
   onToggleSidebar,
@@ -108,8 +111,115 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   const [newTaskStage, setNewTaskStage] = useState('Prepare Quotation');
   const [newTaskStatus, setNewTaskStatus] = useState<'NOT_STARTED' | 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'>('NOT_STARTED');
 
+  const currentUserAccount = getCurrentUserAccount();
+  const isAdminOrSuperAdmin = useMemo(() => {
+    const roleCode = (currentUserAccount?.role_code || activeRole?.code || '').toUpperCase().trim();
+    const roleName = (currentUserAccount?.role_name || activeRole?.name || '').toLowerCase().trim();
+    const name = (currentUserAccount?.staff_name || currentUserAccount?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SUPER_ADMIN' ||
+      roleCode === 'ADMIN' ||
+      roleCode === 'OWNER_DIRECTOR' ||
+      roleName.includes('super admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('owner') ||
+      roleName.includes('director') ||
+      name === 'admin' ||
+      name === 'superadmin' ||
+      name === 'priya' ||
+      name === 'rajesh'
+    );
+  }, [currentUserAccount, activeRole]);
+
+  // Determine user-accessible projects:
+  // - Admin and Super Admin: All projects across all businesses
+  // - Site Engineer & non-admin staff: ONLY projects assigned to them
+  const accessibleProjectIds = useMemo(() => {
+    if (isAdminOrSuperAdmin) return null; // null represents all projects allowed
+
+    const accessible = getUserAccessibleProjects(projects);
+    const idSet = new Set<string>();
+
+    accessible.forEach(p => {
+      if (p.id) idSet.add(p.id.toLowerCase().trim());
+      if (p.code) idSet.add(p.code.toLowerCase().trim());
+      if (p.name) idSet.add(p.name.toLowerCase().trim());
+    });
+
+    const staffName = (currentUserAccount?.staff_name || currentUserAccount?.username || '').toLowerCase().trim();
+    if (staffName) {
+      if (tasks && tasks.length > 0) {
+        tasks.forEach(t => {
+          const aName = (t.assigned_to_name || t.assigned_to || '').toLowerCase().trim();
+          if (aName && (aName === staffName || aName.includes(staffName) || staffName.includes(aName))) {
+            if (t.project) idSet.add(t.project.toLowerCase().trim());
+            if (t.project_id) idSet.add(t.project_id.toLowerCase().trim());
+          }
+        });
+      }
+
+      // Check projects assigned_team directly
+      projects.forEach(p => {
+        if (p.assigned_team && Array.isArray(p.assigned_team)) {
+          const inTeam = p.assigned_team.some((m: any) => {
+            const mName = (m.name || m.staff_name || '').toLowerCase().trim();
+            return mName && (mName === staffName || mName.includes(staffName) || staffName.includes(mName));
+          });
+          if (inTeam) {
+            if (p.id) idSet.add(p.id.toLowerCase().trim());
+            if (p.code) idSet.add(p.code.toLowerCase().trim());
+            if (p.name) idSet.add(p.name.toLowerCase().trim());
+          }
+        }
+      });
+    }
+
+    return idSet;
+  }, [projects, tasks, isAdminOrSuperAdmin, currentUserAccount]);
+
+  // Scoped quotation tasks based on role & assigned projects:
+  // - Admin and Super Admin see all quotation tasks across all active projects
+  // - Site Engineer and non-admin staff see ONLY quotation tasks for projects assigned to them
+  const scopedQuotationTasks = useMemo(() => {
+    const deletedProjSet = getDeletedProjectIds();
+    const isTaskForDeletedProj = (t: QuotationScheduleTask) => {
+      const pId = (t.project_id || '').toLowerCase().trim();
+      const pName = (t.project_name || '').toLowerCase().trim();
+      const gName = (t.group_name || '').toLowerCase().trim();
+      if (pId && (deletedProjSet.has(pId) || pId === 'proj-01' || pId === 'proj-02' || pId === 'default')) return true;
+      if (pName && (deletedProjSet.has(pName) || pName === 'project' || pName === 'overhead')) return true;
+      if (gName && (deletedProjSet.has(gName) || gName === 'project' || gName === 'overhead')) return true;
+      if (isProjectDeleted({ id: pId, name: pName })) return true;
+      return false;
+    };
+
+    if (isAdminOrSuperAdmin) {
+      return quotationTasks.filter(t => !isTaskForDeletedProj(t));
+    }
+
+    // For non-admin (e.g. Site Engineer):
+    // If user has no accessible projects, they MUST see 0 quotation tasks!
+    if (!accessibleProjectIds || accessibleProjectIds.size === 0) {
+      return [];
+    }
+
+    return quotationTasks.filter(task => {
+      if (isTaskForDeletedProj(task)) return false;
+
+      const pId = (task.project_id || '').toLowerCase().trim();
+      const pName = (task.project_name || '').toLowerCase().trim();
+      const isProjectAssigned = accessibleProjectIds.has(pId) || accessibleProjectIds.has(pName);
+      return isProjectAssigned;
+    });
+  }, [quotationTasks, isAdminOrSuperAdmin, accessibleProjectIds]);
+
   const handleDeleteQuotationTask = async (taskId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (!isAdminOrSuperAdmin) {
+      onShowToast?.('Permission Denied: Only Admin or Super Admin can delete tasks.');
+      return;
+    }
     const confirmed = await confirmAction({
       title: 'Delete Quotation Task',
       message: 'Are you sure you want to delete this quotation task from the schedule? This action cannot be undone.',
@@ -221,9 +331,16 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
         matchesDate = (item.display_date || '').includes(dateFilter) || item.date === dateFilter;
       }
 
+      // Role & Project Assignment Filter: Non-admin staff only see timesheets for assigned projects
+      if (!isAdminOrSuperAdmin && accessibleProjectIds) {
+        const itemProj = (item.project_name || '').toLowerCase().trim();
+        const matchesProj = accessibleProjectIds.has(itemProj);
+        if (!matchesProj) return false;
+      }
+
       return matchesSearch && matchesParty && matchesDate;
     });
-  }, [timesheets, timesheetSearch, partyFilter, dateFilter]);
+  }, [timesheets, timesheetSearch, partyFilter, dateFilter, isAdminOrSuperAdmin, accessibleProjectIds]);
 
   // Unique parties for party filter dropdown
   const uniqueParties = useMemo(() => {
@@ -310,7 +427,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
 
   // Filtered Quotation Tasks for Gantt View (supports All, Year, Quarter, Month, Day, and Date Range)
   const filteredQuotationTasks = useMemo(() => {
-    return quotationTasks.filter(task => {
+    return scopedQuotationTasks.filter(task => {
       if (ganttAssigneeFilter !== 'All' && task.assignee !== ganttAssigneeFilter) {
         return false;
       }
@@ -410,7 +527,7 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
       return true;
     });
   }, [
-    quotationTasks,
+    scopedQuotationTasks,
     ganttAssigneeFilter,
     ganttStatusFilter,
     ganttProjectFilter,
@@ -426,20 +543,20 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
   // Unique assignees for Gantt filter
   const uniqueGanttAssignees = useMemo(() => {
     const set = new Set<string>();
-    quotationTasks.forEach(t => {
+    scopedQuotationTasks.forEach(t => {
       if (t.assignee) set.add(t.assignee);
     });
     return Array.from(set);
-  }, [quotationTasks]);
+  }, [scopedQuotationTasks]);
 
   // Unique projects for Gantt filter
   const uniqueGanttProjects = useMemo(() => {
     const set = new Set<string>();
-    quotationTasks.forEach(t => {
+    scopedQuotationTasks.forEach(t => {
       if (t.project_name) set.add(t.project_name);
     });
     return Array.from(set);
-  }, [quotationTasks]);
+  }, [scopedQuotationTasks]);
 
   const handleDeleteTimesheet = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -818,14 +935,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                           <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
                             <Calendar className="w-9 h-9 text-slate-300" />
                             <p className="text-sm font-bold text-slate-700">
-                              {quotationTasks.length === 0 ? 'No quotation tasks scheduled yet' : `No quotation tasks found for ${displayDateRangeLabel}`}
+                              {scopedQuotationTasks.length === 0 ? 'No quotation tasks scheduled yet' : `No quotation tasks found for ${displayDateRangeLabel}`}
                             </p>
                             <p className="text-xs text-slate-400 max-w-sm">
-                              {quotationTasks.length === 0 
+                              {scopedQuotationTasks.length === 0 
                                 ? 'No quotation milestones scheduled yet.' 
                                 : 'Try selecting another period, adjusting the date range, or click below to view all tasks.'}
                             </p>
-                            {quotationTasks.length > 0 && (
+                            {scopedQuotationTasks.length > 0 && (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1012,14 +1129,16 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteQuotationTask(task.id, e)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-rose-200"
-                                title="Delete Task"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {isAdminOrSuperAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteQuotationTask(task.id, e)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer inline-flex items-center justify-center shadow-2xs border border-slate-200/60 hover:border-rose-200"
+                                  title="Delete Task"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1094,7 +1213,14 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                     className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 bg-white"
                   >
                     <option value="">Select Project</option>
-                    {projects.map(p => (
+                    {(isAdminOrSuperAdmin || !accessibleProjectIds
+                      ? projects 
+                      : projects.filter(p => {
+                          const pid = (p.id || '').toLowerCase().trim();
+                          const pname = (p.name || '').toLowerCase().trim();
+                          return accessibleProjectIds.has(pid) || accessibleProjectIds.has(pname);
+                        })
+                    ).map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
@@ -1373,29 +1499,33 @@ export const TeamScheduleView: React.FC<TeamScheduleViewProps> = ({
                                   <Eye className="w-3.5 h-3.5 text-slate-500" />
                                   <span>View Details</span>
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingTimesheet(entry);
-                                    setIsDrawerOpen(true);
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5 text-slate-500" />
-                                  <span>Edit Log</span>
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteTimesheet(entry.id, e);
-                                    setActiveRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600 cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>Delete</span>
-                                </button>
+                                {isAdminOrSuperAdmin && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingTimesheet(entry);
+                                        setIsDrawerOpen(true);
+                                        setActiveRowMenuId(null);
+                                      }}
+                                      className="w-full px-3 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                                      <span>Edit Log</span>
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteTimesheet(entry.id, e);
+                                        setActiveRowMenuId(null);
+                                      }}
+                                      className="w-full px-3 py-2 hover:bg-red-50 flex items-center gap-2 text-red-600 cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Delete</span>
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                           </td>

@@ -255,9 +255,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     syncPermissions();
     window.addEventListener('siteops_role_access_updated', syncPermissions);
     window.addEventListener('booshnam_session_changed', syncPermissions);
+    window.addEventListener('booshnam_accounts_updated', syncPermissions);
+    window.addEventListener('booshnam_staff_updated', syncPermissions);
+    window.addEventListener('storage', syncPermissions);
     return () => {
       window.removeEventListener('siteops_role_access_updated', syncPermissions);
       window.removeEventListener('booshnam_session_changed', syncPermissions);
+      window.removeEventListener('booshnam_accounts_updated', syncPermissions);
+      window.removeEventListener('booshnam_staff_updated', syncPermissions);
+      window.removeEventListener('storage', syncPermissions);
     };
   }, []);
 
@@ -321,7 +327,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'FINANCE & SUPPLY',
         items: [
           { id: 'finance', label: 'Accounts & Finance', icon: Landmark },
-          { id: 'payments', label: 'Payments & Ledger', icon: CreditCard },
           { 
             id: 'procurement', 
             label: 'Procurement', 
@@ -349,7 +354,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       .map(section => ({
         title: section.title,
         items: section.items.filter(item => {
-          return isPageAllowedForActiveUser(item.id) && isPageAllowedForRole(activeRole.code, item.id);
+          if (item.id === 'setting') return true;
+          return isPageAllowedForActiveUser(item.id);
         })
       }))
       .filter(section => section.items.length > 0);

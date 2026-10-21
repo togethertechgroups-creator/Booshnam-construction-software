@@ -27,6 +27,11 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   html {
     font-size: 16.32px; /* Increases font size by ~2% globally across all pages */
   }

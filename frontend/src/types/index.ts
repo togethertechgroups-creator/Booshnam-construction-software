@@ -176,7 +176,7 @@ export interface WBSTask {
     status: string;
     progress_percentage: number;
   }>;
-  s_no?: number;
+  s_no?: number | string;
   created_by?: string;
   created_date?: string;
   actual_start?: string;
@@ -441,6 +441,8 @@ export interface QuotationItem {
   unit_rate: number;
   amount: number;
   category?: string;
+  gst_percentage?: number;
+  gst_amount?: number;
 }
 
 export interface Quotation {

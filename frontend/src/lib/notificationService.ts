@@ -8,7 +8,7 @@ export interface AppNotification {
   id: string;
   title: string;
   message: string;
-  type: 'PROJECT_ASSIGNED' | 'TASK_ASSIGNED' | 'TASK_COMPLETED' | 'PAYMENT_REQUEST' | 'MATERIAL_REQUEST' | 'GENERAL';
+  type: 'PROJECT_ASSIGNED' | 'TASK_ASSIGNED' | 'TASK_COMPLETED' | 'PAYMENT_REQUEST' | 'MATERIAL_REQUEST' | 'LEAD_ASSIGNED' | 'GENERAL';
   recipient: string; // e.g. 'Madhumitha', 'Pavani', 'Likson', 'Site Engineer', 'ADMIN', 'ALL'
   sender?: string;
   projectName?: string;
@@ -17,6 +17,7 @@ export interface AppNotification {
   proofUrl?: string;
   amount?: number;
   requestCode?: string;
+  leadId?: string;
   timestamp: string;
   read: boolean;
 }
@@ -150,11 +151,36 @@ export function isNotificationForUser(
     if (isAdmin) return false;
   }
 
-  // 1. Task Assigned & Project Assigned:
-  // ONLY for the specific individual or role assigned! Admin/Super Admin NEVER receives other people's assignment notifications.
-  if (n.type === 'TASK_ASSIGNED' || n.type === 'PROJECT_ASSIGNED') {
+  // 1. Task Assigned, Project Assigned & Lead Assigned:
+  // Strictly ONLY for the assigned individual or assigned role!
+  // Super Admin / Admin who created or assigned it must NEVER receive these notifications.
+  const isAssignment = 
+    n.type === 'TASK_ASSIGNED' || 
+    n.type === 'PROJECT_ASSIGNED' || 
+    n.type === 'LEAD_ASSIGNED' || 
+    n.title?.toLowerCase().includes('lead assigned') ||
+    n.title?.toLowerCase().includes('project assigned') ||
+    n.title?.toLowerCase().includes('task assigned') ||
+    n.title?.toLowerCase().includes('assigned to');
+
+  if (isAssignment) {
     if (!rec || rec === 'all') return false;
-    // Direct personal match
+
+    // The sender/creator who assigned this item must NEVER receive the assignment notification
+    const senderClean = (n.sender || '').toLowerCase().trim();
+    if (senderClean && cleanName && (senderClean === cleanName || cleanName.includes(senderClean) || senderClean.includes(cleanName))) {
+      return false;
+    }
+    if (isAdmin && senderClean && (senderClean === 'admin' || senderClean === 'super admin' || senderClean === 'superadmin' || senderClean.includes('admin'))) {
+      return false;
+    }
+
+    // Super Admin / Admin must NEVER receive notifications for assignments meant for other staff members
+    if (isAdmin && rec !== 'admin' && rec !== 'super_admin' && rec !== 'superadmin' && rec !== cleanName) {
+      return false;
+    }
+
+    // Direct personal match for assigned recipient
     if (cleanName && (rec === cleanName || rec.includes(cleanName) || cleanName.includes(rec))) {
       return true;
     }
@@ -236,7 +262,7 @@ export function isNotificationForUser(
     return false;
   }
 
-  // 4. General / Other notifications
+  // 5. General / Other notifications
   if (rec === 'all') return true;
   if (isAdmin && rec === 'admin') return true;
   if (cleanName && rec === cleanName) return true;
@@ -541,6 +567,9 @@ export function syncTodayTasksReminderNotifications(): void {
       return !isOldReminder;
     });
 
+    const existingReminder = allNotifs.find(n => n.id === notifKey);
+    const wasRead = existingReminder ? existingReminder.read : false;
+
     const activeReminderNotif: AppNotification = {
       id: notifKey,
       title: notifTitle,
@@ -552,7 +581,7 @@ export function syncTodayTasksReminderNotifications(): void {
       projectId: pendingTasksForUser[0].projectId,
       taskName: pendingTasksForUser[0].title,
       timestamp: 'Today (Daily update)',
-      read: false
+      read: wasRead
     };
 
     saveNotifications([activeReminderNotif, ...remainingNotifs]);

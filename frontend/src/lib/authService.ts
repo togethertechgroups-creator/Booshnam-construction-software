@@ -1,5 +1,5 @@
 import { ALL_SYSTEM_MODULES, getStoredRolePermissions } from './roleAccess';
-import { getStaffMembers } from './staffService';
+import { getStaffMembers, saveStaffMember } from './staffService';
 import { 
   setActiveDepartmentId, 
   normalizeDepartmentId,
@@ -23,6 +23,7 @@ export interface UserAccount {
   allowedPages: string[];
   created_at: string;
   avatar_url?: string;
+  has_custom_permissions?: boolean;
 }
 
 const DEFAULT_ACCOUNTS: UserAccount[] = [
@@ -146,17 +147,30 @@ export function getUserAccounts(): UserAccount[] {
               department: a.department && mergedDepts.includes(a.department) ? a.department : mergedDepts[0]
             };
           }
+
+          if (primaryStaff.has_custom_permissions && Array.isArray(primaryStaff.custom_allowed_pages) && primaryStaff.custom_allowed_pages.length > 0) {
+            if (!a.has_custom_permissions || JSON.stringify(a.allowedPages) !== JSON.stringify(primaryStaff.custom_allowed_pages)) {
+              hasChanges = true;
+              a = {
+                ...a,
+                has_custom_permissions: true,
+                allowedPages: [...primaryStaff.custom_allowed_pages]
+              };
+            }
+          }
         }
       } else if (a.username === 'admin' && a.role_code !== 'ADMIN') {
         hasChanges = true;
         a = { ...a, role_code: 'ADMIN', role_name: 'Admin' };
       }
 
-      const rolePerm = storedPerms[a.role_code];
-      if (rolePerm && Array.isArray(rolePerm.allowedPages)) {
-        if (!a.allowedPages || JSON.stringify(a.allowedPages) !== JSON.stringify(rolePerm.allowedPages)) {
-          hasChanges = true;
-          return { ...a, allowedPages: rolePerm.allowedPages };
+      if (!a.has_custom_permissions) {
+        const rolePerm = storedPerms[a.role_code];
+        if (rolePerm && Array.isArray(rolePerm.allowedPages)) {
+          if (!a.allowedPages || JSON.stringify(a.allowedPages) !== JSON.stringify(rolePerm.allowedPages)) {
+            hasChanges = true;
+            return { ...a, allowedPages: rolePerm.allowedPages };
+          }
         }
       }
       return a;
@@ -347,6 +361,107 @@ export function syncStaffRoleToAccount(staffId: string, phone: string, newRoleCo
   }
 }
 
+export function getUserAccountForStaff(staffId: string, phone?: string): UserAccount | undefined {
+  const accounts = getUserAccounts();
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  return accounts.find(a => {
+    if (a.staff_id === staffId || (Array.isArray(a.staff_ids) && a.staff_ids.includes(staffId))) return true;
+    if (cleanPhone && cleanPhone.length >= 7) {
+      const aPhone = (a.phone || '').replace(/\D/g, '');
+      const aUser = (a.username || '').replace(/\D/g, '');
+      if (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+export function updateUserMemberPermissions(staffId: string, phone: string, allowedPages: string[]): boolean {
+  const accounts = getUserAccounts();
+  const cleanPhone = (phone || '').replace(/\D/g, '');
+  let updatedCount = 0;
+
+  // 1. Update staff member record in booshnam_staff_members_v2
+  const allStaff = getStaffMembers();
+  const targetStaff = allStaff.find(s => s.id === staffId || (cleanPhone && cleanPhone.length >= 7 && (s.phone || '').replace(/\D/g, '').endsWith(cleanPhone)));
+  if (targetStaff) {
+    saveStaffMember({
+      ...targetStaff,
+      custom_allowed_pages: [...allowedPages],
+      has_custom_permissions: true,
+    });
+  }
+
+  // 2. Update existing user accounts matching this staff
+  const updatedAccounts = accounts.map(a => {
+    if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
+      return a;
+    }
+    const aPhone = (a.phone || '').replace(/\D/g, '');
+    const aUser = (a.username || '').replace(/\D/g, '');
+    const isMatch = (a.staff_id === staffId || (Array.isArray(a.staff_ids) && a.staff_ids.includes(staffId))) ||
+      Boolean(cleanPhone && cleanPhone.length >= 7 && (aPhone.endsWith(cleanPhone) || cleanPhone.endsWith(aPhone) || aUser.endsWith(cleanPhone) || cleanPhone.endsWith(aUser)));
+
+    if (isMatch) {
+      updatedCount++;
+      return {
+        ...a,
+        allowedPages: [...allowedPages],
+        has_custom_permissions: true,
+      };
+    }
+    return a;
+  });
+
+  // 3. If no existing account matched, create a dedicated account for this staff
+  if (updatedCount === 0 && targetStaff) {
+    const rawDigits = (targetStaff.phone || cleanPhone || '').replace(/\D/g, '');
+    const username = targetStaff.username || rawDigits || `staff_${targetStaff.employee_code || Date.now()}`;
+    const newAcc: UserAccount = {
+      id: `acc-${targetStaff.id}-${Date.now()}`,
+      username: username,
+      password: targetStaff.phone || 'password123',
+      phone: targetStaff.phone || cleanPhone,
+      staff_id: targetStaff.id,
+      staff_ids: [targetStaff.id],
+      staff_name: targetStaff.name,
+      staff_code: targetStaff.employee_code,
+      role_code: targetStaff.role_code,
+      role_name: targetStaff.role_name || targetStaff.designation,
+      department: targetStaff.department,
+      departments: targetStaff.departments?.length ? targetStaff.departments : (targetStaff.department ? [targetStaff.department] : []),
+      allowedPages: [...allowedPages],
+      has_custom_permissions: true,
+      created_at: new Date().toISOString()
+    };
+    updatedAccounts.unshift(newAcc);
+    updatedCount = 1;
+  }
+
+  try {
+    localStorage.setItem(ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedAccounts));
+    window.dispatchEvent(new CustomEvent('booshnam_accounts_updated', { detail: updatedAccounts }));
+
+    const active = getCurrentUserAccount();
+    if (active && (active.staff_id === staffId || (cleanPhone && cleanPhone.length >= 7 && (active.phone || '').replace(/\D/g, '').endsWith(cleanPhone)))) {
+      const updatedActive = {
+        ...active,
+        allowedPages: [...allowedPages],
+        has_custom_permissions: true,
+      };
+      setCurrentUserAccount(updatedActive);
+      window.dispatchEvent(new CustomEvent('booshnam_session_changed', { detail: updatedActive }));
+    }
+    window.dispatchEvent(new CustomEvent('siteops_role_access_updated'));
+    window.dispatchEvent(new CustomEvent('booshnam_staff_updated'));
+  } catch (e) {
+    console.error('Failed to update member permissions', e);
+  }
+
+  return true;
+}
+
 export function authenticateUser(usernameOrPhone: string, password: string): UserAccount | null {
   const accounts = getUserAccounts();
   const cleanInput = usernameOrPhone.trim().toLowerCase();
@@ -400,9 +515,14 @@ export function authenticateUser(usernameOrPhone: string, password: string): Use
         match.department = mergedDepts[0];
       }
 
-      const storedPerms = getStoredRolePermissions();
-      if (storedPerms[activeStaff.role_code]?.allowedPages) {
-        match.allowedPages = storedPerms[activeStaff.role_code].allowedPages;
+      if (activeStaff.has_custom_permissions && Array.isArray(activeStaff.custom_allowed_pages) && activeStaff.custom_allowed_pages.length > 0) {
+        match.has_custom_permissions = true;
+        match.allowedPages = [...activeStaff.custom_allowed_pages];
+      } else if (!match.has_custom_permissions) {
+        const storedPerms = getStoredRolePermissions();
+        if (storedPerms[activeStaff.role_code]?.allowedPages) {
+          match.allowedPages = storedPerms[activeStaff.role_code].allowedPages;
+        }
       }
     }
 
@@ -470,14 +590,24 @@ export function getCurrentUserAccount(): UserAccount | null {
         acc.department = mergedDepts[0];
         changed = true;
       }
+
+      if (primaryStaff.has_custom_permissions && Array.isArray(primaryStaff.custom_allowed_pages) && primaryStaff.custom_allowed_pages.length > 0) {
+        if (!acc.has_custom_permissions || JSON.stringify(acc.allowedPages) !== JSON.stringify(primaryStaff.custom_allowed_pages)) {
+          acc.has_custom_permissions = true;
+          acc.allowedPages = [...primaryStaff.custom_allowed_pages];
+          changed = true;
+        }
+      }
     }
 
-    const storedPerms = getStoredRolePermissions();
-    const rolePerm = storedPerms[acc.role_code];
-    if (rolePerm && Array.isArray(rolePerm.allowedPages)) {
-      if (!acc.allowedPages || JSON.stringify(acc.allowedPages) !== JSON.stringify(rolePerm.allowedPages)) {
-        acc.allowedPages = rolePerm.allowedPages;
-        changed = true;
+    if (!acc.has_custom_permissions) {
+      const storedPerms = getStoredRolePermissions();
+      const rolePerm = storedPerms[acc.role_code];
+      if (rolePerm && Array.isArray(rolePerm.allowedPages)) {
+        if (!acc.allowedPages || JSON.stringify(acc.allowedPages) !== JSON.stringify(rolePerm.allowedPages)) {
+          acc.allowedPages = rolePerm.allowedPages;
+          changed = true;
+        }
       }
     }
     if (changed) {
@@ -544,35 +674,48 @@ export function isPageAllowedForActiveUser(pageId: string): boolean {
   if (account.role_code === 'SUPER_ADMIN' || account.role_code === 'ADMIN' || account.username === 'admin' || account.username === 'superadmin') return true;
 
   // Normalization for aliases
-  let targetId = pageId;
-  if (pageId === 'company_dashboard') targetId = 'dashboard';
-  if (pageId === 'payroll') targetId = 'workforce';
-  if (pageId === 'crm') targetId = 'clients';
-  if (pageId === 'warehouse') targetId = 'procurement';
-  if (pageId === 'asset') targetId = 'equipment';
-  if (pageId === 'report') targetId = 'site_ops';
-  if (pageId === 'library') targetId = 'documents';
-  if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
-  if (pageId === 'timesheet' || pageId === 'team_schedule' || pageId === 'schedule_timesheet') targetId = 'schedule';
-  if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
+  const normalize = (pid: string) => {
+    if (pid === 'company_dashboard') return 'dashboard';
+    if (pid === 'payroll') return 'workforce';
+    if (pid === 'crm') return 'clients';
+    if (pid === 'warehouse') return 'procurement';
+    if (pid === 'asset') return 'equipment';
+    if (pid === 'report') return 'site_ops';
+    if (pid === 'library') return 'documents';
+    if (pid === 'payments' || pid === 'accounts_finance') return 'finance';
+    if (pid === 'timesheet' || pid === 'team_schedule' || pid === 'schedule_timesheet') return 'schedule';
+    if (pid.startsWith('dept_') || pid === 'soil_investigation' || pid === 'architecture' || pid === 'marketing' || pid === 'construction_dept' || pid === 'accounts_dept') return 'departments';
+    return pid;
+  };
+
+  const targetId = normalize(pageId);
 
   if (targetId === 'schedule') {
     return account.role_code !== 'CLIENT';
   }
 
-  // 1. Strictly enforce dynamic role permissions configured in Roles & Granular Permissions
-  const rolePermissions = getStoredRolePermissions();
-  const roleConfig = rolePermissions[account.role_code];
-  if (roleConfig && Array.isArray(roleConfig.allowedPages)) {
-    const isAllowedInRole = roleConfig.allowedPages.includes(targetId) || roleConfig.allowedPages.includes(pageId);
-    if (!isAllowedInRole) {
-      return false;
+  const checkList = (pages: string[]) => {
+    if (!Array.isArray(pages)) return false;
+    return pages.some(p => p === pageId || p === targetId || normalize(p) === targetId);
+  };
+
+  // 1. If this specific user has custom permissions configured, strictly honor their custom allowedPages
+  if (account.has_custom_permissions && Array.isArray(account.allowedPages)) {
+    return checkList(account.allowedPages);
+  }
+
+  // 2. If user-specific allowed pages exist and contain the target, grant access
+  if (account.allowedPages && Array.isArray(account.allowedPages) && account.allowedPages.length > 0) {
+    if (checkList(account.allowedPages)) {
+      return true;
     }
   }
 
-  // 2. Also enforce user-specific allowed pages if defined
-  if (account.allowedPages && Array.isArray(account.allowedPages)) {
-    return account.allowedPages.includes(targetId) || account.allowedPages.includes(pageId);
+  // 3. Fallback to dynamic role permissions configured in Roles & Granular Permissions
+  const rolePermissions = getStoredRolePermissions();
+  const roleConfig = rolePermissions[account.role_code];
+  if (roleConfig && Array.isArray(roleConfig.allowedPages)) {
+    return checkList(roleConfig.allowedPages);
   }
 
   return true;
@@ -616,9 +759,14 @@ export function authenticateByPhone(phone: string, _dialCode: string = '+91'): U
         matched.department = mergedDepts[0];
       }
 
-      const storedPerms = getStoredRolePermissions();
-      if (storedPerms[primaryStaff.role_code]?.allowedPages) {
-        matched.allowedPages = storedPerms[primaryStaff.role_code].allowedPages;
+      if (primaryStaff.has_custom_permissions && Array.isArray(primaryStaff.custom_allowed_pages) && primaryStaff.custom_allowed_pages.length > 0) {
+        matched.has_custom_permissions = true;
+        matched.allowedPages = [...primaryStaff.custom_allowed_pages];
+      } else if (!matched.has_custom_permissions) {
+        const storedPerms = getStoredRolePermissions();
+        if (storedPerms[primaryStaff.role_code]?.allowedPages) {
+          matched.allowedPages = storedPerms[primaryStaff.role_code].allowedPages;
+        }
       }
       saveUserAccount(matched);
 
@@ -634,6 +782,11 @@ export function authenticateByPhone(phone: string, _dialCode: string = '+91'): U
     } else {
       // Auto-create verified account for staff with their assigned departments
       const storedPerms = getStoredRolePermissions();
+      const hasCustom = Boolean(primaryStaff.has_custom_permissions && primaryStaff.custom_allowed_pages?.length);
+      const customPages = hasCustom
+        ? [...(primaryStaff.custom_allowed_pages || [])]
+        : (storedPerms[primaryStaff.role_code]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id));
+
       const newAcc: UserAccount = {
         id: `usr-mob-${Date.now()}`,
         username: cleanPhone,
@@ -647,7 +800,8 @@ export function authenticateByPhone(phone: string, _dialCode: string = '+91'): U
         role_name: primaryStaff.role_name || primaryStaff.designation,
         department: primaryStaff.department,
         departments: staffDepts.length > 0 ? staffDepts : [primaryStaff.department],
-        allowedPages: storedPerms[primaryStaff.role_code]?.allowedPages || ALL_SYSTEM_MODULES.map(m => m.id),
+        allowedPages: customPages,
+        has_custom_permissions: hasCustom,
         created_at: new Date().toISOString()
       };
       saveUserAccount(newAcc);

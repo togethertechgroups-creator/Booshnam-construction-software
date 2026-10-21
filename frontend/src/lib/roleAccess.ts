@@ -13,7 +13,6 @@ export const ALL_SYSTEM_MODULES: SystemModule[] = [
   { id: 'departments', name: 'Departments', category: 'Core Operations', description: 'Soil investigation, Architectural design hub, Marketing & Accounts' },
   { id: 'workforce', name: 'Staff & Payroll', category: 'Financials & Supply', description: 'Workforce roster, daily biometric attendance, muster roll & wage payouts' },
   { id: 'finance', name: 'Accounts & Finance', category: 'Financials & Supply', description: 'Payment requests, party ledgers, cash & bank transactions, Tally/Zoho sync' },
-  { id: 'payments', name: 'Payments & Ledger', category: 'Financials & Supply', description: 'Project cashflow ledger, client receipts, vendor invoices & payment processing' },
   { id: 'procurement', name: 'Procurement', category: 'Financials & Supply', description: 'Material requisitions, purchase orders (PO), GRN deliveries & stock inventory' },
   { id: 'equipment', name: 'Assets', category: 'Financials & Supply', description: 'Machinery tracking, vehicle fleet, equipment allocation & maintenance logs' },
   { id: 'documents', name: 'Documents', category: 'Repository & Quality', description: 'Engineering drawings, architectural specs, agreements & compliance file vault' },
@@ -52,7 +51,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'PROJECT_MANAGER',
     roleName: 'Project Manager',
     description: 'Overall project leadership, team delegation, budget & schedule execution',
-    allowedPages: ['dashboard', 'projects', 'quotation', 'schedule', 'site_ops', 'workforce', 'finance', 'payments', 'procurement', 'equipment', 'documents', 'approvals', 'setting'],
+    allowedPages: ['dashboard', 'projects', 'quotation', 'schedule', 'site_ops', 'workforce', 'finance', 'procurement', 'equipment', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   SUPERVISOR: {
@@ -72,7 +71,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
       'Site Expense Entries: Record all site expenses incurred by the Site Engineers and update the expense entries with supporting bills and payment details.',
       'Material Stock Control: Maintain site-wise material stock records and regularly update material receipts, material consumption, and closing stock details.'
     ],
-    allowedPages: ['projects', 'schedule', 'site_ops', 'procurement', 'finance', 'payments', 'documents', 'approvals', 'setting'],
+    allowedPages: ['projects', 'schedule', 'site_ops', 'procurement', 'finance', 'documents', 'approvals', 'setting'],
     isSystemRole: true,
   },
   ARCHITECT: {
@@ -93,7 +92,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, RoleAccessPermission> = {
     roleCode: 'ACCOUNTS',
     roleName: 'Accounts',
     description: 'Financial ledger, payment processing, vendor invoices, BOQ & payroll',
-    allowedPages: ['dashboard', 'finance', 'payments', 'workforce', 'procurement', 'approvals', 'setting'],
+    allowedPages: ['dashboard', 'finance', 'workforce', 'procurement', 'approvals', 'setting'],
     isSystemRole: true,
   },
   EMPLOYEE: {
@@ -236,7 +235,7 @@ export function isPageAllowedForRole(roleCode: string, pageId: string): boolean 
   if (pageId === 'asset') targetId = 'equipment';
   if (pageId === 'report') targetId = 'site_ops';
   if (pageId === 'library') targetId = 'documents';
-  if (pageId === 'finance' || pageId === 'accounts_finance') targetId = 'payments';
+  if (pageId === 'payments' || pageId === 'accounts_finance') targetId = 'finance';
   if (pageId === 'timesheet' || pageId === 'team_schedule' || pageId === 'schedule_timesheet') targetId = 'schedule';
   if (pageId.startsWith('dept_') || pageId === 'soil_investigation' || pageId === 'architecture' || pageId === 'marketing' || pageId === 'construction_dept' || pageId === 'accounts_dept') targetId = 'departments';
 

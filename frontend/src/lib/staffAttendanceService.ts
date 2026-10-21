@@ -1,6 +1,8 @@
 import { StaffMember, getStaffMembers } from './staffService';
 import { BOOSHNAM_OFFICE_GEOFENCE, isStaffOfficeBased } from './officeGeofenceService';
 
+export type StaffAttendanceStatus = 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent' | 'Week-off' | 'Paid Leave';
+
 export interface StaffAttendanceRecord {
   id: string;
   staff_id: string;
@@ -11,7 +13,7 @@ export interface StaffAttendanceRecord {
   date: string; // YYYY-MM-DD
   clock_in_time: string; // e.g. "09:15 AM"
   clock_out_time?: string; // e.g. "06:30 PM"
-  status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent';
+  status: StaffAttendanceStatus;
   verification_photo: string; // Base64 data URL or image path
   location_name: string;
   latitude?: number;
@@ -25,8 +27,7 @@ export interface StaffAttendanceRecord {
 
 const ATTENDANCE_STORAGE_KEY = 'booshnam_staff_attendance_v3';
 
-// Default sample avatar data URL for fallback if photo missing
-const SAMPLE_PHOTO_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><rect width="120" height="120" fill="%23fee2e2"/><circle cx="60" cy="46" r="22" fill="%23ef4444"/><path d="M24 102c0-19.882 16.118-36 36-36s36 16.118 36 36" fill="%23dc2626"/></svg>`;
+// Fallback avatar constant removed in favor of empty string for non-camera punches
 
 export function getTodayDateString(): string {
   const d = new Date();
@@ -50,7 +51,28 @@ export function getAllStaffAttendanceRecords(): StaffAttendanceRecord[] {
     const raw = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    let hasDirtySample = false;
+    const sanitized = parsed.map((r: StaffAttendanceRecord) => {
+      if (
+        r.verification_photo &&
+        (r.verification_photo.includes('data:image/svg') ||
+         r.verification_photo.includes('%23fee2e2') ||
+         r.verification_photo.includes('%23dc2626') ||
+         r.verification_photo.includes('<svg') ||
+         r.punch_mode === 'ADMIN_OVERRIDE')
+      ) {
+        hasDirtySample = true;
+        return { ...r, verification_photo: '' };
+      }
+      return r;
+    });
+    if (hasDirtySample) {
+      try {
+        localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(sanitized));
+      } catch (e) {}
+    }
+    return sanitized;
   } catch (e) {
     console.error('Failed to read staff attendance records', e);
     return [];
@@ -131,7 +153,7 @@ export function saveStaffAttendancePunch(
       clock_in_time: currentTime,
       clock_out_time: params.punchType === 'OUT' ? currentTime : undefined,
       status: params.status || 'Present',
-      verification_photo: params.photo || SAMPLE_PHOTO_AVATAR,
+      verification_photo: params.photo || '',
       location_name: params.locationName || defaultLoc,
       latitude: params.latitude || defaultLat,
       longitude: params.longitude || defaultLon,
@@ -158,9 +180,15 @@ export function saveStaffAttendancePunch(
 
 export function updateStaffAttendanceStatus(
   staffId: string,
-  newStatus: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent',
+  newStatus: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent' | 'Week-off' | 'Paid Leave',
   dateStr: string = getTodayDateString()
 ): void {
+  const today = getTodayDateString();
+  if (dateStr > today) {
+    console.warn('Cannot mark attendance for future dates:', dateStr);
+    return;
+  }
+
   const current = getAllStaffAttendanceRecords();
   const index = current.findIndex((r) => r.staff_id === staffId && r.date === dateStr);
 
@@ -182,7 +210,7 @@ export function updateStaffAttendanceStatus(
         date: dateStr,
         clock_in_time: formatTime12h(),
         status: newStatus,
-        verification_photo: SAMPLE_PHOTO_AVATAR,
+        verification_photo: '',
         location_name: isOffice ? 'Booshnam Head Office (Pammal, Chennai)' : 'Site Office',
         distance_from_site_meters: 10,
         is_inside_geofence: true,

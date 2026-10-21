@@ -45,7 +45,6 @@ import {
   StaffAttendanceRecord,
   getTodayDateString
 } from '../lib/staffAttendanceService';
-import { HolidaysManager } from '../components/HolidaysManager';
 
 
 interface WorkforceViewProps {
@@ -90,13 +89,13 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
     window.addEventListener('booshnam_open_payroll', handleOpenPayroll);
     return () => window.removeEventListener('booshnam_open_payroll', handleOpenPayroll);
   }, []);
-  const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves' | 'holidays'>('attendance');
+  const [payrollTab, setPayrollTab] = useState<'attendance' | 'team_leaves' | 'my_leaves'>('attendance');
   const [staffList, setStaffList] = useState<StaffMember[]>(() => getStaffMembers());
   const [searchStaffQuery, setSearchStaffQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [selectedStaffForOverview, setSelectedStaffForOverview] = useState<StaffMember | null>(null);
-  const [overviewInitialTab, setOverviewInitialTab] = useState<'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays'>('people');
+  const [overviewInitialTab, setOverviewInitialTab] = useState<'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves'>('people');
   const [selectedStaffForProjectModal, setSelectedStaffForProjectModal] = useState<StaffMember | null>(null);
 
   // Live Photo Verification Proof Modal State
@@ -183,7 +182,7 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
 
   const handleOpenStaffOverview = (
     staff: StaffMember,
-    defaultTab: 'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' | 'holidays' = 'people'
+    defaultTab: 'people' | 'details' | 'access' | 'leave_dashboard' | 'team_leaves' | 'my_leaves' = 'people'
   ) => {
     setSelectedStaffForOverview(staff);
     setOverviewInitialTab(defaultTab);
@@ -912,15 +911,6 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
                   >
                     My Leaves
                   </button>
-                  <button
-                    onClick={() => setPayrollTab('holidays')}
-                    className={`px-4 py-3 transition-all cursor-pointer ${payrollTab === 'holidays'
-                        ? 'text-indigo-600 border-b-2 border-indigo-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900'
-                      }`}
-                  >
-                    Holidays
-                  </button>
                 </div>
 
                 {/* Right Side: + Add Staff Button */}
@@ -939,61 +929,6 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
           {/* ── SECTION 2.1: ATTENDANCE ── */}
           {mainTab === 'payroll' && payrollTab === 'attendance' && (
             <div className="p-6 space-y-6 max-w-7xl mx-auto w-full animate-in fade-in duration-150">
-              {/* ── SUPER ADMIN DEPARTMENT BREAKDOWN BAR (IF OVERVIEW) ── */}
-              {isOverview && (
-                <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Department-Wise Attendance (Click department to filter):</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDepartmentIds(['ALL'])}
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-lg transition cursor-pointer ${
-                        selectedDepartmentIds.includes('ALL')
-                          ? 'bg-slate-900 text-white'
-                          : 'text-indigo-600 hover:bg-indigo-50'
-                      }`}
-                    >
-                      All Departments ({staffList.length})
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
-                    {departmentAttendanceBreakdown.map((dept) => {
-                      const isFiltered = selectedDepartmentIds.includes(dept.id);
-                      return (
-                        <button
-                          key={dept.id}
-                          type="button"
-                          onClick={() => setSelectedDepartmentIds([dept.id])}
-                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                            isFiltered
-                              ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200 shadow-xs'
-                              : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200'
-                          }`}
-                        >
-                          <div className="text-[11px] font-bold text-slate-800 truncate" title={dept.name}>
-                            {dept.shortName || dept.name}
-                          </div>
-                          <div className="flex items-baseline justify-between mt-1">
-                            <span className="text-sm font-black text-slate-900">
-                              {dept.present} <span className="text-[10px] text-slate-400 font-normal">/ {dept.total}</span>
-                            </span>
-                            <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${
-                              dept.rate >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
-                            }`}>
-                              {dept.rate}%
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {/* Action Toolbar: Filter Pills + Search + Summary Stats */}
               <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                 {/* Left Side: Category Pills + Active Filter + Department Filter */}
@@ -1267,11 +1202,6 @@ export const WorkforceView: React.FC<WorkforceViewProps> = ({
               <User className="w-12 h-12 mb-4 opacity-20" />
               <p>My Leaves view is under construction</p>
             </div>
-          )}
-
-          {/* ── SECTION 2.4: HOLIDAYS ── */}
-          {mainTab === 'payroll' && payrollTab === 'holidays' && (
-            <HolidaysManager onShowToast={triggerToast} />
           )}
         </>
       )}

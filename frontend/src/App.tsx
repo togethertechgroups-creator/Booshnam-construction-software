@@ -14,7 +14,6 @@ import { DocumentsView } from './views/DocumentsView';
 import { DepartmentsView } from './views/DepartmentsView';
 import { ClientPortalView } from './views/ClientPortalView';
 import { TasksView } from './views/TasksView';
-import { PaymentsView } from './views/PaymentsView';
 import { AccountsFinanceView } from './views/AccountsFinanceView';
 import { QuotationView } from './views/QuotationView';
 import { TeamScheduleView } from './views/TeamScheduleView';
@@ -138,7 +137,7 @@ export function App() {
     if (currentView === 'tasks' || currentView === 'snags') {
       setCurrentView('projects');
     }
-    if (currentView === 'payment_requests') {
+    if (currentView === 'payments' || currentView === 'payment_requests') {
       setFinanceInitialTab('payment_requests');
       setCurrentView('finance');
     }
@@ -208,20 +207,40 @@ export function App() {
         try {
           const parsed = JSON.parse(qTasks);
           if (Array.isArray(parsed)) {
-            const cleaned = parsed.filter((t: any) => 
-              t.task_name !== 'Collect Client Details' &&
-              t.project_name !== 'Project' &&
-              t.project_id !== 'proj-01' &&
-              t.project_id !== 'proj-02' &&
-              !t.id?.match(/^q-task-0?[1-9]$|^q-task-1[0-9]$/) && 
-              !t.id?.startsWith('proj-quotation-') &&
-              t.project_name !== 'Navalur Residential Enclave' &&
-              t.project_name !== 'Tambaram Commercial Hub' &&
-              t.project_name !== 'Medavakkam Villa Plots' &&
-              t.project_name !== 'Velachery Tech Park Extension' &&
-              t.project_name !== 'Guindy Industrial Shed' &&
-              t.project_name !== 'Chromepet IT Complex'
-            ).map((t: any) => {
+            let activeProjsNames: string[] = [];
+            let activeProjsIds: string[] = [];
+            try {
+              const activeProjsRaw = localStorage.getItem('booshnam_projects_v2');
+              if (activeProjsRaw) {
+                const apList = JSON.parse(activeProjsRaw);
+                if (Array.isArray(apList)) {
+                  activeProjsNames = apList.map((p: any) => (p.name || '').toLowerCase().trim());
+                  activeProjsIds = apList.map((p: any) => (p.id || '').toLowerCase().trim());
+                }
+              }
+            } catch {}
+
+            const cleaned = parsed.filter((t: any) => {
+              const tName = (t.project_name || '').toLowerCase().trim();
+              const tId = (t.project_id || '').toLowerCase().trim();
+              if (tName === '001' && !activeProjsNames.includes('001')) return false;
+              if (tId && !activeProjsIds.includes(tId) && !activeProjsNames.includes(tName)) return false;
+
+              return (
+                t.task_name !== 'Collect Client Details' &&
+                t.project_name !== 'Project' &&
+                t.project_id !== 'proj-01' &&
+                t.project_id !== 'proj-02' &&
+                !t.id?.match(/^q-task-0?[1-9]$|^q-task-1[0-9]$/) && 
+                !t.id?.startsWith('proj-quotation-') &&
+                t.project_name !== 'Navalur Residential Enclave' &&
+                t.project_name !== 'Tambaram Commercial Hub' &&
+                t.project_name !== 'Medavakkam Villa Plots' &&
+                t.project_name !== 'Velachery Tech Park Extension' &&
+                t.project_name !== 'Guindy Industrial Shed' &&
+                t.project_name !== 'Chromepet IT Complex'
+              );
+            }).map((t: any) => {
               let updatedTask = { ...t };
               if (updatedTask.task_name && (updatedTask.task_name.toLowerCase().includes('scope') || updatedTask.task_name.toLowerCase().includes('quotation & scope'))) {
                 updatedTask.task_name = 'Quotation';
@@ -419,9 +438,12 @@ export function App() {
           setSelectedProject(found);
           try {
             sessionStorage.setItem('booshnam_auto_open_project_id', found.id);
+            if (workspaceTab) {
+              sessionStorage.setItem('booshnam_auto_open_workspace_tab', workspaceTab);
+            }
           } catch {}
           window.dispatchEvent(new CustomEvent('booshnam_select_project', {
-            detail: { projectId: found.id, projectName: found.name, workspaceTab }
+            detail: { projectId: found.id, projectName: found.name, workspaceTab: workspaceTab || 'task' }
           }));
         }
       }
@@ -594,7 +616,7 @@ export function App() {
     } else if (newRole.code === 'ARCHITECT') {
       setCurrentView('departments');
     } else if (newRole.code === 'ACCOUNTS') {
-      setCurrentView('payments');
+      setCurrentView('finance');
     } else if (newRole.code === 'SITE_ENGINEER') {
       setCurrentView('projects');
     }
@@ -612,9 +634,15 @@ export function App() {
     // If full project object was already generated
     if (customData && customData.id && customData.code) {
       const fullProj = customData as Project;
+      try {
+        const stored = JSON.parse(localStorage.getItem('booshnam_projects_v2') || '[]');
+        const filtered = Array.isArray(stored) ? stored.filter((p: Project) => p.id !== fullProj.id && p.code !== fullProj.code) : [];
+        localStorage.setItem('booshnam_projects_v2', JSON.stringify([fullProj, ...filtered]));
+      } catch (e) {}
       setProjects(prev => [fullProj, ...prev.filter(p => p.id !== fullProj.id && p.code !== fullProj.code)]);
       setSelectedProject(fullProj);
       setCurrentView('projects');
+      window.dispatchEvent(new CustomEvent('booshnam_projects_updated', { detail: fullProj }));
       showToast(`Project ${fullProj.code} (${fullProj.name}) launched with budget ₹ ${(fullProj.estimated_budget || 0).toLocaleString('en-IN')}!`);
       return;
     }
@@ -795,7 +823,8 @@ export function App() {
 
   // Guard main view navigation if dirty data is pending and check permission
   const handleNavigateView = async (targetView: string) => {
-    if (targetView === 'projects') {
+    const isAutoCreate = typeof window !== 'undefined' && Boolean(sessionStorage.getItem('booshnam_auto_open_create_project'));
+    if (targetView === 'projects' && !isAutoCreate) {
       window.dispatchEvent(new CustomEvent('booshnam_reset_projects_view'));
     }
     if (targetView === currentView) return;
@@ -807,7 +836,9 @@ export function App() {
     if (canNavigate) {
       if (targetView === 'projects') {
         setSelectedProject(null);
-        window.dispatchEvent(new CustomEvent('booshnam_show_all_projects'));
+        if (!isAutoCreate) {
+          window.dispatchEvent(new CustomEvent('booshnam_show_all_projects'));
+        }
       }
       if (targetView !== currentView) {
         setCurrentView(targetView);
@@ -993,6 +1024,7 @@ export function App() {
                   isSidebarOpen={isSidebarOpen}
                   onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                   activeRole={activeRole?.code}
+                  onNavigate={setCurrentView}
                 />
               )}
 
@@ -1065,15 +1097,6 @@ export function App() {
                     currentView === 'payment_requests' ? 'payment_requests' :
                     (financeInitialTab as any) || undefined
                   }
-                />
-              )}
-
-              {currentView === 'payments' && (
-                <PaymentsView
-                  projects={projects}
-                  isSidebarOpen={isSidebarOpen}
-                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-                  onShowToast={showToast}
                 />
               )}
 

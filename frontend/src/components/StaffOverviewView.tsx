@@ -30,12 +30,13 @@ import {
   updateStaffAttendanceStatus,
   formatTime12h,
   getTodayDateString,
-  StaffAttendanceRecord
+  StaffAttendanceRecord,
+  StaffAttendanceStatus
 } from '../lib/staffAttendanceService';
 
 interface StaffOverviewViewProps {
   staff: StaffMember;
-  initialTab?: 'people' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access' | 'leave_dashboard';
+  initialTab?: 'people' | 'team_leaves' | 'my_leaves' | 'details' | 'access' | 'leave_dashboard';
   onBack: () => void;
   onUpdateStaff: (updated: StaffMember) => void;
   onShowToast: (msg: string) => void;
@@ -114,7 +115,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 }) => {
   // Normalize initial tab: 'leave_dashboard' maps to 'people'
   const normalizedInitial = (initialTab === 'leave_dashboard' || !initialTab) ? 'people' : initialTab;
-  const [activeTab, setActiveTab] = useState<'people' | 'team_leaves' | 'my_leaves' | 'holidays' | 'details' | 'access'>(normalizedInitial);
+  const [activeTab, setActiveTab] = useState<'people' | 'team_leaves' | 'my_leaves' | 'details' | 'access'>(normalizedInitial);
 
   // Selected Month (Default: '2026-10' as in user reference image)
   const [selectedYear, setSelectedYear] = useState<number>(2026);
@@ -211,16 +212,19 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
     const absent = staffRecordsForMonth.filter(r => r.status === 'Absent').length;
 
     // Paid Leaves (PL) and Week Offs (WO)
-    // Sundays in this month count as WO
     let weekOffCount = 0;
     for (let d = 1; d <= daysInMonth; d++) {
       const dayDate = new Date(selectedYear, selectedMonthIndex, d);
-      if (dayDate.getDay() === 0) { // Sunday
+      const isSun = dayDate.getDay() === 0;
+      const dStr = `${currentMonthCode}-${String(d).padStart(2, '0')}`;
+      const rec = staffRecordsForMonth.find(r => r.date === dStr);
+      const recStatus = rec?.status as string | undefined;
+      if (recStatus === 'Week-off' || (isSun && (!rec || recStatus === 'Week-off'))) {
         weekOffCount++;
       }
     }
 
-    const paidLeavesCount = 0; // Standard month default
+    const paidLeavesCount = staffRecordsForMonth.filter(r => r.status === 'Paid Leave').length;
 
     // Pro-rata Monthly Salary Amount
     const salary = Number(staff.salary || 33000);
@@ -238,11 +242,55 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
     };
   }, [attendanceRecords, staff.id, staff.salary, currentMonthCode, daysInMonth, selectedYear, selectedMonthIndex]);
 
-  // Fast Attendance Marking on any calendar day
-  const handleMarkDayAttendance = (dayNum: number, status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent') => {
+  // Dropdown state for Attendance Status marking
+  const [openAttendanceDropdownDay, setOpenAttendanceDropdownDay] = useState<number | null>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.attendance-dropdown-menu-wrapper')) {
+        setOpenAttendanceDropdownDay(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [openAttendanceDropdownDay]);
+
+  // Helper: Only consider genuine camera/photo punch proof, ignoring SVG avatar stubs
+  const hasLiveProofPhoto = (record?: StaffAttendanceRecord): boolean => {
+    if (!record || !record.verification_photo) return false;
+    const photo = record.verification_photo.trim();
+    if (!photo) return false;
+    if (
+      photo.startsWith('data:image/svg') ||
+      photo.includes('%23fee2e2') ||
+      photo.includes('%23dc2626') ||
+      photo.includes('<svg')
+    ) {
+      return false;
+    }
+    return (
+      record.punch_mode === 'CAMERA_SELFIE' ||
+      photo.startsWith('data:image/jpeg') ||
+      photo.startsWith('data:image/png') ||
+      photo.startsWith('data:image/webp') ||
+      photo.startsWith('blob:') ||
+      photo.startsWith('http')
+    );
+  };
+
+  // Fast Attendance Marking on calendar days (restricted to today and past dates)
+  const handleMarkDayAttendance = (dayNum: number, status: 'Present' | 'Late' | 'Half-day' | 'Overtime' | 'Absent' | 'Week-off' | 'Paid Leave') => {
     const dateStr = `${currentMonthCode}-${String(dayNum).padStart(2, '0')}`;
+    const todayStr = getTodayDateString();
+    if (dateStr > todayStr) {
+      onShowToast('Cannot mark attendance for future dates');
+      return;
+    }
     updateStaffAttendanceStatus(staff.id, status, dateStr);
-    onShowToast(`Marked ${status} for ${dateStr}`);
+    onShowToast(`Marked ${status} for ${dayNum} ${currentMonthShort}`);
+    setOpenAttendanceDropdownDay(null);
   };
 
   // Tab 1 & Tab 2 (Details & System Access states preserved)
@@ -375,6 +423,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       staff_code: staff.employee_code,
       department: staff.department,
       allowedPages: allowedPages,
+      has_custom_permissions: true,
       staff_id: staff.id,
       created_at: new Date().toISOString()
     });
@@ -383,7 +432,9 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
     onUpdateStaff({
       ...staff,
       has_login_account: true,
-      username: cleanUsername
+      username: cleanUsername,
+      custom_allowed_pages: allowedPages,
+      has_custom_permissions: true
     });
 
     onShowToast(`Workspace credentials updated for ${staff.name}! (Username: ${cleanUsername})`);
@@ -392,11 +443,14 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 
   // Staff Initials for Avatar
   const staffInitials = useMemo(() => {
-    const parts = staff.name.trim().split(/\s+/);
+    const trimmed = (staff.name || '').trim();
+    if (!trimmed) return 'ST';
+    const parts = trimmed.split(/\s+/);
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     }
-    return staff.name.substring(0, 2).toUpperCase();
+    // Single word name (e.g., "priya" -> "P")
+    return parts[0][0].toUpperCase();
   }, [staff.name]);
 
   // Salary calculations
@@ -451,18 +505,6 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
           >
             My leaves
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('holidays')}
-            className={`py-3.5 px-1 transition-all cursor-pointer relative whitespace-nowrap ${
-              activeTab === 'holidays'
-                ? 'text-[#5825d1] font-bold border-b-2 border-[#5825d1]'
-                : 'text-slate-500 hover:text-slate-900 border-b-2 border-transparent'
-            }`}
-          >
-            Holidays
-          </button>
         </div>
 
         {/* Administration quick tools (Profile & Permissions) */}
@@ -503,26 +545,26 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       <div className="px-6 sm:px-8 py-5 border-b border-slate-100 bg-white">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           {/* Left: Back button + Avatar + Staff Info + Pill Buttons */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5 sm:gap-4">
             {/* Back Button ← */}
             <button
               type="button"
               onClick={onBack}
-              className="p-1.5 -ml-1 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
+              className="p-2 -ml-1 text-slate-400 hover:text-slate-800 transition-colors cursor-pointer rounded-xl hover:bg-slate-100 shrink-0"
               title="Back to Staff Directory"
             >
               <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
 
-            {/* Circular Purple Avatar (IM) */}
-            <div className="w-13 h-13 rounded-full bg-[#5825d1] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs uppercase tracking-tight">
+            {/* Circular Purple Avatar */}
+            <div className="w-12 h-12 min-w-[48px] min-h-[48px] rounded-full bg-[#5825d1] text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs uppercase select-none">
               {staffInitials}
             </div>
 
             {/* Staff Titles & Metadata */}
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-sm sm:text-base font-extrabold text-slate-900 uppercase tracking-tight">
+                <h1 className="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight">
                   {staff.name} {staff.designation}
                 </h1>
               </div>
@@ -770,13 +812,15 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                   const isSunday = dayDate.getDay() === 0;
                   const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
                   const record = attendanceRecords.find(r => r.staff_id === staff.id && r.date === dateStr);
-                  const isToday = dateStr === getTodayDateString();
+                  const todayStr = getTodayDateString();
+                  const isToday = dateStr === todayStr;
+                  const isFuture = dateStr > todayStr;
 
                   return (
                     <div 
                       key={dateStr}
                       className={`px-6 sm:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
-                        isToday ? 'bg-indigo-50/30' : isSunday ? 'bg-slate-50/50' : 'hover:bg-slate-50/60'
+                        isToday ? 'bg-indigo-50/30' : isSunday ? 'bg-slate-50/50' : isFuture ? 'bg-white hover:bg-slate-50/30' : 'hover:bg-slate-50/60'
                       }`}
                     >
                       {/* Left: Date Details */}
@@ -786,6 +830,8 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
                             ? 'bg-amber-100/70 text-amber-800'
                             : isToday
                             ? 'bg-indigo-600 text-white'
+                            : isFuture
+                            ? 'bg-slate-50 text-slate-400 border border-slate-100'
                             : 'bg-slate-100 text-slate-700'
                         }`}>
                           <span className="text-[10px] font-medium leading-none">{dayName}</span>
@@ -816,69 +862,162 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
 
                       {/* Right: Verification Photo + Status Badge + Quick Action Buttons */}
                       <div className="flex items-center gap-3 self-end sm:self-center">
-                        {/* Live Photo Proof thumbnail if available */}
-                        {record?.verification_photo && (
+                        {/* Live Photo Proof thumbnail ONLY if genuine camera photo proof is available */}
+                        {hasLiveProofPhoto(record) && (
                           <div
-                            onClick={() => setViewPhotoUrl(record.verification_photo)}
+                            onClick={() => setViewPhotoUrl(record!.verification_photo)}
                             className="w-8 h-8 rounded-lg overflow-hidden border border-emerald-400 shrink-0 cursor-pointer hover:scale-105 transition shadow-2xs"
-                            title="Click to view full photo proof"
+                            title="Click to view live selfie proof"
                           >
-                            <img src={record.verification_photo} alt="Punch" className="w-full h-full object-cover" />
+                            <img src={record!.verification_photo} alt="Punch" className="w-full h-full object-cover" />
                           </div>
                         )}
 
-                        {/* Status Badge */}
-                        {isSunday && !record ? (
-                          <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                            Week Off
-                          </span>
-                        ) : record ? (
-                          <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${
-                            record.status === 'Present'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : record.status === 'Absent'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : record.status === 'Half-day'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          }`}>
-                            {record.status}
-                          </span>
+                        {/* Future date lock: attendance cannot be marked for dates after today */}
+                        {isFuture ? (
+                          <div
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-slate-200 bg-slate-50 text-slate-400 select-none flex items-center gap-1.5 cursor-not-allowed opacity-80"
+                            title="Attendance cannot be marked for future dates"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                            <span>{isSunday ? 'Week Off' : '--'}</span>
+                          </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">
-                            Not Marked
-                          </span>
-                        )}
+                          /* Mark Attendance Dropdown Component for today and past days */
+                          <div className="relative attendance-dropdown-menu-wrapper">
+                            <button
+                              type="button"
+                              onClick={() => setOpenAttendanceDropdownDay(openAttendanceDropdownDay === dayNum ? null : dayNum)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border flex items-center gap-2 transition-all shadow-2xs cursor-pointer select-none active:scale-95 ${
+                                record?.status === 'Present' || record?.status === 'Late' || record?.status === 'Overtime'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/70'
+                                  : record?.status === 'Absent'
+                                  ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100/70'
+                                  : record?.status === 'Half-day'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100/70'
+                                  : record?.status === 'Week-off' || (isSunday && !record)
+                                  ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200/70'
+                                  : record?.status === 'Paid Leave'
+                                  ? 'bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100/70'
+                                  : 'bg-white text-indigo-700 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/50'
+                              }`}
+                            >
+                            {record ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                  record.status === 'Present' || record.status === 'Overtime' ? 'bg-emerald-500' :
+                                  record.status === 'Late' ? 'bg-emerald-600' :
+                                  record.status === 'Absent' ? 'bg-red-500' :
+                                  record.status === 'Half-day' ? 'bg-amber-500' :
+                                  record.status === 'Paid Leave' ? 'bg-purple-500' : 'bg-slate-500'
+                                }`} />
+                                <span>{record.status}</span>
+                              </div>
+                            ) : isSunday ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                                <span>Week Off</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                <span>Mark Attendance</span>
+                              </div>
+                            )}
+                            <ChevronDown className={`w-3.5 h-3.5 opacity-70 transition-transform ${openAttendanceDropdownDay === dayNum ? 'rotate-180' : ''}`} />
+                          </button>
 
-                        {/* Quick Action P/A/PL/WO Buttons */}
-                        <div className="flex items-center gap-1 border border-slate-200 rounded-lg p-0.5 bg-white shadow-2xs">
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Present')}
-                            title="Mark Present"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition cursor-pointer"
-                          >
-                            P
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Absent')}
-                            title="Mark Absent"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-red-50 hover:text-red-700 transition cursor-pointer"
-                          >
-                            A
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMarkDayAttendance(dayNum, 'Half-day')}
-                            title="Mark Half-day"
-                            className="w-6 h-6 rounded text-[10px] font-bold text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition cursor-pointer"
-                          >
-                            HD
-                          </button>
+                          {/* Dropdown Menu Popover */}
+                          {openAttendanceDropdownDay === dayNum && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 animate-in fade-in zoom-in-95 select-none"
+                            >
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                                <span>Mark Attendance</span>
+                                <span className="text-[10px] text-slate-400 font-normal">{dayNum} {currentMonthShort}</span>
+                              </div>
+
+                              {/* Present */}
+                              <button
+                                type="button"
+                                onClick={() => handleMarkDayAttendance(dayNum, 'Present')}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-emerald-50 hover:text-emerald-800 transition cursor-pointer ${
+                                  record?.status === 'Present' ? 'bg-emerald-50/70 text-emerald-800 font-bold' : 'text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                  <span>Present</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">P</span>
+                              </button>
+
+                              {/* Absent */}
+                              <button
+                                type="button"
+                                onClick={() => handleMarkDayAttendance(dayNum, 'Absent')}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-red-50 hover:text-red-800 transition cursor-pointer ${
+                                  record?.status === 'Absent' ? 'bg-red-50/70 text-red-800 font-bold' : 'text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                                  <span>Absent</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-800 font-bold">A</span>
+                              </button>
+
+                              {/* Half-day */}
+                              <button
+                                type="button"
+                                onClick={() => handleMarkDayAttendance(dayNum, 'Half-day')}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-amber-50 hover:text-amber-800 transition cursor-pointer ${
+                                  record?.status === 'Half-day' ? 'bg-amber-50/70 text-amber-800 font-bold' : 'text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                                  <span>Half-day</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">HD</span>
+                              </button>
+
+                              {/* Week-off */}
+                              <button
+                                type="button"
+                                onClick={() => handleMarkDayAttendance(dayNum, 'Week-off')}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer ${
+                                  record?.status === 'Week-off' || (isSunday && !record) ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                                  <span>Week-off</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-800 font-bold">WO</span>
+                              </button>
+
+                              {/* Paid Leave */}
+                              <button
+                                type="button"
+                                onClick={() => handleMarkDayAttendance(dayNum, 'Paid Leave')}
+                                className={`w-full px-3 py-2 text-left text-xs font-medium flex items-center justify-between hover:bg-purple-50 hover:text-purple-800 transition cursor-pointer ${
+                                  record?.status === 'Paid Leave' ? 'bg-purple-50/70 text-purple-800 font-bold' : 'text-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                                  <span>Paid Leave</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">PL</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
+                  </div>
                   );
                 })}
               </div>
@@ -1034,45 +1173,7 @@ export const StaffOverviewView: React.FC<StaffOverviewViewProps> = ({
       )}
 
       {/* ══════════════════════════════════════════════════════════════════
-          6. TAB CONTENT: HOLIDAYS
-         ══════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'holidays' && (
-        <div className="p-6 sm:p-8 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Company & Public Holidays 2026</h2>
-            <p className="text-xs text-slate-500">Official recognized Tamil Nadu and National construction holidays.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {[
-              { date: '15 Jan 2026', day: 'Thursday', title: 'Pongal / Makar Sankranti', type: 'Public Holiday' },
-              { date: '16 Jan 2026', day: 'Friday', title: 'Thiruvalluvar Day', type: 'State Holiday' },
-              { date: '26 Jan 2026', day: 'Monday', title: 'Republic Day', type: 'National Holiday' },
-              { date: '14 Apr 2026', day: 'Tuesday', title: 'Tamil New Year / Dr. Ambedkar Jayanti', type: 'State Holiday' },
-              { date: '01 May 2026', day: 'Friday', title: 'May Day (Labor Day)', type: 'National Holiday' },
-              { date: '15 Aug 2026', day: 'Saturday', title: 'Independence Day', type: 'National Holiday' },
-              { date: '02 Oct 2026', day: 'Friday', title: 'Gandhi Jayanti', type: 'National Holiday' },
-              { date: '20 Oct 2026', day: 'Tuesday', title: 'Ayutha Pooja', type: 'Festival Holiday' },
-              { date: '08 Nov 2026', day: 'Sunday', title: 'Deepavali', type: 'Festival Holiday' },
-              { date: '25 Dec 2026', day: 'Friday', title: 'Christmas Day', type: 'Public Holiday' }
-            ].map((hol) => (
-              <div key={hol.title} className="p-4 bg-white border border-slate-200 rounded-xl shadow-2xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                    {hol.date}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium">{hol.day}</span>
-                </div>
-                <div className="text-xs font-bold text-slate-900 pt-1">{hol.title}</div>
-                <div className="text-[10px] text-slate-400">{hol.type}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════
-          7. TAB CONTENT: DETAILS (EDIT FORM PRESERVED)
+          6. TAB CONTENT: DETAILS (EDIT FORM PRESERVED)
          ══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'details' && (
         <form onSubmit={handleSaveDetails} className="p-6 sm:p-8 space-y-6 max-w-4xl">

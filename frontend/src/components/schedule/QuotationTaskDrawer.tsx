@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { 
-  X, CheckCircle2, MoreVertical, Image as ImageIcon, 
+  X, CheckCircle2, Image as ImageIcon, 
   ChevronRight, ChevronUp, ChevronDown, Check, Edit2, 
   Trash2, Plus, Calendar, Clock, Paperclip, Send, Eye,
   FileText, Download, CheckSquare, Sparkles
 } from 'lucide-react';
 import { QuotationScheduleTask } from '../../lib/quotationScheduleService';
 import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../../lib/timestampUtils';
+import { getCurrentUserAccount } from '../../lib/authService';
 
 interface QuotationTaskDrawerProps {
   isOpen: boolean;
@@ -46,9 +47,36 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
   const [newToDoInput, setNewToDoInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const currentUserAccount = getCurrentUserAccount();
+  const isAdminOrSuperAdmin = (() => {
+    const roleCode = (currentUserAccount?.role_code || '').toUpperCase().trim();
+    const roleName = (currentUserAccount?.role_name || '').toLowerCase().trim();
+    const name = (currentUserAccount?.staff_name || currentUserAccount?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SUPER_ADMIN' ||
+      roleCode === 'ADMIN' ||
+      roleCode === 'OWNER_DIRECTOR' ||
+      roleName.includes('super admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('owner') ||
+      roleName.includes('director') ||
+      name === 'admin' ||
+      name === 'superadmin' ||
+      name === 'priya' ||
+      name === 'rajesh'
+    );
+  })();
+
+  // In-Screen Progress Update Modal State (replaces native browser prompt)
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [progressInput, setProgressInput] = useState<number>(() => task?.progress_percentage ?? 100);
+  const [progressNote, setProgressNote] = useState('');
+
   // Sync state whenever selected task changes
   React.useEffect(() => {
     if (task) {
+      setProgressInput(task.progress_percentage ?? (task.status === 'COMPLETED' ? 100 : 0));
       if (task.todos && task.todos.length > 0) {
         setToDos(task.todos);
       }
@@ -118,32 +146,41 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
     onShowToast?.('To-Do item added.');
   };
 
-  const handleAddProgress = () => {
-    const newProg = prompt('Enter updated progress percentage (0 - 100):', String(task.progress_percentage || 100));
-    if (newProg !== null) {
-      const num = parseInt(newProg, 10);
-      if (!isNaN(num) && num >= 0 && num <= 100) {
-        const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        const updated = { 
-          ...task, 
-          progress_percentage: num, 
-          status: num === 100 ? ('COMPLETED' as const) : ('IN_PROGRESS' as const),
-          progressUpdates: [
-            {
-              id: `prog-${Date.now()}`,
-              user: task.progress_user || task.assignee || 'Staff',
-              amount: `${num}%`,
-              date: todayStr,
-              note: `Progress updated to ${num}%`,
-              proof_url: task.image_url
-            },
-            ...(task.progressUpdates || [])
-          ]
-        };
-        onUpdateTask?.(updated);
-        onShowToast?.(`Task progress updated to ${num}%`);
-      }
-    }
+  const handleOpenProgressModal = () => {
+    setProgressInput(task.progress_percentage ?? (task.status === 'COMPLETED' ? 100 : 0));
+    setProgressNote('');
+    setShowProgressModal(true);
+  };
+
+  const handleSaveProgress = (percentageToSet?: number) => {
+    if (!task) return;
+    const num = Math.min(100, Math.max(0, percentageToSet !== undefined ? percentageToSet : progressInput));
+    const isCompleted = num === 100;
+    const todayStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const todayIso = new Date().toISOString().split('T')[0];
+
+    const updated = { 
+      ...task, 
+      progress_percentage: num, 
+      status: isCompleted ? ('COMPLETED' as const) : num > 0 ? ('IN_PROGRESS' as const) : ('PENDING' as const),
+      actual_end: isCompleted ? (task.actual_end || todayIso) : (num < 100 ? undefined : task.actual_end),
+      completed_at: isCompleted ? (task.completed_at || new Date().toISOString()) : (num < 100 ? undefined : task.completed_at),
+      progressUpdates: [
+        {
+          id: `prog-${Date.now()}`,
+          user: task.progress_user || task.assignee || 'Staff',
+          amount: `${num}%`,
+          date: todayStr,
+          note: progressNote.trim() || (isCompleted ? 'Task marked as completed (100%)' : `Progress updated to ${num}%`),
+          proof_url: task.image_url
+        },
+        ...(task.progressUpdates || [])
+      ]
+    };
+    onUpdateTask?.(updated);
+    onShowToast?.(isCompleted ? 'Task marked as completed (100%)!' : `Task progress updated to ${num}%`);
+    setShowProgressModal(false);
+    setProgressNote('');
   };
 
   // The actual photo uploaded in Project -> Tasks
@@ -201,7 +238,7 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
             </span>
 
             {/* Delete Task Button */}
-            {onDeleteTask && (
+            {onDeleteTask && isAdminOrSuperAdmin && (
               <button
                 type="button"
                 onClick={() => {
@@ -213,15 +250,6 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
-
-            {/* Three Dots Menu */}
-            <button
-              type="button"
-              onClick={() => onShowToast?.('Task options')}
-              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -230,19 +258,11 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
         {/* ---------------------------------------------------------------- */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 bg-white">
           
-          {/* Title Row: Quotation + Photo Icon */}
+          {/* Title Row: Quotation */}
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
               {cleanTaskTitle}
             </h1>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 border border-slate-200 hover:border-red-500 hover:text-red-600 rounded-xl transition-colors cursor-pointer text-slate-500 shadow-2xs"
-              title="Attach photo or proof"
-            >
-              <ImageIcon className="w-5 h-5" />
-            </button>
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -658,20 +678,24 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
         {/* ---------------------------------------------------------------- */}
         {/* Bottom Input & Action Bar matching screenshot                    */}
         {/* ---------------------------------------------------------------- */}
+        {/* Bottom Input & Action Bar: Icons on Left, Input Center, Update Right */}
+        {/* ---------------------------------------------------------------- */}
         <div className="p-3.5 border-t border-slate-200 bg-white shrink-0">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
             
-            {/* "+ Progress" button */}
-            <button
-              type="button"
-              onClick={handleAddProgress}
-              className="px-3.5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Progress</span>
-            </button>
+            {/* Left side: Photo Attachment */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer shrink-0"
+                title="Attach photo or proof"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+            </div>
 
-            {/* "Enter Message" input */}
+            {/* Center: "Enter Message" input */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -682,35 +706,28 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
               />
             </div>
 
-            {/* Photo Attachment Icon */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer shrink-0"
-              title="Upload photo"
-            >
-              <ImageIcon className="w-4 h-4" />
-            </button>
+            {/* Right side: Send Message (if text entered) + "Update" Button */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {messageText.trim() && (
+                <button
+                  type="submit"
+                  className="p-2 text-white bg-slate-800 hover:bg-slate-900 rounded-xl transition-colors cursor-pointer shrink-0"
+                  title="Send message"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              )}
 
-            {/* Send Message Icon (if text entered) */}
-            {messageText.trim() && (
+              {/* "Update" button without plus icon */}
               <button
-                type="submit"
-                className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors cursor-pointer shrink-0"
-                title="Send"
+                type="button"
+                onClick={handleOpenProgressModal}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0"
               >
-                <Send className="w-4 h-4" />
+                Update
               </button>
-            )}
+            </div>
 
-            {/* More dots */}
-            <button
-              type="button"
-              onClick={() => onShowToast?.('Additional task actions')}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
           </form>
         </div>
 
@@ -744,6 +761,160 @@ export const QuotationTaskDrawer: React.FC<QuotationTaskDrawerProps> = ({
                 alt={cleanTaskTitle}
                 className="max-h-[65vh] max-w-full object-contain rounded-lg shadow-lg"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------------------------------------------------------- */}
+      {/* In-Screen Task Progress Update Modal (Replaces browser prompt)   */}
+      {/* ---------------------------------------------------------------- */}
+      {showProgressModal && (
+        <div 
+          className="fixed inset-0 z-[160] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setShowProgressModal(false)}
+        >
+          <div 
+            className="relative max-w-md w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center shadow-2xs shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Update Task Progress
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium truncate max-w-[240px]">
+                    {cleanTaskTitle}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProgressModal(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* Progress Display & Percentage Bar */}
+              <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600">Completion Status</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-2xl font-black text-slate-900 font-mono tracking-tight">
+                      {progressInput}%
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      progressInput === 100 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                        : progressInput > 0
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {progressInput === 100 ? 'Completed' : progressInput > 0 ? 'In Progress' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar line */}
+                <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-200 rounded-full ${
+                      progressInput === 100 ? 'bg-emerald-600' : 'bg-red-600'
+                    }`}
+                    style={{ width: `${progressInput}%` }}
+                  />
+                </div>
+
+                {/* Slider */}
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={progressInput}
+                  onChange={(e) => setProgressInput(Number(e.target.value))}
+                  className="w-full accent-red-600 cursor-pointer h-2 bg-transparent"
+                />
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Quick Select Percentage
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[25, 50, 75, 100].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setProgressInput(val)}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition cursor-pointer border ${
+                        progressInput === val
+                          ? val === 100
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-red-600 text-white border-red-600 shadow-xs'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {val === 100 ? '100% (Done)' : `${val}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Note / Remark */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1.5">
+                  Update Note (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={progressNote}
+                  onChange={(e) => setProgressNote(e.target.value)}
+                  placeholder="e.g. Completed initial site inspection"
+                  className="w-full text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-red-600 focus:bg-white rounded-xl outline-none text-slate-800 transition-colors"
+                />
+              </div>
+
+              {/* Fast 100% Complete Action Pill */}
+              {progressInput !== 100 && (
+                <button
+                  type="button"
+                  onClick={() => handleSaveProgress(100)}
+                  className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>One-Click Complete (Set to 100%)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowProgressModal(false)}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveProgress()}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Check className="w-4 h-4" />
+                <span>Save Progress ({progressInput}%)</span>
+              </button>
             </div>
           </div>
         </div>

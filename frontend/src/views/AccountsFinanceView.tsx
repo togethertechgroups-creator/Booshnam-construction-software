@@ -23,7 +23,6 @@ import { PaymentRequestOverviewDrawer } from '../components/finance/PaymentReque
 import { ensurePartyExists, getFinanceParties, saveFinanceParties } from '../lib/financeSyncService';
 import { exportInvoiceToPDF } from '../lib/invoiceExportService';
 import { FinanceDashboardTab } from '../components/finance/FinanceDashboardTab';
-import { ProjectFinanceTab } from '../components/finance/ProjectFinanceTab';
 import { FinancialReportsTab } from '../components/finance/FinancialReportsTab';
 import { formatUploadTimestamp, getCurrentUploadTimestamp } from '../lib/timestampUtils';
 import { getCurrentUserAccount } from '../lib/authService';
@@ -281,7 +280,6 @@ export type FinanceTabKey =
   | 'expenses' 
   | 'account_transfer' 
   | 'accounts' 
-  | 'project_finance' 
   | 'reports';
 
 interface AccountsFinanceViewProps {
@@ -299,17 +297,120 @@ export const AccountsFinanceView: React.FC<AccountsFinanceViewProps> = ({
   onShowToast,
   initialTab
 }) => {
-  // Navigation Tabs: Dashboard, Party, Transaction, Payment Requests, Expenses, Account to Account Transfer, Accounts, Project Finance, Reports
-  const [activeTab, setActiveTab] = useState<FinanceTabKey>(initialTab || 'dashboard');
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
-
   // Logged-in User Account State for Role & Routing
   const [currentUserAccount, setCurrentUserAccount] = useState(() => getCurrentUserAccount());
+
+  const isAdminOrSuperAdmin = useMemo(() => {
+    const roleCode = (currentUserAccount?.role_code || '').toUpperCase().trim();
+    const roleName = (currentUserAccount?.role_name || '').toLowerCase().trim();
+    const name = (currentUserAccount?.staff_name || currentUserAccount?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SUPER_ADMIN' ||
+      roleCode === 'ADMIN' ||
+      roleCode === 'OWNER_DIRECTOR' ||
+      roleName.includes('super admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('owner') ||
+      roleName.includes('director') ||
+      name === 'admin' ||
+      name === 'superadmin' ||
+      name === 'priya' ||
+      name === 'rajesh'
+    );
+  }, [currentUserAccount]);
+
+  const isSiteEngineer = useMemo(() => {
+    if (isAdminOrSuperAdmin) return false;
+    const roleCode = (currentUserAccount?.role_code || '').toUpperCase().trim();
+    const roleName = (currentUserAccount?.role_name || '').toLowerCase().trim();
+    const username = (currentUserAccount?.username || '').toLowerCase().trim();
+
+    return (
+      roleCode === 'SITE_ENGINEER' ||
+      roleCode === 'SUPERVISOR' ||
+      roleCode === 'FIELD_ENGINEER' ||
+      roleName.includes('site engineer') ||
+      roleName.includes('engineer') ||
+      roleName.includes('supervisor') ||
+      username.includes('engineer')
+    );
+  }, [currentUserAccount, isAdminOrSuperAdmin]);
+
+  // Navigation Tabs: Dashboard, Party, Transaction, Payment Requests, Expenses, Account to Account Transfer, Accounts, Project Finance, Reports
+  const [activeTab, setActiveTab] = useState<FinanceTabKey>(() => {
+    const acc = getCurrentUserAccount();
+    const roleCode = (acc?.role_code || '').toUpperCase().trim();
+    const roleName = (acc?.role_name || '').toLowerCase().trim();
+    const username = (acc?.username || '').toLowerCase().trim();
+    const staffName = (acc?.staff_name || '').toLowerCase().trim();
+
+    const isSuperOrAdmin = 
+      roleCode === 'SUPER_ADMIN' || 
+      roleCode === 'ADMIN' || 
+      roleCode === 'OWNER_DIRECTOR' ||
+      roleName.includes('super admin') ||
+      roleName.includes('admin') ||
+      roleName.includes('owner') ||
+      roleName.includes('director') ||
+      username === 'admin' || 
+      username === 'superadmin' ||
+      staffName === 'priya' ||
+      staffName === 'rajesh';
+
+    if (isSuperOrAdmin) {
+      return initialTab || 'dashboard';
+    }
+
+    const isEngineer = 
+      roleCode === 'SITE_ENGINEER' ||
+      roleCode === 'SUPERVISOR' ||
+      roleCode === 'FIELD_ENGINEER' ||
+      roleName.includes('site engineer') ||
+      roleName.includes('engineer') ||
+      roleName.includes('supervisor') ||
+      username.includes('engineer');
+
+    if (isEngineer) {
+      if (initialTab && ['payment_requests', 'expenses'].includes(initialTab)) {
+        return initialTab;
+      }
+      return 'payment_requests';
+    }
+
+    if (initialTab && ['party', 'payment_requests', 'expenses'].includes(initialTab)) {
+      return initialTab;
+    }
+    return 'party';
+  });
+
+  useEffect(() => {
+    if (isAdminOrSuperAdmin) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
+      return;
+    }
+
+    if (isSiteEngineer) {
+      if (initialTab && ['payment_requests', 'expenses'].includes(initialTab)) {
+        setActiveTab(initialTab);
+      } else if (!['payment_requests', 'expenses'].includes(activeTab)) {
+        setActiveTab('payment_requests');
+      }
+      return;
+    }
+
+    if (initialTab) {
+      if (!['party', 'payment_requests', 'expenses'].includes(initialTab)) {
+        setActiveTab('party');
+      } else {
+        setActiveTab(initialTab);
+      }
+    } else if (!['party', 'payment_requests', 'expenses'].includes(activeTab)) {
+      setActiveTab('party');
+    }
+  }, [initialTab, isAdminOrSuperAdmin, isSiteEngineer, activeTab]);
 
   useEffect(() => {
     const handleAccountSync = () => {
@@ -884,7 +985,21 @@ const toIsoDate = (displayStr: string) => {
     const handleOpenFinanceTab = (e: any) => {
       const { tab, requestCode } = e?.detail || {};
       if (tab) {
-        setActiveTab(tab);
+        if (isAdminOrSuperAdmin) {
+          setActiveTab(tab);
+        } else if (isSiteEngineer) {
+          if (['payment_requests', 'expenses'].includes(tab)) {
+            setActiveTab(tab);
+          } else {
+            setActiveTab('payment_requests');
+          }
+        } else {
+          if (!['party', 'payment_requests', 'expenses'].includes(tab)) {
+            setActiveTab('party');
+          } else {
+            setActiveTab(tab);
+          }
+        }
       }
       const codeToFind = requestCode || (window as any).__booshnam_pending_req_code;
       if (codeToFind) {
@@ -901,7 +1016,7 @@ const toIsoDate = (displayStr: string) => {
 
     window.addEventListener('booshnam_open_finance_tab', handleOpenFinanceTab);
     return () => window.removeEventListener('booshnam_open_finance_tab', handleOpenFinanceTab);
-  }, [paymentRequests]);
+  }, [paymentRequests, isAdminOrSuperAdmin, isSiteEngineer]);
 
   // Check pending request code on initial mount or updates
   useEffect(() => {
@@ -3434,16 +3549,22 @@ const toIsoDate = (displayStr: string) => {
       <div className="border-b border-slate-200 bg-white px-6">
         <nav className="flex items-center gap-2 -mb-px overflow-x-auto scrollbar-none py-1">
           {[
-            { id: 'dashboard', label: 'Finance Dashboard', icon: Landmark },
-            { id: 'party', label: 'Parties & Ledgers', icon: Users },
-            { id: 'transaction', label: 'Transactions', icon: ArrowLeftRight },
-            { id: 'payment_requests', label: 'Payment Requests', icon: Clock },
-            { id: 'expenses', label: 'Expenses', icon: Receipt },
-            { id: 'account_transfer', label: 'Contra Transfers', icon: ArrowLeftRight },
-            { id: 'accounts', label: 'Bank Accounts & Cash', icon: Wallet },
-            { id: 'project_finance', label: 'Project Finance & P&L', icon: Building2 },
-            { id: 'reports', label: 'Financial Reports', icon: FileSpreadsheet },
-          ].map((tab) => {
+            { id: 'dashboard', label: 'Finance Dashboard', icon: Landmark, adminOnly: true },
+            { id: 'party', label: 'Parties & Ledgers', icon: Users, adminOnly: false, hideForSiteEngineer: true },
+            { id: 'transaction', label: 'Transactions', icon: ArrowLeftRight, adminOnly: true },
+            { id: 'payment_requests', label: 'Payment Requests', icon: Clock, adminOnly: false },
+            { id: 'expenses', label: 'Expenses', icon: Receipt, adminOnly: false },
+            { id: 'account_transfer', label: 'Ac to Ac', icon: ArrowLeftRight, adminOnly: true },
+            { id: 'accounts', label: 'Account & Cash', icon: Wallet, adminOnly: true },
+            { id: 'reports', label: 'Financial Reports', icon: FileSpreadsheet, adminOnly: true },
+          ]
+            .filter((tab) => {
+              if (isAdminOrSuperAdmin) return true;
+              if (tab.adminOnly) return false;
+              if (isSiteEngineer && tab.hideForSiteEngineer) return false;
+              return true;
+            })
+            .map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -3479,7 +3600,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             TAB 0: FINANCE DASHBOARD (Overview, 4 KPI cards, Quick Actions, Accounts)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'dashboard' && (
+        {isAdminOrSuperAdmin && activeTab === 'dashboard' && (
           <FinanceDashboardTab
             parties={parties}
             transactions={transactions}
@@ -3670,12 +3791,15 @@ const toIsoDate = (displayStr: string) => {
             {/* Table / List Container */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
               
-              {/* Header Row matching screenshot */}
+              {/* Header Row with separate Date column */}
               <div className="grid grid-cols-12 px-6 py-3 bg-[#f8fafc] border-b border-slate-200 text-xs font-semibold text-slate-600 select-none">
-                <div className="col-span-5 md:col-span-4 pl-12">
+                <div className="col-span-2">
+                  Date
+                </div>
+                <div className="col-span-4">
                   Party Name
                 </div>
-                <div className="col-span-4 md:col-span-5">
+                <div className="col-span-3">
                   Project Name
                 </div>
                 <div className="col-span-3 text-right">
@@ -3698,29 +3822,26 @@ const toIsoDate = (displayStr: string) => {
                       onClick={() => setSelectedRequestDetails(req)}
                       className="grid grid-cols-12 px-6 py-4 items-center hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
-                      {/* Left: Green Date Box + Party Name */}
-                      <div className="col-span-5 md:col-span-4 flex items-center gap-3.5 min-w-0 pr-2">
-                        {/* Green Date Box with receipt icon (exact match to screenshot) */}
-                        <div className="w-11 h-11 rounded-lg bg-[#198754] text-white flex flex-col items-center justify-center shrink-0 shadow-2xs">
-                          <span className="text-[10px] font-bold tracking-tight text-white/95 leading-none">
-                            {req.date}
-                          </span>
-                          <Receipt className="w-3.5 h-3.5 text-white/90 mt-1 stroke-[2.2]" />
-                        </div>
-
-                        {/* Party Name & Subtitle */}
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate">
-                            {req.partyName}
-                          </div>
-                          <div className="text-xs text-slate-400 font-medium mt-0.5 truncate">
-                            {req.requestCode}
-                          </div>
+                      {/* Column 1: Date */}
+                      <div className="col-span-2 pr-2 flex items-center">
+                        <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="whitespace-nowrap">{req.date}</span>
                         </div>
                       </div>
 
-                      {/* Middle: Project Name & Subtitle */}
-                      <div className="col-span-4 md:col-span-5 min-w-0 pr-3">
+                      {/* Column 2: Party Name & Subtitle */}
+                      <div className="col-span-4 min-w-0 pr-3">
+                        <div className="text-sm font-semibold text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                          {req.partyName}
+                        </div>
+                        <div className="text-xs text-slate-400 font-medium mt-0.5 truncate">
+                          {req.requestCode}
+                        </div>
+                      </div>
+
+                      {/* Column 3: Project Name & Subtitle */}
+                      <div className="col-span-3 min-w-0 pr-3">
                         <div className="text-xs font-semibold text-slate-800 truncate" title={req.projectName}>
                           {req.projectName}
                         </div>
@@ -3768,7 +3889,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             TAB 2: PARTY DIRECTORY (Full View & Split Master-Detail)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'party' && !activePartyOverview && (
+        {!isSiteEngineer && activeTab === 'party' && !activePartyOverview && (
           <div className="space-y-4">
             
             {/* 1. Four Summary KPI Cards (Red & White Theme with Perfect Height & Proportions) */}
@@ -4048,7 +4169,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             PARTY OVERVIEW SCREEN (Matching User's Attached Screenshot)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'party' && activePartyOverview && (
+        {!isSiteEngineer && activeTab === 'party' && activePartyOverview && (
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col min-h-[720px]">
             {(() => {
               const currentParty = liveActiveParty || activePartyOverview;
@@ -4410,7 +4531,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             TAB 3: TRANSACTION (Inflow / Outflow Cashbook)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'transaction' && (
+        {isAdminOrSuperAdmin && activeTab === 'transaction' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -5069,7 +5190,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             TAB 4: ACCOUNT TO ACCOUNT TRANSFER (Contra Ledgers & Imprest)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'account_transfer' && (
+        {isAdminOrSuperAdmin && activeTab === 'account_transfer' && (
           <div className="space-y-6">
             
             {/* Top KPI Summary Cards */}
@@ -5087,7 +5208,7 @@ const toIsoDate = (displayStr: string) => {
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium">
                   <span className="text-emerald-700 font-semibold">{transfers.filter(t => t.status === 'Completed').length} Completed</span>
-                  <span>Contra entries posted</span>
+                  <span>Ac to Ac entries posted</span>
                 </p>
               </div>
 
@@ -5119,7 +5240,7 @@ const toIsoDate = (displayStr: string) => {
                   ₹{transferMetrics.interBankTransfers.toLocaleString('en-IN')}
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                  Inter-account contra transfers
+                  Inter-account Ac to Ac transfers
                 </p>
               </div>
 
@@ -5369,7 +5490,7 @@ const toIsoDate = (displayStr: string) => {
                           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                             {transferSearchQuery || transferModeFilter !== 'All' || transferStatusFilter !== 'All'
                               ? 'Try adjusting your search query or clear the active filters.'
-                              : 'Record contra transfers between connected bank accounts and site petty cash vaults.'}
+                              : 'Record Ac to Ac transfers between connected bank accounts and site petty cash vaults.'}
                           </p>
                           <button
                             type="button"
@@ -5498,7 +5619,7 @@ const toIsoDate = (displayStr: string) => {
 
               {/* Table Footer Summary */}
               <div className="px-6 py-3 bg-[#f8fafc] border-t border-slate-200 flex flex-wrap items-center justify-between text-xs text-slate-500">
-                <span>Showing {filteredTransfers.length} of {transfers.length} contra transfer entries</span>
+                <span>Showing {filteredTransfers.length} of {transfers.length} Ac to Ac transfer entries</span>
                 <div className="flex items-center gap-5">
                   <span>Filtered Sum: <strong className="text-slate-900 tracking-tight">₹{filteredTransfers.reduce((sum, t) => sum + t.amount, 0).toLocaleString('en-IN')}</strong></span>
                   <span>Total Completed: <strong className="text-red-600 tracking-tight">₹{transferMetrics.totalTransferred.toLocaleString('en-IN')}</strong></span>
@@ -5513,7 +5634,7 @@ const toIsoDate = (displayStr: string) => {
         {/* ═════════════════════════════════════════════════════════════
             TAB 5: ACCOUNTS (Bank & Cash Accounts + Detailed Account Cards)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'accounts' && (
+        {isAdminOrSuperAdmin && activeTab === 'accounts' && (
           <div className="space-y-6">
             {statementActiveAccountId ? (
               /* ═══════════════════════════════════════════════════════════
@@ -5831,7 +5952,7 @@ const toIsoDate = (displayStr: string) => {
                   <button
                     type="button"
                     onClick={() => setIsAddAccountModalOpen(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#5932ea] hover:bg-[#4d2ad4] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>New Bank Account</span>
@@ -6316,31 +6437,9 @@ const toIsoDate = (displayStr: string) => {
         )}
 
         {/* ═════════════════════════════════════════════════════════════
-            TAB 7: PROJECT-WISE FINANCE & PROFITABILITY (BOQ, Budget overrun, Cost breakdown)
-        ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'project_finance' && (
-          <ProjectFinanceTab
-            projects={projects}
-            transactions={transactions}
-            paymentRequests={paymentRequests}
-            expenses={expenses}
-            bankAccounts={bankAccounts}
-            onOpenRecordExpense={(defaultProj) => {
-              resetExpenseForm();
-              if (defaultProj) setNewExpProject(defaultProj);
-              setIsRecordExpenseModalOpen(true);
-            }}
-            onOpenCreateTransaction={() => {
-              setCreateTxnFlowStep('menu');
-              setIsCreateTxnFlowOpen(true);
-            }}
-          />
-        )}
-
-        {/* ═════════════════════════════════════════════════════════════
             TAB 8: FINANCIAL REPORTS & AUDIT TRAIL (11 report types, Export & Print)
         ═════════════════════════════════════════════════════════════ */}
-        {activeTab === 'reports' && (
+        {isAdminOrSuperAdmin && activeTab === 'reports' && (
           <FinancialReportsTab
             parties={parties}
             transactions={transactions}
@@ -8500,7 +8599,7 @@ const toIsoDate = (displayStr: string) => {
                       : 'bg-red-600 hover:bg-red-700 cursor-pointer'
                   }`}
                 >
-                  Post Contra Transfer
+                  Post Ac to Ac Transfer
                 </button>
               </div>
             </form>

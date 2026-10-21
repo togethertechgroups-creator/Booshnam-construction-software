@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
   Bell, User as UserIcon, Settings, UserX, LogOut, X, Pencil, ChevronDown,
   CheckCircle2, FileText, Briefcase, Check, Sparkles, Eye, ArrowRight, CreditCard,
-  AlertTriangle, Clock
+  AlertTriangle, Clock, UserCheck
 } from 'lucide-react';
 import { User } from '../types';
 import { MOCK_USER } from '../lib/mockData';
@@ -14,6 +14,7 @@ import {
   getNotifications, markAllNotificationsRead, markNotificationRead, AppNotification 
 } from '../lib/notificationService';
 import { isPageAllowedForRole } from '../lib/roleAccess';
+import { isPageAllowedForActiveUser } from '../lib/authService';
 
 interface UserProfileDropdownProps {
   showBell?: boolean;
@@ -79,9 +80,10 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   const [currentUser, setCurrentUser] = useState<User>(resolveActiveUser);
 
-  const [notifications, setNotifications] = useState<AppNotification[]>(() => 
-    getNotifications(currentUser.first_name || currentUser.username, currentUser.role_code, currentUser.role_name)
-  );
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    const list = getNotifications(currentUser.first_name || currentUser.username, currentUser.role_code, currentUser.role_name);
+    return list.filter(n => !n.read);
+  });
 
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
@@ -106,11 +108,12 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   };
 
   const handleNotificationClick = (n: AppNotification) => {
-    // 1. Mark notification as read
+    // 1. Mark notification as read in storage
     markNotificationRead(n.id);
-    setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+    // 2. Remove immediately from visible dropdown list
+    setNotifications(prev => prev.filter(item => item.id !== n.id));
 
-    // 2. Dismiss dropdown immediately
+    // 3. Dismiss dropdown immediately
     setShowNotificationDropdown(false);
 
     const roleCode = currentUser.role_code || 'SITE_ENGINEER';
@@ -121,8 +124,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       n.requestCode ||
       (n.title && n.title.toLowerCase().includes('payment request'))
     ) {
-      const allowedFinance = isPageAllowedForRole(roleCode, 'finance');
-      const targetView = allowedFinance ? 'finance' : 'payments';
+      const targetView = 'finance';
 
       if (n.requestCode) {
         try {
@@ -149,7 +151,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
         }
       }));
 
-      triggerToast(allowedFinance ? 'Opening Payment Requests...' : 'Opening Payments...');
+      triggerToast('Opening Payment Requests...');
       return;
     }
 
@@ -161,13 +163,15 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       if (n.projectId) {
         try {
           sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+          sessionStorage.setItem('booshnam_auto_open_workspace_tab', 'task');
         } catch {}
       }
       window.dispatchEvent(new CustomEvent('booshnam_navigate', {
         detail: {
           view: 'projects',
           projectId: n.projectId,
-          projectName: n.projectName
+          projectName: n.projectName,
+          workspaceTab: 'task'
         }
       }));
       triggerToast(`Opening project: ${n.projectName || 'Projects'}`);
@@ -179,6 +183,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       if (n.projectId) {
         try {
           sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+          sessionStorage.setItem('booshnam_auto_open_workspace_tab', 'task');
         } catch {}
       }
       window.dispatchEvent(new CustomEvent('booshnam_navigate', {
@@ -196,7 +201,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
     // MATERIAL REQUEST
     if (n.type === 'MATERIAL_REQUEST') {
-      const allowedProc = isPageAllowedForRole(roleCode, 'procurement');
+      const allowedProc = isPageAllowedForActiveUser('procurement');
       const targetView = allowedProc ? 'procurement' : 'projects';
       window.dispatchEvent(new CustomEvent('booshnam_navigate', {
         detail: {
@@ -216,7 +221,27 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       n.title?.includes("Today's Tasks") ||
       n.id?.startsWith('notif-today-tasks-')
     ) {
-      const allowedSched = isPageAllowedForRole(roleCode, 'schedule');
+      if (n.projectId || n.projectName) {
+        if (n.projectId) {
+          try {
+            sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+            sessionStorage.setItem('booshnam_auto_open_workspace_tab', 'task');
+          } catch {}
+        }
+        window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+          detail: {
+            view: 'projects',
+            projectId: n.projectId,
+            projectName: n.projectName,
+            taskName: n.taskName,
+            workspaceTab: 'task'
+          }
+        }));
+        triggerToast(`Opening tasks for ${n.projectName || 'Project'}...`);
+        return;
+      }
+
+      const allowedSched = isPageAllowedForActiveUser('schedule');
       const targetView = allowedSched ? 'schedule' : 'projects';
       window.dispatchEvent(new CustomEvent('booshnam_navigate', {
         detail: {
@@ -229,13 +254,49 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       return;
     }
 
+    // LEAD_ASSIGNED notification
+    if (
+      n.type === 'LEAD_ASSIGNED' ||
+      (n.title && n.title.toLowerCase().includes('lead assigned'))
+    ) {
+      const leadIdToOpen = (n as any).leadId || n.requestCode;
+      if (leadIdToOpen) {
+        try {
+          sessionStorage.setItem('booshnam_auto_open_lead_id', leadIdToOpen);
+        } catch {}
+      }
+      window.dispatchEvent(new CustomEvent('booshnam_navigate', {
+        detail: {
+          view: 'quotation',
+          quotationTab: 'leads',
+          leadId: leadIdToOpen,
+          leadName: n.projectName
+        }
+      }));
+      window.dispatchEvent(new CustomEvent('booshnam_open_lead_tab', {
+        detail: {
+          leadId: leadIdToOpen,
+          leadName: n.projectName
+        }
+      }));
+      triggerToast(`Opening Lead: ${n.projectName || 'Lead'}...`);
+      return;
+    }
+
     // Fallback if project is mentioned
     if (n.projectId || n.projectName) {
+      if (n.projectId) {
+        try {
+          sessionStorage.setItem('booshnam_auto_open_project_id', n.projectId);
+          sessionStorage.setItem('booshnam_auto_open_workspace_tab', 'task');
+        } catch {}
+      }
       window.dispatchEvent(new CustomEvent('booshnam_navigate', {
         detail: {
           view: 'projects',
           projectId: n.projectId,
-          projectName: n.projectName
+          projectName: n.projectName,
+          workspaceTab: 'task'
         }
       }));
       triggerToast(`Opening ${n.projectName || 'Projects'}`);
@@ -261,10 +322,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       setEditDesignation(u.role_name || 'Site Engineer');
       setEditAvatar(u.avatar_url || '');
       const fetched = getNotifications(u.first_name || u.username, u.role_code, u.role_name);
-      setNotifications(fetched);
-      if (!fetched.some(n => !n.read)) {
-        setHasViewedInCurrentSession(true);
-      }
+      setNotifications(fetched.filter(n => !n.read));
     };
 
     window.addEventListener('siteops_user_updated', handleSync);
@@ -427,8 +485,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
     'QA / Safety Officer',
   ];
 
-  const [hasViewedInCurrentSession, setHasViewedInCurrentSession] = useState(false);
-
   return (
     <div className="flex items-center gap-2 sm:gap-2.5 relative" ref={containerRef}>
       {/* Notifications Bell */}
@@ -437,27 +493,15 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           <button
             type="button"
             onClick={() => {
-              const willOpen = !showNotificationDropdown;
-              setShowNotificationDropdown(willOpen);
+              setShowNotificationDropdown(prev => !prev);
               setShowProfileDropdown(false);
-              if (willOpen) {
-                setHasViewedInCurrentSession(true);
-                const currentIds = notifications.map(n => n.id);
-                markAllNotificationsRead(
-                  currentUser.first_name || currentUser.username, 
-                  currentUser.role_code, 
-                  currentUser.role_name,
-                  currentIds
-                );
-                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-              }
             }}
             className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-[5px] relative transition-colors cursor-pointer"
             title="Notifications"
             aria-label="Notifications"
           >
             <Bell className="w-4 h-4" />
-            {unreadCount > 0 && !showNotificationDropdown && !hasViewedInCurrentSession && (
+            {unreadCount > 0 && !showNotificationDropdown && (
               <span className="absolute top-1 right-1 sm:top-1 sm:right-1 min-w-[15px] h-3.5 px-1 bg-red-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white animate-pulse">
                 {unreadCount}
               </span>
@@ -469,47 +513,45 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
               <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900">Notifications</span>
-                  {unreadCount > 0 && !hasViewedInCurrentSession && (
+                  {unreadCount > 0 && (
                     <span className="px-1.5 py-0.2 bg-red-100 text-red-700 text-[10px] font-bold rounded-full">
                       {unreadCount} new
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setHasViewedInCurrentSession(true);
-                    markAllNotificationsRead(
-                      currentUser.first_name || currentUser.username, 
-                      currentUser.role_code, 
-                      currentUser.role_name,
-                      notifications.map(n => n.id)
-                    );
-                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                    triggerToast('All notifications marked as read');
-                  }}
-                  className="text-[10px] text-red-600 font-semibold cursor-pointer hover:underline"
-                >
-                  Mark all read
-                </button>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      markAllNotificationsRead(
+                        currentUser.first_name || currentUser.username, 
+                        currentUser.role_code, 
+                        currentUser.role_name,
+                        notifications.map(n => n.id)
+                      );
+                      setNotifications([]);
+                      triggerToast('All notifications marked as read');
+                    }}
+                    className="text-[10px] text-red-600 font-semibold cursor-pointer hover:underline"
+                  >
+                    Mark all read
+                  </button>
+                )}
               </div>
 
               <div className="py-2 space-y-2 text-xs overflow-y-auto max-h-[60vh]">
                 {notifications.length === 0 ? (
                   <div className="py-8 text-center text-slate-400">
-                    <Bell className="w-6 h-6 mx-auto mb-1 opacity-40" />
-                    <p className="text-xs">No notifications yet</p>
+                    <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500 opacity-90" />
+                    <p className="text-xs font-semibold text-slate-700">No new notifications</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">You're all caught up!</p>
                   </div>
                 ) : (
                   notifications.map((n) => (
                     <div
                       key={n.id}
                       onClick={() => handleNotificationClick(n)}
-                      className={`group p-2.5 rounded-[6px] border transition-all cursor-pointer relative hover:shadow-xs ${
-                        !n.read 
-                          ? 'bg-red-50/50 border-red-200/90 hover:bg-red-50/90 hover:border-red-300' 
-                          : 'bg-slate-50/60 border-slate-100 hover:bg-slate-100/80 hover:border-slate-200'
-                      }`}
+                      className="group p-2.5 rounded-[6px] border transition-all cursor-pointer relative hover:shadow-xs bg-red-50/50 border-red-200/90 hover:bg-red-50/90 hover:border-red-300"
                       title="Click to view details"
                     >
                       <div className="flex items-start gap-2.5">
@@ -517,6 +559,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                           n.type === 'TASK_COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
                           n.type === 'PROJECT_ASSIGNED' ? 'bg-blue-100 text-blue-700' :
                           n.type === 'PAYMENT_REQUEST' ? 'bg-red-100 text-red-700' :
+                          n.type === 'LEAD_ASSIGNED' ? 'bg-rose-100 text-rose-700' :
                           (n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-')) ? 'bg-rose-100 text-rose-700 border border-rose-200' :
                           (n.title?.includes("Today's Tasks") || n.id?.startsWith('notif-today-tasks-')) ? 'bg-amber-100 text-amber-700 border border-amber-200' :
                           'bg-amber-100 text-amber-700'
@@ -524,6 +567,7 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
                           {n.type === 'TASK_COMPLETED' ? <CheckCircle2 className="w-3.5 h-3.5" /> :
                            n.type === 'PROJECT_ASSIGNED' ? <Briefcase className="w-3.5 h-3.5" /> :
                            n.type === 'PAYMENT_REQUEST' ? <CreditCard className="w-3.5 h-3.5" /> :
+                           n.type === 'LEAD_ASSIGNED' ? <UserCheck className="w-3.5 h-3.5" /> :
                            (n.title?.includes("Pending Tasks") || n.id?.startsWith('notif-pending-tasks-')) ? <AlertTriangle className="w-3.5 h-3.5" /> :
                            (n.title?.includes("Today's Tasks") || n.id?.startsWith('notif-today-tasks-')) ? <Clock className="w-3.5 h-3.5" /> :
                            <FileText className="w-3.5 h-3.5" />}

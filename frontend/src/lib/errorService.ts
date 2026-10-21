@@ -72,6 +72,16 @@ class GlobalErrorService {
         // If 404 status returned from API or critical document
         if (response.status === 404) {
           const url = typeof args[0] === 'string' ? args[0] : (args[0] instanceof Request ? args[0].url : '');
+          // Do not trigger global 404 for push notifications, background sync, or telemetry
+          if (url && (
+            url.includes('notification') || 
+            url.includes('send-push') || 
+            url.includes('telemetry') || 
+            url.includes('analytics') ||
+            url.includes('audit-log')
+          )) {
+            return response;
+          }
           // Trigger global 404 for API calls or document routes
           if (url && (url.includes('/api/') || url.includes('/v1/') || url.includes('/documents/') || url.includes('/projects/'))) {
             this.trigger404({

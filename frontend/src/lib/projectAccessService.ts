@@ -65,6 +65,47 @@ export function markProjectDeleted(projectId?: string | null, projectCode?: stri
       }
     }
 
+    // Clean linked quotations from booshnam_quotations_v2
+    try {
+      const rawQ = localStorage.getItem('booshnam_quotations_v2');
+      if (rawQ) {
+        const parsedQ = JSON.parse(rawQ);
+        if (Array.isArray(parsedQ)) {
+          const cleanedQ = parsedQ.filter((q: any) => {
+            const qPid = (q.project_id || '').toLowerCase().trim();
+            const qPtitle = (q.project_title || '').toLowerCase().trim();
+            if (projectId && qPid === projectId.toLowerCase().trim()) return false;
+            if (projectCode && qPid === projectCode.toLowerCase().trim()) return false;
+            if (projectName && qPtitle === projectName.toLowerCase().trim()) return false;
+            return true;
+          });
+          localStorage.setItem('booshnam_quotations_v2', JSON.stringify(cleanedQ));
+          window.dispatchEvent(new CustomEvent('booshnam_quotations_updated'));
+        }
+      }
+    } catch (e) {}
+
+    // Clean linked quotation tasks from booshnam_quotation_schedule_tasks_v3
+    try {
+      const rawQTasks = localStorage.getItem('booshnam_quotation_schedule_tasks_v3');
+      if (rawQTasks) {
+        const parsedTasks = JSON.parse(rawQTasks);
+        if (Array.isArray(parsedTasks)) {
+          const cleanedTasks = parsedTasks.filter((t: any) => {
+            const tPid = (t.project_id || '').toLowerCase().trim();
+            const tPname = (t.project_name || '').toLowerCase().trim();
+            const tGname = (t.group_name || '').toLowerCase().trim();
+            if (projectId && tPid === projectId.toLowerCase().trim()) return false;
+            if (projectCode && tPid === projectCode.toLowerCase().trim()) return false;
+            if (projectName && (tPname === projectName.toLowerCase().trim() || tGname === projectName.toLowerCase().trim())) return false;
+            return true;
+          });
+          localStorage.setItem('booshnam_quotation_schedule_tasks_v3', JSON.stringify(cleanedTasks));
+          window.dispatchEvent(new CustomEvent('booshnam_quotation_schedule_updated'));
+        }
+      }
+    } catch (e) {}
+
     // Broadcast project update event
     window.dispatchEvent(new CustomEvent('booshnam_projects_deleted', { 
       detail: { projectId, projectCode, projectName } 

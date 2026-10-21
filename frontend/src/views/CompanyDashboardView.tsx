@@ -11,6 +11,7 @@ import {
   Activity, HeartPulse, PlayCircle, PauseCircle, FolderKanban, Sparkles, Users, MessageSquare
 } from 'lucide-react';
 import { toggleBrowserFullscreen, addFullscreenChangeListener } from '../lib/fullscreenService';
+import { Loader } from '../components/kokonutui/loader';
 
 export function ArrowsDiagonalRotatedIcon({ size = 24, className = '', ...props }: SVGProps<SVGSVGElement> & { size?: number }) {
   const [animKey, setAnimKey] = useState(0);
@@ -125,6 +126,16 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
 }) => {
   const currentUser = user || MOCK_USER;
   const [activeTab, setActiveTab] = useState<'operational' | 'financial'>('operational');
+  
+  // Manual refresh loading state for Kokonut UI loader animation
+  const [isDashboardLoading, setIsDashboardLoading] = useState(false);
+
+  const handleRefreshDashboard = () => {
+    setIsDashboardLoading(true);
+    setTimeout(() => {
+      setIsDashboardLoading(false);
+    }, 2000);
+  };
 
   // Active Department State (Synchronized with global switcher)
   const [activeDeptId, setActiveDeptId] = useState<string>(() => getActiveDepartmentId());
@@ -1133,6 +1144,21 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
     }
   };
 
+  if (isDashboardLoading) {
+    return (
+      <div className={`flex-1 flex flex-col items-center justify-center min-h-screen h-full w-full bg-white transition-all duration-300 animate-in fade-in ${
+        isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : ''
+      }`}>
+        <Loader
+          size="lg"
+          title="Loading Company Dashboard..."
+          subtitle="Gathering real-time project metrics, workforce and financials"
+          className="text-red-600"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`flex-1 flex flex-col min-w-0 bg-white transition-all duration-300 ${
       isFullscreen ? `fixed top-0 right-0 bottom-0 z-[100] overflow-y-auto bg-[#F4F6F9] ${isSidebarOpen ? 'left-64' : 'left-[72px]'}` : 'min-h-screen'
@@ -1705,7 +1731,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
         /* Main Company Dashboard View (Edge-to-edge seamless) */
         <div className="flex-1 flex flex-col min-w-0 bg-[#F8FAFC]">
           {/* Executive Header with Title, Telemetry Pill, Segmented Tabs, Project Filter & Actions */}
-          <div className="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 bg-white/95 backdrop-blur-md border-b border-slate-200/90 sticky top-0 z-20 shadow-2xs">
+          <div className="px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 bg-white/95 backdrop-blur-md sticky top-0 z-20">
             {/* Left: Title + Operational / Financial segmented pill + Project Filter */}
             <div className="flex items-center gap-3.5 flex-wrap">
               <div className="flex items-center gap-2.5">
@@ -1805,7 +1831,7 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
               </button>
 
               <button 
-                onClick={() => window.location.reload()}
+                onClick={handleRefreshDashboard}
                 title="Refresh Dashboard"
                 className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors cursor-pointer"
               >

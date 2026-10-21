@@ -44,6 +44,14 @@ export function isStaffInDepartment(staff: StaffMember, targetDeptIdOrName: stri
   if (targetNorm === 'booshnam_associates') return true;
   const depts = getStaffDepartmentNames(staff);
   if (depts.length === 0) return true;
+  if (depts.some(d => {
+    const rawLower = (d || '').toLowerCase().trim();
+    if (rawLower === 'operations' || rawLower === 'all' || rawLower.includes('all')) return true;
+    const norm = normalizeDepartmentId(d);
+    return norm === targetNorm || norm === 'booshnam_associates';
+  })) {
+    return true;
+  }
   return depts.some(d => normalizeDepartmentId(d) === targetNorm);
 }
 
@@ -64,7 +72,68 @@ export function getStaffCategory(s: StaffMember): 'OFFICE' | 'SITE' {
   return 'OFFICE';
 }
 
-const DEFAULT_STAFF_MEMBERS: StaffMember[] = [];
+export const DEFAULT_STAFF_MEMBERS: StaffMember[] = [
+  {
+    id: 'staff-chithra',
+    employee_code: 'EMP-01',
+    name: 'Chithra',
+    role_code: 'STAFF',
+    role_name: 'Maintenance',
+    department: 'Operations',
+    departments: ['Operations', 'Soil Investigation (Chennai)', 'Material Testing (Chennai)', 'Surveying', 'Structural', 'Architectural', 'Sculpture', 'Private Construction', 'Government Projects'],
+    designation: 'Maintanance',
+    dob: '1995-05-12',
+    doj: '2023-01-10',
+    phone: '9840123456',
+    email: 'chithra@booshnam.com',
+    employment_type: 'Full-time',
+    salary: 10000,
+    salary_type: 'Month',
+    status: 'ACTIVE',
+    staff_type: 'OFFICE',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'staff-robin',
+    employee_code: 'EMP-02',
+    name: 'Robin Richard',
+    role_code: 'STAFF',
+    role_name: 'Staff',
+    department: 'Operations',
+    departments: ['Operations', 'Soil Investigation (Chennai)', 'Material Testing (Chennai)', 'Surveying', 'Structural', 'Architectural', 'Sculpture', 'Private Construction', 'Government Projects'],
+    designation: '',
+    dob: '1993-08-20',
+    doj: '2023-03-15',
+    phone: '9840234567',
+    email: 'robin@booshnam.com',
+    employment_type: 'Full-time',
+    salary: 28000,
+    salary_type: 'Month',
+    status: 'ACTIVE',
+    staff_type: 'OFFICE',
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 'staff-teki',
+    employee_code: 'EMP-03',
+    name: 'Teki Vijay Yogesh Kumar',
+    role_code: 'ENGINEER',
+    role_name: 'Technical Engineer',
+    department: 'Engineering',
+    departments: ['Engineering', 'Operations', 'Soil Investigation (Chennai)', 'Material Testing (Chennai)', 'Surveying', 'Structural', 'Architectural', 'Sculpture', 'Private Construction', 'Government Projects'],
+    designation: 'Technical Engineer',
+    dob: '1990-11-05',
+    doj: '2022-06-01',
+    phone: '9840345678',
+    email: 'teki@booshnam.com',
+    employment_type: 'Full-time',
+    salary: 35000,
+    salary_type: 'Month',
+    status: 'ACTIVE',
+    staff_type: 'OFFICE',
+    created_at: new Date().toISOString()
+  }
+];
 
 export interface StaffSelectOption {
   name: string;
@@ -188,7 +257,8 @@ export function getStaffMembers(): StaffMember[] {
   try {
     const raw = localStorage.getItem(STAFF_STORAGE_KEY);
     if (!raw) {
-      return [];
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(DEFAULT_STAFF_MEMBERS));
+      return DEFAULT_STAFF_MEMBERS;
     }
     const parsed: StaffMember[] = JSON.parse(raw);
     // Filter out the legacy pre-seeded mock staff members by exact ID or name
@@ -196,14 +266,36 @@ export function getStaffMembers(): StaffMember[] {
       !LEGACY_MOCK_STAFF_IDS.includes(s.id) &&
       !LEGACY_MOCK_STAFF_NAMES.includes(s.name)
     );
-    if (cleaned.length !== parsed.length) {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(cleaned));
-      return cleaned;
+    if (cleaned.length === 0) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(DEFAULT_STAFF_MEMBERS));
+      return DEFAULT_STAFF_MEMBERS;
     }
-    return parsed;
+    const withDepts = cleaned.map(s => {
+      if (s.id === 'staff-chithra') {
+        const def = DEFAULT_STAFF_MEMBERS.find(d => d.id === s.id);
+        return {
+          ...s,
+          salary: s.salary === 22000 ? 10000 : (s.salary || 10000),
+          designation: 'Maintanance',
+          departments: (s.departments && s.departments.length > 1) ? s.departments : (def?.departments || s.departments)
+        };
+      }
+      if (s.id === 'staff-robin' || s.id === 'staff-teki') {
+        const def = DEFAULT_STAFF_MEMBERS.find(d => d.id === s.id);
+        if (def && (!s.departments || s.departments.length <= 1)) {
+          return { ...s, departments: def.departments };
+        }
+      }
+      return s;
+    });
+    if (cleaned.length !== parsed.length || JSON.stringify(withDepts) !== JSON.stringify(parsed)) {
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(withDepts));
+      return withDepts;
+    }
+    return withDepts;
   } catch (e) {
     console.error('Failed to get staff members', e);
-    return [];
+    return DEFAULT_STAFF_MEMBERS;
   }
 }
 

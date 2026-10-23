@@ -2015,24 +2015,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2.5 text-slate-900 relative">
-                  {/* Status Badge */}
-                  <span className={`px-3 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-2 border shadow-2xs ${
-                    healthStats.total === 0 
-                      ? 'bg-slate-100 text-slate-600 border-slate-200' 
-                      : healthStats.isAtRisk 
-                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  }`}>
-                    <span className={`w-2 h-2 rounded-full ${
-                      healthStats.total === 0 
-                        ? 'bg-slate-400' 
-                        : healthStats.isAtRisk 
-                        ? 'bg-rose-500 animate-ping' 
-                        : 'bg-emerald-500 animate-pulse'
-                    }`} />
-                    <span>{healthStats.total === 0 ? 'PORTFOLIO STANDBY' : healthStats.isAtRisk ? 'ACTION REQUIRED' : 'PORTFOLIO OPTIMAL'}</span>
-                  </span>
-
                   {/* Three Dots Menu Button & Dropdown */}
                   <div className="relative" ref={healthDotsMenuRef}>
                     <button

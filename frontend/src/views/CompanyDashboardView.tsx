@@ -2283,7 +2283,6 @@ export const CompanyDashboardView: React.FC<CompanyDashboardViewProps> = ({
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm sm:text-base">Project Operational Summary</h3>
-                    <p className="text-[11px] text-slate-400 font-medium">Real-time status, health monitoring, and delivery milestones</p>
                   </div>
                 </div>
 

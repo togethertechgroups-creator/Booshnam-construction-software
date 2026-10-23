@@ -88,8 +88,22 @@ export function getUserAccounts(): UserAccount[] {
       !['anandhi.admin', 'arun.verma', 'ravi.kumar', 'kavitha.accounts'].includes(a.username)
     );
 
-    // Ensure superadmin exists
-    if (!cleaned.some(a => a.username === 'superadmin' || a.phone === '9840123456')) {
+    // Ensure superadmin exists and has valid role/permissions
+    const superIdx = cleaned.findIndex(a => a.username === 'superadmin' || a.id === 'usr-super');
+    if (superIdx >= 0) {
+      if (
+        cleaned[superIdx].role_code !== 'SUPER_ADMIN' ||
+        cleaned[superIdx].staff_name === 'Teki' ||
+        !cleaned[superIdx].allowedPages ||
+        cleaned[superIdx].allowedPages.length < ALL_SYSTEM_MODULES.length
+      ) {
+        cleaned[superIdx] = {
+          ...cleaned[superIdx],
+          ...DEFAULT_ACCOUNTS[0],
+          password: cleaned[superIdx].password || DEFAULT_ACCOUNTS[0].password
+        };
+      }
+    } else {
       cleaned.unshift(DEFAULT_ACCOUNTS[0]);
     }
     // Ensure admin exists
@@ -108,7 +122,13 @@ export function getUserAccounts(): UserAccount[] {
     cleaned = cleaned.map(a => {
       // Never allow Super Admin accounts to be altered by staff member records
       if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
-        return a;
+        return {
+          ...a,
+          role_code: 'SUPER_ADMIN',
+          role_name: 'Super Admin',
+          staff_name: a.staff_name && a.staff_name !== 'Teki' ? a.staff_name : 'Super Administrator',
+          allowedPages: ALL_SYSTEM_MODULES.map(m => m.id)
+        };
       }
 
       // Find all linked staff members
@@ -193,8 +213,11 @@ export function saveUserAccount(account: UserAccount): void {
   const cleanUser = account.username.trim().toLowerCase();
 
   const existingIdx = current.findIndex(a => {
-    if (a.role_code === 'SUPER_ADMIN' || a.username === 'superadmin' || a.id === 'usr-super') {
-      return account.role_code === 'SUPER_ADMIN' || account.username === 'superadmin' || account.id === 'usr-super';
+    if (a.id === 'usr-super' || a.username === 'superadmin') {
+      return account.id === 'usr-super' || account.username === 'superadmin';
+    }
+    if (account.id === 'usr-super' || account.username === 'superadmin') {
+      return a.id === 'usr-super' || a.username === 'superadmin';
     }
     const aUser = a.username.trim().toLowerCase();
     const aPhone = (a.phone || '').replace(/\D/g, '');
@@ -223,16 +246,20 @@ export function saveUserAccount(account: UserAccount): void {
     const incomingStaffIds = account.staff_ids || (account.staff_id ? [account.staff_id] : []);
     const combinedStaffIds = Array.from(new Set([...existingStaffIds, ...incomingStaffIds].filter(Boolean)));
 
+    const isSuperTarget = existing.id === 'usr-super' || existing.username === 'superadmin' || account.id === 'usr-super' || account.username === 'superadmin';
     const mergedAccount: UserAccount = {
       ...existing,
       ...account,
       id: existing.id,
+      role_code: isSuperTarget ? 'SUPER_ADMIN' : (account.role_code || existing.role_code),
+      role_name: isSuperTarget ? 'Super Admin' : (account.role_name || existing.role_name),
+      staff_name: isSuperTarget && (!account.staff_name || account.staff_name === 'Teki') ? 'Super Administrator' : (account.staff_name || existing.staff_name),
       department: account.department || existing.department || combinedDepts[0],
       departments: combinedDepts.length > 0 ? combinedDepts : (account.department ? [account.department] : []),
       staff_ids: combinedStaffIds,
       staff_id: account.staff_id || existing.staff_id,
       password: (account.password && account.password !== account.phone) ? account.password : (existing.password || account.password),
-      allowedPages: (account.allowedPages && account.allowedPages.length > 0) ? account.allowedPages : existing.allowedPages
+      allowedPages: isSuperTarget ? ALL_SYSTEM_MODULES.map(m => m.id) : ((account.allowedPages && account.allowedPages.length > 0) ? account.allowedPages : existing.allowedPages)
     };
 
     updated = [...current];
@@ -485,6 +512,16 @@ export function authenticateUser(usernameOrPhone: string, password: string): Use
   });
   
   if (match) {
+    // Super Admin accounts always have full master access and are never bound to or blocked by staff records
+    if (match.role_code === 'SUPER_ADMIN' || match.username === 'superadmin' || match.id === 'usr-super') {
+      match.role_code = 'SUPER_ADMIN';
+      match.role_name = 'Super Admin';
+      match.staff_name = 'Super Administrator';
+      match.allowedPages = ALL_SYSTEM_MODULES.map(m => m.id);
+      setCurrentUserAccount(match);
+      return match;
+    }
+
     // Check if associated staff member is INACTIVE and synchronize role and departments
     const allStaff = getStaffMembers();
     const matchingStaff = allStaff.filter(s => 
@@ -553,6 +590,12 @@ export function getCurrentUserAccount(): UserAccount | null {
 
     // If currently logged in as Super Admin, preserve Super Admin session completely
     if (acc.role_code === 'SUPER_ADMIN' || acc.username === 'superadmin' || acc.id === 'usr-super') {
+      acc.role_code = 'SUPER_ADMIN';
+      acc.role_name = 'Super Admin';
+      if (!acc.staff_name || acc.staff_name === 'Teki') {
+        acc.staff_name = 'Super Administrator';
+      }
+      acc.allowedPages = ALL_SYSTEM_MODULES.map(m => m.id);
       return acc;
     }
 
@@ -832,12 +875,17 @@ export function authenticateByPhone(phone: string, _dialCode: string = '+91'): U
     return accountByUsername;
   }
 
-  // 3. Fall back to primary Super Admin only if testing/demo and no accounts exist
-  const primaryAccount = accounts.find(a => a.role_code === 'SUPER_ADMIN') || accounts[0];
-  if (primaryAccount && cleanPhone === '9840123456') {
-    setCurrentUserAccount(primaryAccount);
-    return primaryAccount;
+  // 3. Fall back to primary Super Admin or phone match 9840123456
+  if (cleanPhone === '9840123456') {
+    const superAcc = accounts.find(a => a.id === 'usr-super' || a.username === 'superadmin') || DEFAULT_ACCOUNTS[0];
+    superAcc.role_code = 'SUPER_ADMIN';
+    superAcc.role_name = 'Super Admin';
+    superAcc.staff_name = 'Super Administrator';
+    superAcc.allowedPages = ALL_SYSTEM_MODULES.map(m => m.id);
+    setCurrentUserAccount(superAcc);
+    return superAcc;
   }
+  const primaryAccount = accounts.find(a => a.role_code === 'SUPER_ADMIN') || accounts[0];
 
   // 4. Default verified user account assigned to Soil Investigation
   const fallbackAccount: UserAccount = {

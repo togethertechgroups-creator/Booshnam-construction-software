@@ -84,7 +84,7 @@ export const DEFAULT_STAFF_MEMBERS: StaffMember[] = [
     designation: 'Maintanance',
     dob: '1995-05-12',
     doj: '2023-01-10',
-    phone: '9840123456',
+    phone: '9840111222',
     email: 'chithra@booshnam.com',
     employment_type: 'Full-time',
     salary: 10000,
@@ -275,6 +275,7 @@ export function getStaffMembers(): StaffMember[] {
         const def = DEFAULT_STAFF_MEMBERS.find(d => d.id === s.id);
         return {
           ...s,
+          phone: (s.phone === '9840123456' || !s.phone) ? '9840111222' : s.phone,
           salary: s.salary === 22000 ? 10000 : (s.salary || 10000),
           designation: 'Maintanance',
           departments: (s.departments && s.departments.length > 1) ? s.departments : (def?.departments || s.departments)

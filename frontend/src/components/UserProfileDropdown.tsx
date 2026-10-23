@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { MOCK_USER } from '../lib/mockData';
-import { logoutUser, getCurrentUserAccount, saveUserAccount, setCurrentUserAccount, UserAccount } from '../lib/authService';
+import { logoutUser, getCurrentUserAccount, saveUserAccount, setCurrentUserAccount, getUserAccounts, UserAccount } from '../lib/authService';
 import { getStaffMembers, saveStaffMember } from '../lib/staffService';
 import { confirmSignOut } from '../lib/dialogService';
 import { 
   getNotifications, markAllNotificationsRead, markNotificationRead, AppNotification 
 } from '../lib/notificationService';
-import { isPageAllowedForRole } from '../lib/roleAccess';
+import { ALL_SYSTEM_MODULES, isPageAllowedForRole } from '../lib/roleAccess';
 import { isPageAllowedForActiveUser } from '../lib/authService';
 
 interface UserProfileDropdownProps {
@@ -40,7 +40,11 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
       const resolvedAvatar = (active as any)?.avatar_url || parsedStored?.avatar_url || cachedAvatar || '';
 
       if (active) {
-        const parts = (active.staff_name || active.username || 'Staff').split(' ');
+        const isSuper = active.role_code === 'SUPER_ADMIN' || active.username === 'superadmin' || active.id === 'usr-super';
+        const roleCode = isSuper ? 'SUPER_ADMIN' : active.role_code;
+        const roleName = isSuper ? 'Super Admin' : active.role_name;
+        const staffName = isSuper ? (active.staff_name && active.staff_name !== 'Teki' ? active.staff_name : 'Super Administrator') : (active.staff_name || active.username || 'Staff');
+        const parts = staffName.split(' ');
         const rawDigits = (active.phone || '').replace(/\D/g, '');
         const phoneFormatted = rawDigits.length >= 10 
           ? `+91 ${rawDigits.slice(-10, -5)} ${rawDigits.slice(-5)}` 
@@ -52,23 +56,28 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           last_name: parts.slice(1).join(' ') || '',
           username: active.username,
           email: `${active.username.toLowerCase()}@booshnam.com`,
-          role_name: active.role_name,
-          role_code: active.role_code,
+          role_name: roleName,
+          role_code: roleCode,
           phone: phoneFormatted,
           avatar_url: resolvedAvatar,
-          is_org_admin: active.role_code === 'SUPER_ADMIN' || active.role_code === 'ADMIN',
-          is_site_worker: active.role_code === 'SITE_ENGINEER' || active.role_code === 'SUPERVISOR',
+          is_org_admin: isSuper || active.role_code === 'ADMIN',
+          is_site_worker: !isSuper && (active.role_code === 'SITE_ENGINEER' || active.role_code === 'SUPERVISOR'),
           active_role: {
-            id: active.role_code,
-            name: active.role_name,
-            code: active.role_code,
-            description: active.role_name
+            id: roleCode,
+            name: roleName,
+            code: roleCode,
+            description: roleName
           }
         };
       }
       if (parsedStored) {
+        const isSuper = parsedStored.role_code === 'SUPER_ADMIN' || parsedStored.username === 'superadmin' || parsedStored.id === 'usr-super';
         return {
           ...parsedStored,
+          role_code: isSuper ? 'SUPER_ADMIN' : parsedStored.role_code,
+          role_name: isSuper ? 'Super Admin' : parsedStored.role_name,
+          first_name: isSuper && (parsedStored.first_name === 'Teki' || !parsedStored.first_name) ? 'Super' : parsedStored.first_name,
+          last_name: isSuper && (parsedStored.first_name === 'Teki' || !parsedStored.last_name) ? 'Admin' : parsedStored.last_name,
           avatar_url: resolvedAvatar,
         };
       }
@@ -390,6 +399,58 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const handleSwitchToSuperAdmin = () => {
+    const accounts = getUserAccounts();
+    const superAcc = accounts.find(a => a.id === 'usr-super' || a.username === 'superadmin') || {
+      id: 'usr-super',
+      username: 'superadmin',
+      password: 'password123',
+      phone: '9840123456',
+      staff_id: 'super-admin-master',
+      staff_name: 'Super Administrator',
+      staff_code: 'EMP-0001',
+      role_code: 'SUPER_ADMIN',
+      role_name: 'Super Admin',
+      department: 'Executive Management',
+      departments: ['Executive Management'],
+      allowedPages: ALL_SYSTEM_MODULES.map(m => m.id),
+      created_at: '2024-01-01'
+    };
+    superAcc.role_code = 'SUPER_ADMIN';
+    superAcc.role_name = 'Super Admin';
+    superAcc.staff_name = 'Super Administrator';
+    superAcc.allowedPages = ALL_SYSTEM_MODULES.map(m => m.id);
+    saveUserAccount(superAcc);
+    setCurrentUserAccount(superAcc);
+    const updatedUser: User = {
+      id: superAcc.id,
+      first_name: 'Super',
+      last_name: 'Admin',
+      username: 'superadmin',
+      email: 'superadmin@booshnam.com',
+      role_name: 'Super Admin',
+      role_code: 'SUPER_ADMIN',
+      phone: '+91 98401 23456',
+      avatar_url: superAcc.avatar_url || '',
+      is_org_admin: true,
+      is_site_worker: false,
+      active_role: {
+        id: 'SUPER_ADMIN',
+        name: 'Super Admin',
+        code: 'SUPER_ADMIN',
+        description: 'Super Admin'
+      }
+    };
+    try {
+      localStorage.setItem('siteops_user', JSON.stringify(updatedUser));
+    } catch (e) {}
+    setCurrentUser(updatedUser);
+    window.dispatchEvent(new CustomEvent('siteops_user_updated', { detail: updatedUser }));
+    window.dispatchEvent(new CustomEvent('booshnam_session_changed', { detail: superAcc }));
+    setShowProfileDropdown(false);
+    triggerToast('Switched to Super Administrator mode');
+  };
+
   useEffect(() => {
     if (!showProfileModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -476,6 +537,8 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
   };
 
   const designationOptions = [
+    'Super Admin',
+    'Admin',
     'Owner / Director',
     'Project Manager',
     'Site Engineer',
@@ -679,6 +742,17 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
             {/* Removed User Switcher */}
 
             <div className="space-y-0.5">
+              {currentUser.role_code !== 'SUPER_ADMIN' && (
+                <button
+                  type="button"
+                  onClick={handleSwitchToSuperAdmin}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded-xl transition-colors font-bold text-left cursor-pointer border border-amber-200/80 mb-1"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Switch to Super Admin</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={openProfileModal}

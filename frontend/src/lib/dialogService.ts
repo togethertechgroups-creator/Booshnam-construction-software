@@ -3,8 +3,8 @@ export interface DialogOptions {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info' | 'primary';
-  icon?: 'trash' | 'alert' | 'info' | 'help' | 'check';
+  variant?: 'danger' | 'warning' | 'info' | 'primary' | 'auth';
+  icon?: 'trash' | 'alert' | 'info' | 'help' | 'check' | 'logout';
 }
 
 export type DialogResolver = (value: boolean) => void;
@@ -40,7 +40,7 @@ export const confirmAction = (options: DialogOptions | string): Promise<boolean>
 export const alertAction = (
   message: string,
   title: string = 'Notification',
-  variant: 'info' | 'warning' | 'danger' | 'primary' = 'info'
+  variant: 'info' | 'warning' | 'danger' | 'primary' | 'auth' = 'info'
 ): Promise<boolean> => {
   return new Promise<boolean>((resolve) => {
     window.dispatchEvent(
@@ -68,8 +68,8 @@ export const confirmSignOut = async (): Promise<boolean> => {
     message: 'Are you sure you want to sign out of your account?',
     confirmText: 'Sign Out',
     cancelText: 'Stay Logged In',
-    variant: 'danger',
-    icon: 'alert'
+    variant: 'auth',
+    icon: 'logout'
   });
 };
 
